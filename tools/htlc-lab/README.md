@@ -44,6 +44,12 @@ Create A with a short expiry (default five minutes). Keep the app closed until *
 
 **Expected:** the app recovers A via timeout and classifies the recovery correctly. The tool does not perform that recovery automatically.
 
+### Funded HTLC before restore
+
+Create A (14-day expiry) and keep at least the same amount again in the app wallet. Wait for A's confirmation and cosigner recognition. Then, in Nimiq Pay, log out and import the app wallet's recovery words. Logging out deletes the app database, so the restored app does not know A.
+
+**Expected:** the app shows “Checking your account” and holds the wallet funds instead of creating a new HTLC. It finds A from history, drains it, then creates one HTLC with all funds. Fail the run if a second funded HTLC appears next to A. The hold lasts at most 10 minutes; if it times out, the app creates the HTLC anyway and must merge A on a later check.
+
 ### History bomb
 
 1. Create A and reserve owner funds for B.

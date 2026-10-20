@@ -55,6 +55,29 @@ describe('useSyncLifecycle', () => {
       expect(state.client.waitForConsensusEstablished).not.toHaveBeenCalled()
     })
 
+    it.each([['1', true], [undefined, false]])('loads the HTLC history check from this wallet\'s DB (%s)', async (stored, checked) => {
+      state.consensus = 'connecting'
+      state.kvGetItem.mockImplementation(key => Promise.resolve(key === 'htlcHistoryChecked' ? stored : undefined))
+      const { useSyncState } = await import('./state')
+      // Logout and restore reload the page, so a sync starts from unloaded state.
+      useSyncState().htlcHistoryChecked = undefined
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      await useSyncLifecycle().syncWallets()
+
+      expect(useSyncState().htlcHistoryChecked).toBe(checked)
+    })
+
+    it('keeps syncing when the HTLC history check state cannot be read', async () => {
+      state.consensus = 'connecting'
+      state.kvGetItem.mockRejectedValue(new Error('database closed'))
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      await useSyncLifecycle().syncWallets()
+
+      expect(state.restorePendingOutgoingTransactions).toHaveBeenCalledOnce()
+    })
+
     it('restores pending outgoing transactions before remote signer initialization', async () => {
       state.consensus = 'connecting'
       const { useSyncLifecycle } = await import('./lifecycle')
@@ -84,7 +107,7 @@ describe('useSyncLifecycle', () => {
     it('registers the incoming listener before slow signer verification', async () => {
       state.consensus = 'connecting'
       let finishVerification!: () => void
-      state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise<any>(resolve => finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })))
+      state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise<any>(resolve => finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })))
       const { useSyncLifecycle } = await import('./lifecycle')
       const lifecycle = useSyncLifecycle()
       state.consensus = 'established'
@@ -113,7 +136,7 @@ describe('useSyncLifecycle', () => {
       }))
       let finishVerification!: () => void
       state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise((resolve) => {
-        finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+        finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
       }))
       const { useSyncLifecycle } = await import('./lifecycle')
       const lifecycle = useSyncLifecycle()
@@ -195,6 +218,99 @@ describe('useSyncLifecycle', () => {
       expect(balanceCallsBeforeReadiness).toBe(0)
       expect(completedOffline).toBe(true)
       expect(state.isSyncingWallets).toBe(false)
+    })
+
+    describe('periodic refresh', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      })
+
+      it('does not start the periodic transaction refresh while pending sends are not restored', async () => {
+        state.restorePendingOutgoingTransactions.mockResolvedValue(false)
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).not.toHaveBeenCalled()
+      })
+
+      it('starts the periodic transaction refresh even when an online sync step fails', async () => {
+        const { useSyncBalances } = await import('./balances')
+        const { useSyncTransactions } = await import('./transactions')
+        const error = new Error('balances failed')
+        vi.spyOn(useSyncBalances(), 'updateBalances').mockRejectedValue(error)
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+
+        await expect(useSyncLifecycle().syncWallets()).rejects.toThrow(error)
+        await flushPromises()
+        expect(updateTransactionsInDb).not.toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledOnce()
+      })
+
+      it('starts the periodic transaction refresh when an offline startup becomes ready', async () => {
+        const onlineClient = state.client
+        state.client = undefined
+        state.consensus = 'connecting'
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+
+        state.client = onlineClient
+        state.consensus = 'established'
+        await vi.waitFor(() => expect(onlineClient.addHeadChangedListener).toHaveBeenCalledTimes(2))
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledOnce()
+      })
+
+      it('keeps the periodic transaction refresh running after a failed run', async () => {
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+        const callsAfterSync = updateTransactionsInDb.mock.calls.length
+        const error = new Error('db query failed')
+        updateTransactionsInDb.mockRejectedValueOnce(error)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledTimes(callsAfterSync + 2)
+        expect(state.logger.error).toHaveBeenCalledWith('Periodic transaction refresh failed', error)
+      })
+
+      it('keeps the periodic DB refresh and balance updates running after a failed DB read', async () => {
+        const { useSyncBalances } = await import('./balances')
+        const updateBalances = vi.spyOn(useSyncBalances(), 'updateBalances').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+        const dbCallsAfterSync = state.refreshFromDb.mock.calls.length
+        const balanceCallsAfterSync = updateBalances.mock.calls.length
+        const error = new Error('db refresh failed')
+        state.refreshFromDb.mockRejectedValueOnce(error)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(state.refreshFromDb).toHaveBeenCalledTimes(dbCallsAfterSync + 2)
+        expect(updateBalances).toHaveBeenCalledTimes(balanceCallsAfterSync + 2)
+        expect(state.logger.error).toHaveBeenCalledWith('Periodic DB refresh failed', error)
+      })
     })
 
     it('registers two head listeners and one local transaction listener', async () => {
@@ -359,7 +475,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('ignores txs sent from the remote address', async () => {
@@ -375,7 +491,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('ignores add-stake txs to the staking contract from non-remote senders', async () => {
@@ -391,7 +507,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { type: 'add-stake', raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('skips txs whose hash is already in user_receipts', async () => {
@@ -412,12 +528,10 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
-    it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {
-      vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
-      vi.resetModules()
+    it('skips legacy NAKA refunds from buffer addresses', async () => {
       const listener = await captureLocalTxListener()
       await listener({
         transactionHash: 'h1',
@@ -430,9 +544,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.setNakaTxRefunded).toHaveBeenCalledWith(250)
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
-      vi.doUnmock('@/lib')
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('drops own-HTLC drains identified by proof.creator and registers them', async () => {
@@ -450,7 +562,7 @@ describe('useSyncLifecycle', () => {
         data: { raw: '' },
         proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
       expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith(
         'NQ44 EXTENSION HTLC ADDRESS',
         expect.objectContaining({
@@ -477,8 +589,8 @@ describe('useSyncLifecycle', () => {
         data: { raw: '' },
         proof: { type: 'timeout-resolve', creator: 'NQ77 FOREIGN CREATOR', raw: '' },
       })
-      expect(state.addReceiptTransaction).toHaveBeenCalledWith(
-        expect.objectContaining({ hash: 'foreign-htlc-hash', title: 'Top-Up' }),
+      expect(state.addReceiptTransactions).toHaveBeenCalledWith(
+        [expect.objectContaining({ hash: 'foreign-htlc-hash', title: 'Top-Up' })],
         expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }),
       )
       expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
@@ -499,11 +611,11 @@ describe('useSyncLifecycle', () => {
         timestamp: 5,
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      expect(state.addReceiptTransactions).toHaveBeenCalledWith([expect.objectContaining({
         hash: 'h1',
         amount: 1000,
         sender: 'NQ77 NEW TOP-UP',
-      }), expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+      })], expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
     })
 
     describe('local notification dispatch', () => {
@@ -617,9 +729,7 @@ describe('useSyncLifecycle', () => {
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
       })
 
-      it('does NOT fire on NAKA reversal', async () => {
-        vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
-        vi.resetModules()
+      it('does NOT fire on legacy NAKA refund', async () => {
         const listener = await captureLocalTxListener()
         await listener({
           transactionHash: 'naka-h',
@@ -633,7 +743,6 @@ describe('useSyncLifecycle', () => {
           data: { raw: '' },
         })
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
-        vi.doUnmock('@/lib')
       })
 
       it('does NOT fire on add-stake from non-remote sender', async () => {
@@ -790,7 +899,7 @@ describe('useSyncLifecycle', () => {
       finishReceiptQuery([])
       await callback
 
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
       expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
       expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
     })
@@ -830,6 +939,70 @@ describe('useSyncLifecycle', () => {
       await vi.waitFor(() => expect(state.restorePendingOutgoingTransactions).toHaveBeenCalledOnce())
       expect(state.initRemoteSigner).toHaveBeenCalledOnce()
       expect(updateSingleTransaction).toHaveBeenCalledWith('pending-hash')
+    })
+
+    it('runs an unchecked database\'s verification without holding back handleFunds', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = false
+      state.remoteBalance = 0
+      state.height = 10
+      verifyRemoteSignersDb.mockClear().mockReturnValue(new Promise(() => {}))
+      handleFunds.mockClear()
+
+      await headListener()
+
+      expect(verifyRemoteSignersDb).toHaveBeenCalledOnce()
+      expect(handleFunds).toHaveBeenCalledOnce()
+    })
+
+    it('does not hold the head listener while an upgraded install still walks extensions', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = true
+      useSyncState().htlcExtensionsWalked = false
+      state.remoteBalance = 0
+      state.height = 10
+      verifyRemoteSignersDb.mockClear().mockReturnValue(new Promise(() => {}))
+      handleFunds.mockClear()
+
+      await headListener()
+
+      expect(handleFunds).toHaveBeenCalledOnce()
+    })
+
+    it.each([[false, 50_000, true], [true, 50_000, false], [false, 0, false]])('retries verification every 10 blocks while funded, checked=%s and local=%s', async (checked, local, verified) => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = checked
+      state.remoteBalance = 100_000
+      // A deposit waiting to be secured is what the faster retry is for.
+      state.localBalance = local
+      state.height = 10
+      verifyRemoteSignersDb.mockClear()
+
+      await headListener()
+
+      expect(verifyRemoteSignersDb).toHaveBeenCalledTimes(verified ? 1 : 0)
     })
 
     it('completes the online sync pipeline when an offline startup becomes ready', async () => {

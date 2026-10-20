@@ -1,6 +1,6 @@
 import type { Network } from './protocol'
 
-export type Scenario = 'two' | 'drained' | 'expired' | 'bomb'
+export type Scenario = 'two' | 'drained' | 'expired' | 'bomb' | 'restore'
 export type Stage = 'idle' | 'ready-claim' | 'claiming-existing' | 'ready-start' | 'funding-a' | 'ready-drain' | 'draining-a' | 'waiting-expiry' | 'ready-spam' | 'spamming' | 'ready-new' | 'funding-b' | 'checking' | 'observe' | 'cancelled' | 'failed'
 export type TxState = 'unknown' | 'pending' | 'included' | 'confirmed' | 'failed'
 export interface Config { scenario: Scenario, amount: number, fee: number, expiryMinutes: number, count: number }
@@ -80,4 +80,5 @@ export const scenarios: { id: Scenario, title: string, description: string, expe
   { id: 'drained', title: 'Drained old HTLC', description: 'Create A, return its funds through the cosigner, then create B. This tests recovery of historical payments.', expected: 'Old history returns, but the drained balance does not. The funded signer remains usable.' },
   { id: 'expired', title: 'Expired funded HTLC', description: 'Create A and leave it funded until chain time passes its expiry. Keep the app closed while waiting.', expected: 'The app reclaims A with a timeout proof and classifies recovery correctly.' },
   { id: 'bomb', title: 'History bomb', description: 'Expire A, bury its creation under 0.00001 NIM receipts, then create B. The app must scan beyond its first 100 history entries.', expected: 'The app discovers and recovers expired A while preserving B’s funds. No duplicate receipts, false payments, or restored historical balances.' },
+  { id: 'restore', title: 'Funded HTLC before restore', description: 'Create A and keep the same amount again in the app wallet. Then fresh-import the wallet in the app, which starts with an empty database.', expected: 'The app holds the wallet funds and shows “Checking your account”, drains A, then creates one HTLC with everything. No second HTLC next to a funded A.' },
 ]

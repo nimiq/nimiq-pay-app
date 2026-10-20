@@ -14,6 +14,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { DEFAULT_LIMIT } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -41,13 +42,23 @@ const showSingleTxSkeleton = computed(() => isConsensusNeeded.value && consensus
 const showSingleTxSkeletonDebounced = refDebounced(showSingleTxSkeleton, debounceDelay, { maxWait: debounceMaxWait })
 const showTransactionsSkeleton = computed(() => isUpdatingTransactions.value && (isNimiqAsset.value || !hasLoadedPolygonHistory.value))
 const isExhausted = ref(false)
-const hasMore = computed(() => !isExhausted.value && canLoadMore())
-watch(activeAsset, () => isExhausted.value = false)
+// The store holds the whole history; mounting every row at once froze the UI for over a second
+// on large accounts, so rows are rendered a page at a time as the user scrolls.
+const renderLimit = ref(DEFAULT_LIMIT)
+const visibleTransactions = computed(() => transactions.value.slice(0, renderLimit.value))
+const hasMore = computed(() => renderLimit.value < transactions.value.length || (!isExhausted.value && canLoadMore()))
+watch(activeAsset, () => {
+  isExhausted.value = false
+  renderLimit.value = DEFAULT_LIMIT
+})
 
 async function onInfiniteScroll(event: InfiniteScrollCustomEvent) {
-  const added = await loadMoreTxs()
-  if (added === 0)
-    isExhausted.value = true
+  if (renderLimit.value >= transactions.value.length) {
+    const added = await loadMoreTxs()
+    if (added === 0)
+      isExhausted.value = true
+  }
+  renderLimit.value += DEFAULT_LIMIT
   event.target.complete()
 }
 
@@ -105,7 +116,7 @@ function onRowClick(tx: ExternalTransaction) {
       :transition="{ duration: showAnimations ? 0.4 : 0 }"
     >
       <motion.li
-        v-for="(tx, index) in transactions"
+        v-for="(tx, index) in visibleTransactions"
         :key="tx.hash"
         :data-hash="tx.hash"
         :initial="{ opacity: 0, x: -20 }"

@@ -1,8 +1,8 @@
 import type { State, StepCallbacks } from './steps.types'
 import { describe, expect, it, vi } from 'vitest'
 import { QRDataFormat } from '@/composables/useStringParser'
-import { qrCodeScannerStep } from './steps'
-import { FlowName } from './steps.types'
+import { paymentRequestManualInputStep, qrCodeScannerStep } from './steps'
+import { FlowName, StepName } from './steps.types'
 
 vi.mock('@/stores/app', () => ({
   useApp: vi.fn(),
@@ -37,5 +37,25 @@ describe('qrCodeScannerStep', () => {
     expect(callbacks.navigateTo).not.toHaveBeenCalled()
     expect(callbacks.next).not.toHaveBeenCalled()
     expect(callbacks.prev).not.toHaveBeenCalled()
+  })
+})
+
+describe('paymentRequestManualInputStep', () => {
+  it('sends a fixed-amount request to the preview, not the amount input', async () => {
+    const callbacks = {
+      navigateTo: vi.fn(),
+      next: vi.fn(),
+      prev: vi.fn(),
+      err: vi.fn(),
+      finalizeFlow: vi.fn(async () => {}),
+    } satisfies StepCallbacks
+    const step = await paymentRequestManualInputStep({ flowName: FlowName.Payment })
+    const state = { paymentRequestManualInput: { amount: 100_000 } } as State
+
+    await step.beforeNext?.(state, callbacks)
+
+    expect(callbacks.navigateTo).toHaveBeenCalledExactlyOnceWith({ step: StepName.PaymentPreview })
+    expect(callbacks.next).not.toHaveBeenCalled()
+    expect(state.qrCodeScanner).toBe(state.paymentRequestManualInput)
   })
 })

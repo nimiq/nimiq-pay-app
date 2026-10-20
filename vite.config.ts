@@ -7,6 +7,7 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
+import { configDefaults } from 'vitest/config'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -18,23 +19,6 @@ export default defineConfig(({ mode }) => {
       vue(),
       poLoader(),
       poOptimizer(),
-      {
-        name: 'copy-issuer-schema:serve',
-        apply: () => true, // apply for both 'serve' (dev server) and 'build'
-        buildStart() {
-          try {
-            copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/bluecode-issuer.schema.ts', 'src/lib/issuer-schemas/bluecode-issuer.schema.ts')
-            copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/common.schema.ts', 'src/lib/issuer-schemas/common.schema.ts')
-            copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/rest.schema.ts', 'src/lib/issuer-schemas/rest.schema.ts')
-            copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/naka-issuer.schema.ts', 'src/lib/issuer-schemas/naka-issuer.schema.ts')
-            copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/ws.schema.ts', 'src/lib/issuer-schemas/ws.schema.ts')
-            console.log('📋 Copied issuer server schemas')
-          }
-          catch {
-            console.error('🚫 ERROR: Failed to copy issuer server schemas, make sure you have the "nimiq-pay-issuer-server" repo cloned next to this "nimiq-pay-app" repo!')
-          }
-        },
-      },
       {
         name: 'copy-web3-provider:serve',
         apply: () => true, // apply for both 'serve' (dev server) and 'build'
@@ -63,6 +47,8 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'jsdom',
+      // The provider submodule ships Bun tests that Vitest cannot run.
+      exclude: [...configDefaults.exclude, 'vendor/**'],
       testTimeout: 20000,
       hookTimeout: 20000,
       retry: process.env.CI ? 2 : 0,
@@ -74,7 +60,6 @@ export default defineConfig(({ mode }) => {
       __INTLIFY_PROD_DEVTOOLS__: false,
       // __ENABLE_BTC_LN__: process.env.ENABLE_BTC_LN ? true : false,
       __ENABLE_BTC_LN__: true, // Enable BTC LN by default, remove this once Apple is not complaining
-      __ENABLE_NAKA__: env.VITE_ENABLE_NAKA === 'true',
       __ENABLE_BLUECODE__: env.VITE_ENABLE_BLUECODE === 'true',
       __ENABLE_MINI_APPS__: env.VITE_ENABLE_MINI_APPS === 'true',
       __WALKIE_TALKIE_URL__: JSON.stringify(env.VITE_WALKIE_TALKIE_URL),

@@ -7,7 +7,6 @@ import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
-import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
 import { trackTopUpReceived } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -29,7 +28,7 @@ const logger = useLogger('useSync')
 
 export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { client, height: localHeight, consensus, networkName } = storeToRefs(useNimiqNetwork())
-  const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, isHtlcActive, homeBalanceState } = storeToRefs(useRemoteSigner())
   const { getWalletContext, isWalletContextCurrent } = useRemoteSigner()
   const { isProcessingRemote, isSyncingWallets, headChangePendingDrainLock, headChangeUpdatesLock } = storeToRefs(useLocks())
@@ -44,17 +43,24 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (!hasLocalWallet.value)
       return
 
-    await updateTransactionHistory()
-    await updateTransactionsInDb()
+    // useTimeoutPoll only reschedules after the callback resolves, so one throw would end the poll for the session.
+    try {
+      await updateTransactionHistory()
+      await updateTransactionsInDb()
+    }
+    catch (error) {
+      logger.error('Periodic transaction refresh failed', error)
+    }
   }, 30_000, { immediate: false })
 
   // Reloading from DB catches transactions saved outside the in-memory list.
   const { resume: startPeriodicDbRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
       return
-    await useTransactions().refreshFromDb()
+    // Catch each call on its own: a throw would end the poll, and a failing DB read must not skip balance updates.
+    await useTransactions().refreshFromDb().catch(error => logger.error('Periodic DB refresh failed', error))
     if (client.value && consensus.value === 'established')
-      await updateBalances()
+      await updateBalances().catch(error => logger.error('Periodic balance refresh failed', error))
   }, 30_000, { immediate: false })
 
   interface ListenerHandle {
@@ -95,6 +101,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   ) {
     if (!isCurrent())
       return false
+    // Both callers restore pending sends first. Start before any step that can fail, so a failure can't leave it off.
+    startPeriodicTransactionRefresh()
     if (!await registerWalletListeners(context, isCurrent))
       return false
     logger.log('Updating balances')
@@ -119,9 +127,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
-    if (!isCurrent())
-      return false
-    startPeriodicTransactionRefresh()
     return isCurrent()
   }
 
@@ -145,6 +150,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       await loadMockData()
       return
     }
+
+    // The flags live in this wallet's DB (wiped on logout); load them before the sweep or a deposit reads them.
+    await syncState.loadHtlcHistoryFlags()
 
     isSyncingWallets.value = true
     try {
@@ -232,10 +240,18 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       }
 
       try {
-        if (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
-          await verifyRemoteSignersDb()
-        else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
-          await verifyRemoteSignersDb()
+        // An unchecked database holds waiting local funds until a sweep comes back clean, so retry as often as when empty.
+        const shouldVerify = (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
+          || ((remoteBalance.value === 0 || (!syncState.htlcHistoryChecked && localBalance.value > 0)) && localHeight.value % 10 === 0)
+        if (shouldVerify) {
+          const verifying = verifyRemoteSignersDb()
+          // Until extensions are walked its sweep can outlast the hold, so don't hold this listener: handleFunds
+          // must run to end the hold, and payment status updates must not wait either.
+          if (syncState.htlcExtensionsWalked)
+            await verifying
+          else
+            verifying.catch(error => logger.error('Error in background remote signer verification', error))
+        }
 
         await updateBalances()
         await handleFunds()
@@ -306,19 +322,17 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     }
 
-    logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
-
     if (nakaBufferAddresses.includes(tx.sender)) {
-      logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-      if (isListenerContextCurrent(context))
-        await useTransactions().setNakaTxRefunded(tx.value)
+      logger.log(`🚫 handleIncomingTransaction skipped legacy NAKA refund`, { hash, sender: tx.sender, amount: tx.value })
       return
     }
+
+    logger.log(`📬 Saving ${tx.state} transaction with ${tx.value / 1e5} NIM`)
 
     const receipt = await buildTopUpReceipt(tx)
     if (!isListenerContextCurrent(context))
       return
-    await useTransactions().addReceiptTransaction(receipt, context)
+    await useTransactions().addReceiptTransactions([receipt], context)
     if (!isListenerContextCurrent(context))
       return
     trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)

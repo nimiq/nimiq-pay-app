@@ -64,7 +64,6 @@ export enum Transfer {
 export enum Rail {
   CryptoPaymentLink = 'CPL',
   GoCrypto = 'GoCrypto',
-  NakaCard = 'NakaCard',
   Bluecode = 'bluecode',
   BitcoinLightning = 'bitcoin-lightning',
   NimiqWallet = 'nimiq-wallet',
@@ -246,9 +245,6 @@ export type MerchantTransaction = BaseTransaction & {
   rail: Rail.NimiqWallet
   railMerchantId?: undefined
 } | {
-  rail: Rail.NakaCard
-  railMerchantId?: undefined
-} | {
   rail: Rail.Unknown
   railMerchantId?: undefined
 } /* | {
@@ -279,8 +275,9 @@ export type StakingData = {
 export type StakingTransaction = BaseTransaction & {
   transfer: Transfer.Staking
   title: TransactionTitle
-  recipientData?: Uint8Array
-  senderData?: Uint8Array
+  // Hex, as provided by the chain and stored in the DB.
+  recipientData?: string
+  senderData?: string
   rail?: Rail.MiniApp
   railMerchantId?: string // Mini-app URL
   merchantName?: string // Mini-app name
@@ -401,8 +398,6 @@ export enum PaymentMethod {
   NIM = 'nim',
   USDT = 'usdt',
   Points = 'points',
-  NakaCard = 'nakaCard',
-  Bluecode = 'bluecode',
 }
 
 export type AppTransactionState = Nimiq.TransactionState | 'mined' | 'failed'

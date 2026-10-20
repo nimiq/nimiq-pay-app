@@ -103,6 +103,7 @@ vi.mock('@/composables/useMiniAppHost', async () => {
 
 vi.mock('@/lib/mini-app-confirmation', () => ({
   requestUserConfirmation: vi.fn(() => Promise.resolve(true)),
+  selectLightningAsset: vi.fn(() => Promise.resolve('NIM')),
 }))
 
 vi.mock('@/lib/site-metadata', () => ({

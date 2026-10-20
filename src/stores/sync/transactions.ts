@@ -1,13 +1,14 @@
 import type { Client, PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { RemoteSigner } from '@/lib/sql-queries'
-import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
+import type { WalletContext } from '@/stores/remote-signer'
+import type { TransactionStatusUpdate } from '@/stores/transactions'
+import type { AppTransactionState, ExternalTransaction, MerchantTransaction, StakingTransaction, Transaction, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { defineStore, storeToRefs } from 'pinia'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
-import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
 import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -28,6 +29,7 @@ import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transac
 const logger = useLogger('useSync')
 const LOCAL_HISTORY_PAGE_SIZE = 100
 const TRANSACTION_LOOKUP_TIMEOUT_MS = 30_000
+const DISCOVERY_RETRY_MS = 5 * 60_000
 const RESOLVED_TRANSACTION_STATES = new Set<AppTransactionState>([
   'included',
   'confirmed',
@@ -55,7 +57,7 @@ export function isOwnHtlcDrain(tx: PlainTransactionDetails, localUserFriendly: s
 export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
   const { query, run } = useConn()
-  const { client, consensus, height, networkName, networkId } = storeToRefs(useNimiqNetwork())
+  const { client, consensus, height, headTimestamp, lastMacroBlockHeight, networkName, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const remoteSignerStore = useRemoteSigner()
   const { remoteAddress } = storeToRefs(remoteSignerStore)
@@ -63,12 +65,29 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { isUpdatingTransactions } = storeToRefs(useLocks())
   const { pendingTransactions, pendingRemoteDrainTxs, isTransactionPending, walletContextGeneration } = storeToRefs(useSyncState())
   const {
-    addUnknownPaymentToMerchantTransaction,
-    addWithdrawalTransaction,
-    addStakingtransaction,
+    saveTransactions,
+    toUnknownPaymentToMerchantTransaction,
     updateTransactionCashbackClaimed,
     updateTransactionStatus,
   } = useTransactions()
+
+  // Lets periodic history runs skip already-synced history. Set only after a run that fetched and saved
+  // everything, and kept in memory so every app start, login or wallet switch runs one full sync.
+  let historyCursor: {
+    context: WalletContext
+    // Final (macro) block height known when that run started.
+    height: number
+    // Remote signers fully scanned by that run.
+    signers: Set<string>
+    // Extension HTLCs found per signer. Their creating txs are older than the cursor,
+    // so incremental runs would no longer find them.
+    extensionHtlcs: Map<string, Set<string>>
+  } | undefined
+
+  // Discovery reads all local history and asks the cosigner about every HTLC, so it runs once per
+  // wallet context instead of on every poll. Old HTLCs can keep it incomplete for good (the cosigner
+  // answers "Wallet no longer active"), so an incomplete one retries after a delay, not every poll.
+  let discovery: { context: WalletContext, isComplete: boolean, at: number } | undefined
 
   function getPendingTransactionContext(): PendingTransactionContext | undefined {
     if (!localAddress.value)
@@ -249,6 +268,12 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       return
     }
     isUpdatingTransactions.value = true
+    const cursor = historyCursor && remoteSignerStore.isWalletContextCurrent(historyCursor.context) ? historyCursor : undefined
+    // One batch of overlap covers history peers that lag behind our head.
+    const sinceHeight = cursor ? Math.max(0, cursor.height - Nimiq.Policy.BLOCKS_PER_BATCH) : 0
+    const nextCursorHeight = lastMacroBlockHeight.value
+    // Any failed fetch or write keeps the old cursor, so the next run fetches that range again.
+    let isComplete = true
     try {
       const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
       if (!isLocalCurrent())
@@ -257,10 +282,11 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         const seenCursors = new Set<string>()
         let startAt: string | undefined
         while (true) {
-          const page = await getLocalTransactions({ sinceHeight: 0, ...(startAt ? { startAt } : {}), limit: LOCAL_HISTORY_PAGE_SIZE })
+          const page = await getLocalTransactions({ sinceHeight, ...(startAt ? { startAt } : {}), limit: LOCAL_HISTORY_PAGE_SIZE })
           if (!isLocalCurrent())
             return
-          // Publish recent receipts before fetching older pages or reconciling HTLCs.
+          const receipts: UserReceiptTransaction[] = []
+          const stakingTxs: StakingTransaction[] = []
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
@@ -273,9 +299,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             if (nakaBufferAddresses.includes(tx.sender)) {
-              logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-              if (isLocalCurrent())
-                await useTransactions().setNakaTxRefunded(tx.value)
+              logger.log(`🚫 updateTransactionHistory skipped legacy NAKA refund`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
               return
             }
 
@@ -284,28 +308,43 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             if (savedReceipt) {
               if (tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
                 const receipt = await buildTopUpReceipt(tx)
-                if (isLocalCurrent() && receipt.sender !== savedReceipt.sender)
-                  await useTransactions().addReceiptTransaction(receipt, context)
+                if (receipt.sender !== savedReceipt.sender)
+                  receipts.push(receipt)
               }
               return
             }
 
-            logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
-            if (tx.senderType === 'staking') {
-              if (isLocalCurrent())
-                handleStakingTxs(tx)
-            }
-            else {
-              const receipt = await buildTopUpReceipt(tx)
-              if (isLocalCurrent())
-                await useTransactions().addReceiptTransaction(receipt, context)
-            }
+            logger.log(`📬 New ${tx.state} transaction received with ${tx.value / 1e5} NIM`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
+            if (tx.senderType === 'staking')
+              stakingTxs.push(toStakingTransaction(tx))
+            else
+              receipts.push(await buildTopUpReceipt(tx))
           }))
+          // Publish recent receipts before fetching older pages or reconciling HTLCs.
+          // One write per page: per-tx writes queue hundreds of native calls and re-sort the list each time.
+          if (!isLocalCurrent())
+            return
+          if (receipts.length && !await useTransactions().addReceiptTransactions(receipts, context))
+            isComplete = false
+          if (!isLocalCurrent())
+            return
+          if (!await saveTransactions(stakingTxs))
+            isComplete = false
           // Register own HTLCs once per page after publishing incoming receipts.
           const ownHtlcSenders = new Set<string>()
           for (const tx of page) {
             if (isOwnHtlcDrain(tx, context.owner))
               ownHtlcSenders.add(tx.sender)
+            // A cosigner HTLC we don't know yet (e.g. created on another device) needs discovery again.
+            if (discovery
+              && tx.sender === context.owner
+              && tx.recipientType === 'htlc'
+              && tx.data.type === 'htlc'
+              && remoteSignerStore.isCosignerAddress(tx.data.recipient)
+              && !await remoteSignerStore.isOurRemoteSigner(tx.recipient)) {
+              logger.log('🔎 New HTLC creation found, discovering remote signers again', { hash: tx.transactionHash, htlc: tx.recipient })
+              discovery = undefined
+            }
           }
           if (ownHtlcSenders.size > 0)
             await Promise.all([...ownHtlcSenders].map(sender => remoteSignerStore.registerOwnHtlcIfMissing(sender, context)))
@@ -324,6 +363,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
       catch (error) {
+        isComplete = false
         logger.error('Error getting local account transactions', error)
       }
       if (!isCurrent() || isTransactionPending.value)
@@ -369,13 +409,20 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      await discoverRemoteSignersFromBlockchain()
-      if (!isCurrent())
-        return
+      if (!discovery
+        || !remoteSignerStore.isWalletContextCurrent(discovery.context)
+        || (!discovery.isComplete && Date.now() - discovery.at > DISCOVERY_RETRY_MS)) {
+        const result = await discoverRemoteSignersFromBlockchain()
+        if (!isCurrent())
+          return
+        discovery = { context, isComplete: result.localComplete, at: Date.now() }
+      }
       const remoteSigners = await getAllRemoteSigners()
       if (!isCurrent())
         return
 
+      const scannedSigners = new Set<string>()
+      const nextExtensionHtlcs = new Map<string, Set<string>>()
       if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already
         // categorized — both filters apply at the outer level AND to recursive traversal results
@@ -404,9 +451,15 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
         for (const remoteSigner of remoteSigners.sort((a, b) => b.end - a.end)) {
           const signerLabel = remoteSigner.address.toUserFriendlyAddress()
-          const accountTxs = await getAccountTransactions(remoteSigner.address)
+          // Only empty, expired signers already scanned in full skip old history; active ones are always scanned in full.
+          const isIncremental = !!cursor?.signers.has(signerLabel)
+            && remoteSigner.balance === 0
+            && remoteSigner.end < headTimestamp.value
+          const accountTxs = await getAccountTransactions(remoteSigner.address, undefined, isIncremental ? sinceHeight : 0)
           if (!isCurrent())
             return
+          if (accountTxs.error)
+            isComplete = false
           const txsToProcess = filterUnseen(
             accountTxs.data.filter(tx => tx.sender === signerLabel),
             `outer:${signerLabel}`,
@@ -415,11 +468,17 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, stakingTxs, unknownTxs } = categorizeTransactions(txsToProcess)
           logger.log(`📦 categorize[${signerLabel}] htlcExt=${htlcExtensionTxs.length} swap=${htlcSwapTxs.length} withdraw=${withdrawalTxs.length} staking=${stakingTxs.length} unknown=${unknownTxs.length}`)
 
-          await Promise.all(htlcExtensionTxs.map(async (tx) => {
-            const nestedTxs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient))
+          const extensionHtlcs = new Set([
+            ...(isIncremental ? cursor?.extensionHtlcs.get(signerLabel) ?? [] : []),
+            ...htlcExtensionTxs.map(tx => tx.recipient),
+          ])
+          nextExtensionHtlcs.set(signerLabel, extensionHtlcs)
+          scannedSigners.add(signerLabel)
+          await Promise.all([...extensionHtlcs].map(async (htlcAddress) => {
+            const nestedTxs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(htlcAddress))
             if (!isCurrent())
               return
-            const categorized = categorizeTransactions(filterUnseen(nestedTxs, `nested:${tx.recipient}`))
+            const categorized = categorizeTransactions(filterUnseen(nestedTxs, `nested:${htlcAddress}`))
             htlcSwapTxs.push(...categorized.htlcSwapTxs)
             withdrawalTxs.push(...categorized.withdrawalTxs)
             stakingTxs.push(...categorized.stakingTxs)
@@ -427,13 +486,24 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           }))
           if (!isCurrent())
             return
-          await Promise.all([
-            ...htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner }, isCurrent)),
-            ...withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
-            ...stakingTxs.map(tx => handleStakingTxs(tx)),
-            ...unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
+          const swapTxs = await Promise.all(htlcSwapTxs.map(tx => toSwapTransaction(tx, { remoteSigner }, isCurrent)))
+          if (!isCurrent())
+            return
+          const isSaved = await saveTransactions([
+            ...swapTxs.filter(tx => tx !== undefined),
+            ...withdrawalTxs.map(tx => toWithdrawalTransaction(tx, { remoteSigner })),
+            ...stakingTxs.map(tx => toStakingTransaction(tx)),
+            ...unknownTxs.map(tx => toUnknownTransaction(tx, { remoteSigner })),
           ])
+          if (!isSaved)
+            isComplete = false
         }
+      }
+
+      // lastMacroBlockHeight stays 0 until the first macro block after startup.
+      if (isComplete && nextCursorHeight > 0 && isCurrent()) {
+        historyCursor = { context, height: nextCursorHeight, signers: scannedSigners, extensionHtlcs: nextExtensionHtlcs }
+        logger.log(`📍 History cursor set to block ${nextCursorHeight}`, { sinceHeight, signers: scannedSigners.size })
       }
     }
     catch (error) {
@@ -450,6 +520,8 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
   async function updateTransactionsInDb() {
     const context = getPendingTransactionContext()
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
+    // Written together after all lookups: one native call and one list sort instead of one per tx.
+    const statusUpdates: TransactionStatusUpdate[] = []
 
     await Promise.all(dbTxs.map(async (dbTx) => {
       if (['failed', 'invalidated'].includes(dbTx.status))
@@ -493,7 +565,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
         if (dbTx.status !== txStatus) {
           logger.log(`📬 Updating transaction ${dbTx.hash} ${txStatus}`)
-          updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
+          statusUpdates.push({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
         }
       }
       else {
@@ -534,8 +606,8 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             return
           }
           if (dbTx.status !== state || dbTx.timestamp !== timestamp || (executionResult !== undefined && current?.executionResult !== executionResult)) {
-            logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${usePrice(amount).crypto.formatted}`, { executionResult: executionResult ?? null })
-            updateTransactionStatus({ hash: dbTx.hash, status: state, timestamp, executionResult })
+            logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${amount / 1e5} NIM`, { executionResult: executionResult ?? null })
+            statusUpdates.push({ hash: dbTx.hash, status: state, timestamp, executionResult })
           }
         }
         catch (error) {
@@ -543,13 +615,25 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
     }))
+
+    if (context && !isPendingTransactionContextCurrent(context))
+      return
+    // Another refresh may have recorded a failure while the lookups ran.
+    const transactions = useTransactions().transactions
+    const updates = statusUpdates.filter((update) => {
+      const current = transactions.find(transaction => transaction.hash === update.hash)
+      return !(current && ['failed', 'invalidated'].includes(current.status)
+        && !['failed', 'invalidated'].includes(update.status) && update.executionResult !== true)
+    })
+    if (updates.length)
+      await updateTransactionStatus(updates)
   }
 
-  async function handleSwapTxs(
+  async function toSwapTransaction(
     tx: PlainTransactionDetails,
     { remoteSigner }: { remoteSigner: RemoteSigner },
     isCurrent: () => boolean,
-  ) {
+  ): Promise<MerchantTransaction | undefined> {
     let contract: ContractWithEstimate<SwapAsset>
     try {
       const fastspot = await useFastspotApiV1()
@@ -561,9 +645,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
     catch (error: any) {
       logger.error('Error fetching contract info from Fastspot:', error.message)
-      if (isCurrent())
-        await addUnknownPaymentToMerchantTransaction(tx)
-      return
+      return toUnknownPaymentToMerchantTransaction(tx)
     }
 
     if (contract.from.asset !== SwapAsset.NIM) {
@@ -571,27 +653,23 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
     else if (contract.to.asset === SwapAsset.BTC_LN) {
       logger.log(`📬 BTC_LN swap found with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-      if (isCurrent()) {
-        await addUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
-          amount: (contract.to.amount - contract.to.fee) / 1e8,
-          currency: 'BTC',
-        }, {
-          imported: true,
-        })
-      }
-      return
+      return toUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
+        amount: (contract.to.amount - contract.to.fee) / 1e8,
+        currency: 'BTC',
+      }, {
+        imported: true,
+      })
     }
     else {
       logger.error(`Found a swap to another asset than BTC_LN (${contract.to.asset}) - This type of swap cannot yet be handled`)
     }
 
-    if (isCurrent())
-      await addUnknownPaymentToMerchantTransaction(tx)
+    return toUnknownPaymentToMerchantTransaction(tx)
   }
 
-  function handleWithdrawalTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+  function toWithdrawalTransaction(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }): UserTransaction {
     logger.log(`📬 New withdrawal transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-    addWithdrawalTransaction({
+    return {
       transfer: Transfer.UserPayment,
       amount: tx.value,
       sender: tx.sender,
@@ -606,10 +684,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       fee: tx.fee,
       // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
       proofSize: useRemoteSigner().remoteProofSize,
-    })
+    }
   }
 
-  function handleStakingTxs(tx: PlainTransactionDetails) {
+  function toStakingTransaction(tx: PlainTransactionDetails): StakingTransaction {
     let title: StakingTransaction['title']
     if (tx.senderType === 'staking') {
       logger.log(`📬 New ${tx.senderData!.type} transaction found with ${tx.value / 1e5} NIM from staking contract`)
@@ -652,28 +730,28 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       title = 'Staking Contract'
     }
 
-    addStakingtransaction({
+    return {
       transfer: Transfer.Staking,
       amount: tx.value,
       fee: tx.fee,
       hash: tx.transactionHash,
       sender: tx.sender,
       senderType: toAccountType(tx.senderType),
-      senderData: tx.senderData ? Nimiq.BufferUtils.fromHex(tx.senderData.raw) : undefined,
+      senderData: tx.senderData?.raw,
       recipient: tx.recipient,
       recipientType: toAccountType(tx.recipientType),
-      recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
+      recipientData: tx.data?.raw || undefined,
       status: tx.state,
       timestamp: tx.timestamp,
       validityStartHeight: tx.validityStartHeight,
       title,
       proofSize: tx.proof.raw.length / 2,
-    })
+    }
   }
 
-  function handleUnknownTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+  function toUnknownTransaction(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
     logger.log(`📬 New merchant transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-    addUnknownPaymentToMerchantTransaction(tx)
+    return toUnknownPaymentToMerchantTransaction(tx)
   }
 
   return {

@@ -70,8 +70,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       // import). Never let that become an uncaught rejection or wedge boot — log and bail so the app
       // still unlocks and renders; sync simply stays offline until the next launch.
       // iOS Lockdown Mode is gated out in main.ts before init() runs, so this is a genuine failure.
-      logger.error('Nimiq WASM init failed; running without the PoS client', error)
+      // Reported first so PostHog gets the context; the logger then skips the already reported error.
       reportCriticalError(error, { context: 'nimiq-wasm-init', network: networkName.value })
+      logger.error('Nimiq WASM init failed; running without the PoS client', error)
       return
     }
 
@@ -94,8 +95,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     head.value = await client.value.getHeadBlock()
     networkId.value = await useNimiqNetwork().client!.getNetworkId()
 
-    const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
-      useNimiqNetwork().reconnect()
+    const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(async () => {
+      await useNimiqNetwork().reconnect()
+      // Consensus listener only arms the watchdog on an established -> lost transition, so re-arm it here
+      if (consensus.value !== 'established')
+        startReconnectNetwork()
     }, 2 * 60 * 1e3, { immediate: false }) // 2 minutes
 
     client.value.addConsensusChangedListener(async (newConsensus) => {
@@ -159,8 +163,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         logger.log('Disconnected from network, connecting again...')
         await client.value?.connectNetwork()
 
-        await until(consensus).toBe('established')
-        logger.log('Connected to network')
+        // Bounded so a client that never regains consensus releases the lock and can be reconnected again
+        await until(consensus).toBe('established', { timeout: 2 * 60 * 1e3 })
+        if (consensus.value === 'established')
+          logger.log('Connected to network')
+        else
+          logger.warn('Reconnect timed out waiting for consensus', { consensus: consensus.value, peerCount: peerCount.value })
+      }
+      catch (error) {
+        logger.error('Reconnect failed', error)
       }
       finally {
         isNetworkReconnecting.value = false
@@ -264,11 +275,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
-  async function getAccountTransactions(address: Address | undefined, limit?: number) {
+  // sinceHeight must be a final (macro) block height: older history is not fetched or verified.
+  async function getAccountTransactions(address: Address | undefined, limit?: number, sinceHeight = 0) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
     try {
-      const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, undefined, limit)
+      const transactions = await client.value?.getTransactionsByAddress(address, sinceHeight, undefined, undefined, limit)
       if (!transactions)
         return { data: [], error: i18n.t('No transactions found') }
       return { data: transactions, error: undefined }

@@ -27,7 +27,6 @@ dependencies {
     implementation project(':capgo-capacitor-updater')
     implementation project(':rdlabo-capacitor-screenshot-event')
     implementation project(':capacitor-extended-dialog')
-    implementation project(':capacitor-sumsub-mobile-sdk')
     implementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-app')
     implementation project(':capacitor-clipboard')

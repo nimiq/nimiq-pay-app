@@ -1,11 +1,10 @@
 # CLAUDE.md
 
-Common mistakes, gotchas, and confusion points in this project. If something surprises you, alert the developer and add it here. If unsure, ask — don't assume.
+Common mistakes, gotchas, and confusion points in this project. If something surprises you, alert the developer and add it here.
 
 ## Collaboration
 
-- Unsure about anything? Ask the developer.
-- Stuck? Ask the developer to guide you.
+- Keep going when no input is needed. Stop and ask only when blocked, when requirements are ambiguous, or before destructive actions.
 
 ## Simplicity
 
@@ -16,14 +15,16 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - Use `pnpm` for dependencies and scripts.
 - `dotenv` scripts (`pnpm release:browserstack:apk`, …) swallow flags passed after them: `pnpm release:browserstack:apk --apk x` silently drops `--apk`. Run `pnpm exec dotenv -- node scripts/<script> --flag` instead.
-- Run `pnpm lint` and `pnpm typecheck` after any change.
+- Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
-### Mini Apps provider dependency in CI
+### Mini Apps provider submodule
 
-- `web3-provider/package.json` links to the sibling `../trust-web3-provider` checkout. CI builds the commit pinned in `.github/actions/setup-provider/action.yml`, so local tests can pass with newer provider code while CI fails.
-- When a change needs new provider code, update that CI pin in the same PR to a full commit SHA available in `nimiq/trust-web3-provider`. Publishing a new SDK version or updating the demo dependency does not update this pin.
-- Verify against that exact provider commit: build `core`, `nimiq`, then `ethereum` using the action's commands, rebuild the injected bridge, and run lint, typechecks, and the full unit suite. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+- `web3-provider/package.json` links to `vendor/trust-web3-provider`, a submodule of `nimiq/trust-web3-provider` (branch `nimiq`). Local builds and CI use the same pinned commit. Clone with `--recurse-submodules`, or run `git submodule update --init --recursive`.
+- `pnpm install` runs `scripts/build-web3-provider.mjs`. It builds `core`, `nimiq`, then `ethereum` with the pinned Bun devDependency, then typechecks and bundles the injected bridge. Run `pnpm build:web3-provider` after changing provider code.
+- A pull that moves the pin leaves the old submodule checkout in place, and the build silently uses it. Before debugging Mini Apps provider behavior, run `git submodule status`: a leading `+` means the checkout differs from the pin. Fix with `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
+- The build script installs `web3-provider` with `--frozen-lockfile`. After changing its dependencies, run `pnpm --dir web3-provider install` to update `web3-provider/pnpm-lock.yaml` first.
+- When a change needs new provider code, move the submodule to a reviewed commit that exists on `nimiq/trust-web3-provider` in the same PR. Publishing a new SDK version or updating the demo dependency does not move the pin. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
 - An app build without the bridge still succeeds: `public/web3-provider.js` is then a placeholder (or a stale copy) and `vite build` only logs "Failed to copy web3 provider script". Before building an APK, build the provider packages and run `pnpm build:web3-provider`, then check `assets/public/web3-provider.js` in the APK is the real bundle (~1.2 MB, not a few bytes).
 
 ## Naming & terminology
@@ -33,25 +34,25 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Comments
 
-- Comment only complex/non-obvious code. Concise, explain *why* not *what*.
+- Comment complex/non-obvious code. Concise, explain *why* not *what*.
+
+## Error messages
+
+- Never interpolate an object into a template string: `` `Expected ${{ a, b }}` `` renders `[object Object]`. Use `JSON.stringify({ a, b })` or name the fields.
+- The second argument of `new Error()` is `ErrorOptions` (`{ cause }`), not extra data. `new Error('msg', payload)` silently drops `payload`; put the data in the message or use `{ cause }`.
 
 ## Vue & components
 
+- Ionic mounts modal contents before presenting the overlay. In `onMounted`, find the owning `ion-modal` from the component's DOM; `modalController.getTop()` excludes that still-hidden overlay and can return an underlying modal.
 - Sibling blocks of the same currency: wrap in one `<template v-if="asset === Asset.USDT">` / `<template v-if="asset === Asset.NIM">` instead of repeating the condition per block.
 - Reuse existing components before creating new ones.
 - `Flow.vue` keeps visited steps mounted in `historyStack`. When wiring step handlers (`done`, `select`, `skip`, `back`, `navigateTo`), always validate the emitting step is still the active step before changing flow state.
 - Animations: prefer `motion-v` (use the `motion` skill).
 
-## JavaScript & TypeScript pitfalls
-
-- Never `arr.forEach(async ...)`: the callback is fire-and-forget, so inner awaits aren't awaited by the loop. Use `for (const x of arr)` (sequential) or `await Promise.all(arr.map(async ...))` (parallel).
-- `Array.prototype.concat` returns a new array, doesn't mutate. To grow an existing local array, use `arr.push(...other)` — `arr.concat(other)` silently discards the result.
-- Don't add a base interface + `extends` wrapper just to add one field to most variants of a union (e.g. `ChainScoped extends MiniAppBase { network }`). If only a minority opt out, keep the base minimal and inline the field per variant via intersection. Extension only pays off when reused in more than one place or carrying multiple shared fields.
-
 ## Testing
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
-- Don't run test all the time. Run tests only when you are about to commit or when you are debugging a test failure. Don't run tests after every change, it slows down development and is unnecessary.
+- Run tests only before committing or when debugging a test failure.
 
 ### Maestro on BrowserStack
 
@@ -79,7 +80,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Cosigner `validityStart` is the height at which spending is allowed (includes confirmation delay). It is not the creating transaction's `validityStartHeight`; never compare them for equality.
 - Cosigner `txSent: false` includes broadcast RPC timeouts. Keep the staged transaction unresolved; false does not prove it was never broadcast.
 
-- Client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. logout → login) must capture the ID and remove the previous one first; see the `watch(remoteAddress, ...)` block in `src/stores/sync.ts` for the canonical pattern.
+- Client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. logout → login) must capture the ID and remove the previous one first; see `registerWalletListeners` in `src/stores/sync/lifecycle.ts` and `init` in `src/stores/remote-signer.ts` for the canonical pattern.
 - On login/sync paths, hydrate UI state from the local DB cache (e.g. `useTransactions().refreshFromDb()`) before any network call. Never show an empty list while waiting for consensus when the data is already on disk.
 
 ## Data & schema
@@ -102,7 +103,11 @@ To evolve a table, leave its `Create*Table` query untouched and add a new `ALTER
 
 ### Fiat enum — dual update
 
-When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same value must also be added to the Mini App SDK in `mini-app-sdk/` so Mini Apps consuming the host's fiat type stay in sync. Warn the developer about this dual-update requirement whenever modifying the `Fiat` enum — do not silently update only one side.
+When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same value must also be added to the `Fiat` enum of the published `@nimiq/mini-app-sdk` package (source: `packages/mini-app-sdk/types.ts` on the `nimiq` branch of `nimiq/trust-web3-provider`) so Mini Apps consuming the host's fiat type stay in sync. Warn the developer about this dual-update requirement whenever modifying the `Fiat` enum — do not silently update only one side.
+
+## Android release R8
+
+Release uses `proguard-android-optimize.txt`. With optimization on, R8 folds reads of annotation types that no rule keeps to `null`. Capacitor's `PluginHandle.getPluginAnnotation()` then returns null and `checkPermissions` crashes with an NPE. `android/app/proguard-rules.pro` keeps the Capacitor annotation interfaces; don't remove them. After R8 rule or plugin changes, install a release build and exercise permission flows (push toggle, biometrics, camera). Debug builds are not minified and won't show this.
 
 ## CSS — teleported/portaled elements
 
@@ -130,20 +135,21 @@ The sync/transactions/remote-signer paths emit emoji-prefixed events at every si
 
 | Grep | What it tells you |
 |---|---|
-| `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransaction` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
-| `grep -E "♻️.*replacing"` | `addTransaction` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
+| `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransactions` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
+| `grep -E "♻️.*replacing"` | `addTransactions` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
 | `grep -E "🧹 filterDisplayableTxs dropped"` | Read-side filter (`selectTxs` / `refreshFromDb`) removed an own-HTLC `UserReceipt` already in DB. Lists hashes. |
 | `grep -E "🧹 filterUnseen"` | Recursive HTLC traversal filter dropped reclaim-to-local txs and dup hashes. Tags origin as `outer:<addr>` or `nested:<addr>`. |
 | `grep -E "📦 categorize"` | Per-remote-signer bucket distribution from `categorizeTransactions` (htlcExt/swap/withdraw/staking/unknown counts). Sanity-check whether traversal is finding what you expect. |
-| `grep -E "💸 addUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by `handleUnknownTxs`. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |
+| `grep -E "💸 toUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by remote-signer history sync. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |
 | `grep -E "🔄.*cache rebuilt"` | `getOurRemoteSignerAddresses` rebuilt its in-memory cache. Should fire after every `addRemoteSigner`/`updateRemoteSigner`/`discoverRemoteSignersFromBlockchain` insert. Missing rebuild = stale guard set. |
 | `grep -E "⚠️.*publicKey mismatch"` | Stored remote signer's cosigner publicKey ≠ API response's. Almost certainly cross-network stale state (testnet signer left over after switching to mainnet, or vice versa). |
-| `grep -E "All Transactions from Blockchain"` | `discoverRemoteSignersFromBlockchain` reached the chain query and returned. **Absence after `Verifying remote signers in DB` means the chain query stalled** — a 30s timeout aborts and lets the periodic head listener retry. |
+| `grep -E "All Transactions from Blockchain"` | The local HTLC history scan (`runScanLocalHtlcCreations`, shared by discovery and DB verification) got one history page. **Absence after `Verifying remote signers in DB` means the chain query stalled.** Each page times out after 30s in `waitForLocalHistory`: the history client is reset, the scan logs `getTransactionsByAddress failed` and discovery returns incomplete. |
+| `grep -E "📇 Cosigner"` | Cosigner `owner-wallets` listing, asked once per wallet and network per session (DevModal "Scan wallet history" reuses it). `listed HTLCs` gives the count fed to the stray sweep, which checks each one on chain before draining; `unavailable` means a failure or an old cosigner without the endpoint, retried after 5 min. |
 | `grep -E "🧬 Starting to sync wallets"` | `syncWallets` made it past `verifyRemoteSignersDb`. If missing, sync is wedged earlier and listeners + periodic refresh never started — that's why home appears empty. |
-| `grep -E "📚 Upsert-ing transaction"` | DB write happening. Compare count in fresh session against expected tx count to catch missing ingest. |
+| `grep -E "📚 Upsert-ing"` | DB write happening. Single writes log `Upsert-ing transaction`; history sync batches log `Upsert-ing <n> transactions` with the hashes. Sum both against the expected tx count to catch missing ingest. |
 
 ### Common diagnoses
 
-- **Empty home list after fresh start**: check `🧬 Starting to sync wallets` is logged. If not, `syncWallets` is wedged on `verifyRemoteSignersDb` → `discoverRemoteSignersFromBlockchain`. The 30s timeout in `runDiscoverRemoteSignersFromBlockchain` should unblock; if it keeps tripping, the testnet light client history isn't ready yet — wait or reload.
+- **Empty home list after fresh start**: check `🧬 Starting to sync wallets` is logged. If not, `syncWallets` is still waiting on `verifyRemoteSignersDb` → `discoverRemoteSignersFromBlockchain`. There is no timeout for the whole run. Each history page and each cosigner/chain lookup times out after 30s (`DISCOVER_TIMEOUT_MS`), so a stalled page ends the run as incomplete (`Remote signer discovery incomplete. Delaying reconciliation`) and sync continues. A wallet with many HTLCs can still take minutes, because metadata lookups run one by one. If history pages keep timing out on testnet, the light client history isn't ready yet: wait or reload.
 - **Stale tx duplicated as different titles** (e.g., same hash showing as both "Top-Up" and "Payment"): grep `♻️ replacing` for that hash. The dedup catches the in-memory dupe; the underlying multi-path write is the deeper bug — trace which paths hit the same hash via `🚫`/`💸`/`📦` logs.
-- **Cross-network leftover** (foreign address active in DB after switching networks): grep `⚠️ publicKey mismatch`. The DevModal switch flow purges `remote_signers`, `swap_htlcs`, `swap_quotes`, `transactions`, NAKA — anything else network-scoped (e.g. KV keys) needs to be added there.
+- **Cross-network leftover** (foreign address active in DB after switching networks): grep `⚠️ publicKey mismatch`. The DevModal switch flow purges `remote_signers`, `swap_htlcs`, `swap_quotes`, `transactions` — anything else network-scoped (e.g. KV keys) needs to be added there.

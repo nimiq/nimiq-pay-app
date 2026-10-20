@@ -22,6 +22,15 @@ export interface RemoteSigner {
   end: number
 }
 
+// Set once this database's signers were checked against history for funded HTLCs, or the hold gave up.
+// Logout and restore delete the database, so a restored wallet must check again.
+export const HTLC_HISTORY_CHECKED_KV_KEY = 'htlcHistoryChecked'
+// Set once a clean sweep followed every HTLC's extensions. Separate from the check because upgraded installs
+// are backfilled as checked (no hold) but may still miss a funded extension an older version never stored.
+export const HTLC_EXTENSIONS_WALKED_KV_KEY = 'htlcExtensionsWalked'
+// Persisted so restarts don't restart the hold and block HTLC creation forever.
+export const HTLC_CHECK_HOLD_STARTED_KV_KEY = 'htlcCheckHoldStartedAt'
+
 export enum SQLQuery {
   // Key-Value Store
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
@@ -36,8 +45,9 @@ export enum SQLQuery {
   SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetUserReceiptSenders = `SELECT DISTINCT sender FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\'`, // eslint-disable-line ts/prefer-literal-enum-member
-  GetTransactionByHash = 'SELECT hash, validityStartHeight, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  GetTransactionByHash = 'SELECT hash, validityStartHeight, senderData, recipientData, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
+  // List queries don't select senderData, recipientData or validityStartHeight; re-saving such a row keeps the stored values.
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, (SELECT senderData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT recipientData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT validityStartHeight FROM transactions WHERE hash = ?)))',
   UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
   MergeReplacementTxState = `UPDATE transactions SET
     status = COALESCE((SELECT status FROM transactions WHERE hash = ?), status),
@@ -45,8 +55,10 @@ export enum SQLQuery {
     fee = COALESCE((SELECT fee FROM transactions WHERE hash = ?), fee),
     raw = COALESCE((SELECT raw FROM transactions WHERE hash = ?), raw)
     WHERE hash = ?`,
-  SetPolygonSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
-  SetPolygonTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
+  SetSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
+  SetTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
+  SetTxHidden = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.hidden', json(?)) WHERE hash = ?`,
+  SetSwapTxRefundedByHtlc = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE recipient = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
@@ -54,7 +66,6 @@ export enum SQLQuery {
   ClearTxHistory = 'DELETE FROM transactions',
   AddInvoicedColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN invoiced_json TEXT',
   AddMetaColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN meta_json TEXT',
-  GetIncludedTransactionsByRailAfter = `SELECT hash, timestamp, amount, status FROM transactions WHERE status IN ('included', 'confirmed') AND rail = ? AND timestamp >= ? ORDER BY timestamp`,
   AddSenderDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN senderData TEXT',
   AddRecipientDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN recipientData TEXT',
   AddAssetToTxsTable = 'ALTER TABLE transactions ADD COLUMN asset TEXT',
@@ -136,12 +147,16 @@ export enum SQLQuery {
   AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
   AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
   BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
+  // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
+  BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
   ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
   ClearSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = NULL WHERE address = ?',
   SetSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
+  // A native refund's validity window starts at its own block, so every attempt replaces it.
+  SetNativeSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = ? WHERE address = ?',
   SetSwapHtlcRefundAttempt = 'UPDATE swap_htlcs SET refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
   ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
@@ -160,6 +175,13 @@ export enum SQLQuery {
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
   PurgeSwapQuotes = 'DELETE FROM swap_quotes',
 
+  // Mini App Lightning attempts are kept after swap quote cleanup to prevent duplicate invoice payments.
+  CreateMiniAppLightningPaymentsTable = 'CREATE TABLE IF NOT EXISTS mini_app_lightning_payments (network TEXT NOT NULL, invoice_hash TEXT NOT NULL, origin TEXT NOT NULL, owner TEXT NOT NULL, swap_id TEXT NOT NULL, tx_hash TEXT, status TEXT NOT NULL, PRIMARY KEY (network, invoice_hash))',
+  GetMiniAppLightningPayment = 'SELECT origin, owner, swap_id, tx_hash, status FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ? LIMIT 1',
+  InsertMiniAppLightningPayment = 'INSERT INTO mini_app_lightning_payments (network, invoice_hash, origin, owner, swap_id, status) VALUES (?, ?, ?, ?, ?, \'pending\')',
+  SetMiniAppLightningPaymentStatus = 'UPDATE mini_app_lightning_payments SET tx_hash = COALESCE(tx_hash, ?), status = ? WHERE network = ? AND invoice_hash = ?',
+  DeleteMiniAppLightningPayment = 'DELETE FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ?',
+
   // Polygon payment attempts
   CreatePolygonPaymentAttemptsTable = 'CREATE TABLE IF NOT EXISTS polygon_payment_attempts (network TEXT NOT NULL, sender TEXT NOT NULL, request_json TEXT NOT NULL, title TEXT NOT NULL, relay_request_json TEXT NOT NULL, relay_url TEXT NOT NULL, signature TEXT NOT NULL, fee INTEGER NOT NULL, start_block INTEGER NOT NULL, created_at INTEGER NOT NULL, relay_hash TEXT, PRIMARY KEY (network, sender))',
   InsertPolygonPaymentAttempt = 'INSERT INTO polygon_payment_attempts (network, sender, request_json, title, relay_request_json, relay_url, signature, fee, start_block, created_at, relay_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -168,14 +190,8 @@ export enum SQLQuery {
   DeletePolygonPaymentAttempt = 'DELETE FROM polygon_payment_attempts WHERE network = ? AND sender = ?',
   PurgePolygonPaymentAttempts = 'DELETE FROM polygon_payment_attempts',
 
-  // NAKA
+  // Legacy: NAKA was removed, but migrations are additive-only, so the table stays.
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
-  InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, JSON(?))',
-  // GetNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE sourceId = ? LIMIT 1',
-  // GetActiveNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE statusId = "Active" LIMIT 1',
-  GetAllNakaCards = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards',
-  DeleteNakaCard = 'DELETE FROM naka_cards WHERE sourceId = ?',
-  PurgeNakaCards = 'DELETE FROM naka_cards',
 }
 
 // History refreshes chain evidence without replacing richer payment metadata.
@@ -275,6 +291,18 @@ export const migrations: Migration[] = [
     toVersion: 11,
     statements: [
       SQLQuery.CreatePolygonPaymentAttemptsTable,
+    ],
+  },
+  {
+    toVersion: 12,
+    statements: [
+      SQLQuery.CreateMiniAppLightningPaymentsTable,
+    ],
+  },
+  {
+    toVersion: 13,
+    statements: [
+      SQLQuery.BackfillHtlcHistoryChecked,
     ],
   },
 ]

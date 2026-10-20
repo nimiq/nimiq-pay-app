@@ -4,9 +4,10 @@ import { formatEther } from 'ethers'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { getFaviconUrl } from '@/lib/site-metadata'
-import { Crypto } from '@/stores/app'
+import { Crypto, DECIMALS } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS } from '@/stores/nimiq-network'
@@ -15,6 +16,20 @@ const logger = useLogger('mini-app-confirmation')
 
 function resolveMiniAppLogo(url: string): string {
   return useMiniApps().iconForUrl(url) ?? getFaviconUrl(url)
+}
+
+export async function selectLightningAsset(app: { url: string, name: string, description?: string }): Promise<Asset | undefined> {
+  const result = await ExtendedDialog.singleSelect({
+    title: 'Pay Bitcoin Lightning',
+    message: `${app.name} requests a Lightning payment${app.description ? ` for ${app.description}` : ''}. Choose what to spend.`,
+    options: [
+      { label: 'NIM', value: Asset.NIM },
+      { label: 'USDT on Polygon', value: Asset.USDT },
+    ],
+    okButtonTitle: 'Continue',
+    cancelButtonTitle: 'Cancel',
+  })
+  return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
 
 /**
@@ -119,6 +134,54 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         headerLogoCornerRadius: -1,
         rows,
         confirmButtonTitle: 'Confirm',
+        cancelButtonTitle: 'Reject',
+      })
+      return result.confirmed
+    }
+
+    case 'lightning-access': {
+      const appName = request.name || new URL(request.url).hostname
+      const result = await ExtendedDialog.sheet({
+        title: 'Review Lightning payment',
+        subtitle: `${appName} wants to prepare payments and check Lightning invoice history for this wallet during this session.`,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: request.description ? [{ title: 'Invoice', value: request.description }] : [],
+        confirmButtonTitle: 'Continue',
+        cancelButtonTitle: 'Cancel',
+      })
+      return result.confirmed
+    }
+
+    case 'lightning-payment': {
+      const appName = request.name || new URL(request.url).hostname
+      const { description, btcAmount, asset, amount, usdtFeeAllowance, fees } = request.data
+      const formatAmount = (value: number, maxDigits: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: maxDigits }).format(value)
+      const rows: { title: string, value?: string }[] = [
+        { title: 'Lightning payment', value: description || 'Bitcoin merchant' },
+        { title: 'Merchant receives', value: `${formatAmount(btcAmount, 11)} BTC` },
+        { title: 'You spend', value: `${formatAmount((amount + usdtFeeAllowance) / 10 ** DECIMALS[asset], DECIMALS[asset])} ${asset}` },
+      ]
+      if (asset === Asset.USDT)
+        rows.push({ title: 'USDT fee allowance', value: `${formatAmount(usdtFeeAllowance / 10 ** DECIMALS[Crypto.USDT], DECIMALS[Crypto.USDT])} USDT` })
+      for (const fee of fees) {
+        if (fee.asset !== Crypto.NIM && fee.asset !== Crypto.BTC && fee.asset !== Crypto.USDT && fee.asset !== 'USD')
+          continue
+        if (asset === Asset.USDT && fee.asset === Crypto.USDT && !fee.included)
+          continue
+        const amount = fee.asset === 'USD' ? fee.amount.toFixed(2) : (fee.amount / 10 ** DECIMALS[fee.asset]).toFixed(DECIMALS[fee.asset])
+        rows.push({
+          title: `${fee.source === 'SERVICE' ? 'Service' : 'Network'} fee${fee.included ? ' (included)' : ''}`,
+          value: `${amount} ${fee.asset}`,
+        })
+      }
+      const result = await ExtendedDialog.sheet({
+        title: 'Pay Bitcoin Lightning',
+        subtitle: `${appName} requests this payment:`,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows,
+        confirmButtonTitle: `Pay with ${asset}`,
         cancelButtonTitle: 'Reject',
       })
       return result.confirmed

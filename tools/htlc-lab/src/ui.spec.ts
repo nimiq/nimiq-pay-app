@@ -51,7 +51,7 @@ function setup() {
 describe('operator dashboard', () => {
   it('shows every scenario and calculates owner reserves including reused drained funds', async () => {
     setup()
-    expect(wrapper.findAll('.scenario-tab')).toHaveLength(4)
+    expect(wrapper.findAll('.scenario-tab')).toHaveLength(5)
     await wrapper.get('#fee').setValue('5')
     expect(wrapper.get('.funding-summary').text()).toContain('0.0201 NIM')
     await wrapper.findAll('.scenario-tab')[1].trigger('click')
@@ -64,6 +64,8 @@ describe('operator dashboard', () => {
     expect((wrapper.get('#count').element as HTMLInputElement).value).toBe('250')
     await wrapper.get('#count').setValue('1001')
     expect(wrapper.get('.funding-summary').text()).toContain('1–1,000')
+    await wrapper.findAll('.scenario-tab')[4].trigger('click')
+    expect(wrapper.get('.funding-summary').text()).toContain('0.02005 NIM')
   })
 
   it('prevents empty reports and verdicts before a run', async () => {

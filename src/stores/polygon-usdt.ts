@@ -3,7 +3,7 @@ import type { Log, TransactionReceipt } from 'ethers'
 import type { HDNodeWallet } from 'ethers/wallet'
 import type { PolygonTransferFeeSnapshot, PolygonTransferQuote, RelayServerInfo } from '@/lib/polygon/types'
 import type { SavedAddress } from '@/stores/app'
-import type { AsyncResult } from '@/types'
+import type { Result } from '@/types'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, MerchantTransaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { Contract, getAddress, Interface, isError, JsonRpcProvider, Signature, Transaction } from 'ethers'
@@ -24,7 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
-import { sleep } from '@/lib/utils'
+import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -601,13 +601,17 @@ export function buildPolygonTransferQuoteFromSnapshot(input: BuildPolygonTransfe
 
 export async function resolvePolygonTransferQuote(input: ResolvePolygonTransferQuoteInput): Promise<PolygonTransferQuote> {
   const now = input.now ?? Date.now()
-  const quote = input.providedQuote
-    && matchesPolygonTransferQuote(input.providedQuote, input.request)
-    && input.providedQuote.expiresAt > now
+  const approvedQuote = input.providedQuote && matchesPolygonTransferQuote(input.providedQuote, input.request)
     ? input.providedQuote
+    : undefined
+  const quote = approvedQuote && approvedQuote.expiresAt > now
+    ? approvedQuote
     : await input.buildFreshQuote()
 
   assertQuoteBalance(quote.amount, BigInt(quote.fee), input.balance)
+  // The user confirmed the approved quote's total; never sign a higher fee they did not see.
+  if (approvedQuote && quote.fee > approvedQuote.fee)
+    throw new Error(i18n.t('Polygon fee changed; review the payment again'))
   return quote
 }
 
@@ -731,6 +735,9 @@ async function getPoolAddress(client: PolygonUsdtClient) {
       provider: client.provider,
       registryAddress: polygonUsdtConfig.transferContract,
       tokenAddress: polygonUsdtConfig.tokenContract,
+    }).catch((error) => {
+      poolAddressPromise = null
+      throw error
     })
   }
 
@@ -821,11 +828,14 @@ async function getTokenQuotePerBaseUnit(client: PolygonUsdtClient) {
   return tokenQuotePerBaseUnit
 }
 
-async function getRequiredRelayGas(client: PolygonUsdtClient) {
+export async function getRequiredRelayGas(client: PolygonUsdtClient) {
   if (!requiredRelayGasPromise) {
     requiredRelayGasPromise = client.transferContract.getRequiredRelayGas(
       client.transferContract.interface.getFunction('transferWithApproval')!.selector,
-    ).then(result => BigInt(result.toString()))
+    ).then(result => BigInt(result.toString())).catch((error) => {
+      requiredRelayGasPromise = null
+      throw error
+    })
   }
 
   return requiredRelayGasPromise
@@ -835,6 +845,9 @@ async function getAcceptanceBudget(client: PolygonUsdtClient) {
   if (!acceptanceBudgetPromise) {
     acceptanceBudgetPromise = client.transferContract.getGasAndDataLimits().then((limits) => {
       return BigInt(((limits.acceptanceBudget ?? limits[0]) as bigint).toString())
+    }).catch((error) => {
+      acceptanceBudgetPromise = null
+      throw error
     })
   }
 
@@ -844,7 +857,10 @@ async function getAcceptanceBudget(client: PolygonUsdtClient) {
 async function getCalldataGasCost(client: PolygonUsdtClient) {
   if (!calldataGasCostPromise) {
     const relayHub = new Contract(polygonUsdtConfig.openGsnRelayHubContract, POLYGON_RELAY_HUB_ABI, client.provider)
-    calldataGasCostPromise = relayHub.calldataGasCost(1220).then((value: bigint) => BigInt(value.toString()))
+    calldataGasCostPromise = relayHub.calldataGasCost(1220).then((value: bigint) => BigInt(value.toString())).catch((error: unknown) => {
+      calldataGasCostPromise = null
+      throw error
+    })
   }
 
   return calldataGasCostPromise
@@ -968,7 +984,10 @@ async function getRequiredHtlcRelayGas(client: PolygonUsdtClient) {
   if (!requiredHtlcRelayGasPromise) {
     requiredHtlcRelayGasPromise = client.htlcContract.getRequiredRelayGas(
       client.htlcContract.interface.getFunction('openWithApproval')!.selector,
-    ).then(result => BigInt(result.toString()))
+    ).then(result => BigInt(result.toString())).catch((error) => {
+      requiredHtlcRelayGasPromise = null
+      throw error
+    })
   }
 
   return requiredHtlcRelayGasPromise
@@ -978,6 +997,9 @@ async function getHtlcAcceptanceBudget(client: PolygonUsdtClient) {
   if (!htlcAcceptanceBudgetPromise) {
     htlcAcceptanceBudgetPromise = client.htlcContract.getGasAndDataLimits().then((limits) => {
       return BigInt(((limits.acceptanceBudget ?? limits[0]) as bigint).toString())
+    }).catch((error) => {
+      htlcAcceptanceBudgetPromise = null
+      throw error
     })
   }
 
@@ -1484,7 +1506,6 @@ export function buildOutgoingTransaction(
       || request.rail === Rail.GoCrypto
       || request.rail === Rail.BitcoinLightning
       || request.rail === Rail.NimiqWallet
-      || request.rail === Rail.NakaCard
       || request.rail === Rail.Unknown
       ? request.rail
       : Rail.Unknown
@@ -1527,11 +1548,6 @@ export function buildOutgoingTransaction(
         return {
           ...merchantBase,
           rail: Rail.NimiqWallet,
-        }
-      case Rail.NakaCard:
-        return {
-          ...merchantBase,
-          rail: Rail.NakaCard,
         }
       case Rail.Unknown:
       default:
@@ -1597,17 +1613,8 @@ export async function persistHistoryTransaction(group: TransferGroup, address: s
     message: '',
   } satisfies UserReceiptTransaction
 
-  await transactionsStore.addReceiptTransaction(receipt)
+  await transactionsStore.addReceiptTransactions([receipt])
   await options?.onIncomingPersisted?.(receipt)
-}
-
-function parseStoredTransaction(tx: ExternalTransaction | null) {
-  if (!tx)
-    return null
-
-  tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
-  tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
-  return tx
 }
 
 // Dynamic import to avoid a circular dep between useNotifications and this store.
@@ -1651,12 +1658,19 @@ async function fetchRangesParallel(
 }
 
 export const usePolygonUsdt = defineStore('polygon-usdt', () => {
-  const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
-  // Invalidate the cached client when the RPC URL changes from PostHog
+  const { polygonRpcUrl, isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
+  // Invalidate the cached client and its lookups when the RPC URL changes from PostHog;
+  // a lookup still pending on the old provider must not block quotes on the new one
   watch(polygonRpcUrl, (newUrl) => {
     if (newUrl !== resolvedRpcUrl) {
       resolvedRpcUrl = newUrl
       clientPromise = null
+      poolAddressPromise = null
+      requiredRelayGasPromise = null
+      acceptanceBudgetPromise = null
+      calldataGasCostPromise = null
+      requiredHtlcRelayGasPromise = null
+      htlcAcceptanceBudgetPromise = null
     }
   }, { immediate: true })
 
@@ -1980,7 +1994,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (!('preimage' in swapResult) || !swapResult.preimage)
         return
 
-      const updatedTx = await transactionsStore.setPolygonSwapPreimage(hash, swapResult.preimage)
+      const updatedTx = await transactionsStore.setSwapPreimage(hash, swapResult.preimage)
       // A relay replacement may have renamed this hash while Fastspot was answering.
       if (!updatedTx)
         return
@@ -2186,6 +2200,9 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
       }
 
+      if (isUsdtMaintenanceActive.value)
+        return { outcome: 'rejected', data: undefined, error: usdtMaintenanceNotice.value }
+
       const quote = await resolvePolygonTransferQuote({
         request,
         balance: balance.value,
@@ -2199,6 +2216,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       try {
         outcome = await relayTransaction(execution, {
           beforeRelay: async () => {
+            if (isUsdtMaintenanceActive.value)
+              throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
             await run(SQLQuery.InsertPolygonPaymentAttempt, [
               network,
               sender,
@@ -2365,21 +2384,36 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   async function sendSwapPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
-  ): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
+    options: { onSubmitted?: (hash: string) => Promise<void>, onFundingUncertain?: (hash: string) => Promise<void>, expectedSender?: string, maxFee?: number } = {},
+  ): Promise<Result<{ tx: TransactionSentByUser, serialized: string }, string> & { rejected?: boolean }> {
+    if (isUsdtMaintenanceActive.value)
+      return { data: undefined, error: usdtMaintenanceNotice.value, rejected: true }
+
+    const swapKey = request.paymentRef!
+    if (activeSwapPayments.has(swapKey))
+      return { data: undefined, error: i18n.t('A transaction is already in progress') }
+
     const { data: wallet, error } = useLocalWallet().getEthWallet()
     if (error || !wallet)
-      return { data: undefined, error: error || i18n.t('No account has been found') }
+      return { data: undefined, error: error || i18n.t('No account has been found'), rejected: true }
+    if (options.expectedSender && getAddress(wallet.address) !== getAddress(options.expectedSender))
+      return { data: undefined, error: i18n.t('Wallet changed before sending'), rejected: true }
 
     await init()
     if (consensus.value !== 'established')
-      return { data: undefined, error: i18n.t('Polygon is not ready yet') }
+      return { data: undefined, error: i18n.t('Polygon is not ready yet'), rejected: !activeSwapPayments.has(swapKey) }
 
-    const swapKey = request.paymentRef!
     if (activeSwapPayments.has(swapKey))
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
     activeSwapPayments.add(swapKey)
 
     const swapStartedAt = Date.now()
+    let fundingPossible = false
+    let fundingRejected = false
+    const ensureApprovedSender = () => {
+      if (options.expectedSender && useLocalWallet().getEthAddress().data !== options.expectedSender)
+        throw new Error(i18n.t('Wallet changed before sending'))
+    }
 
     try {
       // Confirm swap with Fastspot
@@ -2388,6 +2422,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       let swap: import('@nimiq/fastspot-api-v1').Swap
       try {
+        if (isUsdtMaintenanceActive.value)
+          throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
         swap = await fastspotV1.confirmSwap(
           { id: request.paymentRef! } as import('@nimiq/fastspot-api-v1').PreSwap,
           { asset: fastspotV1.SwapAsset.BTC_LN },
@@ -2405,16 +2441,19 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const { parseBitcoinLightningInvoice } = await import('@/composables/useBitcoinLightning')
       const decoded = await parseBitcoinLightningInvoice(request.recipient)
       if (swap.hash !== decoded.payment_hash)
-        return { data: undefined, error: i18n.t('Invalid swap hash') }
+        return { data: undefined, error: i18n.t('Invalid swap hash'), rejected: true }
 
       // Get USDT_MATIC contract from swap
       const usdtContract = swap.contracts[fastspotV1.SwapAsset.USDT_MATIC]
       if (!usdtContract)
-        return { data: undefined, error: i18n.t('No USDT HTLC found in swap') }
+        return { data: undefined, error: i18n.t('No USDT HTLC found in swap'), rejected: true }
 
       const htlcDetails = usdtContract.htlc as import('@nimiq/fastspot-api-v1').Erc20HtlcDetails
 
       const feeSnapshot = await primeHtlcFee()
+      if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
+        throw new Error(i18n.t('Polygon fee changed; review the payment again'))
+      ensureApprovedSender()
 
       // Build and execute HTLC relay transaction
       const execution = await buildHtlcRelayExecution(
@@ -2426,6 +2465,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         usdtContract.timeout,
         feeSnapshot,
       )
+      ensureApprovedSender()
 
       const provisionalSwapHtlcKey = htlcDetails.address
       let createdProvisionalRow = false
@@ -2434,15 +2474,22 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       try {
         receipt = await relayTransaction(execution, {
           beforeRelay: async () => {
+            if (isUsdtMaintenanceActive.value)
+              throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
             const existingRow = await query<SwapHtlc | null>(
               SQLQuery.GetSwapHtlcByAddress,
               [provisionalSwapHtlcKey, provisionalSwapHtlcKey],
               { single: true },
             )
-            if (existingRow?.tx_hash)
+            if (existingRow?.tx_hash) {
+              fundingPossible = true
               throw new Error(i18n.t('Polygon swap transaction is already pending'))
-            if (existingRow)
+            }
+            if (existingRow) {
+              fundingPossible = true
+              ensureApprovedSender()
               return
+            }
 
             await run(
               SQLQuery.InsertSwapHtlcProvisional,
@@ -2456,6 +2503,15 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
               ],
             )
             createdProvisionalRow = true
+            try {
+              ensureApprovedSender()
+            }
+            catch (error) {
+              await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
+              createdProvisionalRow = false
+              throw error
+            }
+            fundingPossible = true
           },
           beforeBroadcast: async (relayHash) => {
             tx = buildOutgoingTransaction(
@@ -2498,12 +2554,22 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       tx = { ...tx, hash: receipt.hash }
 
       if (receipt.status === 'rejected') {
+        fundingRejected = true
         await useTransactions().replaceTransaction({ ...tx, status: 'failed' })
         if (createdProvisionalRow)
           await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
         else
           await run(SQLQuery.ClearSwapHtlcTxHash, [provisionalSwapHtlcKey])
         throw new Error(i18n.t('Polygon swap transaction failed'))
+      }
+
+      if (receipt.status === 'pending') {
+        try {
+          await options.onFundingUncertain?.(receipt.hash)
+        }
+        catch (error) {
+          logger.error('Failed to report uncertain Polygon swap funding', error, { hash: receipt.hash })
+        }
       }
 
       // Signal funding to Fastspot
@@ -2517,8 +2583,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       // State enrichment is best-effort after the relay hash and recovery data exist.
       tx = await enrichPersistedTransaction(tx, receipt.hash, 'swap transaction')
-      if (tx.status === 'failed')
+      if (tx.status === 'failed') {
+        fundingRejected = true
         throw new Error(i18n.t('Polygon swap transaction failed'))
+      }
+
+      if (receipt.status === 'mined')
+        await options.onSubmitted?.(receipt.hash)
 
       // Poll for preimage until the HTLC expires
       const maxPollMs = Math.max((usdtContract.timeout * 1000) - Date.now(), 60_000)
@@ -2548,7 +2619,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       })
 
       // Update transaction with secret
-      const persistedTx = await useTransactions().setPolygonSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
+      const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
       const confirmedTx = persistedTx ?? { ...tx, meta: { ...tx.meta, secret }, status: 'confirmed' as const }
 
       trackSwapCompleted({
@@ -2582,6 +2653,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       return {
         data: undefined,
         error: error instanceof Error ? error.message : i18n.t('Polygon swap payment failed'),
+        rejected: !fundingPossible || fundingRejected || error instanceof PolygonRelayRejectedError,
       }
     }
     finally {

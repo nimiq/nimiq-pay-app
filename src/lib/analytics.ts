@@ -3,7 +3,7 @@ import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
+import { reportException, useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
 import { useApp } from '@/stores/app'
@@ -23,11 +23,7 @@ function capture(event: string, properties: object): void {
 // filterable via the isDev person-property set in identifyUser().
 export function reportCriticalError(error: unknown, context?: Record<string, unknown>): void {
   const err = error instanceof Error ? error : new Error(String(error))
-  void Posthog.captureException({
-    message: err.message,
-    name: err.name,
-    properties: { ...context, stack: err.stack },
-  })
+  reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
 export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'
@@ -52,8 +48,6 @@ export type FeatureName
     | 'referral'
     | 'mini_apps'
     | 'verify_phone'
-    | 'naka_onboarding'
-    | 'naka_management'
 
 export interface FeatureOpenedProperties {
   featureName: FeatureName
@@ -218,6 +212,44 @@ export function trackConsensusEstablished(props: { duration_ms: number, network:
 
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
   capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+}
+
+// Why handleFunds (or the send right after it) left local funds unsecured.
+export type FundsBlockReason
+  = | 'pending_tx'
+    | 'remote_balance_error'
+    | 'history_check_hold'
+    | 'history_check_error'
+    | 'deposit_busy'
+    | 'deposit_failed'
+    | 'nodes_not_synced'
+    | 'htlc_expired'
+    | 'liquidation_busy'
+    | 'liquidation_failed'
+    | 'htlc_not_ready'
+    | 'activation_failed'
+
+export function trackFundsBlocked(reason: FundsBlockReason, props: Record<string, unknown> = {}): void {
+  capture('funds_blocked', { reason, ...props })
+}
+
+export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
+  duration_ms: number
+  last_block_reason?: FundsBlockReason
+  is_htlc_active: boolean
+  is_remote_ok: boolean
+  is_processing_remote: boolean
+  has_local_balance: boolean
+  has_remote_balance: boolean
+  htlc_history_checked: boolean
+  consensus: string
+  pending_htlc_creation_hashes: string[]
+}): void {
+  capture(`funds_processing_${state}`, props)
+}
+
+export function trackSyncSlow(props: { duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
+  capture('sync_slow', { stage: 'remote_signer_verification', ...props })
 }
 
 export type Web3RequestType

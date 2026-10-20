@@ -64,3 +64,6 @@ maestro-evidence/
 /maestro-reports/
 maestro-triage/
 nimiq-pay-tests/**/.mutants/
+
+# Netlify CLI local state
+.netlify/

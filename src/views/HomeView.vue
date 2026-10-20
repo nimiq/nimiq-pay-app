@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
-import { computedAsync, useElementVisibility, useEventListener } from '@vueuse/core'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
+import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import BackupNotification from '@/components/BackupNotification.vue'
-import MapIcon from '@/components/icons/crypto-map.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import LiveChat from '@/components/LiveChat.vue'
@@ -23,17 +21,14 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { promiseWithTimeout, sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
-import { useKyc } from '@/stores/kyc'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
-import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
@@ -49,10 +44,9 @@ const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
-const { hasCard: hasNakaCard } = storeToRefs(useNaka())
-const { isNakaAvailable } = storeToRefs(useFeatureFlags())
-const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
+const { isUsdtMaintenanceActive, isCryptocityPointsEnabled } = storeToRefs(useFeatureFlags())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
+const { htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -63,6 +57,24 @@ const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && !isMockEnabl
 // Ionic modals (geometric intersection, not occlusion) and the native InAppBrowser
 // webview (separate from the Vue tree).
 const homeRoot = ref<HTMLElement | null>(null)
+// The chat badge sits outside IonHeader so it can stay above the chat backdrop (Ionic header/toolbar
+// have their own stacking contexts). Align it to the main toolbar, which banners above it push down.
+// Offsets, not bounding rects: page transitions transform ion-page while mounting.
+const headerRef = ref()
+const toolbarRef = ref()
+const chatBadgeRef = ref()
+const chatBadgeTop = ref(0)
+const chatBadgeBottom = ref(0)
+useResizeObserver([headerRef, chatBadgeRef], () => {
+  const toolbar: HTMLElement | undefined = toolbarRef.value?.$el
+  const badge: HTMLElement | undefined = chatBadgeRef.value?.$el
+  if (!toolbar || !badge)
+    return
+  // iOS pads the first header toolbar with the safe area; center within the content below it
+  const paddingTop = Number.parseFloat(getComputedStyle(toolbar).paddingTop) || 0
+  chatBadgeTop.value = toolbar.offsetTop + paddingTop + (toolbar.offsetHeight - paddingTop - badge.offsetHeight) / 2
+  chatBadgeBottom.value = chatBadgeTop.value + badge.offsetHeight
+})
 const homeElementVisible = useElementVisibility(homeRoot)
 const openModalCount = ref(0)
 useEventListener(document, 'ionModalDidPresent', () => {
@@ -176,14 +188,7 @@ async function handleRefresh(event: CustomEvent) {
   event.detail.complete()
 }
 
-watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus, isNakaAvailable, isNimiqAsset], () => {
-  const nakaCardActivationNotification = {
-    id: 'activate-naka-card',
-    get title() { return i18n.t('Tap to pay with NAKA!') },
-    get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
-    action: () => initializeFlow(FlowName.NakaOnboarding, { analyticsSource: 'home_notification' }),
-  }
-
+watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
@@ -203,19 +208,12 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
-  // Remove notification if user already has a Naka card
-  if (hasNakaCard.value || !isNimiqAsset.value) {
-    removeLocalNotification(nakaCardActivationNotification.id, false)
-  }
-
   if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
   else if (!referralCode.value && !phoneNumberVerified.value && isCampaignActive.value)
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && isNimiqAsset.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled && isNakaAvailable.value)
-    addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
 watch(() => localNotifications.value.length, (newValue, oldValue) => {
@@ -237,6 +235,22 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, rem
   })
 }, { immediate: true })
 
+// Explain why new funds wait while a fresh database checks for older HTLCs.
+let isHtlcHistoryCheckOpen = false
+watch(htlcCheckHoldStartedAt, async (holdStartedAt) => {
+  if (holdStartedAt === undefined || htlcHistoryChecked.value || isHtlcHistoryCheckOpen)
+    return
+  isHtlcHistoryCheckOpen = true
+  const modal = await showModal(Modal.HtlcHistoryCheck, { isOnTop: true, isSmall: true, canDismiss: false }).catch(() => undefined)
+  if (!modal) {
+    isHtlcHistoryCheckOpen = false
+    return
+  }
+  modal.onDidDismiss().then(() => {
+    isHtlcHistoryCheckOpen = false
+  })
+}, { immediate: true })
+
 onMounted(() => {
   scrollToFirstNotification()
   useLiveChat().initFromBackground()
@@ -245,15 +259,15 @@ onMounted(() => {
 
 <template>
   <IonPage ref="homeRoot" class="bg-[var(--colors-gray)]">
-    <IonHeader class="ion-no-border">
+    <IonHeader ref="headerRef" class="ion-no-border">
       <BackupNotification v-if="isRecoveryWordsShown" />
-      <IonToolbar class="px-2">
+      <IonToolbar ref="toolbarRef" class="px-2">
         <IonButtons slot="start">
           <IonButton aria-label="Open menu" @click="showModal(Modal.Menu, { isSmall: true })">
             <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>
         </IonButtons>
-        <IonButtons slot="end">
+        <IonButtons v-if="isCryptocityPointsEnabled" slot="end">
           <IonButton
             class="text-base normal-case"
             aria-label="Earn Points"
@@ -265,10 +279,6 @@ onMounted(() => {
             <span v-if="phoneNumberVerified" class="ml-2">
               {{ (pointsBalance / 1e5).toLocaleString() }}
             </span>
-          </IonButton>
-
-          <IonButton aria-label="Crypto Map" fill="clear" @click="showModal(Modal.Map, { showHandle: true })">
-            <MapIcon class="h-6 opacity-40" />
           </IonButton>
         </IonButtons>
       </IonToolbar>
@@ -285,7 +295,7 @@ onMounted(() => {
           <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openTopUp">
             {{ $t('Top Up') }}
           </button>
-          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openWithdraw">
+          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space disabled:opacity-50" :disabled="!isNimiqAsset && isUsdtMaintenanceActive" @click="openWithdraw">
             {{ $t('Withdraw') }}
           </button>
         </div>
@@ -352,8 +362,8 @@ onMounted(() => {
 
     <!-- Live Chat -->
     <IonBackdrop v-if="liveChatEnabled && liveChatShown" class="bg-black opacity-[0.32] z-20" @ion-backdrop-tap="liveChatShown = false" />
-    <LiveChatBadge v-if="liveChatEnabled" class="absolute top-[10px] left-[72px] z-20" />
-    <LiveChat />
+    <LiveChatBadge v-if="liveChatEnabled" ref="chatBadgeRef" class="absolute left-[72px] z-20" :style="{ top: `${chatBadgeTop}px` }" />
+    <LiveChat :style="{ '--top-margin': `${chatBadgeBottom}px` }" />
   </IonPage>
 </template>
 

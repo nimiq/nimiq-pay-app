@@ -11,6 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 const handleRequest = vi.fn()
 let script: string
 let closeNative: () => void
+let emitFullscreenChange: (enabled: boolean) => void
 
 // Exercise the actual injected bundle and RPC transport used by old SDK consumers.
 beforeAll(() => {
@@ -32,6 +33,7 @@ beforeEach(() => {
     },
   })
   closeNative = () => native.$close()
+  emitFullscreenChange = enabled => (native as any).fullscreenChanged.asEvent(enabled)
   runInNewContext(script, {
     window,
     sessionStorage,
@@ -44,6 +46,41 @@ beforeEach(() => {
     crypto,
     setTimeout,
     clearTimeout,
+  })
+})
+
+describe('Mini App fullscreen API', () => {
+  it('requests entry, exit, and current state through the host bridge', async () => {
+    handleRequest.mockImplementation(async ({ name }: { name: string }) => name === 'getFullscreen')
+
+    await window.nimiqPay!.requestFullscreen()
+    await window.nimiqPay!.exitFullscreen()
+    await expect(window.nimiqPay!.getFullscreen()).resolves.toBe(true)
+    expect(handleRequest.mock.calls.map(([request]) => request)).toEqual([
+      { network: 'host', name: 'setFullscreen', params: { enabled: true } },
+      { network: 'host', name: 'setFullscreen', params: { enabled: false } },
+      { network: 'host', name: 'getFullscreen' },
+    ])
+  })
+
+  it('notifies Mini Apps of native exit until unsubscribed', async () => {
+    const listener = vi.fn()
+    const unsubscribe = window.nimiqPay!.onFullscreenChange(listener)
+
+    emitFullscreenChange(false)
+    await Promise.resolve()
+    expect(listener).toHaveBeenCalledWith(false)
+    const callsBeforeUnsubscribe = listener.mock.calls.length
+
+    unsubscribe()
+    emitFullscreenChange(true)
+    await Promise.resolve()
+    expect(listener).toHaveBeenCalledTimes(callsBeforeUnsubscribe)
+  })
+
+  it('propagates native fullscreen errors', async () => {
+    handleRequest.mockRejectedValueOnce(new Error('WebView is hidden'))
+    await expect(window.nimiqPay!.requestFullscreen()).rejects.toThrow('WebView is hidden')
   })
 })
 
@@ -89,6 +126,21 @@ describe('injected provider errors', () => {
     handleRequest.mockRejectedValue(error)
 
     await expect(window.nimiq!.sign('hello')).rejects.toEqual(error)
+  })
+
+  it('preserves the reconciliation hash without resolving an uncertain Nimiq payment', async () => {
+    const error = {
+      code: -32001,
+      type: 'TRANSACTION_OUTCOME_UNKNOWN',
+      message: 'The transaction outcome is unknown. It may have been submitted; do not retry.',
+      data: { hash: 'staged-hash' },
+    }
+    handleRequest.mockRejectedValue(error)
+
+    await expect(window.nimiq!.request({
+      method: 'sendBasicTransactionWithData',
+      params: { recipient: 'NQ22 RECIPIENT', value: 100000, fee: 0, data: 'Payment reference' },
+    })).rejects.toEqual(error)
   })
 
   it('keeps the Ethereum rejection payload unchanged', async () => {

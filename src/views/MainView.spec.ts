@@ -1,5 +1,5 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, ref } from 'vue'
 import { Asset } from '@/lib/assets'
 
@@ -24,24 +24,35 @@ const hasPendingHtlcCreation = computed(() => pendingHtlcCreationTransactions.va
 ))
 const htlcCanBeExtended = ref(false)
 const blocksUntilNextMacroBlock = ref(1)
+const htlcHistoryChecked = ref<boolean | undefined>(true)
+const htlcCheckHoldStartedAt = ref<number | undefined>()
+const lastFundsBlockReason = ref()
 const isProcessingRemote = ref(false)
 const isSyncingWallets = ref(false)
 const isConsensusNeeded = ref(false)
 const isScannerActive = ref(false)
 const localBalance = ref(0)
 const htlcThreshold = ref(0)
-const kycSdkStatus = ref('idle')
+const isUsdtMaintenanceActive = ref(false)
+const usdtMaintenanceNotice = ref('USDT maintenance notice')
 
 const updatePointsBalance = vi.fn()
 const updateTasks = vi.fn()
 const updatePointsStatus = vi.fn()
-const updateNakaUser = vi.fn()
 const initNotifications = vi.fn()
 const syncWallets = vi.fn()
-const checkKycInBackground = vi.fn()
+const loggerError = vi.fn()
 const routerReplace = vi.fn()
 const libState = vi.hoisted(() => ({
   isTestnet: false,
+}))
+const capture = vi.hoisted(() => vi.fn())
+
+enableAutoUnmount(afterEach)
+afterEach(() => vi.useRealTimers())
+
+vi.mock('@capawesome/capacitor-posthog', () => ({
+  Posthog: { capture },
 }))
 
 vi.mock('@capacitor/app', () => ({
@@ -92,12 +103,6 @@ vi.mock('@vueuse/core', async () => {
     }),
   }
 })
-
-vi.mock('capacitor-sumsub-mobile-sdk', () => ({
-  SumsubSdkStatus: {
-    PENDING: 'pending',
-  },
-}))
 
 vi.mock('pinia', () => ({
   storeToRefs: <T>(store: T) => store,
@@ -159,7 +164,7 @@ vi.mock('@/components/TheHomeFooter.vue', () => ({
 
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
-    error: vi.fn(),
+    error: loggerError,
     log: vi.fn(),
   }),
 }))
@@ -199,17 +204,14 @@ vi.mock('@/stores/app', () => ({
   }),
 }))
 
+vi.mock('@/stores/feature-flags', () => ({
+  useFeatureFlags: () => ({ isUsdtMaintenanceActive, usdtMaintenanceNotice }),
+}))
+
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({
     locked,
     dbExists,
-  }),
-}))
-
-vi.mock('@/stores/kyc', () => ({
-  useKyc: () => ({
-    sdkStatus: kycSdkStatus,
-    checkKycInBackground,
   }),
 }))
 
@@ -225,12 +227,6 @@ vi.mock('@/stores/locks', () => ({
     isSyncingWallets,
     isConsensusNeeded,
     isScannerActive,
-  }),
-}))
-
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({
-    updateUser: updateNakaUser,
   }),
 }))
 
@@ -271,6 +267,10 @@ vi.mock('@/stores/sync', () => ({
     hasPendingHtlcCreation,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,
+    htlcHistoryChecked,
+    htlcCheckHoldStartedAt,
+    pendingHtlcCreationTransactions,
+    lastFundsBlockReason,
     syncWallets,
   }),
 }))
@@ -309,30 +309,36 @@ describe('mainView', () => {
     pendingHtlcCreationTransactions.value = []
     htlcCanBeExtended.value = false
     blocksUntilNextMacroBlock.value = 1
+    htlcHistoryChecked.value = true
+    htlcCheckHoldStartedAt.value = undefined
     isProcessingRemote.value = false
     isSyncingWallets.value = false
     isConsensusNeeded.value = false
     isScannerActive.value = false
     localBalance.value = 0
     htlcThreshold.value = 0
-    kycSdkStatus.value = 'idle'
+    isUsdtMaintenanceActive.value = false
     updatePointsBalance.mockReset()
     updateTasks.mockReset()
     updatePointsStatus.mockReset()
     updatePointsStatus.mockResolvedValue(undefined)
-    updateNakaUser.mockReset()
     initNotifications.mockReset()
     syncWallets.mockReset()
-    checkKycInBackground.mockReset()
+    syncWallets.mockResolvedValue(undefined)
+    loggerError.mockReset()
     routerReplace.mockReset()
     libState.isTestnet = false
+    capture.mockClear()
   })
 
-  it('does not update the NAKA user from the retired issuer API on mount', async () => {
+  it('logs a rejected wallet sync instead of leaving it unhandled', async () => {
+    const error = new Error('sync failed')
+    syncWallets.mockRejectedValue(error)
+
     await mountComponent()
     await flushPromises()
 
-    expect(updateNakaUser).not.toHaveBeenCalled()
+    expect(loggerError).toHaveBeenCalledWith('Wallet sync failed', error)
   })
 
   it('does not show the NIM consensus banner when USDT is the active asset', async () => {
@@ -358,6 +364,18 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
+  })
+
+  it('shows maintenance notice and disables USDT Pay', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 1_000_000
+    isUsdtMaintenanceActive.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('USDT maintenance notice')
+    expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('true')
   })
 
   it('shows the USDT testnet warning instead of the Polygon connecting banner', async () => {
@@ -409,6 +427,34 @@ describe('mainView', () => {
     expect(wrapper.text()).toContain('Processing funds')
   })
 
+  it.each([60_000, 120_000])('preserves funds telemetry when switching assets after %s ms', async (switchAfterMs) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    isProcessingRemote.value = true
+    await mountComponent()
+    await flushPromises()
+
+    await vi.advanceTimersByTimeAsync(switchAfterMs)
+    activeAsset.value = Asset.USDT
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(180_000 - switchAfterMs)
+
+    expect(capture).toHaveBeenCalledExactlyOnceWith({
+      event: 'funds_processing_stuck',
+      properties: expect.objectContaining({ duration_ms: 120_000 }),
+    })
+
+    isProcessingRemote.value = false
+    await flushPromises()
+    activeAsset.value = Asset.NIM
+    await flushPromises()
+
+    expect(capture).toHaveBeenCalledTimes(2)
+    expect(capture).toHaveBeenLastCalledWith({
+      event: 'funds_processing_resolved',
+      properties: expect.objectContaining({ duration_ms: 180_000, is_processing_remote: false }),
+    })
+  })
+
   it('does not show "Processing funds" when accumulating below threshold onto an active HTLC', async () => {
     // Below-threshold top-up onto an existing secured balance just accumulates (shown as "pending").
     isHtlcActive.value = true
@@ -433,6 +479,19 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Processing funds')
+  })
+
+  it('explains a held deposit instead of a short processing countdown', async () => {
+    isHtlcActive.value = false
+    remoteBalance.value = 0
+    localBalance.value = 2 * 1e5
+    htlcHistoryChecked.value = false
+    htlcCheckHoldStartedAt.value = Date.now()
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Checking your account')
   })
 
   it('shows "Processing funds" once local balance reaches the HTLC threshold', async () => {

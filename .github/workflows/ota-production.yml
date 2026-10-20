@@ -28,7 +28,6 @@ jobs:
     env:
       APP_ID: ${{ vars.APP_ID }}
 
-      VITE_ENABLE_NAKA: ${{ vars.VITE_ENABLE_NAKA }}
       VITE_ENABLE_BLUECODE: ${{ vars.VITE_ENABLE_BLUECODE }}
       VITE_ENABLE_MINI_APPS: ${{ vars.VITE_ENABLE_MINI_APPS }}
       VITE_WALKIE_TALKIE_URL: ${{ vars.VITE_WALKIE_TALKIE_URL }}
@@ -48,6 +47,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           path: nimiq-pay-app
+          submodules: recursive
           persist-credentials: false
 
       - name: Validate OTA tag
@@ -138,7 +138,7 @@ jobs:
               fi
             done
 
-            for NAME in VITE_ENABLE_NAKA VITE_ENABLE_BLUECODE VITE_ENABLE_MINI_APPS; do
+            for NAME in VITE_ENABLE_BLUECODE VITE_ENABLE_MINI_APPS; do
               if [[ "${!NAME}" != true && "${!NAME}" != false ]]; then
                 echo "ERROR: $NAME must explicitly be true or false."
                 exit 1
@@ -154,12 +154,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version-file: nimiq-pay-app/.nvmrc
           cache: pnpm
           cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
-
-      - name: Setup provider packages
-        uses: ./nimiq-pay-app/.github/actions/setup-provider
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

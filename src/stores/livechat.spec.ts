@@ -5,8 +5,10 @@ import { ref } from 'vue'
 const mocks = vi.hoisted(() => ({
   appInfo: vi.fn(),
   deviceInfo: vi.fn(),
+  readLogsBase64: vi.fn(),
   sendMessage: vi.fn(),
   startSession: vi.fn(),
+  uploadAttachment: vi.fn(),
   state: {
     activeAsset: 'USDT',
     language: 'es',
@@ -26,6 +28,14 @@ vi.mock('@vueuse/core', () => ({
   useStorageAsync: <T>(_key: string, defaultValue: T) => ref(defaultValue),
 }))
 
+vi.mock('@/composables/useLogger', () => ({
+  useLogger: () => ({ readLogsBase64: mocks.readLogsBase64 }),
+}))
+
+vi.mock('@/lib/diagnostics', () => ({
+  logDiagnostics: vi.fn(async () => {}),
+}))
+
 vi.mock('@/lib', () => ({
   isTestnet: true,
 }))
@@ -35,6 +45,8 @@ vi.mock('@/lib/walkie-talkie', () => ({
   getStatus: vi.fn(),
   sendMessage: mocks.sendMessage,
   startSession: mocks.startSession,
+  uploadAttachment: mocks.uploadAttachment,
+  MAX_ATTACHMENT_SIZE: 10 * 1024 * 1024,
 }))
 
 vi.mock('./app', () => ({
@@ -76,6 +88,8 @@ describe('useLiveChat support context', () => {
     })
     mocks.startSession.mockReset().mockResolvedValue({ session_id: 'session-1' })
     mocks.sendMessage.mockReset().mockResolvedValue({ message_id: 'message-1' })
+    mocks.readLogsBase64.mockReset().mockResolvedValue('bG9ncw==')
+    mocks.uploadAttachment.mockReset().mockResolvedValue({ file_id: 'F1' })
   })
 
   it('starts new sessions with a shortened name and full support context', async () => {
@@ -103,5 +117,30 @@ describe('useLiveChat support context', () => {
       'NQ29CGXH84N9BSK4B8TUUPUFGV973YTTFDJ8',
       '[Name: NQ29...FDJ8 | Address: NQ29 CGXH 84N9 BSK4 B8TU UPUF GV97 3YTT FDJ8 | App Version: unknown | Build: unknown | Platform: unknown | OS: unknown | Device: unknown | Network: testnet | Asset: NIM | Language: en]',
     )
+  })
+  it('uploads logs capped at the attachment limit, starting a session if needed', async () => {
+    const { useLiveChat } = await import('./livechat')
+
+    await useLiveChat().sendLogs()
+
+    expect(mocks.readLogsBase64).toHaveBeenCalledWith(10 * 1024 * 1024)
+    expect(mocks.startSession).toHaveBeenCalledTimes(1)
+    expect(mocks.uploadAttachment).toHaveBeenCalledWith(
+      'NQ29CGXH84N9BSK4B8TUUPUFGV973YTTFDJ8',
+      'session-1',
+      expect.stringMatching(/^nimiq-pay-logs-.+\.txt$/),
+      'bG9ncw==',
+    )
+  })
+
+  it('uploads logs to the existing session', async () => {
+    const { useLiveChat } = await import('./livechat')
+    const livechat = useLiveChat()
+    livechat.sessionId = 'session-2'
+
+    await livechat.sendLogs()
+
+    expect(mocks.startSession).not.toHaveBeenCalled()
+    expect(mocks.uploadAttachment).toHaveBeenCalledWith(expect.any(String), 'session-2', expect.any(String), 'bG9ncw==')
   })
 })

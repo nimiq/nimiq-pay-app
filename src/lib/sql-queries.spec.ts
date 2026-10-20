@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getSwapHtlcTxHash } from '@/types/swapHtlcs'
-import { migrations, SQLQuery } from './sql-queries'
+import { HTLC_HISTORY_CHECKED_KV_KEY, migrations, SQLQuery } from './sql-queries'
 
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 
@@ -113,6 +113,30 @@ describe('transaction recovery queries', () => {
   })
 })
 
+describe('migration of the HTLC history check', () => {
+  function applyMigrations(seed?: string) {
+    db.close()
+    db = new DatabaseSync(':memory:')
+    db.exec(migrations[0].statements.join(';'))
+    if (seed)
+      db.exec(seed)
+    for (const migration of migrations.slice(1))
+      db.exec(migration.statements.join(';'))
+  }
+
+  it('marks an upgraded install that already tracks remote signers as checked', () => {
+    applyMigrations('INSERT INTO remote_signers (address, balance, active) VALUES (\'NQ11 TEST\', 1, 1)')
+
+    expect(db.prepare(SQLQuery.SelectKv).get(HTLC_HISTORY_CHECKED_KV_KEY)).toEqual({ value: '1' })
+  })
+
+  it('leaves a fresh database unchecked', () => {
+    applyMigrations()
+
+    expect(db.prepare(SQLQuery.SelectKv).get(HTLC_HISTORY_CHECKED_KV_KEY)).toBeUndefined()
+  })
+})
+
 describe('polygon recovery migrations', () => {
   it('creates each recovery column once on a fresh database', () => {
     const columns = (db.prepare('PRAGMA table_info(swap_htlcs)').all() as { name: string }[]).map(column => column.name)
@@ -128,7 +152,7 @@ describe('polygon recovery migrations', () => {
       'refund_timestamp',
       'refund_block',
     ])
-    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
     expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
       SQLQuery.AddValidityStartHeightToTxsTable,
     ])
@@ -198,5 +222,22 @@ describe('polygon recovery migrations', () => {
     expect(getSwapHtlcTxHash({ ...row, tx_hash: 'replacement' })).toBe('replacement')
     expect(getSwapHtlcTxHash({ ...row, address: 'htlc' })).toBeNull()
     expect(getSwapHtlcTxHash({ ...row, address: 'nim-address', htlc_id: null })).toBe('nim-address')
+  })
+})
+
+describe('lightning invoice records', () => {
+  it('keeps the first attempt and its transaction hash across repeated inserts', () => {
+    db.prepare(SQLQuery.InsertMiniAppLightningPayment).run('testnet', 'invoice-hash', 'https://app.example', 'NQ11 OWNER', 'swap-id')
+    db.prepare(SQLQuery.SetMiniAppLightningPaymentStatus).run('nim-hash', 'submitted', 'testnet', 'invoice-hash')
+
+    expect(() => db.prepare(SQLQuery.InsertMiniAppLightningPayment).run('testnet', 'invoice-hash', 'https://other.example', 'NQ11 OTHER', 'other-swap')).toThrow()
+    expect(db.prepare(SQLQuery.GetMiniAppLightningPayment).get('testnet', 'invoice-hash')).toMatchObject({
+      swap_id: 'swap-id',
+      tx_hash: 'nim-hash',
+      status: 'submitted',
+      origin: 'https://app.example',
+      owner: 'NQ11 OWNER',
+    })
+    expect(db.prepare(SQLQuery.GetMiniAppLightningPayment).get('mainnet', 'invoice-hash')).toBeUndefined()
   })
 })

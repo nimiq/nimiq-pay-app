@@ -5,7 +5,6 @@ import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonPage, IonRouterOutlet, IonTabs } from '@ionic/vue'
 import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
 import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,17 +19,16 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
+import { trackFundsProcessing } from '@/lib/analytics'
 import { Chain } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
-import { useKyc } from '@/stores/kyc'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
-// NAKA disabled: issuer server retired. Uncomment with the refresh block below to restore.
-// import { useNaka } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
@@ -43,30 +41,71 @@ const router = useRouter()
 
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, displayedPaymentRequests, isNimiqAsset, htlcThreshold } = storeToRefs(useApp())
+const { isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(usePolygonUsdt())
-const { isTransactionPending, hasPendingHtlcCreation, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { isTransactionPending, hasPendingHtlcCreation, pendingHtlcCreationTransactions, htlcCanBeExtended, blocksUntilNextMacroBlock, htlcHistoryChecked, htlcCheckHoldStartedAt, lastFundsBlockReason } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
-// const { updateUser: updateNakaUser } = useNaka()
-const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
-const { checkKycInBackground } = useKyc()
 
 const isFirstRender = ref(true)
 
 const isPaymentDisabled = computed(() =>
   isNimiqAsset.value
     ? (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value
-    : polygonBalance.value === 0 || isProcessingRemote.value || isTransactionPending.value,
+    : isUsdtMaintenanceActive.value || polygonBalance.value === 0 || isProcessingRemote.value || isTransactionPending.value,
 )
 
 const isConsensusMessageShown = computed(() =>
   isNimiqAsset.value && consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value),
 )
 const isConsensusMessageShownDebounced = refThrottled(isConsensusMessageShown, debounceDelay)
+
+// Local funds are just accumulating (shown as "pending"), not processing, only while they're
+// below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
+// with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
+const isProcessingFunds = computed(() =>
+  ((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value)
+  || isProcessingRemote.value
+  || hasPendingHtlcCreation.value,
+)
+
+// A processing banner past a few blocks means funds are stuck; report it, and its duration once it clears.
+const FUNDS_STUCK_MS = 2 * 60 * 1e3
+function trackFundsProcessingState(state: 'stuck' | 'resolved', durationMs: number) {
+  trackFundsProcessing(state, {
+    duration_ms: durationMs,
+    last_block_reason: lastFundsBlockReason.value,
+    is_htlc_active: isHtlcActive.value,
+    is_remote_ok: isRemoteOk.value,
+    is_processing_remote: isProcessingRemote.value,
+    has_local_balance: localBalance.value > 0,
+    has_remote_balance: remoteBalance.value > 0,
+    htlc_history_checked: htlcHistoryChecked.value === true,
+    consensus: consensus.value,
+    pending_htlc_creation_hashes: pendingHtlcCreationTransactions.value.map(tx => tx.transactionHash),
+  })
+}
+// NIM funds keep processing while another asset is selected; keep the same telemetry episode alive.
+watch(isProcessingFunds, (processing, _, onCleanup) => {
+  if (!processing)
+    return
+  const startedAt = Date.now()
+  let reported = false
+  const timeout = setTimeout(() => {
+    reported = true
+    trackFundsProcessingState('stuck', Date.now() - startedAt)
+  }, FUNDS_STUCK_MS)
+  onCleanup(() => {
+    clearTimeout(timeout)
+    // Unmounting does not mean the funds finished processing.
+    if (reported && !isProcessingFunds.value)
+      trackFundsProcessingState('resolved', Date.now() - startedAt)
+  })
+}, { immediate: true })
 
 const statusMessageText = ref('')
 const statusMessageBgColor = ref('bg-[#F9EDE1]')
@@ -79,8 +118,16 @@ watchEffect(async () => {
     return
 
   if (!isNimiqAsset.value) {
+    if (isUsdtMaintenanceActive.value) {
+      statusMessageText.value = usdtMaintenanceNotice.value
+      statusMessageBgColor.value = 'bg-[#F9EDE1]'
+      statusMessageTextColor.value = 'text-pumpkin'
+      statusMessageIconColor.value = 'text-pumpkin/60'
+      statusMessageIcon.value = markRaw(InfoIcon)
+      isStatusMessageShown.value = true
+    }
     // Mock mode fakes a working USDT setup even on testnet dev builds
-    if (isTestnet && !isMockEnabled) {
+    else if (isTestnet && !isMockEnabled) {
       statusMessageText.value = i18n.t('USDT is only available on mainnet. Switch to mainnet to use USDT.')
       statusMessageBgColor.value = 'bg-[#F9EDE1]'
       statusMessageTextColor.value = 'text-pumpkin'
@@ -114,10 +161,16 @@ watchEffect(async () => {
       isStatusMessageShown.value = true
     }
   }
-  // Local funds are just accumulating (shown as "pending"), not processing, only while they're
-  // below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
-  // with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
-  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value) || isProcessingRemote.value || hasPendingHtlcCreation.value) {
+  // handleFunds is holding new funds while a fresh database checks for older HTLCs.
+  else if (htlcCheckHoldStartedAt.value !== undefined && !htlcHistoryChecked.value) {
+    statusMessageText.value = i18n.t('Checking your account')
+    statusMessageBgColor.value = 'bg-[#F9EDE1]'
+    statusMessageTextColor.value = 'text-pumpkin'
+    statusMessageIconColor.value = 'text-pumpkin/60'
+    statusMessageIcon.value = markRaw(InfoIcon)
+    isStatusMessageShown.value = true
+  }
+  else if (isProcessingFunds.value) {
     statusMessageText.value = i18n.tc(
       'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
       blocksUntilNextMacroBlock.value,
@@ -249,15 +302,6 @@ onMounted(async () => {
     return
   }
 
-  /* NAKA disabled: issuer server retired. Keep refresh code for restoration.
-  try {
-    updateNakaUser() // Fire and forget
-  }
-  catch (error) {
-    logger.error('Error updating NAKA user:', error)
-  }
-  */
-
   try {
     await updatePointsStatus()
   }
@@ -285,11 +329,8 @@ onMounted(async () => {
   }
 
   logger.log('Initial checks done, starting sync process')
-  useSync().syncWallets()
+  useSync().syncWallets().catch(error => logger.error('Wallet sync failed', error))
   detectPaymentRequest()
-
-  if (kycSdkStatus.value === SumsubSdkStatus.PENDING)
-    checkKycInBackground()
 
   isFirstRender.value = false
 })

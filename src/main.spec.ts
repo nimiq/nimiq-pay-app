@@ -31,7 +31,6 @@ vi.mock('@/stores/app', () => ({ useApp: vi.fn() }))
 vi.mock('@/stores/conn', () => ({ useConn: () => ({ init: mocks.initDb }) }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => ({ init: vi.fn() }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: vi.fn() }))
-vi.mock('@/stores/naka', () => ({ useNaka: () => ({ init: vi.fn() }) }))
 vi.mock('./App.vue', () => ({ default: {} }))
 vi.mock('./views/LockdownScreen.vue', () => ({ default: {} }))
 vi.mock('./router', () => ({

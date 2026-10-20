@@ -144,12 +144,12 @@ vi.mock('@/composables/useTransactionSearch', () => ({
 
 vi.mock('@/lib', () => ({
   isDev: false,
-  nakaBufferAddresses: [],
 }))
 
 vi.mock('@/lib/analytics', () => ({
   trackSwapCompleted: state.trackSwapCompleted,
   trackSwapFailed: state.trackSwapFailed,
+  trackFundsBlocked: vi.fn(),
 }))
 
 vi.mock('@/lib/tx', () => ({
@@ -400,6 +400,31 @@ describe('useTransactions', () => {
     expect(seenStatuses).toEqual(['confirmed'])
   })
 
+  it('writes a batch of status updates with one runSet and one list update', async () => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    await store.saveTransactions([
+      { hash: 'older', status: 'pending', timestamp: 1, asset: Asset.NIM } as any,
+      { hash: 'newer', status: 'pending', timestamp: 2, asset: Asset.NIM } as any,
+    ])
+    state.run.mockClear()
+    state.runSet.mockClear()
+
+    await store.updateTransactionStatus([
+      { hash: 'older', status: 'confirmed', timestamp: 3 },
+      { hash: 'newer', status: 'failed', timestamp: 2, executionResult: false },
+    ])
+
+    expect(state.run).not.toHaveBeenCalled()
+    expect(state.runSet).toHaveBeenCalledOnce()
+    expect(state.runSet.mock.calls[0][0]).toEqual([
+      { statement: SQLQuery.UpdateTxStatus, values: ['confirmed', 3, 'older'] },
+      { statement: SQLQuery.UpdateTxStatus, values: ['failed', 2, 'newer'] },
+    ])
+    expect(store.transactions.map(tx => [tx.hash, tx.status])).toEqual([['older', 'confirmed'], ['newer', 'failed']])
+  })
+
   it.each([true, false, undefined])('preserves executionResult=%s unless an update provides a result', async (executionResult) => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()
@@ -430,10 +455,10 @@ describe('useTransactions', () => {
     await store.refreshFromDb()
     const { plain } = createSignedTransaction('imported-payment', { state: 'included', validityStartHeight: 100 })
 
-    await store.addUnknownPaymentToMerchantTransaction(plain as any)
+    await store.saveTransactions([store.toUnknownPaymentToMerchantTransaction(plain as any)])
 
-    const write = state.run.mock.calls.find(([sql]) => sql === SQLQuery.UpsertTx)
-    expect((write?.[1] as unknown[])?.at(-1)).toBe(100)
+    const write = state.runSet.mock.calls[0]?.[0].find(({ statement }) => statement === SQLQuery.UpsertTx)
+    expect(write?.values.at(-2)).toBe(100)
     expect(store.transactions.find(tx => tx.hash === 'imported-payment')?.validityStartHeight).toBe(100)
   })
 
@@ -620,14 +645,7 @@ describe('useTransactions', () => {
     expect(store.transactionsToShow).toHaveLength(0)
     expect(store.transactions).toHaveLength(1)
 
-    const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-      ([query]) => query === SQLQuery.UpsertTx,
-    )
-    expect(upsertCall).toBeDefined()
-    const metaJson = upsertCall![1].find(
-      (arg): arg is string => typeof arg === 'string' && arg.includes('"hidden"'),
-    )
-    expect(metaJson).toContain('"hidden":true')
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.SetTxHidden, ['true', '0xhide'])
   })
 
   it('reveals hidden txs when showHiddenTransactions is enabled (APP-132)', async () => {
@@ -678,7 +696,7 @@ describe('useTransactions', () => {
     expect(store.transactionsToShow).toHaveLength(1)
   })
 
-  describe('refreshFromDb / addReceiptTransaction filter our own HTLC drains', () => {
+  describe('refreshFromDb / addReceiptTransactions filter our own HTLC drains', () => {
     const ourHtlc = 'NQ22 TEST OUR OLD HTLC'
     const foreignHtlc = 'NQ33 OTHER NIMIQ PAY USER HTLC'
 
@@ -776,7 +794,7 @@ describe('useTransactions', () => {
       expect(store.transactions[1].hash).toBe('older')
     })
 
-    it('addReceiptTransaction drops drains from one of our remote signers (no upsert, no in-memory entry)', async () => {
+    it('addReceiptTransactions drops drains from one of our remote signers (no upsert, no in-memory entry)', async () => {
       const { useTransactions } = await import('./transactions')
       let store!: ReturnType<typeof useTransactions>
       mount(defineComponent({
@@ -787,8 +805,8 @@ describe('useTransactions', () => {
       }))
       await nextTick()
 
-      state.run.mockClear()
-      await store.addReceiptTransaction({
+      state.runSet.mockClear()
+      await store.addReceiptTransactions([{
         transfer: Transfer.UserReceipt,
         amount: 5505,
         sender: ourHtlc,
@@ -804,13 +822,10 @@ describe('useTransactions', () => {
         proofSize: 98,
         asset: Asset.NIM,
         chain: Chain.Nimiq,
-      } as any)
+      } as any])
       await nextTick()
 
-      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-        ([query]) => query === SQLQuery.UpsertTx,
-      )
-      expect(upsertCall).toBeUndefined()
+      expect(state.runSet).not.toHaveBeenCalled()
       expect(store.transactions.map(tx => tx.hash)).not.toContain('hash-our-drain')
     })
 
@@ -819,17 +834,17 @@ describe('useTransactions', () => {
       const { useRemoteSigner } = await import('./remote-signer')
       const store = useTransactions()
       await nextTick()
-      let finishLookup!: (isOurs: boolean) => void
-      vi.spyOn(useRemoteSigner(), 'isOurRemoteSigner').mockReturnValueOnce(
+      let finishLookup!: (ours: Set<string>) => void
+      vi.spyOn(useRemoteSigner(), 'getOurRemoteSignerAddresses').mockReturnValueOnce(
         new Promise(resolve => finishLookup = resolve),
       )
       const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-lookup-receipt' })
-      const persistence = store.addReceiptTransaction(receipt as any)
+      const persistence = store.addReceiptTransactions([receipt as any])
       state.walletContextGeneration += 1
-      finishLookup(false)
+      finishLookup(new Set())
       await persistence
 
-      expect(state.run).not.toHaveBeenCalled()
+      expect(state.runSet).not.toHaveBeenCalled()
       expect(store.transactions).toEqual([])
     })
 
@@ -838,16 +853,16 @@ describe('useTransactions', () => {
       const store = useTransactions()
       await nextTick()
       let finishWrite!: () => void
-      state.run.mockReturnValueOnce(new Promise(resolve => finishWrite = () => resolve(undefined)))
+      state.runSet.mockReturnValueOnce(new Promise(resolve => finishWrite = () => resolve(undefined)))
       const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-native-receipt' })
-      const persistence = store.addReceiptTransaction(receipt as any)
-      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array)))
+      const persistence = store.addReceiptTransactions([receipt as any])
+      await vi.waitFor(() => expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }]))
       state.walletContextGeneration += 1
       finishWrite()
       await persistence
 
       expect(store.transactions).toEqual([])
-      expect(state.run).toHaveBeenCalledTimes(1)
+      expect(state.runSet).toHaveBeenCalledTimes(1)
     })
 
     it('stores a Polygon receipt while the Nimiq client is unavailable', async () => {
@@ -862,13 +877,81 @@ describe('useTransactions', () => {
         asset: Asset.USDT,
         chain: Chain.Polygon,
       })
-      await store.addReceiptTransaction(receipt as any)
+      await store.addReceiptTransactions([receipt as any])
 
-      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+      expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }])
       expect(store.transactions.map(tx => tx.hash)).toEqual(['polygon-receipt'])
     })
 
-    it('addReceiptTransaction stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
+    it('addReceiptTransactions writes a batch with one runSet and one sorted list update', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockClear()
+
+      await store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'older', timestamp: 1 }),
+        makeUserReceiptRow({ hash: 'own-drain', timestamp: 2 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'newer', timestamp: 3 }),
+      ] as any)
+
+      expect(state.runSet).toHaveBeenCalledOnce()
+      expect(state.runSet.mock.calls[0][0].map(({ values }) => values[0])).toEqual(['older', 'newer'])
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['newer', 'older'])
+    })
+
+    it('addReceiptTransactions keeps valid rows when the batch write fails on one row', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockRejectedValueOnce(new Error('constraint failed'))
+      state.run.mockImplementation(async (...args: unknown[]) => {
+        if ((args[1] as unknown[] | undefined)?.[0] === 'bad')
+          throw new Error('constraint failed')
+      })
+
+      await store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'good-1', timestamp: 1 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'bad', timestamp: 2 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'good-2', timestamp: 3 }),
+      ] as any)
+
+      expect(state.run.mock.calls.filter(([sql]) => sql === SQLQuery.UpsertTx).map(([, values]) => (values as unknown[])[0])).toEqual(['good-1', 'bad', 'good-2'])
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['good-2', 'good-1'])
+    })
+
+    it('splits large batches into chunks and retries only the failed chunk row by row', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockClear()
+      state.run.mockClear()
+      // Second chunk fails as a set; its rows still write one by one.
+      state.runSet.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('constraint failed'))
+
+      await store.addReceiptTransactions(Array.from({ length: 450 }, (_, index) =>
+        makeUserReceiptRow({ sender: foreignHtlc, hash: `chunk-${index}`, timestamp: index })) as any)
+
+      expect(state.runSet.mock.calls.map(([statements]) => statements.length)).toEqual([200, 200, 50])
+      expect(state.run.mock.calls.filter(([sql]) => sql === SQLQuery.UpsertTx)).toHaveLength(200)
+      expect(store.transactions).toHaveLength(450)
+    })
+
+    it('addReceiptTransactions throws when no row of a failed batch can be written', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const batchError = new Error('database locked')
+      state.runSet.mockRejectedValueOnce(batchError)
+      state.run.mockRejectedValue(new Error('database locked'))
+
+      await expect(store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'locked', timestamp: 1 }),
+      ] as any)).rejects.toBe(batchError)
+      expect(store.transactions).toEqual([])
+    })
+
+    it('addReceiptTransactions stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
       const { useTransactions } = await import('./transactions')
       let store!: ReturnType<typeof useTransactions>
       mount(defineComponent({
@@ -879,8 +962,8 @@ describe('useTransactions', () => {
       }))
       await nextTick()
 
-      state.run.mockClear()
-      await store.addReceiptTransaction({
+      state.runSet.mockClear()
+      await store.addReceiptTransactions([{
         transfer: Transfer.UserReceipt,
         amount: 1234,
         sender: foreignHtlc,
@@ -896,13 +979,10 @@ describe('useTransactions', () => {
         proofSize: 98,
         asset: Asset.NIM,
         chain: Chain.Nimiq,
-      } as any)
+      } as any])
       await nextTick()
 
-      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-        ([query]) => query === SQLQuery.UpsertTx,
-      )
-      expect(upsertCall).toBeDefined()
+      expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }])
       expect(store.transactions.map(tx => tx.hash)).toContain('hash-foreign-pay')
     })
   })
@@ -2052,6 +2132,133 @@ describe('useTransactions', () => {
       expect(state.client.sendTransaction).not.toHaveBeenCalled()
     })
 
+    it('signals NIM submission before waiting for Lightning settlement', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('submitted-before-lightning')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+      const onSubmitted = vi.fn(async () => {})
+
+      const send = useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+      } as any, undefined, onSubmitted)
+      await expect(send).resolves.toMatchObject({ outcome: 'submitted' })
+      expect(onSubmitted).toHaveBeenCalledWith('submitted-before-lightning')
+      expect(state.isSendingTx).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+
+      settleSwap({ preimage: 'secret' })
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+    })
+
+    it('saves the Lightning secret even when the swap row is gone', async () => {
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      state.run.mockImplementation(async (statement, values = []) => {
+        db.prepare(statement as string).run(...(values as unknown[]).map(value => value ?? null) as Array<string | number | null>)
+      })
+      state.query.mockImplementation(async (statement, values = [], options): Promise<any> => {
+        const query = db.prepare(statement)
+        const params = (values as unknown[]).map(value => value ?? null) as Array<string | number | null>
+        return options?.single ? query.get(...params) : query.all(...params)
+      })
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('swap-row-removed')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+
+      try {
+        await expect(useTransactions().sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'swap-id',
+        } as any, undefined, async () => {})).resolves.toMatchObject({ outcome: 'submitted' })
+        db.prepare('DELETE FROM transactions WHERE hash = ?').run('swap-row-removed')
+
+        settleSwap({ preimage: 'secret' })
+        await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+
+        expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('swap-row-removed')).toEqual({
+          status: 'confirmed',
+          meta_json: '{"secret":"secret"}',
+        })
+      }
+      finally {
+        db.close()
+      }
+    })
+
+    it('keeps row updates made while waiting for Lightning settlement', async () => {
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      state.run.mockImplementation(async (statement, values = []) => {
+        db.prepare(statement as string).run(...(values as unknown[]).map(value => value ?? null) as Array<string | number | null>)
+      })
+      state.query.mockImplementation(async (statement, values = [], options): Promise<any> => {
+        const query = db.prepare(statement)
+        const params = (values as unknown[]).map(value => value ?? null) as Array<string | number | null>
+        return options?.single ? query.get(...params) : query.all(...params)
+      })
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      const { signedTx } = createSignedTransaction('swap-waiting-for-lightning')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+
+      try {
+        await expect(store.sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'swap-id',
+        } as any, undefined, async () => {})).resolves.toMatchObject({ outcome: 'submitted' })
+        db.prepare(`UPDATE transactions SET timestamp = 999, meta_json = '{"hidden":true}' WHERE hash = ?`).run('swap-waiting-for-lightning')
+
+        settleSwap({ preimage: 'secret' })
+        await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+
+        expect(db.prepare('SELECT status, timestamp, meta_json FROM transactions WHERE hash = ?').get('swap-waiting-for-lightning')).toEqual({
+          status: 'confirmed',
+          timestamp: 999,
+          meta_json: '{"hidden":true,"secret":"secret"}',
+        })
+        expect(store.transactions.find(tx => tx.hash === 'swap-waiting-for-lightning')?.meta).toEqual({ hidden: true, secret: 'secret' })
+      }
+      finally {
+        db.close()
+      }
+    })
+
     it('returns rejected for a second concurrent send and only broadcasts once', async () => {
       const { useTransactions } = await import('./transactions')
       const { signedTx } = createSignedTransaction('locked-send')
@@ -2092,8 +2299,167 @@ describe('useTransactions', () => {
       },
       expect.objectContaining({ statement: SQLQuery.UpsertTx }),
     ])
-    expect(state.runSet.mock.calls[0][0][1].values).toHaveLength(30)
-    expect(state.runSet.mock.calls[0][0][1].values[29]).toBe(123)
+    expect(state.runSet.mock.calls[0][0][1].values).toHaveLength(33)
+    expect(state.runSet.mock.calls[0][0][1].values[31]).toBe(123)
+  })
+
+  describe('native row persistence', () => {
+    let db: DatabaseSync
+
+    beforeEach(() => {
+      state.activeAsset = Asset.NIM
+      db = new DatabaseSync(':memory:')
+      for (const migration of migrations) {
+        for (const statement of migration.statements)
+          db.exec(statement)
+      }
+      db.prepare(`INSERT INTO transactions
+        (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain, meta_json, senderData, recipientData, validityStartHeight)
+        VALUES ('nim-swap', 'confirmed', 1, 'NQ00 TEST LOCAL ADDRESS', 'NQ55 SWAP HTLC ADDRESS', 10, 0, ?, ?, ?, '{"secret":"preimage"}', 'aabb', 'ccdd', 789)`).run(
+        Transfer.UserPaymentToAtomicSwap,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+
+      state.query.mockImplementation(async (statement, values = [], options): Promise<any> => {
+        const query = db.prepare(statement)
+        const params = (values as unknown[]).map(value => value ?? null) as Array<string | number | null>
+        return options?.single ? query.get(...params) : query.all(...params)
+      })
+      state.run.mockImplementation(async (statement, values = []) => {
+        db.prepare(statement as string).run(...(values as unknown[]).map(value => value ?? null) as Array<string | number | null>)
+      })
+    })
+
+    afterEach(() => db.close())
+
+    it('keeps tx data columns when re-saving a row loaded from the list', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+
+      await store.setTxHidden('nim-swap', true)
+
+      expect(db.prepare('SELECT senderData, recipientData, validityStartHeight, meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
+        senderData: 'aabb',
+        recipientData: 'ccdd',
+        validityStartHeight: 789,
+        meta_json: '{"secret":"preimage","hidden":true}',
+      })
+    })
+
+    it('writes staking tx data to the columns as hex', async () => {
+      state.runSet.mockImplementation(async (statements: { statement: string, values: unknown[] }[]) => {
+        for (const { statement, values } of statements)
+          db.prepare(statement).run(...values.map(value => value ?? null) as Array<string | number | null>)
+      })
+      const { useTransactions } = await import('./transactions')
+
+      await useTransactions().saveTransactions([{
+        hash: 'nim-staking',
+        timestamp: 1,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 0,
+        recipient: 'NQ77 STAKING CONTRACT',
+        recipientType: 3,
+        amount: 10,
+        fee: 0,
+        status: 'confirmed',
+        transfer: Transfer.Staking,
+        title: 'Staking Contract',
+        proofSize: 0,
+        senderData: '',
+        recipientData: 'aabb',
+      }])
+
+      expect(db.prepare('SELECT senderData, recipientData FROM transactions WHERE hash = ?').get('nim-staking')).toEqual({
+        senderData: '',
+        recipientData: 'aabb',
+      })
+    })
+
+    it('reads staking tx data columns back as hex', async () => {
+      db.prepare(`INSERT INTO transactions
+        (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain, senderData, recipientData, validityStartHeight)
+        VALUES ('nim-staking', 'confirmed', 1, 'NQ00 TEST LOCAL ADDRESS', 'NQ77 STAKING CONTRACT', 10, 0, ?, ?, ?, 'aabb', '', 789)`).run(
+        Transfer.Staking,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+      const { useTransactions } = await import('./transactions')
+
+      // setSwapPreimage only touches meta and returns the stored row.
+      await expect(useTransactions().setSwapPreimage('nim-staking', 'preimage')).resolves.toMatchObject({
+        senderData: 'aabb',
+        recipientData: '',
+        validityStartHeight: 789,
+      })
+    })
+
+    it('persists a native swap refund when its tx is not loaded', async () => {
+      const { useTransactions } = await import('./transactions')
+
+      await useTransactions().setSwapHtlcRefunded('NQ55 SWAP HTLC ADDRESS')
+
+      expect(db.prepare('SELECT meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
+        meta_json: '{"secret":"preimage","refunded":true}',
+      })
+    })
+
+    it('keeps newer row state when hiding a loaded tx', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      db.exec(`UPDATE transactions SET status = 'failed', meta_json = '{"secret":"preimage","refunded":true}' WHERE hash = 'nim-swap'`)
+
+      await store.setTxHidden('nim-swap', true)
+
+      expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
+        status: 'failed',
+        meta_json: '{"secret":"preimage","refunded":true,"hidden":true}',
+      })
+      expect(store.transactions[0].meta).toEqual({ secret: 'preimage', hidden: true })
+    })
+
+    it('replaces the loaded tx when its cashback is claimed', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const loadedTx = store.transactions[0]
+
+      await store.updateTransactionCashbackClaimed({ hash: 'nim-swap' })
+
+      expect(store.transactions[0]).not.toBe(loadedTx)
+      expect(store.transactions[0].isCashbackClaimed).toBe(true)
+    })
+
+    it('marks every loaded tx sent to a refunded swap HTLC', async () => {
+      db.prepare(`INSERT INTO transactions (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain)
+        VALUES ('nim-swap-retry', 'failed', 2, 'NQ00 TEST LOCAL ADDRESS', 'NQ55 SWAP HTLC ADDRESS', 10, 0, ?, ?, ?)`).run(
+        Transfer.UserPaymentToAtomicSwap,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+
+      await store.setSwapHtlcRefunded('NQ55 SWAP HTLC ADDRESS')
+
+      expect(store.transactions.map(tx => tx.meta?.refunded)).toEqual([true, true])
+    })
+
+    it('replaces the loaded native swap tx after marking it refunded', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const loadedTx = store.transactions[0]
+
+      await store.setSwapHtlcRefunded('NQ55 SWAP HTLC ADDRESS')
+
+      expect(store.transactions[0]).not.toBe(loadedTx)
+      expect(store.transactions[0].meta).toEqual({ secret: 'preimage', refunded: true })
+    })
   })
 
   describe('polygon replacement persistence', () => {
@@ -2208,11 +2574,11 @@ describe('useTransactions', () => {
       db.exec(`UPDATE transactions SET meta_json = '{"source":"relay","refunded":true}' WHERE hash = '0xoriginal'`)
       await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')
 
-      expect(await store.setPolygonSwapPreimage('0xoriginal', 'late-secret')).toBeFalsy()
+      expect(await store.setSwapPreimage('0xoriginal', 'late-secret')).toBeFalsy()
       expect(db.prepare('SELECT hash FROM transactions').all()).toEqual([{ hash: '0xreplacement' }])
       expect(store.transactions.map(tx => tx.hash)).toEqual(['0xreplacement'])
 
-      await expect(store.setPolygonSwapPreimage('0xreplacement', 'secret')).resolves.toMatchObject({
+      await expect(store.setSwapPreimage('0xreplacement', 'secret')).resolves.toMatchObject({
         status: 'confirmed',
         meta: { source: 'relay', refunded: true, secret: 'secret' },
         invoiced: { amount: 5, currency: 'EUR' },

@@ -3,25 +3,27 @@ import type { WalletContext } from '@/stores/remote-signer'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { RecoverablePlainTransactionDetails } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
+import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import { SQLQuery } from '@/lib/sql-queries'
+import { isMockEnabled } from '@/lib/mock-mode'
+import { HTLC_CHECK_HOLD_STARTED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
-import { useApp } from '@/stores/app'
+import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
+import { HTLC_HISTORY_CHECK_HOLD_MS, upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { getSwapHtlcTxHash } from '@/types/swapHtlcs'
 import { Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const { setToast } = useToast()
-const HTLC_LOOKUP_TIMEOUT_MS = 30_000
+const HTLC_CALL_TIMEOUT_MS = 30_000
 
 interface PendingHtlcCreationRow {
   hash: string
@@ -53,7 +55,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { activateRemoteSignerFromTransaction, deactivateRemoteSigner, findTransactionInHistory, getAllRemoteSigners, getWalletContext, isWalletContextCurrent, updateRemoteSigner } = remoteSignerStore
   const { sendTx, updateTransactionStatus } = useTransactions()
   const { htlcThreshold } = storeToRefs(useApp())
-  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration } = storeToRefs(useSyncState())
+  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt, lastFundsBlockReason } = storeToRefs(useSyncState())
+
+  const { loadHtlcHistoryFlags, reportFundsBlocked } = useSyncState()
+
+  // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
+  watch(remoteBalance, (balance) => {
+    if (balance > 0)
+      htlcCheckHoldStartedAt.value = undefined
+  })
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -63,6 +73,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     if (isTransactionPending.value || isSendingTx.value) {
       logger.log('There is a pending transaction. Delaying handleFunds', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
+      reportFundsBlocked('pending_tx', {
+        is_sending_tx: isSendingTx.value,
+        pending_tx_hashes: [
+          ...pendingRemoteDrainTxs.value.map(tx => tx.hash),
+          ...[...pendingTransactions.value, ...pendingHtlcCreationTransactions.value].map(tx => tx.transactionHash),
+        ],
+      })
       return
     }
 
@@ -83,33 +100,84 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       const { data, error } = await getBalance(remoteAddress.value)
       if (error && error !== NO_ACCOUNT_ERROR) {
         logger.error('Error while getting remote balance before handling funds', error)
+        reportFundsBlocked('remote_balance_error')
         return
       }
       remoteBalanceOnChain = data ?? 0
     }
 
-    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
+    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'New HTLC needed' : 'Top-up needs liquidation'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
 
+    // A fresh database (install, restore, re-login) does not know older HTLCs yet, so a new HTLC could
+    // land beside a funded one. That includes a top-up, which liquidates the active HTLC to recreate it.
+    // Wait for the first clean sweep, bounded because payments need an HTLC.
+    // Mock mode never verifies remote signers, so it has no sweep to wait for.
+    if (!isMockEnabled && !isHtlcPending.value && !(await loadHtlcHistoryFlags()).checked) {
+      try {
+        let startedAt = htlcCheckHoldStartedAt.value ?? (Number(await kv().getItem(HTLC_CHECK_HOLD_STARTED_KV_KEY)) || undefined)
+        // A start in the future (clock moved back) would extend the hold indefinitely.
+        if (startedAt === undefined || startedAt > Date.now()) {
+          startedAt = Date.now()
+          await kv().setItem(HTLC_CHECK_HOLD_STARTED_KV_KEY, String(startedAt))
+        }
+        if (Date.now() - startedAt < HTLC_HISTORY_CHECK_HOLD_MS) {
+          // Only unsecured funds need the explanation; with a funded HTLC the deposit just stays pending.
+          if (remoteBalanceOnChain === 0 && htlcCheckHoldStartedAt.value !== startedAt) {
+            htlcCheckHoldStartedAt.value = startedAt
+            // handleFunds may not run again at the limit (pending tx, RPC error), so release the explanation here.
+            setTimeout(() => {
+              if (htlcCheckHoldStartedAt.value === startedAt)
+                htlcCheckHoldStartedAt.value = undefined
+            }, startedAt + HTLC_HISTORY_CHECK_HOLD_MS - Date.now())
+          }
+          logger.log('🧲 Holding local funds until the HTLC history check completes')
+          reportFundsBlocked('history_check_hold')
+          return
+        }
+        // Not marked checked: the sweep keeps following extensions and merges a split HTLC once found.
+        logger.warn('🧲 HTLC history check did not finish in time. Securing funds anyway')
+        htlcCheckHoldStartedAt.value = undefined
+      }
+      catch (error) {
+        // A DB error must not release the hold; retry on the next head.
+        logger.error('Error while checking the HTLC history hold', error)
+        reportFundsBlocked('history_check_error')
+        return
+      }
+    }
+
     if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
+      // Nothing holds the funds now. Cleared before sending so a failure inside the send (activation_failed) stays.
+      lastFundsBlockReason.value = undefined
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.LocalToRemote })
       if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
         if (result.reason === 'busy') {
           logger.log('Delaying deposit until the pending transaction resolves')
+          reportFundsBlocked('deposit_busy')
           return
         }
         setToast({ message: i18n.t('Error while creating deposit'), type: 'error', duration: 5000 })
         logger.error('Error while creating HTLC', result.error)
+        reportFundsBlocked('deposit_failed')
       }
       return
     }
 
-    if (!nodesAreSynced.value)
+    if (!nodesAreSynced.value) {
+      reportFundsBlocked('nodes_not_synced', { local_height: localHeight.value, remote_height: remoteHeight.value })
       return
+    }
 
     if (isHtlcActive.value && isRemoteOk.value) {
+      // Past validity end the cosigner refuses to sign; checkRemoteValidity reclaims via timeout.
+      if (hasHtlcExpired.value) {
+        logger.log('Active HTLC expired. Leaving it to the timeout reclaim')
+        reportFundsBlocked('htlc_expired')
+        return
+      }
       const liquidationContext = {
         localBalance: localBalance.value,
         remoteBalance: remoteBalanceOnChain,
@@ -126,21 +194,25 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value.length,
       }
       logger.log('Preparing to top up deposit by liquidating active HTLC', liquidationContext)
+      lastFundsBlockReason.value = undefined
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
         if (result.reason === 'busy') {
           logger.log('Delaying deposit until the pending transaction resolves')
+          reportFundsBlocked('liquidation_busy')
           return
         }
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
         logger.error('Error while liquidating HTLC', result.error, liquidationContext)
+        reportFundsBlocked('liquidation_failed')
       }
       return
     }
 
     logger.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}, isHtlcPending: ${isHtlcPending.value}`)
+    reportFundsBlocked('htlc_not_ready', { is_htlc_active: isHtlcActive.value, is_remote_ok: isRemoteOk.value, is_htlc_pending: isHtlcPending.value })
   }
 
   async function extendValidity() {
@@ -281,7 +353,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         const address = typeof predecessor.address === 'string' ? Nimiq.Address.fromString(predecessor.address) : predecessor.address
         const { data: balance, error } = await promiseWithTimeout(
           getBalance(address),
-          HTLC_LOOKUP_TIMEOUT_MS,
+          HTLC_CALL_TIMEOUT_MS,
         )
         if (!isWalletContextCurrent(context))
           return false
@@ -357,7 +429,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       }
       let transaction: PlainTransactionDetails | undefined
       try {
-        transaction = await promiseWithTimeout(context.client.getTransaction(pending.transactionHash), HTLC_LOOKUP_TIMEOUT_MS)
+        transaction = await promiseWithTimeout(context.client.getTransaction(pending.transactionHash), HTLC_CALL_TIMEOUT_MS)
       }
       catch (error) {
         logger.error('Error checking pending HTLC transactions', error)
@@ -560,12 +632,45 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         }
 
         try {
-          const account = await client.value!.getAccount(htlc.address) as PlainAccount
+          // The stored refund decides the outcome; an empty HTLC alone can't tell a refund from a redeem.
+          let refundUnproven = false
+          let refundWindowOpen = false
+          if (htlc.refund_hash) {
+            const refund = await promiseWithTimeout(client.value!.getTransaction(htlc.refund_hash), HTLC_CALL_TIMEOUT_MS)
+              .catch((error) => {
+                logger.warn('Stored swap HTLC refund lookup failed', htlc.refund_hash, error)
+                return undefined
+              })
+            if (refund?.executionResult === true) {
+              await useTransactions().setSwapHtlcRefunded(htlc.address)
+              await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+              continue
+            }
+            if (refund && refund.executionResult !== false)
+              continue
+            refundUnproven = !refund
+            // Until its validity window ends, a refund that can't be found may still be included.
+            refundWindowOpen = refundUnproven && localHeight.value <= (htlc.refund_block ?? 0) + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
+          }
+
+          const account = await promiseWithTimeout(client.value!.getAccount(htlc.address), HTLC_CALL_TIMEOUT_MS) as PlainAccount
           if (!account.balance) {
+            if (refundUnproven) {
+              if (refundWindowOpen) {
+                logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
+                continue
+              }
+              // Past its window, only a complete history scan tells whether the refund drained the HTLC.
+              const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
+              if (landedRefund?.executionResult === true)
+                await useTransactions().setSwapHtlcRefunded(htlc.address)
+            }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
             continue
           }
+          // Inside its window an unfound refund is rebuilt unchanged, so a rebroadcast keeps its hash.
+          const validityStartHeight = refundWindowOpen ? htlc.refund_block! : localHeight.value
 
           logger.log('Refunding swap HTLC', htlc, account)
           const refundTx = new Nimiq.Transaction(
@@ -578,7 +683,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             BigInt(account.balance),
             0n,
             0,
-            localHeight.value,
+            validityStartHeight,
             networkId.value,
           )
           const { privateKey, publicKey } = localWallet.value
@@ -588,11 +693,23 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
           proof.write(sigProof)
           refundTx.proof = proof
-          const txDetails = await client.value!.sendTransaction(refundTx)
-          if (txDetails.state !== 'invalidated')
-            useTransactions().setSwapHtlcRefunded(htlc.address)
-          else
+          await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), validityStartHeight, htlc.address])
+          const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
+          if (txDetails.executionResult === true) {
+            await useTransactions().setSwapHtlcRefunded(htlc.address)
+            await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+          }
+          else if (txDetails.executionResult === false) {
             logger.error('Error while sending refund swap HTLC tx', txDetails)
+            await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+          }
+          else if (txDetails.state === 'invalidated' || txDetails.state === 'expired') {
+            // A rebuilt copy is rejected once the original lands; keep the hash so its lookup decides.
+            logger.error('Error while sending refund swap HTLC tx', txDetails)
+          }
+          else {
+            logger.warn('Swap HTLC refund has no execution result yet; next sweep checks its hash', txDetails)
+          }
         }
         catch (error) {
           logger.error('Error while refunding swap HTLC', error)

@@ -1,6 +1,17 @@
 import type { ConsensusState, Transaction } from '@nimiq/core'
+import type { ExternalTransaction } from '@/types/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
+
+// Decodes a `GetTransactionByHash` row. Callers may re-save it, and upsertTx expects parsed JSON.
+export function parseStoredTransaction(tx: ExternalTransaction | null) {
+  if (!tx)
+    return null
+
+  tx.invoiced = typeof tx.invoiced === 'string' ? JSON.parse(tx.invoiced) : tx.invoiced
+  tx.meta = typeof tx.meta === 'string' ? JSON.parse(tx.meta) : tx.meta
+  return tx
+}
 
 export function getLegacyTransactionValidityStartHeight(
   row: { hash: string, sender: string, recipient: string, raw?: string | null },

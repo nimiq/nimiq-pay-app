@@ -1,5 +1,58 @@
 [
   {
+    "version": "2.22.0",
+    "date": "2026-10-06",
+    "highlights": [
+      {
+        "title": "Safer swap fees and refunds",
+        "description": "The fee you see before a swap is now the most you'll pay, even if network fees go up while you confirm. Refunds from failed swaps are also tracked more reliably, so your funds come back and show up correctly."
+      },
+      {
+        "title": "More reliable syncing",
+        "description": "The app recovers better when the network connection drops or a sync step fails, so your balance and transactions stay up to date during longer sessions."
+      },
+      {
+        "title": "Clearer wallet status on startup",
+        "description": "Your funded wallet no longer shows \"Processing funds\" for a while after you open the app. Claimed cashback now also updates in your transaction list right away."
+      },
+      {
+        "title": "Smoother screens and Mini Apps",
+        "description": "When the keyboard is open, the Withdraw button stays in view and the screen moves up properly, for example when you enter your PIN. Mini App logos now show in full in their dialogs. USDT payments now show a clear notice during scheduled maintenance."
+      },
+      {
+        "title": "Crypto Map removed",
+        "description": "The Crypto Map service has been shut down, so its button and map views are no longer in the app."
+      }
+    ]
+  },
+  {
+    "version": "2.21.1",
+    "date": "2026-09-28",
+    "highlights": [
+      {
+        "title": "Share app logs with support",
+        "description": "Support can now help you faster. You can send your app logs directly in the support chat, so the team can see what went wrong.",
+        "howTo": "Open the support chat, tap the attach button next to the message field, and confirm to send your logs. If a support agent asks for your logs, the chat will show a notice to remind you."
+      },
+      {
+        "title": "Lightning payments in Mini Apps",
+        "description": "Mini Apps can now request Bitcoin Lightning payments. The app also saves each payment attempt, so you are not charged twice."
+      },
+      {
+        "title": "Better Mini Apps experience",
+        "description": "Mini Apps can now use fullscreen for a more immersive view. With your permission, they can also see your NIM balance, so they can show you relevant options."
+      },
+      {
+        "title": "Safer USDT payments",
+        "description": "USDT payments and swaps now recover more reliably if something goes wrong along the way. The app will not retry a payment until it confirms the first one did not go through, so you are never charged twice."
+      },
+      {
+        "title": "Chat button fixes",
+        "description": "The support chat button and notification badge now stay in the right spot, even when a backup reminder is on screen."
+      }
+    ]
+  },
+  {
     "version": "2.20.0",
     "date": "2026-09-16",
     "highlights": [

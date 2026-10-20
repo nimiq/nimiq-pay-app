@@ -110,10 +110,10 @@ function handleManualInput() {
       <p v-if="state !== QRScannerState.NoPermission" class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
         <span v-if="expect === QRDataFormat.PaymentRequest">
           <template v-if="isBtcLightningEnabled">
-            {{ $t('Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay.') }}
+            {{ $t('Scan any Nimiq, USDT or Bitcoin Lightning QR code to pay.') }}
           </template>
           <template v-else>
-            {{ $t('Scan any Nimiq, USDT or NAKA QR code to pay.') }}
+            {{ $t('Scan any Nimiq or USDT QR code to pay.') }}
           </template>
         </span>
         <span v-else-if="expect === QRDataFormat.AssetAddress">
@@ -138,10 +138,10 @@ function handleManualInput() {
           <p v-if="state !== QRScannerState.NoPermission" class="w-full mt-5 text-center text-space/60 small:leading-5">
             <span v-if="expect === QRDataFormat.PaymentRequest">
               <template v-if="isBtcLightningEnabled">
-                {{ $t('Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay.') }}
+                {{ $t('Scan any supported Nimiq, USDT or Bitcoin Lightning QR code to pay.') }}
               </template>
               <template v-else>
-                {{ $t('Scan any supported Nimiq, USDT or NAKA QR code to pay.') }}
+                {{ $t('Scan any supported Nimiq or USDT QR code to pay.') }}
               </template>
             </span>
             <span v-else-if="expect === QRDataFormat.AssetAddress">

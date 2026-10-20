@@ -9,7 +9,7 @@ import { Transfer } from '@/types/transactions'
 const loggerError = vi.fn()
 
 const txMocks = vi.hoisted(() => ({
-  addReceiptTransaction: vi.fn(),
+  addReceiptTransactions: vi.fn(),
   addPaymentTransaction: vi.fn(),
   addWithdrawalTransaction: vi.fn(),
   addPolygonHistoryTransaction: vi.fn(),
@@ -52,7 +52,7 @@ vi.mock('@/stores/transactions', () => ({
     addPaymentTransaction: txMocks.addPaymentTransaction,
     addWithdrawalTransaction: txMocks.addWithdrawalTransaction,
     addPolygonHistoryTransaction: txMocks.addPolygonHistoryTransaction,
-    addReceiptTransaction: txMocks.addReceiptTransaction,
+    addReceiptTransactions: txMocks.addReceiptTransactions,
     updateTransactionStatus: vi.fn(),
     updateTransactionTitle: vi.fn(),
   }),
@@ -133,6 +133,25 @@ describe('polygon-usdt quote helpers', () => {
 
     expect(send).toHaveBeenCalledTimes(1)
     expect(send).toHaveBeenCalledWith('eth_gasPrice', [])
+  })
+
+  it('retries the required relay gas lookup after a failed RPC call', async () => {
+    vi.resetModules()
+    const { getRequiredRelayGas } = await import('./polygon-usdt')
+    const lookup = vi.fn()
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce(70_000n)
+    const client = {
+      transferContract: {
+        getRequiredRelayGas: lookup,
+        interface: new Interface(['function transferWithApproval()']),
+      },
+    } as any
+
+    await expect(getRequiredRelayGas(client)).rejects.toThrow('network error')
+    await expect(getRequiredRelayGas(client)).resolves.toBe(70_000n)
+    await expect(getRequiredRelayGas(client)).resolves.toBe(70_000n)
+    expect(lookup).toHaveBeenCalledTimes(2)
   })
 
   it('logs relay broadcast RPC errors before falling back to polling', async () => {
@@ -722,7 +741,7 @@ describe('polygon-usdt quote helpers', () => {
       amount: 116_440_000,
       recipient: '0x0000000000000000000000000000000000000001',
       transfer: Transfer.UserPaymentToMerchant,
-      fee: 5_000_000n,
+      fee: 4_000_000n,
       balance: 500_000_000,
       gasLimit: 123_000n,
       gasPrice: 456_000_000n,
@@ -753,6 +772,62 @@ describe('polygon-usdt quote helpers', () => {
 
     expect(buildFreshQuote).toHaveBeenCalledTimes(1)
     expect(resolvedQuote).toEqual(freshQuote)
+  })
+
+  it('rejects a refreshed quote whose fee exceeds the approved fee', async () => {
+    const { buildPolygonTransferQuote, resolvePolygonTransferQuote } = await import('./polygon-usdt')
+
+    const staleQuote = buildPolygonTransferQuote({
+      amount: 116_440_000,
+      recipient: '0x0000000000000000000000000000000000000001',
+      transfer: Transfer.UserPaymentToMerchant,
+      fee: 4_000_000n,
+      balance: 500_000_000,
+      gasLimit: 123_000n,
+      gasPrice: 456_000_000n,
+      relay: {
+        url: 'https://relay.example/stale',
+        baseRelayFee: 1n,
+        pctRelayFee: 2n,
+        relayManagerAddress: '0x0000000000000000000000000000000000000011',
+        relayWorkerAddress: '0x0000000000000000000000000000000000000022',
+        minGasPrice: 3n,
+      },
+      now: 1_000,
+    })
+
+    const freshQuote = buildPolygonTransferQuote({
+      amount: 116_440_000,
+      recipient: '0x0000000000000000000000000000000000000001',
+      transfer: Transfer.UserPaymentToMerchant,
+      fee: 5_000_000n,
+      balance: 500_000_000,
+      gasLimit: 123_000n,
+      gasPrice: 456_000_000n,
+      relay: {
+        url: 'https://relay.example/fresh',
+        baseRelayFee: 1n,
+        pctRelayFee: 2n,
+        relayManagerAddress: '0x0000000000000000000000000000000000000011',
+        relayWorkerAddress: '0x0000000000000000000000000000000000000022',
+        minGasPrice: 3n,
+      },
+      now: staleQuote.expiresAt + 1,
+    })
+
+    const buildFreshQuote = vi.fn().mockResolvedValue(freshQuote)
+
+    await expect(resolvePolygonTransferQuote({
+      request: {
+        amount: 116_440_000,
+        recipient: '0x0000000000000000000000000000000000000001',
+        transfer: Transfer.UserPaymentToMerchant,
+      },
+      balance: 500_000_000,
+      providedQuote: staleQuote,
+      buildFreshQuote,
+      now: staleQuote.expiresAt + 1,
+    })).rejects.toThrow('Polygon fee changed; review the payment again')
   })
 
   it('surfaces a deterministic insufficient-after-fee error from refreshed quotes', async () => {
@@ -897,7 +972,7 @@ describe('polygon-usdt quote helpers', () => {
 
 describe('persistHistoryTransaction onIncomingPersisted hook', () => {
   beforeEach(() => {
-    txMocks.addReceiptTransaction.mockReset()
+    txMocks.addReceiptTransactions.mockReset()
     txMocks.addPaymentTransaction.mockReset()
     txMocks.addWithdrawalTransaction.mockReset()
     txMocks.addPolygonHistoryTransaction.mockReset()
@@ -921,7 +996,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
     const { persistHistoryTransaction } = await import('./polygon-usdt')
     const onIncomingPersisted = vi.fn()
     await persistHistoryTransaction(makeIncomingGroup(2000, '0xfresh'), localAddr, { onIncomingPersisted })
-    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    expect(txMocks.addReceiptTransactions).toHaveBeenCalledTimes(1)
     expect(onIncomingPersisted).toHaveBeenCalledTimes(1)
     const arg = onIncomingPersisted.mock.calls[0]![0]
     expect(arg).toMatchObject({ hash: '0xfresh', transfer: Transfer.UserReceipt, asset: Asset.USDT, chain: Chain.Polygon, timestamp: 2000 })
@@ -930,7 +1005,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
   it('does NOT invoke onIncomingPersisted when no options passed (initial-scan branch contract)', async () => {
     const { persistHistoryTransaction } = await import('./polygon-usdt')
     await persistHistoryTransaction(makeIncomingGroup(2000), localAddr)
-    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    expect(txMocks.addReceiptTransactions).toHaveBeenCalledTimes(1)
     // callback omitted → nothing to assert beyond the receipt being persisted.
   })
 
@@ -947,7 +1022,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
     } as any
     await persistHistoryTransaction(outgoingGroup, localAddr, { onIncomingPersisted })
     expect(onIncomingPersisted).not.toHaveBeenCalled()
-    expect(txMocks.addReceiptTransaction).not.toHaveBeenCalled()
+    expect(txMocks.addReceiptTransactions).not.toHaveBeenCalled()
     expect(txMocks.addPolygonHistoryTransaction).toHaveBeenCalledWith(expect.objectContaining({
       hash: '0xout',
       title: 'Payment',

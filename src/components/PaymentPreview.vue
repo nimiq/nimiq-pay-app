@@ -4,7 +4,7 @@ import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
 import { computed, effectScope, onUnmounted, ref, toValue, watch, watchEffect } from 'vue'
@@ -23,6 +23,7 @@ import { Asset, assetToCrypto, fastspotFeeTickerToCrypto, formatUsdtAmount } fro
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { roundUpToTwoDecimals } from '@/lib/utils'
 import { Fiat, useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -40,6 +41,7 @@ const props = defineProps({
   canSkip: { type: Boolean },
   state: { type: Object as PropType<State>, required: true },
   isConfirmationAlert: { type: Boolean },
+  isVisible: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(stepEmits)
@@ -53,13 +55,12 @@ const { balance: usdtBalance, consensus: polygonConsensus } = storeToRefs(polygo
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
 const { localAddress } = storeToRefs(useLocalWallet())
 const { selectedFiat } = storeToRefs(useApp())
+const { isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
 
 const payment = computed<PaymentRequestData>(() =>
   typeof props.state[StepName.QRCodeScanner] === 'object'
     ? props.state[StepName.QRCodeScanner]
-    : typeof props.state[StepName.HoldNakaCardToReader] === 'object'
-      ? props.state[StepName.HoldNakaCardToReader].request
-      : { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment },
+    : { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment },
 )
 const asset = computed(() => payment.value.asset || Asset.NIM)
 const isAtomicSwap = computed(() => !!payment.value.swap)
@@ -100,13 +101,16 @@ const {
   error: usdtQuoteError,
   quoteLoading: usdtQuoteLoading,
   feeText: usdtFeeText,
+  refresh: refreshUsdtQuote,
 } = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
 
 // Use VueUse's built-in evaluating ref to track loading state — setting a
 // reactive ref synchronously before the first `await` inside computedAsync
 // can prevent the async chain from settling in Vue's scheduler.
 const loadingHtlcFee = ref(false)
-const htlcFeeSnapshot = computedAsync(async () => {
+const htlcFeeRefresh = ref(0)
+const htlcFeeSnapshot = computedAsync(async (): Promise<Awaited<ReturnType<typeof polygonUsdt.primeHtlcFee>> | null> => {
+  void htlcFeeRefresh.value
   if (asset.value !== Asset.USDT || !isAtomicSwap.value || polygonConsensus.value !== 'established')
     return null
 
@@ -115,9 +119,25 @@ const htlcFeeSnapshot = computedAsync(async () => {
   }
   catch (error) {
     logger.error('Failed to get Polygon HTLC fee', error)
-    return null
+    // Keep the fee already shown so a failed refresh neither lowers it nor drops the cap.
+    // A new object re-triggers the refresh watcher, which retries after HTLC_FEE_RETRY_MS.
+    return htlcFeeSnapshot.value && { ...htlcFeeSnapshot.value }
   }
 }, null, loadingHtlcFee)
+// Only the first fetch blocks paying; a background refresh keeps the fee already shown.
+const awaitingHtlcFee = computed(() => loadingHtlcFee.value && !htlcFeeSnapshot.value)
+
+// The store's HTLC fee expires; re-prime it so the fee shown and approved stays current.
+const HTLC_FEE_RETRY_MS = 5_000
+const htlcFeeRefreshDelay = ref(0)
+const { start: scheduleHtlcFeeRefresh, stop: stopHtlcFeeRefresh } = useTimeoutFn(() => htlcFeeRefresh.value++, htlcFeeRefreshDelay, { immediate: false })
+watch([htlcFeeSnapshot, loading], ([snapshot, isPaying]) => {
+  stopHtlcFeeRefresh()
+  if (!snapshot || isPaying)
+    return
+  htlcFeeRefreshDelay.value = Math.max(HTLC_FEE_RETRY_MS, snapshot.expiresAt - Date.now())
+  scheduleHtlcFeeRefresh()
+})
 
 const flowErrorMessage = computed(() => {
   if (usdtQuoteError.value && isGenericPolygonQuoteErrorMessage(props.errorMsg))
@@ -130,10 +150,10 @@ const usdtFee = computed(() => {
   if (asset.value !== Asset.USDT)
     return payment.value.fee
 
-  // For atomic swaps, use non-included fees from Fastspot quote (Polygon HTLC gas),
-  // falling back to our local estimate
+  // For atomic swaps, show the higher of Fastspot's non-included USDT fee and our HTLC relay estimate:
+  // it is also the most the swap may sign.
   return isAtomicSwap.value
-    ? (nonIncludedUsdtFee.value || htlcFeeSnapshot.value?.fee || 0)
+    ? Math.max(nonIncludedUsdtFee.value, htlcFeeSnapshot.value?.fee ?? 0)
     : (usdtQuote.value?.fee ?? payment.value.fee)
 })
 
@@ -149,7 +169,7 @@ const hasEnoughBalance = computed(() => {
     return true
   if (asset.value === Asset.USDT) {
     if (isAtomicSwap.value)
-      return !loadingHtlcFee.value && usdtBalance.value >= usdtTotalDebit.value
+      return !awaitingHtlcFee.value && usdtBalance.value >= usdtTotalDebit.value
     return !!usdtQuote.value && usdtBalance.value >= usdtQuote.value.totalDebit
   }
   return useRemoteSigner().remoteBalance >= payment.value.amount
@@ -321,7 +341,7 @@ const canPayWithPuntos = computed(() => asset.value === Asset.NIM && objectHasDa
  * Only allow paying with Points if:
  *   - The user has enough NIM balance
  *   - The user is eligible for Points
- *   - The user has scanned something with the QR code scanner in previous steps (no Naka, no bluecode...)
+ *   - The user has scanned something with the QR code scanner in previous steps (no bluecode...)
  */
 const payWithPuntos = ref((asset.value === Asset.NIM) && (!hasEnoughBalance.value && isEligible.value && canPayWithPuntos.value))
 
@@ -330,12 +350,8 @@ const paymentMethod = computed(() => {
     return PaymentMethod.Points
   else if (asset.value === Asset.USDT)
     return PaymentMethod.USDT
-  else if (props.state[StepName.HoldNakaCardToReader])
-    return PaymentMethod.NakaCard
   else if (props.state[StepName.QRCodeScanner])
     return PaymentMethod.NIM
-  // else if (props.state[StepName.BluecodePayment])
-  //   return PaymentMethod.Bluecode
   throw new Error('Unexpected payment method')
 })
 
@@ -374,8 +390,11 @@ const remainingFiatLimits = computedAsync(async () => {
   return fiatAmount.fiat.formatted
 })
 
+const isUsdtMaintenanceBlocked = computed(() => asset.value === Asset.USDT && isUsdtMaintenanceActive.value)
+
 const disabled = computed(() =>
-  (isAtomicSwap.value && (loadingSwapLimits.value || loadingHtlcFee.value)) /* Not loaded yet */
+  isUsdtMaintenanceBlocked.value
+  || (isAtomicSwap.value && (loadingSwapLimits.value || awaitingHtlcFee.value)) /* Not loaded yet */
   // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
   || (isAtomicSwap.value && !!swapAddressLimits.value && payment.value.amount > swapLimit.value) /* Over swap limit */
   || !(
@@ -405,8 +424,17 @@ watch(() => goCryptoError.value || flowErrorMessage.value, (message) => {
     emit('back', StepName.QRCodeScanner)
 }, { immediate: true })
 
+// A payment failing on the PIN step puts its error there, so the preview's error watch never resets `loading`.
+// Reset it when the user comes back, which also resumes the paused USDT quote refresh so the fee shown is current.
+watch(() => props.isVisible, (visible) => {
+  if (!visible || !loading.value)
+    return
+  loading.value = false
+  void refreshUsdtQuote()
+})
+
 function handlePay() {
-  if (loading.value)
+  if (loading.value || isUsdtMaintenanceBlocked.value)
     return
 
   const paymentAnalytics = startPaymentAnalytics()
@@ -425,6 +453,10 @@ function handlePay() {
     payWithPuntos: payWithPuntos.value,
     paymentAnalytics,
     polygonQuote: usdtQuote.value || undefined,
+    // A swap may not sign more than the fee shown; without an HTLC estimate there is nothing to cap against.
+    usdtFeeAllowance: asset.value === Asset.USDT && isAtomicSwap.value && htlcFeeSnapshot.value
+      ? usdtFee.value
+      : undefined,
   })
 }
 
@@ -696,10 +728,13 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
             </p>
           </template>
           <template v-else-if="asset === Asset.USDT">
-            <p v-if="polygonConsensus !== 'established'" class="text-pumpkin">
+            <p v-if="isUsdtMaintenanceActive" class="text-pumpkin">
+              {{ usdtMaintenanceNotice }}
+            </p>
+            <p v-else-if="polygonConsensus !== 'established'" class="text-pumpkin">
               {{ $t('Polygon is still connecting. Please wait a moment.') }}
             </p>
-            <p v-else-if="isAtomicSwap && (loadingSwapLimits || loadingHtlcFee)" class="flex items-center justify-center opacity-60 gap-x-2">
+            <p v-else-if="isAtomicSwap && (loadingSwapLimits || awaitingHtlcFee)" class="flex items-center justify-center opacity-60 gap-x-2">
               <LoadingSpinner class="w-4 h-4 shrink-0" />
               {{ $t('Loading swap limits...') }}
             </p>
@@ -742,7 +777,7 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
         aria-label="Pay"
         expand="block"
         class="w-full text-base font-bold [&_ion-spinner]:h-4"
-        :disabled="!isConfirmationAlert && disabled"
+        :disabled="isUsdtMaintenanceBlocked || (!isConfirmationAlert && disabled)"
         @click="handlePay"
       >
         <Transition

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { Asset } from '@/lib/assets'
-import { PaymentMethod, Transfer } from '@/types/transactions'
+import { Rail, Transfer } from '@/types/transactions'
 import { FlowName, StepName } from './steps.types'
 
 const state = vi.hoisted(() => ({
@@ -14,6 +14,8 @@ const state = vi.hoisted(() => ({
   primeTransferFee: vi.fn(() => new Promise(() => {})),
   primeHtlcFee: vi.fn(() => new Promise(() => {})),
   polygonSendPayment: vi.fn(),
+  polygonSendSwapPayment: vi.fn(),
+  isUsdtMaintenanceActive: false,
   isNimiqAsset: false,
   activeAsset: 'NIM',
   trackFeatureOpened: vi.fn(),
@@ -27,16 +29,16 @@ const state = vi.hoisted(() => ({
   updatePinInputTs: vi.fn(),
   setEntropy: vi.fn(async () => {}),
   sendTx: vi.fn(),
-  confirmNakaPayment: vi.fn(async () => ({})),
   setToast: vi.fn(),
   trackPaymentCompleted: vi.fn(),
+  reportCriticalError: vi.fn(),
+  payWithPoints: vi.fn(),
 }))
 
 vi.mock('@ionic/vue', () => ({
   modalController: {
     create: state.create,
   },
-  SumsubSdkStatus: {},
 }))
 
 vi.mock('@/components/Flow.vue', () => ({
@@ -90,15 +92,15 @@ vi.mock('@/stores/polygon-usdt', () => ({
     primeTransferFee: state.primeTransferFee,
     primeHtlcFee: state.primeHtlcFee,
     sendPayment: state.polygonSendPayment,
+    sendSwapPayment: state.polygonSendSwapPayment,
   }),
 }))
 
-vi.mock('@/lib', () => ({
-  isNakaEnabled: true,
-}))
-
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({ isCardActive: true, isCardLocked: false }),
+vi.mock('@/stores/feature-flags', () => ({
+  useFeatureFlags: () => ({
+    isUsdtMaintenanceActive: state.isUsdtMaintenanceActive,
+    usdtMaintenanceNotice: 'USDT maintenance notice',
+  }),
 }))
 
 vi.mock('@/stores/transactions', () => ({
@@ -118,6 +120,11 @@ vi.mock('@/lib/analytics', () => ({
   trackFeatureOpened: state.trackFeatureOpened,
   trackWalletCreated: state.trackWalletCreated,
   trackWalletImported: state.trackWalletImported,
+  reportCriticalError: state.reportCriticalError,
+}))
+
+vi.mock('@/stores/points', () => ({
+  usePoints: () => ({ payWithPoints: state.payWithPoints }),
 }))
 
 vi.mock('@/router', () => ({
@@ -146,7 +153,6 @@ vi.mock('./steps', () => {
     promoCodeStep: vi.fn(async () => step),
     phoneNumberStep: vi.fn(async () => step),
     phoneNumberConfirmStep: vi.fn(async () => step),
-    holdNakaCardToReaderStep: vi.fn(async () => step),
     bluecodeNotAvailableStep: vi.fn(async () => step),
     paymentAmountInputStep: vi.fn(async () => step),
     nimWithdrawalAmountSelectionStep: vi.fn(async () => step),
@@ -178,6 +184,7 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.primeTransferFee.mockClear()
     state.primeHtlcFee.mockClear()
     state.isNimiqAsset = false
+    state.isUsdtMaintenanceActive = false
     state.activeAsset = 'NIM'
     state.trackFeatureOpened.mockClear()
     state.trackWalletCreated.mockClear()
@@ -190,9 +197,11 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
     state.polygonSendPayment.mockReset()
     state.polygonSendPayment.mockResolvedValue({ outcome: 'submitted', data: { tx: { hash: 'polygon-payment' }, serialized: 'polygon-payment' } })
-    state.confirmNakaPayment.mockClear()
     state.setToast.mockClear()
     state.trackPaymentCompleted.mockClear()
+    state.reportCriticalError.mockClear()
+    state.payWithPoints.mockReset()
+    state.payWithPoints.mockResolvedValue({ data: {}, error: undefined })
   })
 
   it('warms the Polygon transfer fee snapshot without blocking payment flow initialization for USDT', async () => {
@@ -269,43 +278,44 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
   })
 
-  it('does not confirm an uncertain Naka payment when final serialization is available', async () => {
-    state.isNimiqAsset = true
-    state.sendTx.mockResolvedValue({
-      outcome: 'unknown',
-      stagedTx: { hash: 'staged-payment' },
-      stagedHash: 'staged-payment',
-      serialized: 'serialized-uncertain-payment',
-      error: 'response lost',
-    })
+  it('reports the payment state readably when the scanned request has no data', async () => {
     const { initializeFlow } = await import('./index')
     await initializeFlow(FlowName.Payment)
     const flow = getLastCreatedFlow()
 
-    await flow.onDone({
-      [StepName.HoldNakaCardToReader]: {
-        request: {
-          transfer: Transfer.UserPaymentToMerchant,
-          recipient: 'NQ22 MERCHANT',
-          amount: 10,
-          paymentMethod: PaymentMethod.NakaCard,
-        },
-        confirmPayment: state.confirmNakaPayment,
-      },
-      [StepName.PaymentPreview]: {
-        payWithPuntos: false,
-        paymentAnalytics: { startedAt: 1, status: 'started' },
-      },
-    }, { err: vi.fn(), setToast: vi.fn() })
-
-    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
-    expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
-    expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
-      message: expect.stringContaining('Do not retry'),
-    }))
+    await expect(flow.onDone({
+      [StepName.QRCodeScanner]: {},
+      [StepName.PaymentPreview]: { payWithPuntos: false },
+    }, { err: vi.fn(), setToast: vi.fn() })).rejects.toThrow('Unexpected payment method. Expected one of {"payWithPuntos":false}')
   })
 
-  it('does not confirm or complete an uncertain Naka payment without final serialization', async () => {
+  it('pays a scanned CryptoPaymentLink request with Points', async () => {
+    state.isNimiqAsset = true
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+    const request = {
+      transfer: Transfer.UserPaymentToMerchant,
+      recipient: 'NQ22 MERCHANT',
+      amount: 10,
+      rail: Rail.CryptoPaymentLink,
+      paymentRef: 'cpl-ref',
+    }
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: request,
+      [StepName.PaymentPreview]: { payWithPuntos: true },
+    }, { err, setToast: vi.fn() })
+
+    expect(state.reportCriticalError).not.toHaveBeenCalled()
+    expect(state.payWithPoints).toHaveBeenCalledWith(request)
+    expect(state.sendTx).not.toHaveBeenCalled()
+    expect(err).not.toHaveBeenCalled()
+    expect(state.trackPaymentCompleted).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not complete or fail an uncertain NIM payment', async () => {
     state.isNimiqAsset = true
     state.sendTx.mockResolvedValue({
       outcome: 'unknown',
@@ -318,14 +328,10 @@ describe('initializeFlow analytics and setup hooks', () => {
     const flow = getLastCreatedFlow()
 
     await flow.onDone({
-      [StepName.HoldNakaCardToReader]: {
-        request: {
-          transfer: Transfer.UserPaymentToMerchant,
-          recipient: 'NQ22 MERCHANT',
-          amount: 10,
-          paymentMethod: PaymentMethod.NakaCard,
-        },
-        confirmPayment: state.confirmNakaPayment,
+      [StepName.QRCodeScanner]: {
+        transfer: Transfer.UserPaymentToMerchant,
+        recipient: 'NQ22 MERCHANT',
+        amount: 10,
       },
       [StepName.PaymentPreview]: {
         payWithPuntos: false,
@@ -333,7 +339,6 @@ describe('initializeFlow analytics and setup hooks', () => {
       },
     }, { err: vi.fn(), setToast: vi.fn() })
 
-    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
     expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
     expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('Do not retry'),
@@ -397,6 +402,80 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(err).not.toHaveBeenCalled()
     expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Do not retry') }))
     expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('limits the signed Polygon fee of a USDT Lightning swap to the approved allowance', async () => {
+    state.activeAsset = Asset.USDT
+    state.polygonSendSwapPayment.mockResolvedValue({ data: {}, error: undefined })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        recipient: 'lnbc1atomicswapinvoice',
+        amount: 1_000_000,
+        paymentRef: 'swap-ref',
+        merchantName: 'Coffee Shop',
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+        usdtFeeAllowance: 4_000_000,
+      },
+    }, { err, setToast: vi.fn() })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(state.polygonSendSwapPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentRef: 'swap-ref' }),
+      expect.anything(),
+      { maxFee: 4_000_000 },
+    )
+  })
+
+  it('blocks a USDT payment when maintenance begins during the flow', async () => {
+    state.activeAsset = Asset.USDT
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    state.isUsdtMaintenanceActive = true
+    const err = vi.fn()
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToMerchant,
+        recipient: '0x00000000000000000000000000000000000000AA',
+        amount: 1_000_000,
+        merchantName: 'Coffee Shop',
+      },
+      [StepName.PaymentPreview]: { payWithPuntos: false },
+    }, { err, setToast: vi.fn() })
+
+    expect(err).toHaveBeenCalledWith('USDT maintenance notice')
+    expect(state.polygonSendPayment).not.toHaveBeenCalled()
+  })
+
+  it('signs the Polygon withdrawal with the quote confirmed on the confirm step', async () => {
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.NimWithdraw)
+    const flow = getLastCreatedFlow()
+    const staleQuote = { fee: 10_000 }
+    const confirmedQuote = { fee: 50_000 }
+
+    await flow.onDone({
+      [StepName.NimWithdrawalAmountSelectionStep]: {
+        amount: 10,
+        recipient: '0x00000000000000000000000000000000000000AA',
+        polygonQuote: staleQuote,
+      },
+      [StepName.NimWithdrawalConfirmStep]: { polygonQuote: confirmedQuote },
+    }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.polygonSendPayment).toHaveBeenCalledWith(expect.anything(), 'Withdrawal', { quote: confirmedQuote })
   })
 
   it('does not report an uncertain Polygon withdrawal as failed or successful', async () => {

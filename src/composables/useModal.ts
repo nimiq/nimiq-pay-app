@@ -17,6 +17,7 @@ export enum Modal {
   Dev = '@/modals/DevModal.vue',
   EnableBiometric = '@/modals/EnableBiometricModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
+  HtlcHistoryCheck = '@/modals/HtlcHistoryCheckModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   LongTimeNoSee = '@/modals/LongTimeNoSeeModal.vue',
@@ -28,7 +29,6 @@ export enum Modal {
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
-  Map = '@/modals/MapModal.vue',
   Changelog = '@/modals/ChangelogModal.vue',
 }
 
@@ -75,6 +75,9 @@ function _useModal() {
       case Modal.LongTimeNoSee:
         component = defineAsyncComponent(() => import(Modal.LongTimeNoSee))
         break
+      case Modal.HtlcHistoryCheck:
+        component = defineAsyncComponent(() => import(Modal.HtlcHistoryCheck))
+        break
       case Modal.Menu:
         component = defineAsyncComponent(() => import(Modal.Menu))
         break
@@ -101,9 +104,6 @@ function _useModal() {
         break
       case Modal.SecretFeatures:
         component = defineAsyncComponent(() => import(Modal.SecretFeatures))
-        break
-      case Modal.Map:
-        component = defineAsyncComponent(() => import(Modal.Map))
         break
       case Modal.Changelog:
         component = defineAsyncComponent(() => import(Modal.Changelog))

@@ -87,7 +87,7 @@ export function useStringParser() {
 
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
-  async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
+  async function getPaymentRequestData(content: string, lightningSellAsset?: Asset): Promise<Result<PaymentRequestData, string>> {
     if (isValidEthAddress(content))
       return parsePolygonAddress(content)
 
@@ -103,10 +103,11 @@ export function useStringParser() {
       url = new URL(content)
     }
     catch (e) {
-      logger.error(`Error invalid URL: ${content}`, e)
-      // Truncate the URL in the error message if it's too long, to avoid overwhelming the user with a long string
-      const truncatedUrl = content.length > 100 ? `${content.substring(0, 100)}...` : content
-      return { error: i18n.t('Invalid URL: {url}', { url: truncatedUrl }), data: undefined }
+      // Scanned or pasted content can be anything (even a seed phrase), and some engines echo it in the URL
+      // error's message. Logs reach PostHog and support reports, so record neither.
+      logger.error('Error invalid URL', { length: content.length, errorName: e instanceof Error ? e.name : typeof e })
+      // The returned error reaches logs, toasts and Mini Apps, so it must not echo the input.
+      return { error: i18n.t('Invalid URL'), data: undefined }
     }
 
     if (url.protocol === 'ethereum:' || url.protocol === 'polygon:')
@@ -121,7 +122,7 @@ export function useStringParser() {
       result = await parseGoCryptoUrl(url)
     }
     else if (rail === Rail.BitcoinLightning) {
-      result = await parseBitcoinLightningUrl(url)
+      result = await parseBitcoinLightningUrl(url, lightningSellAsset)
     }
     // If it is a payment request from the Nimiq Wallet, redirect to the withdrawal flow
     else if (rail === Rail.NimiqWallet) {
@@ -130,8 +131,8 @@ export function useStringParser() {
     else {
       result = {
         error: __ENABLE_BTC_LN__
-          ? i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported.')
-          : i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM are supported.'),
+          ? i18n.t('Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are supported.')
+          : i18n.t('Invalid link format. Only CPLinks for NIM are supported.'),
         data: undefined,
       }
     }
@@ -183,7 +184,7 @@ export function useStringParser() {
     const transfer = Transfer.UserPaymentToMerchant
     const rail = Rail.CryptoPaymentLink
     const paymentRef = searchParams.get(CPL_URL_ID_PARAM)
-    const merchantCategory = MerchantCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
+    const merchantCategory = MerchantCategory.Shop
 
     if (!paymentRef)
       return { error: i18n.t('Invalid CPLink. Missing id.'), data: undefined }
@@ -210,7 +211,7 @@ export function useStringParser() {
     return fetchGoCryptoPaymentRequestData(goCryptoRequestIdentifier)
   }
 
-  async function parseBitcoinLightningUrl(url: URL): Promise<Result<PaymentRequestData, string>> {
+  async function parseBitcoinLightningUrl(url: URL, sellAsset?: Asset): Promise<Result<PaymentRequestData, string>> {
     let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
     try {
       decoded = await parseBitcoinLightningInvoice(url.searchParams.get('lightning') || url.pathname)
@@ -224,9 +225,10 @@ export function useStringParser() {
     const timestampSection = decoded.sections.find(section => section.name === 'timestamp') as TimestampSection
     if (!timestampSection || !timestampSection.value)
       return { error: i18n.t('Invalid Bitcoin Lightning invoice: missing timestamp.'), data: undefined }
+    const invoiceExpiresAt = timestampSection.value + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
 
     // Show expiry error 20s before actual expiry
-    if (timestampSection.value + decoded.expiry < Date.now() / 1e3 - 20)
+    if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
     const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection | undefined
@@ -241,7 +243,7 @@ export function useStringParser() {
     // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
     const amountBtc = Number.parseInt(amountSection.value) / 1e11
 
-    const isUsdt = useApp().activeAsset === Asset.USDT
+    const isUsdt = (sellAsset ?? useApp().activeAsset) === Asset.USDT
     const sellAssetId = isUsdt ? AssetId.USDT_MATIC : AssetId.NIM
     const swapQuoteCacheKey = `${sellAssetId}:${decoded.paymentRequest}`
 
@@ -269,7 +271,7 @@ export function useStringParser() {
           { asset: sellAssetId },
           { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
         ))
-        await run(SQLQuery.InsertSwapQuote, [swapQuoteCacheKey, quote.id, Date.now() + decoded.expiry * 1e3])
+        await run(SQLQuery.InsertSwapQuote, [swapQuoteCacheKey, quote.id, Math.min(invoiceExpiresAt, quote.expiry) * 1e3])
       }
       catch (e) {
         logger.error('Error creating swap:', { error: e, amountBtc, decoded, sellAssetId })

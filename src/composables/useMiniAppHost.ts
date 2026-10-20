@@ -11,13 +11,17 @@ import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
+import { isTestnet } from '@/lib'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
-import { formatUsdtAmount } from '@/lib/assets'
+import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
+import { useConn } from '@/stores/conn'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -33,9 +37,15 @@ import {
   USER_REJECTED_REQUEST_MESSAGE,
 } from '../../web3-provider/src/provider-errors'
 import { generateUUID } from '../../web3-provider/src/utils'
+import { parseBitcoinLightningInvoice } from './useBitcoinLightning'
+import { useFastspotApiV1 } from './useFastspotv1'
+import { useFastspotApiV2 } from './useFastspotV2'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
+// Sent to the webview on `from`/`address` mismatch. Must not include the wallet
+// address: the caller may not have been granted eth_requestAccounts.
+const ETH_ADDRESS_MISMATCH_MESSAGE = 'Requested address does not match the wallet address'
 const erc20TransferInterface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
 ])
@@ -72,6 +82,18 @@ export function getActiveMiniAppSession(): MiniAppSessionState | null {
 export interface SignatureResult {
   publicKey: string
   signature: string
+}
+
+export interface LightningPaymentResult {
+  hash: string
+  swapId: string
+}
+
+interface MiniAppLightningAttempt {
+  origin: string
+  owner: string
+  swap_id: string
+  tx_hash: string | null
 }
 
 interface DecodedAssetTransfer {
@@ -121,6 +143,23 @@ export type UserConfirmationRequest
       network: Network
       data: Omit<PaymentRequestData, 'transfer'>
       stakingData?: StakingData
+    })
+    | (MiniAppBase & {
+      type: 'lightning-access'
+      network: 'nimiq'
+      description?: string
+    })
+    | (MiniAppBase & {
+      type: 'lightning-payment'
+      network: 'nimiq'
+      data: {
+        description?: string
+        btcAmount: number
+        asset: Asset
+        amount: number
+        usdtFeeAllowance: number
+        fees: NonNullable<PaymentRequestData['swap']>['fees']
+      }
     })
     | (MiniAppBase & {
       type: 'eth-transaction'
@@ -180,6 +219,7 @@ export interface MiniAppHostConfig {
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
 }
 
 /**
@@ -192,25 +232,34 @@ export class MiniAppHost {
   private destroyed = false
   private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
+  private fullscreenChangeListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
+  /** Chains the user approved in this session; onChainChanged frames for other chains are ignored. */
+  private readonly approvedChainIds = new Set<string>()
   /** Stops the remote-signer watcher registered in the constructor. */
   private stopRemoteAddressWatcher: (() => void) | null = null
   /** The session object this host registered; destroy() only clears module state it still owns. */
-  private sessionState: MiniAppSessionState | null = null
+  private readonly sessionState: MiniAppSessionState
+  /** Own copy: approved custom chains are added here, and the launcher's defaults are shared by every session. */
+  private readonly evmRpcUrls: Record<string, string>
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
+  private readonly pendingLightningInvoices = new Set<string>()
+  private lightningAccessScope: string | null = null
+  private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
 
   /** Resolve the RPC URL for the given chain (or current chain if not specified) */
   private getRpcUrlForChain(chainId?: string): string | undefined {
     const chain = chainId || this.currentChainId
-    return this.config.evmRpcUrls?.[chain]
+    return this.evmRpcUrls[chain]
   }
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
     this.config = config
+    this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
     this.setupBirpc()
 
@@ -219,7 +268,7 @@ export class MiniAppHost {
       url: config.url,
       title: config.title,
       chainId: this.currentChainId,
-      evmRpcUrls: config.evmRpcUrls,
+      evmRpcUrls: this.evmRpcUrls,
     }
     this.sessionState = _activeMiniAppSession
     isMiniAppActive.value = true
@@ -227,11 +276,11 @@ export class MiniAppHost {
     // When the remote signer address changes (added/refreshed mid-session), the
     // previously-cached Nimiq accounts list is stale. Clear the webview cache so
     // the dApp re-prompts and receives the up-to-date account set.
+    // Watch the address string: signer reloads create new Address objects for
+    // the same address, which would clear the cache without a real change.
     this.stopRemoteAddressWatcher = watch(
-      () => useRemoteSigner().remoteAddress,
-      (newAddress, oldAddress) => {
-        if (newAddress === oldAddress)
-          return
+      () => useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+      () => {
         logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
         this.birpc?.clearAccountCache('nimiq')
       },
@@ -249,9 +298,7 @@ export class MiniAppHost {
   ): MiniAppHost {
     const host = new MiniAppHost(inAppBrowser, config)
     host.currentChainId = restoredChainId
-    if (_activeMiniAppSession) {
-      _activeMiniAppSession.chainId = restoredChainId
-    }
+    host.sessionState.chainId = restoredChainId
     return host
   }
 
@@ -259,6 +306,7 @@ export class MiniAppHost {
     if (this.destroyed) {
       return
     }
+    this.destroyed = true
     this.stopRemoteAddressWatcher?.()
     this.stopRemoteAddressWatcher = null
     // A late destroy of an old host must not clobber the session a newer host
@@ -269,13 +317,20 @@ export class MiniAppHost {
       _activeMiniAppSession = null
       isMiniAppActive.value = false
     }
-    await this.inAppBrowser?.clearAllCookies()
-    await this.messageFromWebviewListener?.remove()
+    const cleanupResults = await Promise.allSettled([
+      this.inAppBrowser?.clearAllCookies(),
+      this.messageFromWebviewListener?.remove(),
+      this.fullscreenChangeListener?.remove(),
+    ])
+    for (const result of cleanupResults) {
+      if (result.status === 'rejected')
+        logger.error('Could not clean up Mini App host', result.reason)
+    }
     this.messageFromWebviewListener = null
+    this.fullscreenChangeListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
-    this.destroyed = true
   }
 
   private setupBirpc(): void {
@@ -305,16 +360,18 @@ export class MiniAppHost {
           }
         }
         catch (error) {
+          const isFullscreenRequest = params.network === 'host' && (params.name === 'setFullscreen' || params.name === 'getFullscreen')
           if (error instanceof MiniAppError) {
             // Show toast for user-actionable errors (skip permission denied - user already knows)
-            if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
+            if (!isFullscreenRequest && !(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
               this.showErrorToast(error.message)
             }
             // Add the Nimiq type while preserving RPC fields used by older SDKs.
-            throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined)
+            throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined, params.network === 'nimiq' ? error.data : undefined)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
-          this.showErrorToast(message)
+          if (!isFullscreenRequest)
+            this.showErrorToast(message)
           throw this.createRpcError(-32603, message, params.network === 'nimiq' ? 'INTERNAL_ERROR' : undefined)
         }
       },
@@ -325,6 +382,8 @@ export class MiniAppHost {
 
         const numericChainId = parseChainId(request.chainId)
         const chainName = request.chainName || (numericChainId ? EVM_CHAIN_NAMES[numericChainId] : undefined)
+        // Allowlisted chains always use the host's RPC, so don't show the dApp's.
+        const customRpcUrl = numericChainId && this.isAllowedChain(numericChainId) ? undefined : request.rpcUrl
         const confirmed = await this.config.requestUserConfirmation({
           url: this.config.url,
           name: this.config.title,
@@ -332,6 +391,7 @@ export class MiniAppHost {
           data: {
             ...request,
             chainName,
+            rpcUrl: customRpcUrl,
           },
           network: 'ethereum',
         })
@@ -347,6 +407,18 @@ export class MiniAppHost {
             chainId: request.chainId,
           })
         }
+        else if (numericChainId) {
+          // The webview reports the switch via onChainChanged, a frame the page itself can
+          // post. Record what the user approved so the host only follows approved chains.
+          const chainId = `0x${numericChainId.toString(16)}`
+          this.approvedChainIds.add(chainId)
+          if (request.action === 'add' && customRpcUrl) {
+            logger.log('[MiniAppHost] Chain added:', chainId, 'RPC:', customRpcUrl)
+            // Same object as sessionState.evmRpcUrls, so the session needs no separate write.
+            this.evmRpcUrls[chainId] = customRpcUrl
+            trackWeb3Request({ requestType: 'add_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
+          }
+        }
 
         return confirmed
       },
@@ -355,27 +427,18 @@ export class MiniAppHost {
         this.showErrorToast(i18n.t('This network is not supported by Nimiq Pay'))
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId })
       },
-      onChainAdded: (chainId: string, rpcUrl: string): void => {
-        logger.log('[MiniAppHost] Chain added:', chainId, 'RPC:', rpcUrl)
-        if (!this.config.evmRpcUrls) {
-          this.config.evmRpcUrls = {}
-        }
-        this.config.evmRpcUrls[chainId] = rpcUrl
-        if (_activeMiniAppSession) {
-          if (!_activeMiniAppSession.evmRpcUrls) {
-            _activeMiniAppSession.evmRpcUrls = {}
-          }
-          _activeMiniAppSession.evmRpcUrls[chainId] = rpcUrl
-        }
-        trackWeb3Request({ requestType: 'add_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
-      },
+      // The RPC of an approved custom chain is stored in requestChainApproval.
+      onChainAdded: (): void => {},
       onChainChanged: (chainId: string): void => {
+        if (this.destroyed || !this.approvedChainIds.has(chainId)) {
+          logger.warn('[MiniAppHost] Ignoring unapproved chain change:', chainId)
+          return
+        }
         const previousChainId = this.currentChainId
         this.currentChainId = chainId
-        if (_activeMiniAppSession) {
-          _activeMiniAppSession.chainId = this.currentChainId
-        }
-        logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
+        // Own session only: a closing host must not write into a newer host's session.
+        this.sessionState.chainId = chainId
+        logger.log('[MiniAppHost] Chain changed to:', chainId)
         trackChainSwitched(this.config.url, previousChainId, chainId)
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
 
@@ -385,10 +448,9 @@ export class MiniAppHost {
           this.birpc?.updateRpcUrl(newRpcUrl)
         }
 
-        const numericChainId = parseChainId(chainId)
-        const chainName = numericChainId ? EVM_CHAIN_NAMES[numericChainId] : `Chain ${numericChainId}`
+        const numericChainId = Number(chainId)
         Toast.show({
-          text: i18n.t('Switched to {chain}', { chain: chainName }),
+          text: i18n.t('Switched to {chain}', { chain: EVM_CHAIN_NAMES[numericChainId] ?? `Chain ${numericChainId}` }),
           duration: 'short',
           position: 'bottom',
         })
@@ -406,15 +468,28 @@ export class MiniAppHost {
           if (event.detail)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
-          this.messageFromWebviewListener = handle
+          if (this.destroyed)
+            void handle.remove()
+          else
+            this.messageFromWebviewListener = handle
         })
       },
       // Fire-and-forget host→webview methods. Without this birpc treats them as
       // request/response and the discarded promises would reject with a 120s
       // timeout if the webview disappears mid-flight (unhandledrejection).
-      eventNames: ['updateRpcUrl', 'clearAccountCache'],
+      eventNames: ['updateRpcUrl', 'clearAccountCache', 'fullscreenChanged'],
       timeout: 120_000,
     })
+
+    void browser.addListener('fullscreenChange', ({ enabled }) => {
+      if (!this.destroyed && _activeMiniAppSession === this.sessionState)
+        this.birpc?.fullscreenChanged.asEvent(enabled)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.fullscreenChangeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
   }
 
   private showErrorToast(message: string): void {
@@ -437,7 +512,7 @@ export class MiniAppHost {
       return 4200
     if (error instanceof InvalidRequestError)
       return -32602
-    if (error instanceof InvalidTransactionError)
+    if (error instanceof InvalidTransactionError || error instanceof DuplicateLightningPaymentError)
       return -32602
     if (error instanceof TransactionOutcomeUnknownError)
       return TRANSACTION_OUTCOME_UNKNOWN_CODE
@@ -447,8 +522,8 @@ export class MiniAppHost {
   }
 
   // Plain object — Error objects don't serialize correctly over birpc
-  private createRpcError(code: number, message: string, type?: string): { code: number, message: string, type?: string } {
-    return { code, message, ...(type ? { type } : {}) }
+  private createRpcError(code: number, message: string, type?: string, data?: unknown): { code: number, message: string, type?: string, data?: unknown } {
+    return { code, message, ...(type ? { type } : {}), ...(data !== undefined ? { data } : {}) }
   }
 
   private getEthPermissions(): EthAccountsPermission[] {
@@ -727,7 +802,8 @@ export class MiniAppHost {
       throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
     if (!addressesEqual(ethWallet.address, address)) {
-      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
+      logger.warn('[MiniAppHost] Address mismatch', { requested: address, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
     }
 
     // Sign the message - for hex data, pass raw bytes; ethers.js handles personal_sign prefix
@@ -816,7 +892,8 @@ export class MiniAppHost {
       throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
     if (!addressesEqual(ethWallet.address, address)) {
-      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
+      logger.warn('[MiniAppHost] Address mismatch', { requested: address, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
     }
 
     // Remove EIP712Domain from types (ethers.js handles it automatically)
@@ -889,28 +966,12 @@ export class MiniAppHost {
 
     const gasLimit = txParams.gas || txParams.gasLimit
 
-    // Get Ethereum wallet to verify address
-    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
-    if (error || !ethWallet) {
-      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
-    }
-
-    // Verify the from address matches the wallet using EIP-55 safe comparison
-    if (!addressesEqual(ethWallet.address, txParams.from)) {
-      throw new PermissionDeniedError(
-        `Address mismatch: requested ${txParams.from}, but wallet address is ${ethWallet.address}`,
-      )
-    }
-
     const currentChainNumber = parseChainId(this.currentChainId)
     let validatedChainIdNumber: number | undefined
     if (txParams.chainId) {
       const txChainIdNumber = parseChainId(txParams.chainId)
       if (!txChainIdNumber) {
         throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
-      }
-      if (!this.isAllowedChain(txChainIdNumber)) {
-        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${txChainIdNumber}`)
       }
       if (currentChainNumber && txChainIdNumber !== currentChainNumber) {
         throw new InvalidTransactionError(
@@ -921,6 +982,10 @@ export class MiniAppHost {
     }
     else if (currentChainNumber) {
       validatedChainIdNumber = currentChainNumber
+    }
+    // Also covers the omitted-chainId fallback: currentChainId may be a user-added custom chain.
+    if (validatedChainIdNumber && !this.isAllowedChain(validatedChainIdNumber)) {
+      throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${validatedChainIdNumber}`)
     }
 
     const decodedAssetTransfer = this.decodeKnownPolygonUsdtTransfer({
@@ -1098,6 +1163,17 @@ export class MiniAppHost {
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
+    // Compared only after confirmation, like the message signers, so an
+    // unapproved caller cannot probe the wallet address.
+    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
+    if (error || !ethWallet) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
+    }
+    if (!addressesEqual(ethWallet.address, txParams.from)) {
+      logger.warn('[ETH_TX] Address mismatch', { requested: txParams.from, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
+    }
+
     // Build transaction object for ethers.js
     const tx: {
       to: string
@@ -1273,6 +1349,15 @@ export class MiniAppHost {
   private async _handleHostMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling host message:', message)
     switch (message.name) {
+      case 'setFullscreen': {
+        const enabled = (message.params as { enabled?: unknown } | null | undefined)?.enabled
+        if (typeof enabled !== 'boolean')
+          throw new InvalidRequestError('enabled must be a boolean')
+        await this.inAppBrowser!.setFullscreen({ enabled })
+        return
+      }
+      case 'getFullscreen':
+        return (await this.inAppBrowser!.getFullscreen()).enabled
       case 'requestDeviceIdentifier':
         return this.requestDeviceIdentifier(message.params)
       default:
@@ -1329,6 +1414,7 @@ export class MiniAppHost {
       case 'getBalance': return this.getBalance(message.params)
       case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
       case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
+      case 'payLightningInvoice': return this.payLightningInvoice(message.params)
       case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
       case 'sendStakeTransaction': return this.sendAddStakeTransaction(message.params)
       case 'sendSetActiveStakeTransaction': return this.sendSetActiveStakeTransaction(message.params)
@@ -1679,6 +1765,285 @@ export class MiniAppHost {
     })
   }
 
+  private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    const invoice = (params as { invoice?: unknown } | null)?.invoice
+    if (typeof invoice !== 'string' || !invoice.trim())
+      throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
+    const requestConfirmation = this.config.requestUserConfirmation
+    const selectAsset = this.config.selectLightningAsset
+    if (!requestConfirmation || !selectAsset)
+      throw new InternalError('Confirmation handler not provided')
+
+    let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
+    try {
+      decoded = await parseBitcoinLightningInvoice(invoice.trim().replace(/^lightning:/i, ''))
+    }
+    catch {
+      throw new InvalidRequestError('Invalid Bitcoin Lightning invoice')
+    }
+    const paymentHash = decoded.sections.find(section => section.name === 'payment_hash')?.value
+    const timestamp = decoded.sections.find(section => section.name === 'timestamp')?.value
+    if (typeof paymentHash !== 'string' || typeof timestamp !== 'number')
+      throw new InvalidRequestError('Invalid Bitcoin Lightning invoice')
+    const invoiceExpiresAt = timestamp + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
+
+    const network = isTestnet ? 'testnet' : 'mainnet'
+    const owner = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const accessScope = `${network}:${owner}`
+    // Consent precedes the ledger lookup so invoice probes cannot reveal this wallet's payment history.
+    if (this.lightningAccessScope !== accessScope) {
+      if (this.lightningAccessRequest?.scope !== accessScope) {
+        this.lightningAccessRequest = {
+          scope: accessScope,
+          promise: requestConfirmation({
+            url: this.config.url,
+            name: this.config.title,
+            type: 'lightning-access',
+            network: 'nimiq',
+            description: decoded.description || undefined,
+          }),
+        }
+      }
+      let allowed: boolean
+      try {
+        allowed = await this.lightningAccessRequest.promise
+      }
+      finally {
+        if (this.lightningAccessRequest?.scope === accessScope)
+          this.lightningAccessRequest = null
+      }
+      if (!allowed)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      this.lightningAccessScope = accessScope
+    }
+
+    const invoiceKey = `${network}:${paymentHash}`
+    if (this.pendingLightningInvoices.has(invoiceKey))
+      throw new DuplicateLightningPaymentError('This Lightning invoice is already being paid')
+    this.pendingLightningInvoices.add(invoiceKey)
+
+    try {
+      const { query, run } = useConn()
+      const duplicatePaymentError = (attempt: MiniAppLightningAttempt) => new DuplicateLightningPaymentError(
+        'This Lightning invoice was already submitted or may still be pending',
+        attempt.origin === this.origin && attempt.owner === owner ? { hash: attempt.tx_hash || undefined, swapId: attempt.swap_id } : undefined,
+      )
+      const existing = await query<MiniAppLightningAttempt | undefined>(
+        SQLQuery.GetMiniAppLightningPayment,
+        [network, paymentHash],
+        { single: true },
+      )
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      if (existing)
+        throw duplicatePaymentError(existing)
+      if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
+        throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
+
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      if (!asset)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+      if (asset !== Asset.NIM && asset !== Asset.USDT)
+        throw new InvalidRequestError('Unsupported payment asset')
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+
+      const { useStringParser } = await import('./useStringParser')
+      const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
+      if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
+        throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
+      const description = decoded.description || payment.message
+
+      const { getSwap } = await useFastspotApiV2()
+      const quote = await getSwap(payment.paymentRef)
+      if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
+        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
+      const context = signer?.getWalletContext()
+      const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
+      const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
+      if (polygon)
+        await polygon.updateBalance()
+      if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
+        throw new NetworkError('NIM wallet is not ready')
+      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+        throw new InvalidTransactionError('Insufficient NIM balance')
+      if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
+        throw new NetworkError('USDT wallet is not ready')
+      if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
+        throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
+      let usdtFeeAllowance = 0
+      if (polygon) {
+        const feeSnapshot = await polygon.primeHtlcFee()
+        const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
+        usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
+        if (polygon.balance < payment.amount + usdtFeeAllowance)
+          throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+      }
+
+      const { getLimits, SwapAsset } = await useFastspotApiV1()
+      const localAddress = useLocalWallet().localAddress
+      const limits = asset === Asset.USDT
+        ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
+        : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
+      if (payment.amount > Math.floor(limits.current * 0.99))
+        throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+
+      const confirmed = await requestConfirmation({
+        url: this.config.url,
+        name: this.config.title,
+        type: 'lightning-payment',
+        network: 'nimiq',
+        data: {
+          description,
+          btcAmount: payment.invoiced.amount,
+          asset,
+          amount: payment.amount,
+          usdtFeeAllowance,
+          fees: payment.swap?.fees || [],
+        },
+      })
+      if (!confirmed)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+
+      if (asset === Asset.NIM && !signer!.isWalletContextCurrent(context!))
+        throw new NetworkError('Wallet or network changed before sending')
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress)
+        throw new NetworkError('Wallet changed before sending')
+      if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
+        throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
+      const currentQuote = await getSwap(payment.paymentRef)
+      if (currentQuote.status !== 'PENDING_CONFIRMATION' || currentQuote.expiry <= Date.now() / 1e3 + 20 || currentQuote.sell.amount !== payment.amount)
+        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+        throw new InvalidTransactionError('Insufficient NIM balance')
+      if (asset === Asset.USDT && polygon!.balance < payment.amount + usdtFeeAllowance)
+        throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+      if (asset === Asset.NIM && !signer!.isWalletContextCurrent(context!))
+        throw new NetworkError('Wallet or network changed before sending')
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress)
+        throw new NetworkError('Wallet changed before sending')
+
+      try {
+        await run(SQLQuery.InsertMiniAppLightningPayment, [network, paymentHash, this.origin, owner, payment.paymentRef])
+      }
+      catch {
+        const duplicate = await query<MiniAppLightningAttempt | undefined>(
+          SQLQuery.GetMiniAppLightningPayment,
+          [network, paymentHash],
+          { single: true },
+        )
+        if (duplicate)
+          throw duplicatePaymentError(duplicate)
+        throw new InternalError('Could not save Lightning payment attempt')
+      }
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress) {
+        await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+        await run(SQLQuery.DeleteSwapQuote, [payment.paymentRef]).catch(error => logger.error('Could not clear abandoned Mini App Lightning quote', error))
+        throw new NetworkError('Wallet changed before sending')
+      }
+
+      const swapId = payment.paymentRef
+      return await new Promise<LightningPaymentResult>((resolve, reject) => {
+        let settled = false
+        const finish = (result: LightningPaymentResult | MiniAppError) => {
+          if (settled)
+            return
+          settled = true
+          if (result instanceof MiniAppError)
+            reject(result)
+          else
+            resolve(result)
+        }
+        const markSubmitted = async (hash: string) => {
+          try {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [hash, 'submitted', network, paymentHash])
+            finish({ hash, swapId })
+          }
+          catch (error) {
+            logger.error('Could not save submitted Mini App Lightning payment', error)
+            finish(new TransactionOutcomeUnknownError(`${asset} was submitted, but its payment record could not be updated. Do not retry this invoice.`, { hash, swapId }))
+          }
+        }
+        const markFundingUncertain = async (hash: string) => {
+          try {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [hash, 'unknown', network, paymentHash])
+          }
+          catch (error) {
+            logger.error('Could not save uncertain Mini App Lightning payment', error)
+          }
+          finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { hash, swapId }))
+        }
+        const outgoingPayment = {
+          ...payment,
+          transfer: Transfer.UserPaymentToAtomicSwap as const,
+          message: description,
+          merchantName: this.config.title,
+          railMerchantId: this.config.url,
+        }
+        if (asset === Asset.USDT) {
+          void polygon!.sendSwapPayment(outgoingPayment, 'Payment', { onSubmitted: markSubmitted, onFundingUncertain: markFundingUncertain, expectedSender: ethAddress, maxFee: usdtFeeAllowance }).then(async ({ data, error, rejected }) => {
+            if (settled)
+              return
+            if (error || !data) {
+              if (rejected) {
+                try {
+                  await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+                  await run(SQLQuery.DeleteSwapQuote, [swapId])
+                }
+                catch (cleanupError) {
+                  logger.error('Could not clear rejected Mini App Lightning payment', cleanupError)
+                }
+                finish(new InvalidTransactionError(error || 'Polygon Lightning payment rejected'))
+              }
+              else {
+                finish(new TransactionOutcomeUnknownError(error || 'Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+              }
+              return
+            }
+            await markSubmitted(data.tx.hash)
+          }).catch((error) => {
+            logger.error('Mini App USDT Lightning payment send failed unexpectedly', error)
+            finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+          })
+          return
+        }
+        void useTransactions().sendTx({ ...outgoingPayment, title: 'Payment' } as PartialSendTxArgs, context, markSubmitted).then(async (result) => {
+          if (settled)
+            return
+          if (result.outcome === 'rejected') {
+            try {
+              await run(SQLQuery.DeleteSwapQuote, [swapId])
+              await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+            }
+            catch (error) {
+              logger.error('Could not clear rejected Mini App Lightning payment', error)
+            }
+            finish(new InvalidTransactionError(result.error))
+          }
+          else if (result.outcome === 'unknown') {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [result.stagedHash, 'unknown', network, paymentHash]).catch(error => logger.error('Could not save uncertain Mini App Lightning payment', error))
+            finish(new TransactionOutcomeUnknownError(result.error, { hash: result.stagedHash, swapId }))
+          }
+          else {
+            await markSubmitted(result.tx.hash)
+          }
+        }).catch((error) => {
+          logger.error('Mini App Lightning payment send failed unexpectedly', error)
+          finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+        })
+      })
+    }
+    finally {
+      this.pendingLightningInvoices.delete(invoiceKey)
+    }
+  }
+
   private async sendPayment(txData: {
     value: number
     fee?: number
@@ -1697,8 +2062,14 @@ export class MiniAppHost {
     }
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
-    if (spendsFromRemote && !useRemoteSigner().remoteAddress)
+    const remoteSigner = useRemoteSigner()
+    if (spendsFromRemote && !remoteSigner.remoteAddress) {
+      // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.
+      // Local funds mean the first HTLC is being created, so that stays a sync error.
+      if (remoteSigner.homeBalanceState === 'resolved-empty' && useLocalWallet().localBalance === 0)
+        throw new InvalidTransactionError(i18n.t('Insufficient funds'))
       throw new NetworkError(i18n.t('Something went wrong syncing your account'))
+    }
 
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
@@ -1767,7 +2138,7 @@ export class MiniAppHost {
       throw new InternalError(`Failed to send payment transaction: ${result.error}`)
     if (result.outcome === 'unknown') {
       logger.log('[MiniAppHost] Transaction outcome unknown', { stagedHash: result.stagedHash })
-      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE)
+      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE, { hash: result.stagedHash })
     }
     return result.tx.hash
   }
@@ -1823,6 +2194,7 @@ export class MiniAppHost {
 /** Base class for MiniApp errors with typed error codes */
 abstract class MiniAppError extends Error {
   abstract readonly type: string
+  readonly data?: { hash?: string, swapId?: string }
 }
 
 class UnknownRequestError extends MiniAppError {
@@ -1843,6 +2215,18 @@ export class PermissionDeniedError extends MiniAppError {
 
 class TransactionOutcomeUnknownError extends MiniAppError {
   readonly type = 'TRANSACTION_OUTCOME_UNKNOWN'
+
+  constructor(message: string, readonly data?: { hash?: string, swapId?: string }) {
+    super(message)
+  }
+}
+
+class DuplicateLightningPaymentError extends MiniAppError {
+  readonly type = 'DUPLICATE_PAYMENT'
+
+  constructor(message: string, readonly data?: { hash?: string, swapId?: string }) {
+    super(message)
+  }
 }
 
 export class NetworkError extends MiniAppError {

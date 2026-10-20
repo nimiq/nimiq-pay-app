@@ -3,7 +3,7 @@ import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
 import type { WalletContext } from '@/stores/remote-signer'
-import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, StakingTransaction, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
@@ -11,13 +11,12 @@ import { useLogger } from '@/composables/useLogger'
 
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { nakaBufferAddresses } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
-import { promiseWithTimeout } from '@/lib/utils'
+import { parseStoredTransaction, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -78,6 +77,15 @@ export enum TransactionListState {
 
   // There are transactions in the database, and the search query matches some of them
   ShowingResults = 'showing-results',
+}
+
+const UPSERT_CHUNK_SIZE = 200
+
+export interface TransactionStatusUpdate {
+  hash: string
+  status: AppTransactionState
+  timestamp: number | undefined
+  executionResult?: boolean
 }
 
 export const useTransactions = defineStore('transactions', () => {
@@ -167,9 +175,12 @@ export const useTransactions = defineStore('transactions', () => {
       tx.meta
         ? JSON.stringify(tx.meta)
         : null,
-      tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
-      tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.senderData ?? null,
+      tx.hash,
+      tx.recipientData ?? null,
+      tx.hash,
       tx.validityStartHeight ?? null,
+      tx.hash,
     ]
   }
 
@@ -178,13 +189,42 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
   }
 
-  async function getStoredTransaction(hash: string) {
-    const tx = await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true })
-    if (tx) {
-      tx.invoiced = typeof tx.invoiced === 'string' ? JSON.parse(tx.invoiced) : tx.invoiced
-      tx.meta = typeof tx.meta === 'string' ? JSON.parse(tx.meta) : tx.meta
+  // One native call and one SQL transaction per chunk instead of one per tx.
+  // executeSet rolls back the whole chunk when one row fails, so retry its rows one by one to keep the valid ones.
+  // Returns the txs that were written.
+  async function upsertTxs<T extends Transaction>(txs: T[]): Promise<T[]> {
+    logger.log(`📚 Upsert-ing ${txs.length} transactions`, txs.map(tx => tx.hash))
+    const written: T[] = []
+    let firstError: unknown
+    // Chunks keep each native bridge message bounded when a remote signer returns thousands of txs.
+    for (let start = 0; start < txs.length; start += UPSERT_CHUNK_SIZE) {
+      const chunk = txs.slice(start, start + UPSERT_CHUNK_SIZE)
+      try {
+        await runSet(chunk.map(tx => ({ statement: SQLQuery.UpsertTx, values: getUpsertTxValues(tx) })))
+        written.push(...chunk)
+        continue
+      }
+      catch (batchError) {
+        firstError ??= batchError
+        logger.error(`📚 Batch upsert of ${chunk.length} transactions failed, retrying one by one`, batchError)
+      }
+      const results = await Promise.allSettled(chunk.map(tx => run(SQLQuery.UpsertTx, getUpsertTxValues(tx))))
+      chunk.forEach((tx, index) => {
+        const result = results[index]
+        if (result.status === 'fulfilled')
+          written.push(tx)
+        else
+          logger.error(`📚 Upsert-ing transaction ${tx.hash} failed`, result.reason)
+      })
     }
-    return tx
+    // Nothing written (e.g. DB locked): fail like a single write would.
+    if (txs.length && !written.length)
+      throw firstError
+    return written
+  }
+
+  async function getStoredTransaction(hash: string) {
+    return parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
   }
 
   async function clearTxHistory() {
@@ -333,6 +373,7 @@ export const useTransactions = defineStore('transactions', () => {
   async function sendTx(
     partialTx: PartialSendTxArgs,
     expectedContext?: WalletContext,
+    onSubmitted?: (hash: string) => Promise<void>,
   ): Promise<TransactionSendResult> {
     if (isSendingTx.value) {
       logger.log('A transaction is already in progress')
@@ -378,7 +419,7 @@ export const useTransactions = defineStore('transactions', () => {
         }
       }
 
-      return await _sendTx(partialTx, sendContext)
+      return await _sendTx(partialTx, sendContext, onSubmitted)
     }
     catch (error) {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
@@ -388,7 +429,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext): Promise<TransactionSendResult> {
+  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext, onSubmitted?: (hash: string) => Promise<void>): Promise<TransactionSendResult> {
     const localWallet = useLocalWallet()
     const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
     let stagedSend: StagedSend | undefined
@@ -476,7 +517,7 @@ export const useTransactions = defineStore('transactions', () => {
       }
 
       if (isExternalTx(staged.tx) && remoteSigner.isWalletContextCurrent(sendContext))
-        addTransaction(staged.tx)
+        addTransactions([staged.tx])
     }
 
     function staleContextResult(errorMessage: string): TransactionSendResult {
@@ -686,7 +727,9 @@ export const useTransactions = defineStore('transactions', () => {
           }
           catch (error) {
             canClearPending = false
-            logger.error('Failed to activate included HTLC signer', error)
+            logger.error('Failed to activate included HTLC signer', error, { transactionHash: staged.tx.hash })
+            // The error message goes out with the logger.error report above.
+            syncState.reportFundsBlocked('activation_failed', { tx_hash: staged.tx.hash, transfer: partialTx.transfer })
           }
         }
         if (canClearPending) {
@@ -744,67 +787,76 @@ export const useTransactions = defineStore('transactions', () => {
       if (!remoteSigner.isWalletContextCurrent(sendContext))
         return staleContextResult(i18n.t('Wallet or network changed before sending'))
 
-      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-        try {
-          const patchedSwapResult = await patchedSwap.catch(() => undefined)
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
-            let timeoutId: number
-            async function checkSecret() {
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              const { getSwap } = await useFastspotApiV2()
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              if ('preimage' in currentSwap && currentSwap.preimage) {
-                window.clearTimeout(timeoutId)
-                resolve(currentSwap.preimage)
-              }
-              else {
-                timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
-              }
-            }
-            void checkSecret().catch(reject)
-          })
+      // Let Mini Apps return at confirmed NIM submission while swap settlement continues below.
+      await onSubmitted?.(staged.tx.hash)
 
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          staged.tx.meta = { secret }
-          staged.tx.status = 'confirmed'
-          await upsertTx(staged.tx)
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
-          if (index >= 0)
-            transactions.value[index].meta = { secret }
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          trackSwapCompleted({
-            swap_duration_ms: Date.now() - swapStartedAt,
-            asset: Asset.NIM,
-          })
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        const finishSwap = async () => {
+          try {
+            const patchedSwapResult = await patchedSwap.catch(() => undefined)
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
+              let timeoutId: number
+              async function checkSecret() {
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                const { getSwap } = await useFastspotApiV2()
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                if ('preimage' in currentSwap && currentSwap.preimage) {
+                  window.clearTimeout(timeoutId)
+                  resolve(currentSwap.preimage)
+                }
+                else if (currentSwap.status === 'EXPIRED') {
+                  reject(new Error('Lightning swap expired before settlement'))
+                }
+                else {
+                  timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
+                }
+              }
+              void checkSecret().catch(reject)
+            })
+
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            // Update only the swap result; other writers may have changed the row while settlement was pending.
+            const storedTx = await setSwapPreimage(staged.tx.hash, secret)
+            // A removed row is recreated, or the secret would be lost once the swap bookkeeping is deleted below.
+            if (!storedTx)
+              await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            trackSwapCompleted({
+              swap_duration_ms: Date.now() - swapStartedAt,
+              asset: Asset.NIM,
+            })
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          }
+          catch (error) {
+            logger.error('Failed to finish accepted swap bookkeeping', error)
+          }
         }
-        catch (error) {
-          logger.error('Failed to finish accepted swap bookkeeping', error)
-        }
+        if (onSubmitted)
+          void finishSwap()
+        else
+          await finishSwap()
       }
 
       return {
@@ -860,27 +912,43 @@ export const useTransactions = defineStore('transactions', () => {
     await refreshFromDb()
   }, { immediate: true })
 
-  async function addReceiptTransaction(tx: UserReceiptTransaction, expectedContext?: WalletContext) {
+  // Resolves true only when every receipt that should be stored was written and published.
+  async function addReceiptTransactions(txs: UserReceiptTransaction[], expectedContext?: WalletContext) {
     const context = expectedContext ?? remoteSigner.getWalletContext()
     // Polygon receipts can arrive before a Nimiq client exists.
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
+      return false
     // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
-    if (tx.senderType === Nimiq.AccountType.HTLC && await remoteSigner.isOurRemoteSigner(tx.sender)) {
-      logger.log(`🚫 addReceiptTransaction skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
-      return
-    }
+    const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
+    const receipts = txs.filter((tx) => {
+      if (tx.senderType !== Nimiq.AccountType.HTLC || !ourSigners.has(tx.sender))
+        return true
+      logger.log(`🚫 addReceiptTransactions skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
+      return false
+    })
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
-    await upsertTx(tx)
+      return false
+    if (!receipts.length)
+      return true
+    const written = await upsertTxs(receipts)
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
-    addTransaction(tx)
+      return false
+    addTransactions(written)
+    return written.length === receipts.length
+  }
+
+  // Resolves true only when every tx was written.
+  async function saveTransactions(txs: ExternalTransaction[]) {
+    if (!txs.length)
+      return true
+    const written = await upsertTxs(txs)
+    addTransactions(written)
+    return written.length === txs.length
   }
 
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function addPolygonHistoryTransaction(tx: UserTransaction) {
@@ -889,7 +957,7 @@ export const useTransactions = defineStore('transactions', () => {
     if (!storedTx)
       return
 
-    addTransaction(storedTx)
+    addTransactions([storedTx])
   }
 
   async function addPolygonSwapTransactionWithRecovery(tx: MerchantTransaction, recoveryAddress: string) {
@@ -903,7 +971,7 @@ export const useTransactions = defineStore('transactions', () => {
         values: getUpsertTxValues(tx),
       },
     ])
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
@@ -930,7 +998,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function addUnknownPaymentToMerchantTransaction(
+  function toUnknownPaymentToMerchantTransaction(
     tx: PlainTransactionDetails,
     transfer = Transfer.UserPaymentToMerchant,
     rail = Rail.Unknown,
@@ -941,8 +1009,8 @@ export const useTransactions = defineStore('transactions', () => {
     },
     meta?: Record<string, any>,
   ) {
-    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
-    const newTx = {
+    logger.log(`💸 toUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
+    return {
       transfer,
       amount: tx.value,
       sender: tx.sender,
@@ -973,23 +1041,16 @@ export const useTransactions = defineStore('transactions', () => {
       asset: Asset.NIM,
       chain: Chain.Nimiq,
     } as MerchantTransaction
-    await upsertTx(newTx)
-    addTransaction(newTx)
   }
 
   async function addPaymentTransaction(tx: UserTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function addWithdrawalTransaction(tx: UserTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
-  }
-
-  async function addStakingtransaction(tx: StakingTransaction) {
-    await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function replaceTransaction(tx: ExternalTransaction) {
@@ -1004,38 +1065,55 @@ export const useTransactions = defineStore('transactions', () => {
       return
     }
 
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
-  function addTransaction(tx: ExternalTransaction) {
+  // Merges a whole batch with one list update and one sort: history sync can add thousands of txs.
+  function addTransactions(txs: ExternalTransaction[]) {
+    if (!txs.length)
+      return
     // Same hash can arrive via multiple paths (incoming-tx listener + recursive HTLC traversal +
     // periodic refresh) — replace any existing entry instead of stacking duplicates.
+    const incoming = new Map(txs.map(tx => [tx.hash, tx]))
     const others: ExternalTransaction[] = []
-    let replaced: ExternalTransaction | undefined
     for (const existing of transactions.value) {
-      if (existing.hash === tx.hash)
-        replaced = existing
+      const tx = incoming.get(existing.hash)
+      if (tx)
+        logger.log(`♻️ addTransactions replacing existing entry`, { hash: tx.hash, transfer: tx.transfer, previousTransfer: existing.transfer })
       else
         others.push(existing)
     }
-    if (replaced)
-      logger.log(`♻️ addTransaction replacing existing entry`, { hash: tx.hash, transfer: tx.transfer, previousTransfer: replaced.transfer })
-    transactions.value = [tx, ...others].sort(
+    transactions.value = [...incoming.values(), ...others].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp, executionResult }: { hash: string, status: AppTransactionState, timestamp: number | undefined, executionResult?: boolean }) {
-    await run(SQLQuery.UpdateTxStatus, [status, timestamp ?? null, hash])
-    const index = transactions.value.findIndex(tx => tx.hash === hash)
-    if (index >= 0) {
-      const nextTransactions = [...transactions.value]
-      nextTransactions[index] = {
-        ...nextTransactions[index],
-        status,
-        executionResult: executionResult ?? nextTransactions[index].executionResult,
-        timestamp: timestamp ?? nextTransactions[index].timestamp,
+  // An array is written with one native call and merged with one sort: periodic refreshes can update many txs.
+  async function updateTransactionStatus(input: TransactionStatusUpdate | TransactionStatusUpdate[]) {
+    const updates = Array.isArray(input) ? input : [input]
+    if (!updates.length)
+      return
+    const values = ({ hash, status, timestamp }: TransactionStatusUpdate) => [status, timestamp ?? null, hash]
+    if (updates.length === 1)
+      await run(SQLQuery.UpdateTxStatus, values(updates[0]))
+    else
+      await runSet(updates.map(update => ({ statement: SQLQuery.UpdateTxStatus, values: values(update) })))
+
+    const byHash = new Map(updates.map(update => [update.hash, update]))
+    let changed = false
+    const nextTransactions = transactions.value.map((tx) => {
+      const update = byHash.get(tx.hash)
+      if (!update)
+        return tx
+      changed = true
+      return {
+        ...tx,
+        status: update.status,
+        executionResult: update.executionResult ?? tx.executionResult,
+        timestamp: update.timestamp ?? tx.timestamp,
       }
+    })
+    if (changed) {
       transactions.value = nextTransactions.sort(
         (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
       )
@@ -1057,34 +1135,34 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function updateTransactionCashbackClaimed({ hash }: { hash: string }) {
     await run(SQLQuery.UpdateCashbackStatus, [true, hash])
-    const tx = transactions.value.find(tx => tx.hash === hash)
-    if (tx)
-      tx.isCashbackClaimed = true
+    if (transactions.value.some(tx => tx.hash === hash))
+      transactions.value = transactions.value.map(tx => tx.hash === hash ? { ...tx, isCashbackClaimed: true } as ExternalTransaction : tx)
   }
 
   async function setSwapHtlcRefunded(htlcAddress: string) {
-    const tx = transactions.value.find(tx => tx.recipient === htlcAddress)
-    if (tx) {
-      tx.meta = {
-        ...tx.meta,
-        refunded: true,
-      }
-      await upsertTx(tx)
-    }
+    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
+    await run(SQLQuery.SetSwapTxRefundedByHtlc, [htlcAddress])
+    mergeLoadedTxMeta(tx => tx.recipient === htlcAddress, { refunded: true })
   }
 
-  async function setPolygonSwapPreimage(txHash: string, secret: string) {
+  // Loaded rows are plain objects in a shallowRef, so replace them to re-run the list computeds.
+  function mergeLoadedTxMeta(matches: (tx: ExternalTransaction) => boolean, meta: Record<string, unknown>) {
+    if (transactions.value.some(matches))
+      transactions.value = transactions.value.map(tx => matches(tx) ? { ...tx, meta: { ...tx.meta, ...meta } } : tx)
+  }
+
+  async function setSwapPreimage(txHash: string, secret: string) {
     // A replacement may rename this hash while Fastspot is resolving; never recreate the old row.
-    await run(SQLQuery.SetPolygonSwapPreimage, [secret, txHash])
+    await run(SQLQuery.SetSwapPreimage, [secret, txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (storedTx && transactions.value.some(tx => tx.hash === txHash))
-      addTransaction(storedTx)
+      addTransactions([storedTx])
     return storedTx
   }
 
   async function setPolygonSwapHtlcRefunded(txHash: string) {
     // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
-    await run(SQLQuery.SetPolygonTxRefunded, [txHash])
+    await run(SQLQuery.SetTxRefunded, [txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (!storedTx)
       return false
@@ -1098,27 +1176,13 @@ export const useTransactions = defineStore('transactions', () => {
     return true
   }
 
-  async function setNakaTxRefunded(amount: number) {
-    const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
-    if (tx) {
-      tx.meta = {
-        ...tx.meta,
-        refunded: true,
-      }
-      await upsertTx(tx)
-    }
-  }
-
-  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). Mirrors setSwapHtlcRefunded —
-  // flag lives in tx.meta, persisted via upsertTx; transactionsToShow filters it out unless the dev-menu
-  // reveal toggle is on. The shallowRef reassignment is required to re-trigger the filter computed.
+  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). The flag lives in tx.meta;
+  // transactionsToShow filters it out unless the dev-menu reveal toggle is on.
   async function setTxHidden(hash: string, hidden: boolean) {
-    const tx = transactions.value.find(tx => tx.hash === hash)
-    if (!tx)
+    if (!transactions.value.some(tx => tx.hash === hash))
       return
-    tx.meta = { ...tx.meta, hidden }
-    await upsertTx(tx)
-    transactions.value = [...transactions.value]
+    await run(SQLQuery.SetTxHidden, [String(hidden), hash])
+    mergeLoadedTxMeta(tx => tx.hash === hash, { hidden })
   }
 
   const status = computed(() => {
@@ -1136,23 +1200,22 @@ export const useTransactions = defineStore('transactions', () => {
     transactions: readonly(transactions),
     sendTx,
     restorePendingOutgoingTransactions,
-    addReceiptTransaction,
+    addReceiptTransactions,
+    saveTransactions,
     addPaymentToMerchantTransaction,
     addPolygonHistoryTransaction,
     addPolygonSwapTransactionWithRecovery,
     replacePolygonTransactionHash,
-    addUnknownPaymentToMerchantTransaction,
+    toUnknownPaymentToMerchantTransaction,
     addPaymentTransaction,
     addWithdrawalTransaction,
-    addStakingtransaction,
     replaceTransaction,
     updateTransactionStatus,
     updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
-    setPolygonSwapPreimage,
+    setSwapPreimage,
     setPolygonSwapHtlcRefunded,
-    setNakaTxRefunded,
     setTxHidden,
     clearTxHistory,
     refreshFromDb,

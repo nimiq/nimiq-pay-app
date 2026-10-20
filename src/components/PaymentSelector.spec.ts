@@ -1,60 +1,36 @@
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
-import { Asset } from '@/lib/assets'
+import { describe, expect, it } from 'vitest'
 import { StepName } from '@/lib/flows/steps.types'
+import PaymentSelector from './PaymentSelector.vue'
 
-const activeAsset = ref(Asset.NIM)
-const isNimiqAsset = ref(true)
-const isCardActive = ref(true)
-const isCardLocked = ref(false)
-
-vi.mock('@/i18n/i18n-setup', () => ({
-  i18n: {
-    t: (value: string) => value,
-  },
-}))
-
-vi.mock('@/lib', () => ({
-  isNakaEnabled: true,
-}))
-
-vi.mock('@/stores/app', () => ({
-  useApp: () => ({
-    activeAsset,
-    isNimiqAsset,
-  }),
-}))
-
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({
-    isCardActive,
-    isCardLocked,
-  }),
-}))
+const qrOption = { label: 'Scan QR', value: StepName.QRCodeScanner }
+const manualOption = { label: 'Manual', value: StepName.PaymentRequestManualInput }
 
 describe('paymentSelector', () => {
-  beforeEach(() => {
-    activeAsset.value = Asset.NIM
-    isNimiqAsset.value = true
-    isCardActive.value = true
-    isCardLocked.value = false
-  })
-
-  it('hides the NAKA option when USDT is the active asset', async () => {
-    activeAsset.value = Asset.USDT
-    isNimiqAsset.value = false
-
-    const { default: PaymentSelector } = await import('./PaymentSelector.vue')
+  it('hides itself with a single option', () => {
     const wrapper = mount(PaymentSelector, {
       props: {
-        activeStep: {
-          step: StepName.QRCodeScanner,
-        },
+        activeStep: { step: StepName.QRCodeScanner },
+        options: [qrOption],
       },
     })
 
-    expect(wrapper.text()).not.toContain('Naka')
     expect(wrapper.findAll('button')).toHaveLength(0)
+  })
+
+  it('navigates to the clicked option', async () => {
+    const wrapper = mount(PaymentSelector, {
+      props: {
+        activeStep: { step: StepName.QRCodeScanner },
+        options: [qrOption, manualOption],
+      },
+    })
+
+    const buttons = wrapper.findAll('button')
+    expect(buttons.map(button => button.text())).toEqual(['Scan QR', 'Manual'])
+
+    await buttons[1].trigger('click')
+
+    expect(wrapper.emitted('navigateTo')).toEqual([[{ step: StepName.PaymentRequestManualInput }]])
   })
 })

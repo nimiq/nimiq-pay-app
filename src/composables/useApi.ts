@@ -20,11 +20,21 @@ const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
 
+// Failure logs end up in the shareable log file, so only these body fields are logged. Phone numbers, SMS access
+// codes, public keys and task answers stay out, and the Points token header is never logged.
+const LOGGABLE_BODY_FIELDS = ['type', 'reference', 'destination', 'tx_hash']
+
 async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
+  const loggedRequest = {
+    url: url.toString(),
+    method,
+    hasToken: !!token,
+    body: _body && Object.fromEntries(Object.entries(_body).filter(([key]) => LOGGABLE_BODY_FIELDS.includes(key))),
+  }
 
   let response: Response | undefined
   try {
@@ -37,7 +47,7 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
       }
       catch (e) {
       // If the response is not JSON or not exist, we don't do anything
-        logger.error('Error parsing response', e, { response, url, method, headers, body })
+        logger.error('Error parsing response', e, { ...loggedRequest, status: response.status })
       }
       return {
         error: responseBody,
@@ -59,7 +69,7 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
     return { data, status: response.status, error: undefined, hasError: false }
   }
   catch (error) {
-    logger.error(`Error fetching ${url.toString()}`, { method, headers, body, response }, { error })
+    logger.error(`Error fetching ${url.toString()}`, { ...loggedRequest, status: response?.status }, { error })
     return { data: undefined, hasError: true, error: { message: i18n.t('Something went wrong'), statusCode: 520 } as E, status: 520 }
   }
 }
@@ -202,7 +212,7 @@ const remoteSignerWsApi = (function () {
     },
   })
 
-  function request<T = any, E = undefined>(event: string, args: any = {}): AsyncResultApi<T, E> {
+  function request<T = any, E = undefined>(event: string, args: any = {}, timeoutMs = 30_000): AsyncResultApi<T, E> {
     const id = `${idCounter++}`
     const requestObject = { event, data: { ...args, id } }
     const response = new Promise<ResultApi<T, E>>((resolve) => {
@@ -212,7 +222,7 @@ const remoteSignerWsApi = (function () {
     // Sends retain their recovery anchor; only read requests can be discarded on timeout.
     if (event.startsWith('wallet-send-'))
       return response
-    return promiseWithTimeout(response, 30_000)
+    return promiseWithTimeout(response, timeoutMs)
       .catch((): ResultApi<T, E> => ({
         data: undefined,
         hasError: true,
@@ -299,13 +309,15 @@ const remoteSignerWsApi = (function () {
 export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
-  interface GetRemoteSignerArg { address: MaybeRef<Address> }
+  interface GetRemoteSignerArg { address: MaybeRef<Address>, includeInactive?: boolean }
+  interface GetOwnerWalletsArg { owner: MaybeRef<Address> }
   interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<NimiqTransaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
   interface GetTransactionStateArg { hash: MaybeRef<string> }
 
   interface StatusRes { status: RemoteStatus, blockHeight: number, servicePublicKey: string, network: string }
-  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number }
+  // isActive is only sent by cosigners that support includeInactive.
+  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number, isActive?: boolean }
   interface GetTransactionStateRes { hash: string, state: RemoteSignerTransactionState, executionResult?: boolean, timestamp: number, value: number }
 
   interface RemoteErrorRes {
@@ -314,23 +326,32 @@ export function useRemoteSignerApi() {
     message: string
   }
 
-  async function getStatus(): AsyncResultApi<StatusRes, RemoteErrorRes> {
+  async function getStatus(timeoutMs?: number): AsyncResultApi<StatusRes, RemoteErrorRes> {
     // No cosigner in mock mode: report Good here so every consumer (cosigner poll,
     // resume height check) behaves without needing its own mock guard.
     if (isMockEnabled)
       return { data: { status: RemoteStatus.Good, blockHeight: 0, servicePublicKey: '', network: '' }, status: 200, hasError: false, error: undefined }
 
-    const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status')
+    const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status', {}, timeoutMs)
     if (error || data?.status !== 'good' || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
     return { data: data!, status, hasError, error: undefined }
   }
 
-  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
-    const { data, error, status, hasError } = await remoteSignerWsApi<GetRemoteSignerRes, RemoteErrorRes>('wallet', { address: v(address).toUserFriendlyAddress() })
+  async function getRemoteSigner({ address, includeInactive }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
+    // includeInactive also returns retired wallets instead of a 409; older cosigners ignore it.
+    const { data, error, status, hasError } = await remoteSignerWsApi<GetRemoteSignerRes, RemoteErrorRes>('wallet', { address: v(address).toUserFriendlyAddress(), ...(includeInactive ? { includeInactive } : {}) })
     if (error || !data?.address || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
+    return { data, error: undefined, status, hasError }
+  }
+
+  // Every wallet the cosigner created for an owner, retired ones included, without balances.
+  async function getOwnerWallets({ owner }: GetOwnerWalletsArg): AsyncResultApi<Pick<GetRemoteSignerRes, 'address'>[], RemoteErrorRes> {
+    const { data, error, status, hasError } = await remoteSignerWsApi<Pick<GetRemoteSignerRes, 'address'>[], RemoteErrorRes>('owner-wallets', { owner: v(owner).toUserFriendlyAddress() })
+    if (error || !Array.isArray(data) || hasError)
+      return { data: undefined, status, hasError: true, error: error || { message: 'Invalid cosigner response', statusCode: 520, error: 'Unknown Error' } }
     return { data, error: undefined, status, hasError }
   }
 
@@ -340,6 +361,7 @@ export function useRemoteSignerApi() {
     getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => remoteSignerWsApi<Transaction[], RemoteErrorRes>('wallet-txs', { address: v(address) }),
     getTransactionState: ({ hash }: GetTransactionStateArg) => remoteSignerWsApi<GetTransactionStateRes, RemoteErrorRes>('tx-state', { hash: v(hash) }),
     getRemoteSigner,
+    getOwnerWallets,
     sendTransaction: ({ address, tx }: SendTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-tx', { address: v(address), payload: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
     sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-raw-tx', { address: v(address), payload: body }),
   }

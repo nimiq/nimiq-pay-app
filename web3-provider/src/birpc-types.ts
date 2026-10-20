@@ -28,4 +28,5 @@ export interface WebviewFunctions {
   updateRpcUrl: (rpcUrl: string) => void
   /** Clears the webview-side approved-accounts cache for a network (omit to clear all). */
   clearAccountCache: (network: 'nimiq' | 'ethereum') => void
+  fullscreenChanged: (enabled: boolean) => void
 }

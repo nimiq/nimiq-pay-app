@@ -30,9 +30,10 @@ const mocks = vi.hoisted(() => ({
   confirmSwap: vi.fn(),
   provideFundingProof: vi.fn(),
   loggerError: vi.fn(),
+  isUsdtMaintenanceActive: false,
   transactions: {
     setPolygonSwapHtlcRefunded: vi.fn(),
-    setPolygonSwapPreimage: vi.fn(),
+    setSwapPreimage: vi.fn(),
     addPaymentTransaction: vi.fn(),
     addPaymentToMerchantTransaction: vi.fn(),
     addWithdrawalTransaction: vi.fn(),
@@ -80,7 +81,7 @@ vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
 vi.mock('@/lib/analytics', () => ({ trackSwapCompleted: vi.fn(), trackSwapFailed: vi.fn(), trackTopUpReceived: vi.fn() }))
 vi.mock('@/stores/feature-flags', async () => {
   const { ref } = await import('vue')
-  return { useFeatureFlags: () => ({ polygonRpcUrl: ref('https://polygon.example') }) }
+  return { useFeatureFlags: () => ({ polygonRpcUrl: ref('https://polygon.example'), isUsdtMaintenanceActive: ref(mocks.isUsdtMaintenanceActive), usdtMaintenanceNotice: ref('USDT maintenance notice') }) }
 })
 vi.mock('@/stores/conn', () => ({ useConn: () => ({ query: mocks.query, run: mocks.run }) }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ withdrawalAddressesHistory: [] }) }))
@@ -191,6 +192,7 @@ function recreateStore() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.isUsdtMaintenanceActive = false
   persistedPayment = null
   persistedPaymentAttempt = null
   mocks.getEthAddress.mockReturnValue({ data: undefined })
@@ -208,7 +210,7 @@ beforeEach(() => {
     persistedPayment = { ...tx }
     persistedHtlc = { ...persistedHtlc!, tx_hash: tx.hash }
   })
-  mocks.transactions.setPolygonSwapPreimage.mockImplementation(async (hash, secret) => {
+  mocks.transactions.setSwapPreimage.mockImplementation(async (hash, secret) => {
     if (!persistedPayment || persistedPayment.hash !== hash)
       return null
     const meta = typeof persistedPayment.meta === 'string' ? JSON.parse(persistedPayment.meta) : persistedPayment.meta
@@ -405,6 +407,17 @@ describe('polygon refund recovery through the store', () => {
 })
 
 describe('polygon payment submission through the store', () => {
+  it('rejects a new payment during maintenance without contacting the relay', async () => {
+    mocks.isUsdtMaintenanceActive = true
+    const store = recreateStore()
+    store.balance = 10_000_000
+
+    await expect(store.sendPayment({ recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment'))
+      .resolves
+      .toMatchObject({ outcome: 'rejected', error: 'USDT maintenance notice' })
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
+  })
+
   it('persists intent before relay contact and blocks sequential retries after a lost response', async () => {
     mocks.relayTransaction.mockImplementationOnce(async () => {
       expect(persistedPaymentAttempt).toMatchObject({
@@ -781,6 +794,24 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.transactions.updateTransactionStatus).toHaveBeenCalledWith({ hash: mocks.relayHash, status: 'confirmed', timestamp: now / 1000 })
   })
 
+  it('blocks swap funding during maintenance', async () => {
+    mocks.isUsdtMaintenanceActive = true
+    const store = recreateStore()
+
+    const result = await store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment')
+
+    expect(result).toMatchObject({ rejected: true, error: 'USDT maintenance notice' })
+    expect(mocks.confirmSwap).not.toHaveBeenCalled()
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
+  })
+
   it('retains swap recovery when both replacement persistence attempts fail', async () => {
     const replacementHash = `0x${'ab'.repeat(32)}`
     persistedHtlc = null
@@ -811,7 +842,7 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenCalledTimes(2)
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenNthCalledWith(1, mocks.relayHash, replacementHash, mocks.htlcId)
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenNthCalledWith(2, mocks.relayHash, replacementHash, mocks.htlcId)
-    expect(mocks.transactions.setPolygonSwapPreimage).toHaveBeenCalledWith(replacementHash, 'secret')
+    expect(mocks.transactions.setSwapPreimage).toHaveBeenCalledWith(replacementHash, 'secret')
     expect(persistedPayment).toMatchObject({ hash: mocks.relayHash, status: 'pending' })
     expect(persistedHtlc).toMatchObject({ address: mocks.htlcId, tx_hash: mocks.relayHash })
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
@@ -845,6 +876,35 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.transactions.addPolygonSwapTransactionWithRecovery.mock.invocationCallOrder[0]).toBeLessThan(mocks.provider.broadcastTransaction.mock.invocationCallOrder[0]!)
     expect(mocks.provideFundingProof).toHaveBeenCalledWith('swap-id', 'contract-id', mocks.relayHash)
     expect(persistedHtlc).toBeNull()
+  })
+
+  it('reports uncertain swap funding before waiting for Lightning settlement', async () => {
+    persistedHtlc = null
+    const store = recreateStore()
+    mocks.wait.mockRejectedValueOnce(new Error('confirmation RPC unavailable'))
+    let releaseNotification!: () => void
+    const onFundingUncertain = vi.fn(() => new Promise<void>((resolve) => {
+      releaseNotification = resolve
+    }))
+
+    const payment = store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment', { onFundingUncertain })
+
+    await vi.waitFor(() => expect(onFundingUncertain).toHaveBeenCalledWith(mocks.relayHash))
+    expect(persistedPayment).toMatchObject({ hash: mocks.relayHash, status: 'pending' })
+    expect(persistedHtlc).toMatchObject({ address: mocks.htlcId, tx_hash: mocks.relayHash })
+    expect(mocks.provideFundingProof).not.toHaveBeenCalled()
+
+    releaseNotification()
+    const result = await payment
+    expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed', meta: { secret: 'secret' } })
+    expect(mocks.provideFundingProof).toHaveBeenCalledWith('swap-id', 'contract-id', mocks.relayHash)
   })
 })
 
@@ -955,8 +1015,8 @@ describe('polygon transaction reconciliation through the store', () => {
     resolvePreimage({ preimage: 'late-secret' })
     await reconcile
 
-    expect(mocks.transactions.setPolygonSwapPreimage).toHaveBeenCalledWith(mocks.relayHash, 'late-secret')
-    await expect(mocks.transactions.setPolygonSwapPreimage.mock.results[0]!.value).resolves.toBeNull()
+    expect(mocks.transactions.setSwapPreimage).toHaveBeenCalledWith(mocks.relayHash, 'late-secret')
+    await expect(mocks.transactions.setSwapPreimage.mock.results[0]!.value).resolves.toBeNull()
     expect(mocks.transactions.replaceTransaction).not.toHaveBeenCalled()
     expect(persistedPayment).toMatchObject({ hash: replacementHash })
     expect(persistedHtlc).toMatchObject({ tx_hash: replacementHash })

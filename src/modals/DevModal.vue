@@ -17,7 +17,6 @@ import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
-import { useNaka, useNakaDb } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
@@ -72,10 +71,10 @@ async function onNetworkSegmentChange(value: unknown) {
   if (!isNetworkChoice(value) || value === currentNetworkChoice.value)
     return
 
-  // Tx history, remote signers, swap state, and NAKA card state are environment-scoped — purge before flipping.
+  // Tx history, remote signers, and swap state are environment-scoped — purge before flipping.
   const alert = await alertController.create({
     header: `Switch to ${value === 'default' ? 'DEFAULT' : value.toUpperCase()}?`,
-    message: 'This will clear your local transaction history, remote signer registrations, pending swaps, and unregister your NAKA card on this device. Your wallet, PIN, and backup remain intact.',
+    message: 'This will clear your local transaction history, remote signer registrations, and pending swaps. Your wallet, PIN, and backup remain intact.',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       { text: 'Switch', role: 'confirm' },
@@ -86,22 +85,15 @@ async function onNetworkSegmentChange(value: unknown) {
   if (role !== 'confirm')
     return
 
-  // Must run before the override flip: SDK keyspace and issuer sourceId are env-scoped.
-  // Remote signer addresses, swap HTLCs, and swap quotes are tied to a specific cosigner
-  // (per-network public key) — leaving them in place causes the next session to load a
-  // foreign-network signer as "active" and stall sync.
-  const naka = useNaka()
+  // Must run before the override flip: remote signer addresses, swap HTLCs, and swap quotes are
+  // tied to a specific cosigner (per-network public key) — leaving them in place causes the next
+  // session to load a foreign-network signer as "active" and stall sync.
   useSyncState().walletContextGeneration += 1
-  const [, , , deactivateResult] = await Promise.allSettled([
+  await Promise.allSettled([
     clearTxHistory(),
     remoteSignerStore.purgeRemoteSigners(),
     Promise.all([run(SQLQuery.PurgeSwapHtlcs), run(SQLQuery.PurgeSwapQuotes)]),
-    naka.deactivateCardOnDevice(),
-    useNakaDb().purgeNakaCards(),
   ])
-  if (deactivateResult.status === 'rejected')
-    logger.warn('Failed to deactivate NAKA card on device', deactivateResult.reason)
-  naka.card = undefined
   setNetworkOverride(value === 'default' ? null : value)
   router.go(0)
 }
@@ -188,6 +180,7 @@ const recoveryMessages = {
   'wallet-busy': 'HTLC registered. Recovery deferred: another transaction is unresolved.',
   'history-incomplete': 'HTLC registered. Recovery deferred: target transaction history is incomplete.',
   'outgoing-transaction': 'HTLC registered. Recovery deferred: an outgoing transaction already exists for this HTLC.',
+  'no-consensus': 'Recovery deferred: waiting for consensus to confirm the HTLC timeout.',
 } as const
 
 async function recoverValidatedHtlc(result: ValidatedRemoteSigner) {

@@ -14,7 +14,9 @@ const budget = computed(() => {
     const count = Number(lab.form.count)
     const owner = ['two', 'bomb'].includes(lab.form.scenario)
       ? 2 * (amount + fee)
-      : lab.form.scenario === 'drained' ? amount + 3 * fee : amount + fee
+      : lab.form.scenario === 'drained'
+        ? amount + 3 * fee
+        : lab.form.scenario === 'restore' ? 2 * amount + fee : amount + fee
     const spammer = lab.form.scenario === 'bomb' ? count * (1 + fee) : 0
     if (amount <= fee || !Number.isSafeInteger(owner) || !Number.isSafeInteger(spammer)
       || (lab.form.scenario === 'bomb' && (!Number.isInteger(count) || count < 1 || count > 1000))) {
@@ -56,6 +58,10 @@ const budget = computed(() => {
     <div v-if="lab.form.scenario === 'bomb'" class="instruction">
       <strong>Required order</strong>
       <p>Fund A → wait for expiry → send spam → confirm every transfer → fund B → open the app. Keep A funded throughout setup. Default 250 receipts pushes its creation beyond the first 100-entry page.</p>
+    </div>
+    <div v-if="lab.form.scenario === 'restore'" class="instruction">
+      <strong>Required order</strong>
+      <p>Fund A → keep the same amount again in the app wallet → setup verified → in Nimiq Pay, log out and import the recovery words. The fresh database does not know A, so the app must hold the wallet funds until it finds A instead of creating a second HTLC.</p>
     </div>
     <fieldset :disabled="lab.state.stage !== 'idle' || locked" class="config-grid">
       <div><label for="amount">Amount per HTLC · NIM</label><input id="amount" v-model="lab.form.amount" inputmode="decimal"><small>Default 0.01 NIM. Up to 5 decimal places.</small></div>

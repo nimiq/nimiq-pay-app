@@ -13,16 +13,16 @@ import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useNotificationsApi } from '@/composables/useApi'
 import { useChangelog } from '@/composables/useChangelog'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
-import { usePrice } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
-import { LocalNotificationsStatus, PushNotificationsStatus, useApp } from '@/stores/app'
+import { Crypto, LocalNotificationsStatus, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useTransactions } from '@/stores/transactions'
 
@@ -349,7 +349,8 @@ export function useNotifications() {
 
     const formatted = tx.asset === Asset.USDT
       ? formatUsdtAmount(tx.amount)
-      : usePrice(tx.amount).crypto.formatted
+      // usePrice outside a component queries prices and leaves a height watcher running.
+      : useCurrencyFormatter().formatCrypto(tx.amount, { currency: Crypto.NIM })
     const memo = tx.message?.trim()
     let body = memo ? tx.message! : ''
     if (tx.title === 'Cashlink Claiming')
