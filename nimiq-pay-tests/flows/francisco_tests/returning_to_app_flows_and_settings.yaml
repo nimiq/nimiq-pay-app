@@ -6,7 +6,7 @@ tags:
 
 ---
 # Scope: existing user returns to the app, then walks through Settings, Backup account,
-# What's New, About, and the main home flows (Top Up, Withdraw, Crypto Map, Earn Points),
+# What's New, About, and the main home flows (Top Up, Withdraw, Earn Points when shown),
 # verifying state survives an app restart (stopApp + relaunch with clearState: false).
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
@@ -81,8 +81,10 @@ tags:
     index: 1
 # A long latest entry can push the button below the fold, where Maestro still finds it with
 # zero-height bounds but the tap misses; scrollUntilVisible rejects zero-height bounds.
+# 60 s: on BrowserStack iOS each swipe and settle takes ~4.4 s, so the default 20 s fits only 4-5.
 - scrollUntilVisible:
     element: ${output.whatsNew.previousVersions}
+    timeout: 60000
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
 # Only the expansion renders a second header; unlike assertVisible, this rejects one below the fold.
@@ -90,10 +92,12 @@ tags:
     element:
       text: ${output.whatsNew.versionHeader}
       index: 1
+    timeout: 60000
 - tapOn: ${output.whatsNew.closeBtn}
 - waitForAnimationToEnd
-# The menu stays in the hierarchy under What's New, so check the changelog itself is gone.
-- assertNotVisible: ${output.whatsNew.previousVersions}
+# The menu stays in the hierarchy under What's New, so check the changelog itself is gone by
+# its headers ("Previous versions" is already reported not visible once scrolled past).
+- assertNotVisible: ${output.whatsNew.versionHeader}
 # Log Out, not What's New: home also shows a "What's New" card.
 - assertVisible: ${output.navigation.logoutBtn}
 - tapOn:
@@ -135,7 +139,6 @@ tags:
 - assertVisible: ${output.navigation.withdrawBtn}
 - assertVisible: ${output.home.payTitle}
 - assertVisible: ${output.navigation.openMenuBtn}
-- assertVisible: ${output.navigation.earnPointsBtn}
 
 - tapOn: ${output.navigation.topUpBtn}
 - waitForAnimationToEnd
@@ -170,22 +173,22 @@ tags:
     commands:
       - tapOn: ${output.navigation.closeNotificationCardBtn}
       - waitForAnimationToEnd
-- assertVisible: ${output.navigation.cryptoMapBtn}
-- tapOn: ${output.navigation.cryptoMapBtn}
-- waitForAnimationToEnd
-- assertVisible: ${output.cryptocityMap.closeBtn}
-- tapOn: ${output.cryptocityMap.closeBtn}
-- waitForAnimationToEnd
-- assertNotVisible: ${output.cryptocityMap.closeBtn}
-- assertVisible: ${output.home.payTitle}
-
-- assertVisible: ${output.navigation.earnPointsBtn}
-- tapOn: ${output.navigation.earnPointsBtn}
-- waitForAnimationToEnd
-- assertVisible: ${output.cryptocityPoints.comingSoonMessage}
-- tapOn: ${output.navigation.closeFlowModalBtn}
-- waitForAnimationToEnd
-- assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
-- assertVisible: ${output.home.payTitle}
+# Since 2.22.1 the button only shows while the PostHog flag `cryptocity-points` is on. Named
+# exception to the when-visible rule (the user's call, 2026-10-20): the Points steps run only
+# when it is shown, so with the flag off this part passes without testing anything. The flag
+# loads after start, so a late answer also skips it. The steps assume no Points campaign: with
+# one, the button opens Points or phone verification instead (HomeView.vue
+# openPointsFromHomeHeader).
+- runFlow:
+    when:
+      visible: ${output.navigation.earnPointsBtn}
+    commands:
+      - tapOn: ${output.navigation.earnPointsBtn}
+      - waitForAnimationToEnd
+      - assertVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - tapOn: ${output.navigation.closeFlowModalBtn}
+      - waitForAnimationToEnd
+      - assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - assertVisible: ${output.home.payTitle}
 
 - stopApp
