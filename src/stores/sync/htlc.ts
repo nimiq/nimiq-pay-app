@@ -7,6 +7,8 @@ import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { trackSwapStep } from '@/lib/analytics'
+import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { HTLC_CHECK_HOLD_STARTED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
@@ -695,6 +697,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           refundTx.proof = proof
           await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), validityStartHeight, htlc.address])
           const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
+          trackSwapStep({
+            step: 'refund',
+            ok: txDetails.executionResult === true,
+            asset: Asset.NIM,
+            swap_id: htlc.swap_id,
+            tx_state: txDetails.state,
+            execution_result: txDetails.executionResult ?? null,
+            rebroadcast: refundWindowOpen,
+          })
           if (txDetails.executionResult === true) {
             await useTransactions().setSwapHtlcRefunded(htlc.address)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
@@ -713,6 +724,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         }
         catch (error) {
           logger.error('Error while refunding swap HTLC', error)
+          trackSwapStep({ step: 'refund', ok: false, asset: Asset.NIM, swap_id: htlc.swap_id, error_reason: error instanceof Error ? error.message : String(error) })
         }
       }
       conn.run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])

@@ -29,7 +29,7 @@ const reportedErrors = new WeakSet<object>()
 
 // Never addresses (Nimiq and 20-byte EVM), 32-byte hex (tx hashes, but also keys) or URL query strings and
 // fragments. Collapsing hashes also keeps one PostHog issue per message instead of one per hash.
-function redact(text: string) {
+export function redact(text: string) {
   return text
     .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
     .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')

@@ -11,7 +11,7 @@ import { useLogger } from '@/composables/useLogger'
 
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
+import { trackSwapCompleted, trackSwapFailed, trackSwapStep } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
@@ -29,6 +29,7 @@ import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@
 const logger = useLogger('transactions.ts')
 const BROADCAST_TIMEOUT_MS = 30_000
 const SEND_CONSENSUS_TIMEOUT_MS = 30_000
+const SWAP_SETTLEMENT_SLOW_MS = 60_000
 
 interface PendingOutgoingRow {
   hash: string
@@ -133,9 +134,8 @@ export const useTransactions = defineStore('transactions', () => {
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
     })
 
-    logger.log(`📚 Selected ${txs.length} transactions`, txs)
-
-    logger.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
+    // Hash and status only: full rows repeat the whole page on every refresh. filterDisplayableTxs logs what it dropped.
+    logger.log(`📚 Selected ${txs.length} transactions, ${filteredTxs.length} displayable`, filteredTxs.map(tx => `${tx.hash}:${tx.status}`))
     return filteredTxs
   }
 
@@ -619,6 +619,7 @@ export const useTransactions = defineStore('transactions', () => {
 
       let patchedSwap: Promise<Swap> | undefined
       let swapStartedAt = 0
+      const swapId = partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.paymentRef : undefined
       if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
         swapStartedAt = Date.now()
         logger.log('Signaling signed transaction to Fastspot', { swap })
@@ -632,7 +633,13 @@ export const useTransactions = defineStore('transactions', () => {
           swap.contracts.NIM!.id,
           signedTx.toHex(),
         )
-        void patchedSwap.catch(() => undefined)
+        void patchedSwap.then(
+          patched => trackSwapStep({ step: 'funding_proof', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, swap_status: patched.status, has_preimage: !!patched.preimage }),
+          (error: unknown) => {
+            logger.warn('Fastspot rejected the funding proof', { swapId, error })
+            trackSwapStep({ step: 'funding_proof', ok: false, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
+          },
+        )
       }
 
       let details = syncState.pendingPaymentTransactions.find(tx => tx.transactionHash === staged.tx.hash)
@@ -643,10 +650,29 @@ export const useTransactions = defineStore('transactions', () => {
           return cleanupRejectedStaged(i18n.t('Wallet or network changed before sending'))
         }
         broadcastPhase = 'possible'
-        details = await promiseWithTimeout(
-          sendContext.client.sendTransaction(signedTx),
-          BROADCAST_TIMEOUT_MS,
-        )
+        const broadcastStartedAt = Date.now()
+        try {
+          details = await promiseWithTimeout(
+            sendContext.client.sendTransaction(signedTx),
+            BROADCAST_TIMEOUT_MS,
+          )
+        }
+        catch (error) {
+          if (patchedSwap)
+            trackSwapStep({ step: 'broadcast', ok: false, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - broadcastStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
+          throw error
+        }
+        if (patchedSwap) {
+          trackSwapStep({
+            step: 'broadcast',
+            ok: details?.executionResult !== false && details?.state !== 'invalidated' && details?.state !== 'expired',
+            asset: Asset.NIM,
+            swap_id: swapId,
+            duration_ms: Date.now() - broadcastStartedAt,
+            tx_state: details?.state ?? null,
+            execution_result: details?.executionResult ?? null,
+          })
+        }
         if (!remoteSigner.isWalletContextCurrent(sendContext)) {
           if (
             details?.executionResult === false
@@ -792,6 +818,19 @@ export const useTransactions = defineStore('transactions', () => {
 
       if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
         const finishSwap = async () => {
+          let polls = 0
+          let lastStatus: string | undefined
+          let settled = false
+          // The in-app flow waits here behind the PIN spinner, and users kill the app before the final event.
+          const slowTimeoutId = window.setTimeout(() => trackSwapStep({
+            step: 'settlement_slow',
+            ok: false,
+            asset: Asset.NIM,
+            swap_id: swapId,
+            duration_ms: Date.now() - swapStartedAt,
+            polls,
+            last_status: lastStatus ?? null,
+          }), SWAP_SETTLEMENT_SLOW_MS)
           try {
             const patchedSwapResult = await patchedSwap.catch(() => undefined)
             if (!remoteSigner.isWalletContextCurrent(sendContext))
@@ -812,6 +851,11 @@ export const useTransactions = defineStore('transactions', () => {
                 if (!remoteSigner.isWalletContextCurrent(sendContext)) {
                   reject(new Error(i18n.t('Wallet or network changed before sending')))
                   return
+                }
+                polls++
+                if (currentSwap.status !== lastStatus) {
+                  logger.log('⚡ Swap status changed', { swapId, from: lastStatus ?? null, to: currentSwap.status, polls })
+                  lastStatus = currentSwap.status
                 }
                 if ('preimage' in currentSwap && currentSwap.preimage) {
                   window.clearTimeout(timeoutId)
@@ -836,6 +880,8 @@ export const useTransactions = defineStore('transactions', () => {
               await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            trackSwapStep({ step: 'settlement', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, polls, last_status: lastStatus ?? null, preimage_source: patchedSwapResult?.preimage ? 'funding_proof' : 'poll' })
+            settled = true
             trackSwapCompleted({
               swap_duration_ms: Date.now() - swapStartedAt,
               asset: Asset.NIM,
@@ -851,6 +897,11 @@ export const useTransactions = defineStore('transactions', () => {
           }
           catch (error) {
             logger.error('Failed to finish accepted swap bookkeeping', error)
+            if (!settled)
+              trackSwapStep({ step: 'settlement', ok: false, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, polls, last_status: lastStatus ?? null, error_reason: error instanceof Error ? error.message : String(error) })
+          }
+          finally {
+            window.clearTimeout(slowTimeoutId)
           }
         }
         if (onSubmitted)

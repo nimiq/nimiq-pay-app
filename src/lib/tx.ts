@@ -7,6 +7,8 @@ import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { nimiqPayCosignerPublicKeys } from '@/lib'
+import { trackSwapStep } from '@/lib/analytics'
+import { Asset } from '@/lib/assets'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -69,36 +71,60 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     // Confirm swap with Fastspot
+    const swapId = partialArgs.paymentRef!
     const localWallet = useLocalWallet().localAddress
     const { confirmSwap, getSwap } = await useFastspotApiV1()
+    const confirmStartedAt = Date.now()
+    let alreadyConfirmed = false
     let swap: Swap
     try {
       swap = await confirmSwap(
-        /* swap */ { id: partialArgs.paymentRef! } as PreSwap,
+        /* swap */ { id: swapId } as PreSwap,
         /* redeem */ { asset: SwapAsset.BTC_LN },
         /* refund */ { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
         /* uid */ localWallet.toHex(),
-      )
+      ).catch(async (error) => {
+        if (!(error instanceof Error && error.message === 'The swap was already confirmed before.'))
+          throw error
+        alreadyConfirmed = true
+        return await getSwap(swapId) as Swap
+      })
     }
     catch (error) {
-      if (error instanceof Error && error.message === 'The swap was already confirmed before.')
-        swap = await getSwap(partialArgs.paymentRef!) as Swap
-      else throw error
+      trackSwapStep({ step: 'confirm', ok: false, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - confirmStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
+      throw error
     }
+    trackSwapStep({ step: 'confirm', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - confirmStartedAt, already_confirmed: alreadyConfirmed, swap_status: swap.status })
 
     const decoded = await parseBitcoinLightningInvoice(partialArgs.recipient)
     logger.log({ swap, decoded })
 
+    const nimContract = swap.contracts[SwapAsset.NIM]
+    const nimHtlc = nimContract?.htlc as NimHtlcDetails | undefined
+    const timestampSection = decoded.sections?.find(section => section.name === 'timestamp') as TimestampSection | undefined
+    const expirySection = decoded.sections?.find(section => section.name === 'expiry') as ExpirySection | undefined
+    const trackVerify = (error_reason?: string) => trackSwapStep({
+      step: 'verify',
+      ok: !error_reason,
+      asset: Asset.NIM,
+      swap_id: swapId,
+      error_reason,
+      // Fastspot pays the invoice only before it expires; the HTLC timeout is when an unpaid swap refunds.
+      invoice_expires_in_s: timestampSection ? Math.round(timestampSection.value + (expirySection?.value ?? 3600) - Date.now() / 1e3) : undefined,
+      htlc_timeout_in_s: nimHtlc ? Math.round((nimHtlc.timeoutTime - Date.now()) / 1e3) : undefined,
+    })
+
     // Verify swap hash
-    if (swap.hash !== decoded.payment_hash)
+    if (swap.hash !== decoded.payment_hash) {
+      trackVerify('hash_mismatch')
       return { outcome: 'rejected', error: i18n.t('Invalid swap hash') }
+    }
 
     // Construct swap NIM HTLC data
-    const nimContract = swap.contracts[SwapAsset.NIM]
-    if (!nimContract)
+    if (!nimContract || !nimHtlc) {
+      trackVerify('missing_nim_contract')
       return { outcome: 'rejected', error: i18n.t('No NIM HTLC found in swap') }
-
-    const nimHtlc = nimContract.htlc as NimHtlcDetails
+    }
 
     logger.log({ nimHtlc })
     logger.log('Writing Swap data')
@@ -119,8 +145,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
 
     // Verify data gainst data given in swap
     logger.log('Verifying Swap data')
-    if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
+    if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data) {
+      trackVerify('htlc_data_mismatch')
       return { outcome: 'rejected', error: i18n.t('Invalid NIM HTLC data in swap') }
+    }
+    trackVerify()
 
     // Setup HTLC creation transaction
     const tx = new Nimiq.Transaction(
@@ -383,6 +412,17 @@ export async function getSignedTxByRemote(
   }
 
   logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
+  const cosignStartedAt = Date.now()
+  const trackCosign = swap && ((props: { ok: boolean, error_reason?: string, [key: string]: unknown }) => trackSwapStep({
+    step: 'cosign',
+    asset: Asset.NIM,
+    swap_id: swap.id,
+    duration_ms: Date.now() - cosignStartedAt,
+    // Lets a stale validity start height be told apart from a slow cosigner.
+    head_height: height.value,
+    remote_height: useRemoteSigner().remoteHeight,
+    ...props,
+  }))
   try {
     const response = await promiseWithTimeout(
       useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx }),
@@ -390,6 +430,7 @@ export async function getSignedTxByRemote(
     )
     logger.log({ receipt: response.data, error: response.error })
     if (response.hasError) {
+      trackCosign?.({ ok: false, status: response.status, replayed: !!response.replayed, error_reason: response.error?.message || 'unknown' })
       const plainTx = tx.toPlain()
       logger.error('Cosigner failed to sign transaction', {
         status: response.status,
@@ -428,10 +469,13 @@ export async function getSignedTxByRemote(
       networkId.value,
     )
     signedTx.proof = Nimiq.BufferUtils.fromHex(typeof receipt.details.proof === 'string' ? receipt.details.proof : receipt.details.proof.raw)
+    trackCosign?.({ ok: true, tx_sent: receipt.txSent ?? null })
     return { outcome: 'signed', signedTx, swap, txSent: receipt.txSent }
   }
   catch (error) {
-    return { outcome: 'unknown', error: error instanceof Error ? error.message : String(error) }
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    trackCosign?.({ ok: false, error_reason: errorMessage })
+    return { outcome: 'unknown', error: errorMessage }
   }
 }
 

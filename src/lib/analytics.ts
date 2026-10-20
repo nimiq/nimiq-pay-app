@@ -3,7 +3,7 @@ import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
-import { reportException, useLogger } from '@/composables/useLogger'
+import { redact, reportException, useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
 import { useApp } from '@/stores/app'
@@ -111,7 +111,7 @@ export interface PaymentEventProperties {
   is_atomic_swap: boolean
 }
 
-export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled'
+export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'unknown'
 
 export interface PaymentAnalyticsState {
   startedAt: number
@@ -192,6 +192,11 @@ export function trackPaymentFailed(props: PaymentEventProperties & { error_reaso
   capture('payment_failed', props)
 }
 
+// The send may have reached the network, so the payment is neither completed nor failed.
+export function trackPaymentUnknown(props: PaymentEventProperties & { error_reason: string, duration_ms: number }): void {
+  capture('payment_unknown', { ...props, error_reason: redact(props.error_reason) })
+}
+
 export function trackPaymentCancelled(props: PaymentEventProperties & { cancelled_at_step: 'pin' }): void {
   capture('payment_cancelled', props)
 }
@@ -204,6 +209,36 @@ function assetToSwapPair(asset: Asset): string {
 
 export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Asset }): void {
   capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+}
+
+export type SwapStep
+  = | 'quote'
+    | 'confirm'
+    | 'verify'
+    | 'cosign'
+    | 'broadcast'
+    | 'funding_proof'
+    | 'settlement_slow'
+    | 'settlement'
+    | 'refund'
+
+// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
+// swap_id is Fastspot's id, needed to look the swap up with them.
+export function trackSwapStep(props: {
+  step: SwapStep
+  ok: boolean
+  asset: Asset
+  swap_id?: string
+  duration_ms?: number
+  error_reason?: string
+  [key: string]: unknown
+}): void {
+  capture('swap_step', {
+    ...props,
+    ...(props.error_reason ? { error_reason: redact(props.error_reason) } : {}),
+    swap_pair: assetToSwapPair(props.asset),
+    swap_provider: SWAP_PROVIDER,
+  })
 }
 
 export function trackConsensusEstablished(props: { duration_ms: number, network: string, sync_mode: string }): void {

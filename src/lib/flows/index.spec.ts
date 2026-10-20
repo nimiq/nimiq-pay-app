@@ -117,6 +117,7 @@ vi.mock('@/lib/analytics', () => ({
   trackPaymentCancelled: vi.fn(),
   trackPaymentCompleted: state.trackPaymentCompleted,
   trackPaymentFailed: vi.fn(),
+  trackPaymentUnknown: vi.fn(),
   trackFeatureOpened: state.trackFeatureOpened,
   trackWalletCreated: state.trackWalletCreated,
   trackWalletImported: state.trackWalletImported,

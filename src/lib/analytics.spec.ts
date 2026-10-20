@@ -9,6 +9,8 @@ import {
   trackAppOpened,
   trackFeatureOpened,
   trackFundsBlocked,
+  trackPaymentUnknown,
+  trackSwapStep,
   trackTopUpReceived,
   trackWalletCreated,
   trackWalletEntrySelected,
@@ -391,5 +393,45 @@ describe('trackFundsBlocked', () => {
     trackFundsBlocked('activation_failed', { tx_hash: 'abc' })
 
     expect(state.capture).toHaveBeenCalledWith({ event: 'funds_blocked', properties: { reason: 'activation_failed', tx_hash: 'abc' } })
+  })
+})
+
+describe('trackSwapStep', () => {
+  it('captures the step with swap pair and provider', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'cosign', ok: true, asset: Asset.NIM, swap_id: 'swap-1', duration_ms: 1200, tx_sent: true })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'swap_step',
+      properties: { step: 'cosign', ok: true, asset: 'NIM', swap_id: 'swap-1', duration_ms: 1200, tx_sent: true, swap_pair: 'NIM_BTC_LN', swap_provider: 'fastspot' },
+    })
+  })
+
+  it('redacts addresses and hashes from the error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'broadcast', ok: false, asset: Asset.NIM, error_reason: `Rejected ${'a'.repeat(64)} from NQ07 0000 0000 0000 0000 0000 0000 0000 0000` })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Rejected … from NQ…')
+  })
+})
+
+describe('trackPaymentUnknown', () => {
+  it('captures payment_unknown with a redacted error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const { PaymentMethod } = await import('@/types/transactions')
+    trackPaymentUnknown({
+      asset: Asset.NIM,
+      payment_method: PaymentMethod.NIM,
+      transfer_type: undefined,
+      amount_range: '1-10',
+      is_atomic_swap: true,
+      duration_ms: 31000,
+      error_reason: 'Timeout for NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'payment_unknown',
+      properties: expect.objectContaining({ is_atomic_swap: true, duration_ms: 31000, error_reason: 'Timeout for NQ…' }),
+    })
   })
 })
