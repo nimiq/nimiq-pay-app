@@ -141,6 +141,7 @@ Options:
   --app <value>            BrowserStack app identifier or custom_id (required)
   --suite <value>          BrowserStack test suite identifier or custom_id (required)
   --device <value>         BrowserStack device string, required, e.g. "Google Pixel 7 Pro-13.0"
+  --platform <value>       Platform of the app and device: android or ios (default: android)
   --flow <value>           Flow file or folder inside the uploaded suite to execute (default: flows/francisco_tests/create_new_account_with_pageObject.yaml)
   --env <KEY=VALUE>        Environment variable exposed to the flows via BrowserStack's
                            setEnvVariables; repeat for several (e.g. APP_ID, PIN)
@@ -701,11 +702,12 @@ export function parseBrowserStackTime(value) {
 
 /**
  * When a build POST fails on the network or with a 5xx, BrowserStack may still have created the
- * build. Stop a still-running build of the same flow that started meanwhile, so the retry does not
- * run next to an orphan holding a parallel. Builds of the same flow from earlier attempts are
- * already finished or stopped, so they are skipped.
+ * build. Stop a still-running build of the same flow on the same device that started meanwhile, so
+ * the retry does not run next to an orphan holding a parallel. Builds of the same flow from earlier
+ * attempts are already finished or stopped, so they are skipped. The device check spares the other
+ * platform's CI job, which runs the same flows at the same time.
  */
-async function stopOrphanedBuild(request, execute, postedAt) {
+export async function stopOrphanedBuild(request, { execute, devices }, postedAt) {
   try {
     const recent = await request('/builds?limit=10')
     for (const { id, start_time: startTime } of Array.isArray(recent) ? recent : (recent?.builds ?? [])) {
@@ -717,6 +719,7 @@ async function stopOrphanedBuild(request, execute, postedAt) {
       }
       const build = await request(`/builds/${id}`)
       const sameFlow = JSON.stringify(build.input_capabilities?.execute) === JSON.stringify(execute)
+        && JSON.stringify(build.input_capabilities?.devices) === JSON.stringify(devices)
       if (sameFlow && !TERMINAL_STATUSES.has(String(build.status).toLowerCase())) {
         console.error(`⚠️ Found build ${id} started by the failed request; stopping it`)
         await stopBuild(request, id)
@@ -862,11 +865,11 @@ export async function collectEvidence(download, { session, testcase, appId, bund
   return { ...diagnosis, failingStep }
 }
 
-async function runAttempt(client, payload, { timeoutSeconds, evidenceDirectory, secrets = [] }) {
+async function runAttempt(client, payload, { platform, timeoutSeconds, evidenceDirectory, secrets = [] }) {
   let started
   const postedAt = Date.now()
   try {
-    started = await client.request('/android/build', {
+    started = await client.request(`/${platform}/build`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -881,7 +884,7 @@ async function runAttempt(client, payload, { timeoutSeconds, evidenceDirectory, 
       await sleep(RATE_LIMIT_PAUSE_MS)
     }
     else if (!fatal) {
-      await stopOrphanedBuild(client.request, payload.execute, postedAt)
+      await stopOrphanedBuild(client.request, payload, postedAt)
     }
     return {
       build: null,
@@ -1011,6 +1014,11 @@ async function main() {
   const timeoutSeconds = Number(getArgValue(args, '--timeout', String(DEFAULT_TIMEOUT_SECONDS)))
   const maxAttempts = Number(getArgValue(args, '--max-attempts', String(DEFAULT_MAX_ATTEMPTS)))
   const deadline = Number(getArgValue(args, '--deadline', 'Infinity'))
+  const platform = getArgValue(args, '--platform', 'android')
+
+  if (!['android', 'ios'].includes(platform)) {
+    throw new Error('--platform must be android or ios.')
+  }
 
   if (!app) {
     throw new Error('Missing app identifier. Pass --app or set BROWSERSTACK_APP_ID.')
@@ -1087,6 +1095,7 @@ async function main() {
     }
 
     const attempt = await runAttempt(client, payload, {
+      platform,
       timeoutSeconds,
       evidenceDirectory: path.join(evidenceDirectory, `attempt-${attemptNumber}`),
       secrets,
@@ -1103,6 +1112,7 @@ async function main() {
 
   const result = {
     flow,
+    platform,
     ...resolveOutcome(attempts),
     appCommit: getArgValue(args, '--app-commit') ?? null,
     attempts: attempts.map(attempt => ({
