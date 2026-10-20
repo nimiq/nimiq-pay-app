@@ -221,7 +221,8 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     let newIndex: number = currentIndex + 1
 
     if (typeof options === 'number') {
-      newIndex = currentIndex + options
+      // prev()/navigateTo(-n) walk back through the visited steps like goBackBy, so a skipped step stays skipped
+      newIndex = options < 0 ? activeIndex.value + options : currentIndex + options
     }
     else if ('step' in options) {
       const stepIndex = stepsInFlow.findIndex(s => s.step === options.step)
@@ -246,14 +247,18 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     // For goBackBy, newIndex is a historyStack position — look up the step from historyStack
     // (not stepsInFlow) so we navigate to the step the user actually visited, even when
     // steps were skipped via navigateTo({ step }).
-    const isGoBackBy = typeof options === 'object' && 'goBackBy' in options
+    const isGoBackBy = typeof options === 'number' ? options < 0 : 'goBackBy' in options
     const newActiveStep = isGoBackBy
       ? historyStack.value[newIndex] ?? stepsInFlow.at(newIndex)
       : stepsInFlow.at(newIndex)
     if (!newActiveStep)
       return
 
-    const isGoingForward = newIndex > activeIndex.value
+    // Except for goBackBy, newIndex is a stepsInFlow position, but historyStack omits skipped steps. Resolve the
+    // historyStack position by step identity; an unvisited earlier step goes right before the current one.
+    const visitedIndex = getVisitedStepIndex(newActiveStep.step)
+    const isGoingForward = visitedIndex === -1 && newIndex > currentIndex
+    const targetIndex = visitedIndex === -1 ? activeIndex.value : visitedIndex
     if (!isGoingForward && activeStep.value.beforePrev)
       await activeStep.value.beforePrev(state.value, stepCallbacks.value)
 
@@ -267,11 +272,11 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     }
     else {
       // If the jump is more than one step, we remove the middle slides from the animation.
-      if (activeIndex.value - newIndex > 1) {
+      if (activeIndex.value - targetIndex > 1) {
         // Save the current step.
         const currentStep = historyStack.value[activeIndex.value]
         // Temporarily set history to only include the target and the current step.
-        historyStack.value = [historyStack.value[newIndex], currentStep]
+        historyStack.value = [newActiveStep, currentStep]
         // The current slide is now at index 1.
         activeIndex.value = 1
         await nextTick()
@@ -286,16 +291,14 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
       }
       else {
         // For adjacent navigation, ensure the target is in the history.
-        const exists = historyStack.value.find(s => s.step === newActiveStep.step)
-        if (!exists) {
-          historyStack.value.splice(newIndex, 0, newActiveStep)
-        }
+        if (visitedIndex === -1)
+          historyStack.value.splice(targetIndex, 0, newActiveStep)
         await nextTick()
-        goToSlide(newIndex)
+        goToSlide(targetIndex)
         await until(isScrolling).toBe(true, { timeout: 1000 })
         await until(isScrolling).toBe(false, { timeout: 1000 })
-        historyStack.value = historyStack.value.slice(0, newIndex + 1)
-        activeIndex.value = newIndex
+        historyStack.value = historyStack.value.slice(0, targetIndex + 1)
+        activeIndex.value = targetIndex
       }
     }
   }
