@@ -810,6 +810,7 @@ describe('useSyncLifecycle', () => {
       const { useSyncState } = await import('./state')
       const syncState = useSyncState()
       syncState.pendingTransactions.push({ transactionHash: 'remote-tx' } as any)
+      state.isSendingTx = true
       const tx = { transactionHash: 'remote-tx', state: 'included', timestamp: 123, executionResult }
       await remoteListener!(tx)
 
@@ -823,6 +824,26 @@ describe('useSyncLifecycle', () => {
       expect(syncState.pendingTransactions).toEqual([])
       expect(state.client.getTransaction).not.toHaveBeenCalled()
       expect(state.getTransactionState).not.toHaveBeenCalled()
+    })
+
+    it('does not retain remote transactions observed while no send is in flight', async () => {
+      let remoteListener: ((tx: any) => Promise<void>) | undefined
+      state.client.addTransactionListener.mockImplementation(async (fn: any, addresses?: any[]) => {
+        if (addresses?.[0]?.toUserFriendlyAddress?.() === 'NQ11 TEST REMOTE ADDRESS')
+          remoteListener = fn
+        return 1
+      })
+      const { useSyncLifecycle } = await import('./lifecycle')
+      useSyncLifecycle()
+      await vi.waitFor(() => expect(remoteListener).toBeDefined())
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'idle-remote-tx' } as any)
+
+      await remoteListener!({ transactionHash: 'idle-remote-tx', state: 'included', timestamp: 123, executionResult: true })
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith(expect.objectContaining({ hash: 'idle-remote-tx', status: 'included' }))
+      expect(syncState.pendingPaymentTransactions).toEqual([])
     })
 
     it('ignores local and remote callbacks after wallet context becomes stale', async () => {

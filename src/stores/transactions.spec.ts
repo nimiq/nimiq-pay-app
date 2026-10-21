@@ -1725,6 +1725,23 @@ describe('useTransactions', () => {
       expect(state.client.sendTransaction).not.toHaveBeenCalled()
     })
 
+    it('skips rebroadcast of a listener-observed transaction and drops observations after the send', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { useSyncState } = await import('@/stores/sync/state')
+      const { plain, signedTx } = createSignedTransaction('observed-payment')
+      vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options) => {
+        await options?.beforeRemoteBroadcast?.(signedTx as any)
+        useSyncState().pendingPaymentTransactions.push({ ...plain, state: 'included' } as any)
+        return { outcome: 'signed', signedTx } as any
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      expect(useSyncState().pendingPaymentTransactions).toEqual([])
+    })
+
     it.each([
       ['invalidated', 'failed'],
       ['expired', 'expired'],

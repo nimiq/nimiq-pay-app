@@ -425,6 +425,7 @@ export const useTransactions = defineStore('transactions', () => {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
     }
     finally {
+      syncState.pendingPaymentTransactions = []
       isSendingTx.value = false
     }
   }
