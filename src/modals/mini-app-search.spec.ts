@@ -24,6 +24,18 @@ describe('normalizeMiniAppUrl', () => {
     expect(normalizeMiniAppUrl('127.0.0.1')).toBe('http://127.0.0.1/')
   })
 
+  it('rejects cleartext http for public hosts', () => {
+    expect(normalizeMiniAppUrl('http://example.com')).toBeUndefined()
+    expect(normalizeMiniAppUrl('HTTP://app.uniswap.org/swap')).toBeUndefined()
+    expect(normalizeMiniAppUrl('http://8.8.8.8:8080')).toBeUndefined()
+    expect(normalizeMiniAppUrl('8.8.8.8')).toBeUndefined()
+  })
+
+  it('keeps http for LAN dev servers', () => {
+    expect(normalizeMiniAppUrl('http://10.0.0.5:5174')).toBe('http://10.0.0.5:5174/')
+    expect(normalizeMiniAppUrl('http://172.16.0.2:5173/')).toBe('http://172.16.0.2:5173/')
+  })
+
   it('returns undefined for non-URL inputs', () => {
     expect(normalizeMiniAppUrl('swap tokens')).toBeUndefined()
     expect(normalizeMiniAppUrl('')).toBeUndefined()
