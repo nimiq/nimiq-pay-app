@@ -60,12 +60,14 @@ describe('useConn open', () => {
     expect(conn.locked).toBe(false)
   })
 
-  it('keeps a timed-out open in flight so a retry joins it instead of opening again', async () => {
+  // The decrypt retry's checkEncryptionSecret closes every native connection, so a late finish of
+  // the timed-out open would unlock queries onto a closed connection.
+  it('abandons a timed-out open so its late finish cannot unlock', async () => {
     vi.useFakeTimers()
     try {
-      let finishOpen!: () => void
+      const finishOpen: Array<() => void> = []
       mocks.dbConn.open.mockImplementation(() => new Promise<void>((resolve) => {
-        finishOpen = resolve
+        finishOpen.push(resolve)
       }))
       const { useConn } = await import('./conn')
       const conn = useConn()
@@ -77,16 +79,15 @@ describe('useConn open', () => {
 
       const retry = conn.open()
       await vi.advanceTimersByTimeAsync(0)
-      expect(mocks.dbConn.open).toHaveBeenCalledTimes(1)
+      expect(mocks.dbConn.open).toHaveBeenCalledTimes(2)
 
-      finishOpen()
+      finishOpen[0]()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(conn.locked).toBe(true)
+
+      finishOpen[1]()
       await expect(retry).resolves.toBeUndefined()
-      expect(mocks.sqlite.createConnection).toHaveBeenCalledTimes(1)
-
-      // Settled opens are not memoized: a later open (e.g. after close or changePin) runs again.
-      mocks.dbConn.open.mockResolvedValue(undefined)
-      await conn.open()
-      expect(mocks.sqlite.retrieveConnection).toHaveBeenCalledTimes(1)
+      expect(conn.locked).toBe(false)
     }
     finally {
       vi.useRealTimers()
