@@ -2768,14 +2768,22 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Keeps the contract it was registered on: an RPC-URL change rebuilds the client,
   // and off() on the new contract would not remove a listener from the old one.
   let transferListener: { address: string, contract: Contract, listener: (...args: any[]) => void } | null = null
-  let transferListenerSync = Promise.resolve()
+  // Bumped per watcher run. A run superseded while awaiting a slow RPC stops instead of
+  // blocking newer runs or attaching after them (e.g. after a logout's detach).
+  let transferListenerRun = 0
 
-  async function attachTransferListener(address: string) {
+  async function attachTransferListener(address: string, run: number) {
     const normalized = getAddress(address)
+    // Another account's listener goes now; the same account's stays until the new client
+    // is up, so a failed RPC switch keeps the working one.
+    if (transferListener?.address !== normalized)
+      await detachTransferListener()
     const client = await getClient()
-    if (transferListener?.address === normalized && transferListener.contract === client.tokenContract)
+    if (run !== transferListenerRun || transferListener?.contract === client.tokenContract)
       return
     await detachTransferListener()
+    if (run !== transferListenerRun)
+      return
 
     const filter = client.tokenContract.filters.Transfer(null, normalized)
 
@@ -2845,6 +2853,10 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
 
     await client.tokenContract.on(filter, listener)
+    if (run !== transferListenerRun) {
+      await client.tokenContract.off(filter, listener)
+      return
+    }
     transferListener = { address: normalized, contract: client.tokenContract, listener }
     logger.log('📬 Polygon Transfer listener attached', { address: normalized })
   }
@@ -2866,31 +2878,23 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Re-attach on address or RPC-URL change. getEthAddress() reads ethWallet.value internally,
   // so wrapping in computed makes the watch reactive without changing the store API.
   const ethAddress = computed(() => useLocalWallet().getEthAddress().data)
-  watch([ethAddress, polygonRpcUrl], () => {
+  watch([ethAddress, polygonRpcUrl], async ([addr]) => {
     if (isTestnet)
       return
-    // Either change makes the current listener stale (other account or abandoned client).
-    // Drop it now instead of behind a queued attach that may hang on a slow RPC.
-    void detachTransferListener()
-    // Serialized, and each run reads the address after its awaits, so a slow attach
-    // can't finish after a logout's detach and leave a listener for the old account.
-    transferListenerSync = transferListenerSync.then(async () => {
-      try {
-        if (ethAddress.value)
-          await init()
-        const addr = ethAddress.value
-        if (!addr) {
-          await detachTransferListener()
-          return
-        }
-        if (consensus.value !== 'established')
-          return
-        await attachTransferListener(addr)
+    const run = ++transferListenerRun
+    try {
+      if (!addr) {
+        await detachTransferListener()
+        return
       }
-      catch (err) {
-        logger.error('📬 Polygon Transfer listener (re)attach failed', err)
-      }
-    })
+      await init()
+      if (run !== transferListenerRun || consensus.value !== 'established')
+        return
+      await attachTransferListener(addr, run)
+    }
+    catch (err) {
+      logger.error('📬 Polygon Transfer listener (re)attach failed', err)
+    }
   }, { immediate: true })
 
   return {

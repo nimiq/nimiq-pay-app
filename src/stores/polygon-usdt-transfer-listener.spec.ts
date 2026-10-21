@@ -6,7 +6,7 @@ import { usePolygonUsdt } from './polygon-usdt'
 
 const mocks = vi.hoisted(() => ({
   tokenContracts: [] as Array<{ on: ReturnType<typeof vi.fn>, off: ReturnType<typeof vi.fn> }>,
-  blockNumberGates: [] as Array<() => void>,
+  blockNumberGates: [] as Array<(ok: boolean) => void>,
   ethAddress: null as unknown as import('vue').Ref<string | null>,
   rpcUrl: null as unknown as import('vue').Ref<string>,
 }))
@@ -17,7 +17,7 @@ vi.mock('ethers', async (importOriginal) => {
     ...actual,
     // Each provider's first RPC call blocks until the test releases it, to model a slow cold connect.
     JsonRpcProvider: vi.fn(() => ({
-      getBlockNumber: vi.fn(() => new Promise<number>(resolve => mocks.blockNumberGates.push(() => resolve(1)))),
+      getBlockNumber: vi.fn(() => new Promise<number>((resolve, reject) => mocks.blockNumberGates.push(ok => ok ? resolve(1) : reject(new Error('rpc down'))))),
     })),
     Contract: vi.fn((address: string, abi) => {
       const contract = {
@@ -60,9 +60,9 @@ async function flush() {
     await new Promise(resolve => setTimeout(resolve, 0))
 }
 
-async function releaseBlockNumber() {
+async function releaseBlockNumber({ ok = true, index = 0 } = {}) {
   await flush()
-  mocks.blockNumberGates.shift()?.()
+  mocks.blockNumberGates.splice(index, 1)[0]?.(ok)
   await flush()
 }
 
@@ -120,5 +120,38 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     await nextTick()
     await flush()
     expect(newToken.off).toHaveBeenCalledWith(newToken.on.mock.calls[0][0], newToken.on.mock.calls[0][1])
+  })
+
+  it('keeps the working listener when the new RPC fails to connect', async () => {
+    mocks.ethAddress.value = ADDRESS_A
+    await nextTick()
+    await releaseBlockNumber()
+
+    mocks.rpcUrl.value = `https://polygon-${++rpcId}.example`
+    await nextTick()
+    await releaseBlockNumber({ ok: false })
+
+    const [token] = mocks.tokenContracts
+    expect(token.on).toHaveBeenCalledTimes(1)
+    expect(token.off).not.toHaveBeenCalled()
+  })
+
+  it('attaches on the new RPC while the old one is still hung', async () => {
+    mocks.ethAddress.value = ADDRESS_A
+    await nextTick()
+    await flush()
+
+    // The first RPC never answers before the switch to the second
+    mocks.rpcUrl.value = `https://polygon-${++rpcId}.example`
+    await nextTick()
+    await releaseBlockNumber({ index: 1 })
+
+    const [newToken] = mocks.tokenContracts
+    expect(newToken.on).toHaveBeenCalledTimes(1)
+
+    // The hung run settling late must not attach a second listener
+    await releaseBlockNumber()
+    const listeners = mocks.tokenContracts.reduce((sum, t) => sum + t.on.mock.calls.length - t.off.mock.calls.length, 0)
+    expect(listeners).toBe(1)
   })
 })
