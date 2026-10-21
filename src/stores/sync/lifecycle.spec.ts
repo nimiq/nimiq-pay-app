@@ -867,6 +867,7 @@ describe('useSyncLifecycle', () => {
       expect(remoteListener).toBeDefined()
       state.query.mockClear()
       useSyncState().pendingPaymentTransactions = []
+      state.isSendingTx = true
       useSyncState().walletContextGeneration += 1
 
       const tx = {
@@ -937,6 +938,7 @@ describe('useSyncLifecycle', () => {
       useSyncLifecycle()
       await vi.waitFor(() => expect(oldRemoteListener).toBeDefined())
       useSyncState().pendingPaymentTransactions = []
+      state.isSendingTx = true
 
       state.remoteAddress = createAddress('NQ22 REPLACEMENT REMOTE ADDRESS')
       oldRemoteListener({ transactionHash: 'old-remote-tx' })
