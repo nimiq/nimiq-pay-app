@@ -115,9 +115,7 @@ const currentUsdtQuoteRequest = computed<{
   recipient: string
   transfer: Transfer.UserPayment
 } | null>(() => {
-  // Flow keeps this step mounted while later steps are shown; stop quoting there so this step's poller
-  // doesn't refill the shared fee snapshot the payment re-reads at submit time.
-  if (!props.isActive || isNimiqAsset.value || polygonConsensus.value !== 'established' || !hasPositiveAmount.value || !payment.value.recipient)
+  if (isNimiqAsset.value || polygonConsensus.value !== 'established' || !hasPositiveAmount.value || !payment.value.recipient)
     return null
 
   return {
@@ -186,20 +184,21 @@ function handlePay() {
   if (loading.value)
     return
 
-  // Also pauses the USDT quote refresh until Flow switches the active step.
+  // Flow keeps this step mounted on later steps; pausing here stops the USDT quote poller from
+  // refilling the shared fee snapshot the payment re-reads at submit time.
   loading.value = true
   emit('done', amountUnits.value)
 }
 
 watch(errorMessage, (value) => {
-  // A hidden step has no quote, and the payment debits the balance, so its errors are not the user's here.
+  // The payment debits the balance while later steps are shown; that error must not resume quoting.
   if (value && props.isActive) {
     loading.value = false
     logger.error('Error in payment amount input:', value)
   }
 })
 
-// Reset the spinner when the user comes back from a later step; the quote request resumes with a fresh fee.
+// Reset the spinner and resume quoting when the user comes back from a later step.
 watch(() => props.isActive, (active) => {
   if (active)
     loading.value = false
