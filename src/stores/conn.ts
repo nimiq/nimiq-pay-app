@@ -99,10 +99,13 @@ export const useConn = defineStore('conn', () => {
   }
 
   async function close() {
-    // Locked means already closed, deleted or never opened. isOpen alone goes stale after a close.
-    if (locked.value || !isOpen.value)
+    // Locked means already closed, deleted or never opened. isOpen is not used: it can stay false
+    // for an open db (computed before the native open finishes).
+    if (locked.value)
       return
     lock()
+    // Yield once so queries already past waitForUnlock() dispatch before the native close.
+    await Promise.resolve()
     await db.value!.close()
   }
 
