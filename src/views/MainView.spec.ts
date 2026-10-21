@@ -571,7 +571,28 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(true)
-    expect(stringParser.getPaymentRequestData).toHaveBeenCalledOnce()
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not show a dismissed request again on resume once it is no longer valid', async () => {
+    const pr = 'nimiq:NQ00?amount=1'
+    consensusWait.promise = new Promise(() => {})
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: pr })
+    stringParser.isPaymentRequest.mockReturnValue(true)
+    stringParser.getPaymentRequestData.mockResolvedValueOnce({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+    stringParser.getPaymentRequestData.mockResolvedValueOnce({ error: 'expired' })
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    wrapper.findComponent({ name: 'PaymentRequestDetectedNotification' }).vm.$emit('onContinue')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(false))
+
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    await onResume()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(false)
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
   })
 
   it('retries detection on a later resume after validation fails', async () => {
