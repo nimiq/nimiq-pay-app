@@ -1,3 +1,4 @@
+import type { ComputedRef, Ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +17,8 @@ const fiatUsdPrice = ref({ price: 1, currency: 'USD' })
 const usdtQuote = ref<{ fee: number, totalDebit: number } | null>(null)
 const usdtQuoteError = ref('')
 const usdtQuoteLoading = ref(false)
+let quoteRequest: ComputedRef<unknown> | undefined
+let quotePaused: Ref<boolean> | undefined
 let useFetchCall = 0
 
 vi.mock('@/stores/remote-signer', () => ({
@@ -71,14 +74,18 @@ vi.mock('@/composables/useApi', () => ({
 }))
 
 vi.mock('@/composables/useUsdtQuoteRefresh', () => ({
-  useUsdtQuoteRefresh: () => ({
-    quote: usdtQuote,
-    error: usdtQuoteError,
-    quoteLoading: usdtQuoteLoading,
-    feeText: ref(''),
-    refresh: vi.fn(),
-    scheduleRefresh: vi.fn(),
-  }),
+  useUsdtQuoteRefresh: (request: ComputedRef<unknown>, loading: Ref<boolean>) => {
+    quoteRequest = request
+    quotePaused = loading
+    return {
+      quote: usdtQuote,
+      error: usdtQuoteError,
+      quoteLoading: usdtQuoteLoading,
+      feeText: ref(''),
+      refresh: vi.fn(),
+      scheduleRefresh: vi.fn(),
+    }
+  },
 }))
 
 vi.mock('@/composables/useLogger', () => ({
@@ -162,7 +169,7 @@ async function mountComponent(options: MountOptions = {}) {
 
   const { default: PaymentAmountInput } = await import('./PaymentAmountInput.vue')
   return mount(PaymentAmountInput, {
-    props: { state },
+    props: { state, isActive: true },
     global: {
       plugins: [createPinia()],
       mocks: {
@@ -341,5 +348,38 @@ describe('paymentAmountInput', () => {
     // Back in crypto mode after 6 toggles; the amount must be exactly what was entered.
     await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
     expect(wrapper.emitted('done')?.at(-1)).toEqual([1_000_000])
+  })
+
+  it('pauses the USDT quote after continuing and resumes it when the user comes back', async () => {
+    usdtBalance.value = 10_000_000
+    usdtQuote.value = { fee: 250_000, totalDebit: 1_250_000 }
+
+    const wrapper = await mountComponent({ asset: Asset.USDT })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
+    await flushPromises()
+    expect(quoteRequest?.value).not.toBeNull()
+    expect(quotePaused?.value).toBe(false)
+
+    await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
+    expect(wrapper.emitted('done')).toHaveLength(1)
+    expect(quotePaused?.value).toBe(true)
+
+    // Flow keeps the step mounted on later steps; a second click must not emit again.
+    await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
+    expect(wrapper.emitted('done')).toHaveLength(1)
+
+    await wrapper.setProps({ isActive: false })
+    expect(quoteRequest?.value).toBeNull()
+    // The payment debits the balance while later steps are shown; that error must not resume quoting.
+    usdtBalance.value = 0
+    await flushPromises()
+    expect(quotePaused?.value).toBe(true)
+
+    usdtBalance.value = 10_000_000
+    await wrapper.setProps({ isActive: true })
+    expect(quoteRequest?.value).not.toBeNull()
+    expect(quotePaused?.value).toBe(false)
+    expect(wrapper.find('[data-testid="loading-spinner"]').exists()).toBe(false)
   })
 })
