@@ -282,6 +282,35 @@ describe('native dialog queue', () => {
     await host.destroy()
   })
 
+  it('stops waiting for a dialog that never settles after the request timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const { host, handlers, requestUserConfirmation } = await createPermissionHost()
+      // iOS swipe-down closes the sheet without settling its promise.
+      requestUserConfirmation.mockImplementationOnce(() => new Promise(() => {}))
+      requestUserConfirmation.mockImplementationOnce(() => new Promise(() => {}))
+
+      void handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })
+      void handlers.requestChainApproval({ action: 'switch', chainId: '0xa' })
+      const third = handlers.requestChainApproval({ action: 'switch', chainId: '0x1' })
+      await vi.advanceTimersByTimeAsync(119_999)
+      expect(requestUserConfirmation).toHaveBeenCalledOnce()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+
+      // The wait starts when a dialog is shown, not when it is queued.
+      await vi.advanceTimersByTimeAsync(119_999)
+      expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(await third).toBe(true)
+      await host.destroy()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('drops confirmations still queued when the session is destroyed', async () => {
     const { host, closeFirst, first, second, requestUserConfirmation } = await createHostWithOpenDialog()
 

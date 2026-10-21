@@ -262,6 +262,9 @@ export class MiniAppHost {
     // let a Mini App cover one sheet with another. Show one dialog at a time, in
     // request order. Dialogs still queued when the session is destroyed are never
     // shown; they fail instead of resolving as a user rejection.
+    // On iOS a swipe-down closes a sheet without settling its promise, so the
+    // next dialog waits at most the Mini App's 120s request timeout, counted
+    // from when the open one was shown.
     const { requestUserConfirmation, selectLightningAsset } = config
     let dialogQueue: Promise<unknown> = Promise.resolve()
     const enqueue = <T>(show: () => Promise<T>): Promise<T> => {
@@ -270,7 +273,7 @@ export class MiniAppHost {
           throw new PermissionDeniedError('Mini App session closed')
         return show()
       })
-      dialogQueue = next.catch(() => {})
+      dialogQueue = dialogQueue.then(() => Promise.race([next, sleep(120_000)])).catch(() => {})
       return next
     }
     this.config = {
