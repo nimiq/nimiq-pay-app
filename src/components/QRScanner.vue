@@ -52,17 +52,18 @@ const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect
 const { isWeb, isIOS } = useDevice()
 
 watchDebounced(() => props.isVisible, async (isVisible) => {
+  // Skip if the container is not mounted: before mount, or after unmount, since the debounce timer outlives the component.
+  if (!cameraFeedContainer.value)
+    return
   if (isVisible) {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
     useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
     await start()
     useToast().clearToast()
   }
-  else if (cameraFeedContainer.value) {
-    // Stop scanner, if the container has actually been mounted yet.
+  else {
     document.body.classList.remove('native-qr-scanner-modal-open')
-    if (state.value === QRScannerState.Scanning)
-      stop()
+    stop()
     useToast().clearToast()
   }
 }, { immediate: true, debounce: 250, maxWait: 500 })
@@ -72,8 +73,7 @@ onMounted(ready)
 
 onBeforeUnmount(() => {
   document.body.classList.remove('native-qr-scanner-modal-open')
-  if (state.value === QRScannerState.Scanning)
-    stop()
+  stop()
 
   if (props.isVisible)
     useToast().clearToast()
