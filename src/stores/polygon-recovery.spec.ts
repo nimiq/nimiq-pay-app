@@ -395,6 +395,67 @@ describe('polygon refund recovery through the store', () => {
     expect(mocks.transactions.setPolygonSwapHtlcRefunded).not.toHaveBeenCalled()
   })
 
+  describe('pre-v8 row without htlc_id', () => {
+    let fundingHash: string
+
+    beforeEach(() => {
+      fundingHash = persistedHtlc!.tx_hash!
+      persistedHtlc = { ...persistedHtlc!, address: fundingHash, htlc_id: null, tx_hash: null }
+    })
+
+    it('recovers the HTLC id from the funding receipt Open event and refunds it', async () => {
+      const open = refundInterface.encodeEventLog(refundInterface.getEvent('Open')!, [
+        mocks.htlcId,
+        polygonUsdtConfig.tokenContract,
+        1_000_000n,
+        mocks.walletAddress,
+        `0x${mocks.swapHash}`,
+        1n,
+      ])
+      mocks.provider.getTransactionReceipt.mockImplementation(async hash => hash === fundingHash
+        ? { status: 1, logs: [{ ...open, address: polygonUsdtConfig.tokenContract }, { ...open, address: polygonUsdtConfig.htlcContract }] }
+        : null)
+
+      await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).resolves.toEqual({ refunded: true, hash: mocks.relayHash })
+      expect(mocks.run).toHaveBeenCalledWith(SQLQuery.SetRecoveredSwapHtlcId, [mocks.htlcId, fundingHash])
+      const refundData = mocks.relayTransaction.mock.calls[0]![1].relayRequest.request.data
+      expect(refundInterface.decodeFunctionData('refund', refundData)[0]).toBe(mocks.htlcId)
+      expect(mocks.transactions.setPolygonSwapHtlcRefunded).toHaveBeenCalledWith(fundingHash)
+      expect(persistedHtlc).toBeNull()
+    })
+
+    it.each([
+      ['no HTLC Open event', { status: 1, logs: [] }],
+      ['a reverted receipt', { status: 0, logs: [] }],
+    ])('marks the row unrecoverable without refunding or deleting it when the funding tx has %s', async (_, receipt) => {
+      mocks.provider.getTransactionReceipt.mockResolvedValue(receipt)
+
+      await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).resolves.toEqual({ refunded: false })
+      expect(mocks.run).toHaveBeenCalledWith(SQLQuery.SetSwapHtlcIdRecoveryFailed, [fundingHash])
+      expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(mocks.transactions.updateTransactionStatus).toHaveBeenCalledWith({ hash: fundingHash, status: 'failed', timestamp: undefined })
+      expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    })
+
+    it('keeps the row retryable when the funding receipt is missing', async () => {
+      mocks.provider.getTransactionReceipt.mockResolvedValue(null)
+
+      await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).resolves.toEqual({ refunded: false })
+      expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.SetSwapHtlcIdRecoveryFailed, expect.anything())
+      expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(mocks.transactions.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    })
+
+    it('keeps the row retryable when the funding receipt lookup fails', async () => {
+      mocks.provider.getTransactionReceipt.mockRejectedValue(new Error('RPC unavailable'))
+
+      await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).rejects.toThrow('RPC unavailable')
+      expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.SetSwapHtlcIdRecoveryFailed, expect.anything())
+      expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    })
+  })
+
   it('returns a late preimage before inspecting or resubmitting a pending refund', async () => {
     persistedHtlc = { ...persistedHtlc!, refund_hash: mocks.relayHash, refund_timestamp: now, refund_block: headBlock }
     mocks.getSwap.mockResolvedValueOnce({ preimage: 'late-secret' })
