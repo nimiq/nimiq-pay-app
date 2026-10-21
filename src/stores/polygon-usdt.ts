@@ -1827,13 +1827,16 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       // or late-finality incoming txs.
       const previousMaxTimestamp = dbTransactions.find(tx => typeof tx.timestamp === 'number')?.timestamp ?? 0
 
-      // Fire the initial-scan nonce in parallel only when we know we'll enter that branch;
+      // Fire the initial-scan balance and nonce in parallel only when we know we'll enter that branch;
       // ethers v6 batches concurrent JSON-RPC calls so this folds into one HTTP round-trip.
+      // Not `balance`: updateBalance swallows errors and leaves 0, which would persist
+      // canStopEarly = false for a funded wallet and force a full rescan.
       const willEnterInitialScan = !(hasLoadedHistory.value && lastHistorySyncBlock.value > 0)
-      const needsInitialNonce = willEnterInitialScan && !initialHistoryScanSession.value
-      const [latestBlock, prefetchedInitialNonce] = await Promise.all([
+      const needsInitialCounters = willEnterInitialScan && !initialHistoryScanSession.value
+      const [latestBlock, prefetchedInitialBalance, prefetchedInitialNonce] = await Promise.all([
         client.provider.getBlockNumber(),
-        needsInitialNonce ? client.tokenContract.getNonce(address) : Promise.resolve(null),
+        needsInitialCounters ? client.tokenContract.balanceOf(address) : null,
+        needsInitialCounters ? client.tokenContract.getNonce(address) : null,
       ])
 
       if (hasLoadedHistory.value && lastHistorySyncBlock.value > 0) {
@@ -1866,14 +1869,16 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       let session = initialHistoryScanSession.value
       if (!session) {
+        const balanceRaw = prefetchedInitialBalance ?? await client.tokenContract.balanceOf(address)
         const nonceRaw = prefetchedInitialNonce ?? await client.tokenContract.getNonce(address)
+        const initialRemainingBalance = BigInt(balanceRaw.toString())
         const initialRemainingNonce = BigInt(nonceRaw.toString())
         session = {
-          canStopEarly: balance.value > 0 || initialRemainingNonce > 0n,
+          canStopEarly: initialRemainingBalance > 0n || initialRemainingNonce > 0n,
           state: {
             headBlock: latestBlock,
             nextToBlock: latestBlock,
-            remainingBalance: BigInt(balance.value),
+            remainingBalance: initialRemainingBalance,
             remainingNonce: initialRemainingNonce,
           },
         }
