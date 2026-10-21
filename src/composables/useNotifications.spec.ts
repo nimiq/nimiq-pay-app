@@ -21,6 +21,7 @@ const state = vi.hoisted(() => ({
   transactions: [] as Array<{ hash: string }>,
   formatUsdtAmount: vi.fn((_amount: number) => '5.00 USDT'),
   formatCrypto: vi.fn((_amount?: number, _options?: object) => '123.456 NIM'),
+  pushListeners: [] as string[],
 }))
 
 vi.mock('@capacitor/local-notifications', () => ({
@@ -37,11 +38,15 @@ vi.mock('@capacitor/push-notifications', () => ({
   PushNotifications: {
     checkPermissions: vi.fn(async () => ({ receive: 'granted' as const })),
     requestPermissions: vi.fn(async () => ({ receive: 'granted' as const })),
-    addListener: vi.fn(),
+    addListener: vi.fn(async (event: string) => {
+      state.pushListeners.push(event)
+    }),
     register: vi.fn(),
     createChannel: vi.fn(),
     unregister: vi.fn(),
-    removeAllListeners: vi.fn(),
+    removeAllListeners: vi.fn(async () => {
+      state.pushListeners = []
+    }),
     getDeliveredNotifications: vi.fn(async () => ({ notifications: [] })),
   },
 }))
@@ -168,6 +173,7 @@ describe('useNotifications — local notifications', () => {
     state.formatUsdtAmount.mockClear()
     state.formatCrypto.mockClear()
     state.formatCrypto.mockReturnValue('123.456 NIM')
+    state.pushListeners = []
   })
 
   describe('scheduleIncomingPaymentNotification gates', () => {
@@ -387,6 +393,13 @@ describe('useNotifications — local notifications', () => {
       expect(state.addListener.mock.calls[0][0]).toBe('localNotificationActionPerformed')
     })
 
+    it('registers listener once across instances', async () => {
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().installLocalNotificationsTapHandler()
+      await useNotifications().installLocalNotificationsTapHandler()
+      expect(state.addListener).toHaveBeenCalledTimes(1)
+    })
+
     it('on tap: waits for unlock, closes Mini App, opens tx detail', async () => {
       state.transactions = [{ hash: 'abc-123' } as any]
       const { useNotifications } = await import('./useNotifications')
@@ -424,6 +437,16 @@ describe('useNotifications — local notifications', () => {
       await useNotifications().installLocalNotificationsTapHandler()
       await state.tapCallback!({ notification: { extra: { hash: 'abc-123' } } })
       expect(state.initializeFlow).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('push notification listeners', () => {
+    it('setup flow then MainView init leaves a single listener set', async () => {
+      const { useNotifications } = await import('./useNotifications')
+      // getNotifiedStep and MainView each create their own instance.
+      await useNotifications().registerNotifications()
+      await useNotifications().init()
+      expect(state.pushListeners).toEqual(['registration', 'registrationError', 'pushNotificationReceived', 'pushNotificationActionPerformed'])
     })
   })
 })
