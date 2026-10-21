@@ -2407,9 +2407,23 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     const pending = pendingHtlcForwarderNonce
     if (pending?.from === from && nonce <= pending.nonce && !shouldRetryMissingPolygonRelay(pending.at))
       throw new Error(i18n.t('A transaction is already in progress'))
-    const outcome = await relayTransaction(execution, callbacks)
-    pendingHtlcForwarderNonce = outcome.status === 'pending' ? { from, nonce, at: Date.now() } : null
-    return outcome
+    try {
+      const outcome = await relayTransaction(execution, {
+        ...callbacks,
+        beforeRelay: async () => {
+          await callbacks.beforeRelay?.()
+          // The relay can broadcast even if its HTTP response is lost.
+          pendingHtlcForwarderNonce = { from, nonce, at: Date.now() }
+        },
+      })
+      pendingHtlcForwarderNonce = outcome.status === 'pending' ? { from, nonce, at: Date.now() } : null
+      return outcome
+    }
+    catch (error) {
+      if (error instanceof PolygonRelayRejectedError)
+        pendingHtlcForwarderNonce = null
+      throw error
+    }
   }
 
   async function sendSwapPayment(

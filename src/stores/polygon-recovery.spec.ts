@@ -1004,6 +1004,28 @@ describe('polygon payment submission through the store', () => {
     expect(result.error).toBeUndefined()
     expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed' })
   })
+
+  it('keeps a refund nonce reserved when the relay response is lost', async () => {
+    const expiredHtlc = { ...persistedHtlc! }
+    persistedHtlc = null
+    const store = recreateStore()
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('timeout of 30000ms exceeded'))
+
+    await expect(store.refundPolygonSwapHtlc(expiredHtlc)).rejects.toThrow('timeout')
+    expect(mocks.run).toHaveBeenCalledWith(SQLQuery.SetSwapHtlcRefundAttempt, expect.anything())
+
+    // The refund may have been broadcast, so the forwarder nonce read is unchanged.
+    const result = await store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment')
+    expect(result.error).toBe('A transaction is already in progress')
+    expect(mocks.relayTransaction).toHaveBeenCalledOnce()
+  })
 })
 
 describe('polygon transaction reconciliation through the store', () => {
