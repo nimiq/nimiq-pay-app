@@ -158,7 +158,8 @@ const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: 
 const stepCompletionInProgress = ref<StepName | null>(null)
 // performNavigation yields for the slide animation and then writes back values computed before it. A navigation
 // started meanwhile (e.g. QR "Enter manually" tapped mid back-animation) would be overwritten, so serialise them.
-let navigationInProgress = false
+// Steps also count as not visible meanwhile, so e.g. the QR scanner doesn't start and emit a scan that gets dropped.
+const navigationInProgress = ref(false)
 
 function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
@@ -202,12 +203,12 @@ function defaultErrorHandler(errorMessage: string) {
 }
 
 function shouldBlockNavigation(source: string, allowDuringStepCompletion = false) {
-  if (!navigationInProgress && (allowDuringStepCompletion || !stepCompletionInProgress.value))
+  if (!navigationInProgress.value && (allowDuringStepCompletion || !stepCompletionInProgress.value))
     return false
 
   logger.warn(`Ignoring ${source} while step completion or navigation is in progress`, {
     inProgress: stepCompletionInProgress.value,
-    navigationInProgress,
+    navigationInProgress: navigationInProgress.value,
     activeStep: activeStep.value.step,
   })
   return true
@@ -217,7 +218,7 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
   if (shouldBlockNavigation(source, allowDuringStepCompletion))
     return
 
-  navigationInProgress = true
+  navigationInProgress.value = true
   try {
     if (props.isClosing)
       return
@@ -305,7 +306,7 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     }
   }
   finally {
-    navigationInProgress = false
+    navigationInProgress.value = false
     stepCompletionInProgress.value = null
   }
 }
@@ -481,6 +482,7 @@ function isStepVisible(stepName: StepName) {
     // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
     // the background page on native, before the modal unveils the background.
     && !props.isClosing
+    && !navigationInProgress.value
 }
 
 function focus() {

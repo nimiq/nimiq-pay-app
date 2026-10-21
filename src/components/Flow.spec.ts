@@ -761,9 +761,10 @@ describe('flow', () => {
   it('ignores step completion while a back navigation is animating', async () => {
     let finishScroll!: () => void
     const QrStep = markRaw(defineComponent({
+      props: { isVisible: Boolean },
       emits: ['done'],
       template: `
-        <div>
+        <div :data-visible="isVisible" data-testid="qr-step">
           <button data-testid="qr-scan" @click="$emit('done', 'scanned-request')">Scan</button>
           <button data-testid="qr-manual" @click="$emit('done')">Enter manually</button>
         </div>
@@ -842,6 +843,8 @@ describe('flow', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
+    // Hidden until the slide settles, so the scanner can't start and emit a scan that would be dropped
+    expect(wrapper.get('[data-testid="qr-step"]').attributes('data-visible')).toBe('false')
 
     await wrapper.get('[data-testid="qr-manual"]').trigger('click')
     await flushPromises()
@@ -854,6 +857,7 @@ describe('flow', () => {
 
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
     expect(wrapper.find('[data-testid="pin-step"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="qr-step"]').attributes('data-visible')).toBe('true')
 
     await wrapper.get('[data-testid="qr-manual"]').trigger('click')
     await flushPromises()
