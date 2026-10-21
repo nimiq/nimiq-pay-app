@@ -1,7 +1,7 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, ref } from 'vue'
-import { Asset } from '@/lib/assets'
+import { Asset, Chain } from '@/lib/assets'
 
 const activeAsset = ref<Asset>(Asset.NIM)
 const isNimiqAsset = computed(() => activeAsset.value === Asset.NIM)
@@ -47,6 +47,16 @@ const libState = vi.hoisted(() => ({
   isTestnet: false,
 }))
 const capture = vi.hoisted(() => vi.fn())
+const capacitor = vi.hoisted(() => ({
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  readClipboard: vi.fn(),
+}))
+const stringParser = vi.hoisted(() => ({
+  isPaymentRequest: vi.fn(),
+  getPaymentRequestData: vi.fn(),
+}))
+const consensusWait = vi.hoisted(() => ({ promise: undefined as Promise<void> | undefined }))
 
 enableAutoUnmount(afterEach)
 afterEach(() => vi.useRealTimers())
@@ -57,13 +67,13 @@ vi.mock('@capawesome/capacitor-posthog', () => ({
 
 vi.mock('@capacitor/app', () => ({
   App: {
-    addListener: vi.fn(),
+    addListener: capacitor.addListener,
   },
 }))
 
 vi.mock('@capacitor/clipboard', () => ({
   Clipboard: {
-    read: vi.fn().mockResolvedValue({ type: '', value: '' }),
+    read: capacitor.readClipboard,
   },
 }))
 
@@ -95,7 +105,7 @@ vi.mock('@vueuse/core', async () => {
     refDebounced: <T>(value: T) => value,
     refThrottled: <T>(value: T) => value,
     until: () => ({
-      toBe: vi.fn().mockResolvedValue(undefined),
+      toBe: (value: unknown) => (value === 'established' && consensusWait.promise) || Promise.resolve(),
     }),
     useSwipe: () => ({
       lengthX: ref(0),
@@ -134,6 +144,7 @@ vi.mock('@/components/icons/WorldIcon.vue', () => ({
 
 vi.mock('@/components/PaymentRequestDetectedNotification.vue', () => ({
   default: defineComponent({
+    name: 'PaymentRequestDetectedNotification',
     template: '<div data-testid="payment-request-notification" />',
   }),
 }))
@@ -167,6 +178,10 @@ vi.mock('@/composables/useLogger', () => ({
     error: loggerError,
     log: vi.fn(),
   }),
+}))
+
+vi.mock('@/composables/useStringParser', () => ({
+  useStringParser: () => stringParser,
 }))
 
 vi.mock('@/composables/useNotifications', () => ({
@@ -218,6 +233,7 @@ vi.mock('@/stores/conn', () => ({
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => ({
     localBalance,
+    getEthAddress: () => ({ data: undefined }),
   }),
 }))
 
@@ -329,6 +345,14 @@ describe('mainView', () => {
     routerReplace.mockReset()
     libState.isTestnet = false
     capture.mockClear()
+    capacitor.addListener.mockReset()
+    capacitor.addListener.mockResolvedValue({ remove: capacitor.removeListener })
+    capacitor.removeListener.mockReset()
+    capacitor.readClipboard.mockReset()
+    capacitor.readClipboard.mockResolvedValue({ type: '', value: '' })
+    stringParser.isPaymentRequest.mockReset()
+    stringParser.getPaymentRequestData.mockReset()
+    consensusWait.promise = undefined
   })
 
   it('logs a rejected wallet sync instead of leaving it unhandled', async () => {
@@ -504,5 +528,76 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Processing funds')
+  })
+
+  it('does not re-run payment request detection on resume while the same request waits for consensus', async () => {
+    const pr = 'nimiq:NQ00?amount=1'
+    let establishConsensus!: () => void
+    consensusWait.promise = new Promise(resolve => establishConsensus = resolve)
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: pr })
+    stringParser.isPaymentRequest.mockReturnValue(true)
+    stringParser.getPaymentRequestData.mockResolvedValue({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+
+    await mountComponent()
+    await flushPromises()
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    const resumes = [onResume(), onResume()]
+    await flushPromises()
+
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledOnce()
+
+    establishConsensus()
+    await Promise.all(resumes)
+    await flushPromises()
+
+    expect(displayedPaymentRequests.value).toEqual([pr])
+  })
+
+  it('shows a dismissed request again on resume while it waits for consensus', async () => {
+    const pr = 'nimiq:NQ00?amount=1'
+    consensusWait.promise = new Promise(() => {})
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: pr })
+    stringParser.isPaymentRequest.mockReturnValue(true)
+    stringParser.getPaymentRequestData.mockResolvedValue({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    wrapper.findComponent({ name: 'PaymentRequestDetectedNotification' }).vm.$emit('onContinue')
+    // Leave transition removes the element on the next frame
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(false))
+
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    await onResume()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(true)
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledOnce()
+  })
+
+  it('retries detection on a later resume after validation fails', async () => {
+    const pr = 'nimiq:NQ00?amount=1'
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: pr })
+    stringParser.isPaymentRequest.mockReturnValue(true)
+    stringParser.getPaymentRequestData.mockResolvedValueOnce({ error: 'network' })
+    stringParser.getPaymentRequestData.mockResolvedValueOnce({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+
+    await mountComponent()
+    await flushPromises()
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    await onResume()
+
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
+    expect(displayedPaymentRequests.value).toEqual([pr])
+  })
+
+  it('removes the resume listener on unmount', async () => {
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    wrapper.unmount()
+    await flushPromises()
+
+    expect(capacitor.addListener).toHaveBeenCalledWith('resume', expect.any(Function))
+    expect(capacitor.removeListener).toHaveBeenCalledOnce()
   })
 })

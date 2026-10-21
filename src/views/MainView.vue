@@ -6,7 +6,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonPage, IonRouterOutlet, IonTabs } from '@ionic/vue'
 import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 // TODO: lazy load
 import AlertIcon from '@/components/icons/alert.vue'
@@ -261,18 +261,31 @@ async function isOwnRecipient({ recipient, chain }: PaymentRequestData) {
   return false
 }
 
+// Requests being validated (false) or validated and waiting for consensus (true).
+// Resumes before consensus would otherwise re-fetch and push the same request again.
+const pendingPaymentRequests = new Map<string, boolean>()
+
 async function detectPaymentRequest() {
   try {
     const { type, value: pr } = await Clipboard.read()
-    if (type === 'text/plain' && pr) {
-      if (displayedPaymentRequests.value.includes(pr))
-        return
+    if (type !== 'text/plain' || !pr || displayedPaymentRequests.value.includes(pr))
+      return
+    const isValidated = pendingPaymentRequests.get(pr)
+    if (isValidated !== undefined) {
+      // Show it again in case it was dismissed while waiting for consensus
+      if (isValidated)
+        detectedPaymentRequest.value = pr
+      return
+    }
+    pendingPaymentRequests.set(pr, false)
+    try {
       const { useStringParser } = await import('@/composables/useStringParser')
       const { isPaymentRequest, getPaymentRequestData } = useStringParser()
       if (isPaymentRequest(pr)) {
         // Invoice could be expired, so we don't want to show the notification if it's invalid
         const { data, error } = await getPaymentRequestData(pr)
         if (!error && data && !(await isOwnRecipient(data))) {
+          pendingPaymentRequests.set(pr, true)
           detectedPaymentRequest.value = pr
           // Wait for the animation to start before vibrating
           // It feels weird if the vibration happens before the notification is even shown
@@ -283,6 +296,9 @@ async function detectPaymentRequest() {
           displayedPaymentRequests.value.push(pr)
         }
       }
+    }
+    finally {
+      pendingPaymentRequests.delete(pr)
     }
   }
   catch (error) {
@@ -335,7 +351,8 @@ onMounted(async () => {
   isFirstRender.value = false
 })
 
-App.addListener('resume', detectPaymentRequest)
+const resumeListener = App.addListener('resume', detectPaymentRequest)
+onUnmounted(() => resumeListener.then(listener => listener.remove()))
 </script>
 
 <template>
