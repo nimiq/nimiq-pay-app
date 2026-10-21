@@ -157,6 +157,7 @@ const tokenInterface = new Interface(POLYGON_BRIDGED_TOKEN_ABI)
 const relayHubInterface = new Interface(POLYGON_RELAY_HUB_ABI)
 const htlcInterface = new Interface(POLYGON_HTLC_RECIPIENT_ABI)
 const htlcRefundTopicHash = getRequiredContractEvent(htlcInterface, 'Refund').topicHash
+const htlcOpenTopicHash = getRequiredContractEvent(htlcInterface, 'Open').topicHash
 let clientPromise: Promise<PolygonUsdtClient> | null = null
 let resolvedRpcUrl: string = polygonUsdtConfig.rpcUrl
 let poolAddressPromise: Promise<string> | null = null
@@ -2747,19 +2748,41 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Caller (sync sweep) wraps this in try/catch and only deletes the swap_htlcs row on success.
   const reportedRefundFailures = new Set<string>()
   async function refundPolygonSwapHtlc(htlc: SwapHtlc): Promise<{ refunded: boolean, preimage?: string, hash?: string }> {
-    if (!htlc.htlc_id)
-      return { refunded: false }
-
     // Every refund outcome is reported here; the sync sweep only retries.
     const refund = startSwapRefund({ asset: Asset.USDT, swap_id: htlc.swap_id }, reportedRefundFailures)
     try {
-      const htlcId = htlc.htlc_id
       const txHash = getSwapHtlcTxHash(htlc)
       const { useFastspotApiV2 } = await import('@/composables/useFastspotV2')
       const { getSwap } = await useFastspotApiV2()
       const swap = await getSwap(htlc.swap_id).catch(() => null)
       if (swap && 'preimage' in swap && swap.preimage)
         return { refunded: false, preimage: swap.preimage }
+
+      // Pre-v8 rows lack htlc_id but are keyed by the funding tx hash, whose receipt carries the Open event.
+      let maybeHtlcId = htlc.htlc_id
+      if (!maybeHtlcId) {
+        const receipt = await (await getClient()).provider.getTransactionReceipt(htlc.address)
+        // A load-balanced RPC can miss an old receipt; only a receipt without an Open event is final.
+        if (!receipt) {
+          logger.warn('Polygon HTLC funding receipt not found; retrying next sweep', htlc.address)
+          return { refunded: false }
+        }
+        const htlcContract = getAddress(polygonUsdtConfig.htlcContract)
+        const recoveredId = receipt.logs.find(log => getAddress(log.address) === htlcContract && log.topics[0] === htlcOpenTopicHash)?.topics[1]
+        if (!recoveredId) {
+          // No HTLC was opened, so no funds are locked. Keep the row marked so the sweep stops retrying.
+          logger.error('Polygon HTLC funding receipt has no Open event', htlc.address)
+          // Status first: a parked row leaves the sweep, so a later status failure would never be retried.
+          await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'failed', timestamp: undefined })
+          await run(SQLQuery.SetSwapHtlcIdRecoveryFailed, [htlc.address])
+          refund.end(false, { tx_state: 'no_open_event' })
+          return { refunded: false }
+        }
+        await run(SQLQuery.SetRecoveredSwapHtlcId, [recoveredId, htlc.address])
+        maybeHtlcId = recoveredId
+      }
+      // Hoisted helpers below don't see narrowing on a reassigned binding.
+      const htlcId = maybeHtlcId
 
       async function finishRefund(hash?: string) {
         if (txHash)

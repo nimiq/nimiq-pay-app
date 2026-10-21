@@ -1817,13 +1817,15 @@ describe('useSyncHtlc', () => {
       expect(state.query.mock.calls.length).toBe(firstQueryCalls)
     })
 
-    it('marks legacy polygon row (no htlc_id) as expired without on-chain refund', async () => {
-      state.query.mockResolvedValue([{ address: '0xabc', htlc_id: null }])
+    it('refunds a legacy polygon row (no htlc_id) instead of deleting it as expired', async () => {
+      const legacyRow = { address: '0xfundinghash', htlc_id: null, swap_id: 'swap-1' }
+      state.query.mockResolvedValue([legacyRow])
+      state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: false })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      expect(state.run).toHaveBeenCalledWith(expect.any(String), ['0xabc'])
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: '0xabc', status: 'expired', timestamp: undefined })
-      expect(state.refundPolygonSwapHtlc).not.toHaveBeenCalled()
+      expect(state.refundPolygonSwapHtlc).toHaveBeenCalledWith(legacyRow)
+      expect(state.run).not.toHaveBeenCalledWith(expect.stringContaining('swap_htlcs'), ['0xfundinghash'])
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
     })
 
     it('reclaims polygon row with htlc_id via refundPolygonSwapHtlc', async () => {
