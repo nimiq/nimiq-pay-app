@@ -1219,7 +1219,7 @@ async function buildHtlcRelayEnvelope(
 }
 
 // Swap funding and expiry refunds sign with the same on-chain HTLC forwarder nonce. Hold it from the
-// read in buildHtlcRelayEnvelope until the relay settles, so two relays can't sign the same nonce.
+// read in buildHtlcRelayEnvelope until the relay returns, so two relays can't sign the same nonce.
 let htlcForwarderRelay: Promise<unknown> | null = null
 
 async function withHtlcForwarderNonce<T>(relay: () => Promise<T>): Promise<T> {
@@ -2397,6 +2397,21 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     return htlcFeeSnapshotPromise
   }
 
+  // A pending relay was accepted and can still mine, but getNonce reads the latest block. Keep its
+  // nonce reserved for the missing-relay grace unless the chain moves past it.
+  let pendingHtlcForwarderNonce: { from: string, nonce: bigint, at: number } | null = null
+
+  async function relayHtlcTransaction(execution: RelayExecutionInput, callbacks: Omit<PolygonRelayCallbacks, 'validateReceipt'>) {
+    const from = execution.relayRequest.request.from
+    const nonce = BigInt(execution.relayRequest.request.nonce)
+    const pending = pendingHtlcForwarderNonce
+    if (pending?.from === from && nonce <= pending.nonce && !shouldRetryMissingPolygonRelay(pending.at))
+      throw new Error(i18n.t('A transaction is already in progress'))
+    const outcome = await relayTransaction(execution, callbacks)
+    pendingHtlcForwarderNonce = outcome.status === 'pending' ? { from, nonce, at: Date.now() } : null
+    return outcome
+  }
+
   async function sendSwapPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
@@ -2489,7 +2504,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
           )
           ensureApprovedSender()
 
-          return relayTransaction(execution, {
+          return relayHtlcTransaction(execution, {
             beforeRelay: async () => {
               if (isUsdtMaintenanceActive.value)
                 throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
@@ -2752,7 +2767,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
     const receipt = await withHtlcForwarderNonce(async () => {
       const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
-      return relayTransaction(execution, {
+      return relayHtlcTransaction(execution, {
         beforeRelay: async () => {
           await run(SQLQuery.SetSwapHtlcRefundAttempt, [Date.now(), refundBlock, htlc.address])
         },
