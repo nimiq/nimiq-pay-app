@@ -18,6 +18,7 @@ const state = vi.hoisted(() => {
   const query = vi.fn((_sql?: string): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn(() => Promise.resolve())
   const sendTx = vi.fn(() => Promise.resolve({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' }))
+  const listCosignerHtlcs = vi.fn(async (): Promise<string[]> => [])
   const scanLocalHtlcCreations = vi.fn(async () => ({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] as string[] }))
   const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[], createdHtlcs: [], historyComplete: true }))
   const updateSignersTableBalance = vi.fn(() => Promise.resolve())
@@ -71,6 +72,7 @@ const state = vi.hoisted(() => {
     sendTx,
     discoverRemoteSignersFromBlockchain,
     scanLocalHtlcCreations,
+    listCosignerHtlcs,
     updateSignersTableBalance,
     updateRemoteSigner,
     getAllRemoteSigners,
@@ -269,6 +271,7 @@ vi.mock('@/stores/remote-signer', () => {
     blockHeightToTimestamp: vi.fn((height: number) => Promise.resolve(height * 1000)),
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
     scanLocalHtlcCreations: state.scanLocalHtlcCreations,
+    listCosignerHtlcs: state.listCosignerHtlcs,
     getWalletContext: () => ({
       address: state.localAddress,
       client: state.client,

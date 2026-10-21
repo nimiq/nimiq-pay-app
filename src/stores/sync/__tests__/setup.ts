@@ -26,6 +26,7 @@ function makeState() {
     serialized: 'serialized-drain',
   }))
   const scanLocalHtlcCreations = vi.fn((): Promise<any> => Promise.resolve({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] as string[] }))
+  const listCosignerHtlcs = vi.fn((): Promise<string[] | undefined> => Promise.resolve([]))
   const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[], createdHtlcs: [] as string[], historyComplete: true }))
   const registerValidatedRemoteSigner = vi.fn((candidate?: any): Promise<any> => Promise.resolve(candidate))
   const updateSignersTableBalance = vi.fn((): Promise<void> => Promise.resolve())
@@ -123,6 +124,7 @@ function makeState() {
     sendTx,
     discoverRemoteSignersFromBlockchain,
     scanLocalHtlcCreations,
+    listCosignerHtlcs,
     registerValidatedRemoteSigner,
     updateSignersTableBalance,
     updateRemoteSigner,
@@ -263,6 +265,7 @@ export function resetSyncState() {
     state.sendTx,
     state.discoverRemoteSignersFromBlockchain,
     state.scanLocalHtlcCreations,
+    state.listCosignerHtlcs,
     state.registerValidatedRemoteSigner,
     state.updateSignersTableBalance,
     state.updateRemoteSigner,
@@ -334,6 +337,7 @@ export function resetSyncState() {
   state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' })
   state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
   state.scanLocalHtlcCreations.mockResolvedValue({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] })
+  state.listCosignerHtlcs.mockResolvedValue([])
   state.registerValidatedRemoteSigner.mockImplementation(candidate => Promise.resolve(candidate))
   state.updateSignersTableBalance.mockResolvedValue(undefined)
   state.updateRemoteSigner.mockResolvedValue(undefined)
@@ -549,6 +553,7 @@ vi.mock('@/stores/remote-signer', () => {
     blockHeightToTimestamp: state.blockHeightToTimestamp,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
     scanLocalHtlcCreations: state.scanLocalHtlcCreations,
+    listCosignerHtlcs: state.listCosignerHtlcs,
     registerValidatedRemoteSigner: state.registerValidatedRemoteSigner,
     getWalletContext: state.getWalletContext,
     isWalletContextCurrent: state.isWalletContextCurrent,
