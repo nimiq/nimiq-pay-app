@@ -26,22 +26,17 @@ const state = vi.hoisted(() => ({
   interval: {
     pause: vi.fn(),
     resume: vi.fn(),
-    callback: undefined as undefined | (() => Promise<void>),
   },
   device: { isWeb: true },
   cameraPreview: {
     start: vi.fn(),
     stop: vi.fn(),
-    captureSample: vi.fn(),
   },
 }))
 
 vi.mock('@vueuse/core', async importOriginal => ({
   ...await importOriginal<typeof import('@vueuse/core')>(),
-  useIntervalFn: (callback: () => Promise<void>) => {
-    state.interval.callback = callback
-    return state.interval
-  },
+  useIntervalFn: () => state.interval,
 }))
 
 vi.mock('@capgo/camera-preview', () => ({
@@ -132,11 +127,9 @@ describe('useQRScanner', () => {
     state.tearDownCameraFeed.mockReset()
     state.interval.pause.mockReset()
     state.interval.resume.mockReset()
-    state.interval.callback = undefined
     state.device.isWeb = true
     state.cameraPreview.start.mockReset()
     state.cameraPreview.stop.mockReset()
-    state.cameraPreview.captureSample.mockReset()
 
     state.getPaymentRequestData.mockImplementation(async (request: string) => {
       if (request === 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=1&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y') {
@@ -360,23 +353,6 @@ describe('useQRScanner', () => {
     expect(firstStart).toBeLessThan(stop)
     expect(stop).toBeLessThan(secondStart)
     expect(next.state.value).toBe('scanning')
-  })
-
-  it('scans frames on mobile when the camera was already started by a previous session', async () => {
-    state.device.isWeb = false
-    state.cameraPreview.start.mockRejectedValue(new Error('camera already started'))
-    state.cameraPreview.captureSample.mockRejectedValue(new Error('no frame'))
-
-    const { start } = useQRScanner({
-      expect: 'paymentRequest' as any,
-      onData: vi.fn(),
-      onError: vi.fn(),
-      cameraFeedContainer: ref(document.createElement('div')),
-    })
-    await start()
-    await state.interval.callback!()
-
-    expect(state.cameraPreview.captureSample).toHaveBeenCalledTimes(1)
   })
 
   it('releases the camera when start() fails after the camera feed was set up', async () => {

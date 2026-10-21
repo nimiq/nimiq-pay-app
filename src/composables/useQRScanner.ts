@@ -312,12 +312,8 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
       }
     }
     catch (e) {
-      const message = (e as Error).message
-      // The scan loop skips frames until isCameraStarted is set, so an already running camera must count as started.
-      if (message.includes('camera already started')) {
-        isCameraStarted.value = true
-      }
-      else if (!message.includes('camera initialization in progress')) {
+      const ignoreErrors = ['camera already started', 'camera initialization in progress']
+      if (!ignoreErrors.some(error => (e as Error).message.includes(error))) {
         onError?.(i18n.t('Something went wrong while starting the camera'))
         return
       }
