@@ -111,6 +111,7 @@ interface PolygonRelayCallbacks {
   beforeBroadcast?: (hash: string) => Promise<void>
   onReplaced?: (oldHash: string, newHash: string) => Promise<void>
   validateReceipt?: (receipt: TransactionReceipt) => boolean
+  confirmationTimeoutMs?: number
 }
 
 interface PolygonPaymentAttempt {
@@ -173,6 +174,8 @@ const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 20
 const CONCURRENT_RANGE_FETCHES = 4
 const BLOCK_TS_CACHE_MAX = 5_000
 const POLYGON_RELAY_AMBIGUITY_GRACE_MS = 5 * 60_000
+// HTLC relays hold the forwarder nonce lock while waiting; a timeout leaves the relay pending.
+const HTLC_RELAY_CONFIRMATION_TIMEOUT_MS = 2 * 60_000
 const POLYGON_PAYMENT_FINALITY_BLOCKS = 10
 
 export function shouldRetryMissingPolygonRelay(submittedAt: number | null | undefined, now = Date.now()) {
@@ -514,7 +517,7 @@ export async function completePolygonRelayTransaction(
     if (!txResponse)
       throw new Error(i18n.t('Polygon transaction not found after relay'))
 
-    const receipt = await txResponse.wait(1)
+    const receipt = await txResponse.wait(1, callbacks.confirmationTimeoutMs)
     if (!receipt)
       throw new Error(i18n.t('Transaction was not mined on Polygon'))
     if (receipt.status === 0 || (callbacks.validateReceipt && !callbacks.validateReceipt(receipt)))
@@ -1221,6 +1224,7 @@ async function buildHtlcRelayEnvelope(
 
 // Swap funding and expiry refunds sign with the same on-chain HTLC forwarder nonce. Hold it from the
 // read in buildHtlcRelayEnvelope until the relay returns, so two relays can't sign the same nonce.
+// relayHtlcTransaction bounds the confirmation wait, so an unmined relay can't hold it forever.
 let htlcForwarderRelay: Promise<unknown> | null = null
 
 async function withHtlcForwarderNonce<T>(relay: () => Promise<T>): Promise<T> {
@@ -2411,6 +2415,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     try {
       const outcome = await relayTransaction(execution, {
         ...callbacks,
+        confirmationTimeoutMs: HTLC_RELAY_CONFIRMATION_TIMEOUT_MS,
         beforeRelay: async () => {
           await callbacks.beforeRelay?.()
           // The relay can broadcast even if its HTTP response is lost.

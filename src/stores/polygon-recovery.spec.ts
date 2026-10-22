@@ -1042,6 +1042,39 @@ describe('polygon payment submission through the store', () => {
     expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed' })
   })
 
+  it('bounds the swap funding confirmation wait so later HTLC relays are not blocked', async () => {
+    const expiredHtlc = { ...persistedHtlc!, address: `0x${'9a'.repeat(32)}`, htlc_id: `0x${'9a'.repeat(32)}` }
+    persistedHtlc = null
+    const store = recreateStore()
+    // Like ethers, the wait only settles on its own timeout: without one it never resolves.
+    let expireWait: (() => void) | undefined
+    mocks.wait.mockImplementationOnce((_confirms?: number, timeout?: number) => new Promise((_resolve, reject) => {
+      if (timeout)
+        expireWait = () => reject(Object.assign(new Error('wait for transaction timeout'), { code: 'TIMEOUT' }))
+    }))
+
+    const payment = store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment')
+    await vi.waitFor(() => expect(mocks.wait).toHaveBeenCalledOnce())
+    await expect(store.refundPolygonSwapHtlc(expiredHtlc)).resolves.toEqual({ refunded: false })
+
+    expect(expireWait).toBeDefined()
+    expireWait!()
+    const result = await payment
+    expect(result.error).toBeUndefined()
+
+    // The lock is free, but the unconfirmed funding nonce stays reserved.
+    await expect(store.refundPolygonSwapHtlc(expiredHtlc)).rejects.toThrow('A transaction is already in progress')
+    expect(mocks.relayTransaction).toHaveBeenCalledOnce()
+    expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.SetSwapHtlcRefundAttempt, expect.anything())
+  })
+
   it('keeps a refund nonce reserved when the relay response is lost', async () => {
     const expiredHtlc = { ...persistedHtlc! }
     persistedHtlc = null
