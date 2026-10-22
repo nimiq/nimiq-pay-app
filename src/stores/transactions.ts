@@ -873,19 +873,19 @@ export const useTransactions = defineStore('transactions', () => {
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            // The preimage proves payment; bookkeeping failures must not change its settlement outcome.
+            settled = true
+            window.clearTimeout(slowTimeoutId)
+            trackSwapStep({ step: 'settlement', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, polls, last_status: lastStatus ?? null, preimage_source: patchedSwapResult?.preimage ? 'funding_proof' : 'poll' })
+            trackSwapCompleted({
+              swap_duration_ms: Date.now() - swapStartedAt,
+              asset: Asset.NIM,
+            })
             // Update only the swap result; other writers may have changed the row while settlement was pending.
             const storedTx = await setSwapPreimage(staged.tx.hash, secret)
             // A removed row is recreated, or the secret would be lost once the swap bookkeeping is deleted below.
             if (!storedTx)
               await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            trackSwapStep({ step: 'settlement', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - swapStartedAt, polls, last_status: lastStatus ?? null, preimage_source: patchedSwapResult?.preimage ? 'funding_proof' : 'poll' })
-            settled = true
-            trackSwapCompleted({
-              swap_duration_ms: Date.now() - swapStartedAt,
-              asset: Asset.NIM,
-            })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
             await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
