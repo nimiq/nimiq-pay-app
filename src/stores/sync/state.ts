@@ -14,8 +14,8 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = Nimiq.Policy.BLOCKS_PER_BATCH
-export const HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS = 120 * Nimiq.Policy.BLOCKS_PER_BATCH
-export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS
+// HTLC start/end and the head timestamp are in ms; one block per second turns 120 batches into ms.
+export const HTLC_AUTO_EXTEND_LOOKAHEAD_MS = 120 * Nimiq.Policy.BLOCKS_PER_BATCH * 1000
 // Payments need an HTLC, so a fresh database never holds local funds longer than this.
 export const HTLC_HISTORY_CHECK_HOLD_MS = 10 * 60 * 1000
 
@@ -35,10 +35,10 @@ export const useSyncState = defineStore('sync-state', () => {
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
   const nodesAreSynced = computedAsync(() => remoteHeight.value > (localHeight.value - MAX_BLOCK_HEIGHT_MISMATCH) && remoteHeight.value < (localHeight.value + MAX_BLOCK_HEIGHT_MISMATCH), false)
 
-  // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
+  // True once the head timestamp is within the lookahead of the HTLC validity mid-point.
   const htlcCanBeExtended = computed(() => {
     if (end.value > 0 && start.value > 0)
-      return (end.value - (end.value - start.value) / 2) < (headTimestamp.value + HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS)
+      return (end.value - (end.value - start.value) / 2) < (headTimestamp.value + HTLC_AUTO_EXTEND_LOOKAHEAD_MS)
     return false
   })
 
