@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Option } from '@/types'
 import { Keyboard } from '@capacitor/keyboard'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
@@ -25,6 +26,12 @@ const errorMsg = ref('')
 // instead of a silently stuck PIN screen. Generous so slow devices / DB migrations don't trip it.
 const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
 
+// Biometric and manual entry can both emit done, so a second submit must not start while one runs.
+let isSubmitting = false
+// promiseWithTimeout doesn't cancel decrypt(). A retry after a timeout joins the running unlock
+// instead of starting a second one (and a second conn.open() / migration run).
+let pendingDecrypt: Promise<Option<string>> | undefined
+
 // Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
 // title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
 // stealing the pointermove — can't cancel it (the old 3s + default threshold was unreliable).
@@ -32,8 +39,11 @@ const titleRef = ref<HTMLElement | null>(null)
 onLongPress(titleRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
 async function handleSubmit(pin: string) {
-  if (pin.length < 4)
+  if (pin.length < 4 || isSubmitting)
     return false
+  isSubmitting = true
+  // Reset so a repeated identical error still reaches PinInput's watcher and clears its spinner.
+  errorMsg.value = ''
 
   logger.log('🔓 handleSubmit: PIN submitted', { length: pin.length })
   // Anything that throws OR hangs here (decrypt, mini-app reconnect, navigation) must surface as a
@@ -41,7 +51,10 @@ async function handleSubmit(pin: string) {
   // stuck on the PIN screen. Each phase is timeout-guarded so a hang cannot wedge the screen.
   try {
     logger.log('🔓 handleSubmit: decrypt start')
-    const error = await promiseWithTimeout(decrypt(pin), UNLOCK_PHASE_TIMEOUT)
+    pendingDecrypt ??= decrypt(pin).finally(() => {
+      pendingDecrypt = undefined
+    })
+    const error = await promiseWithTimeout(pendingDecrypt, UNLOCK_PHASE_TIMEOUT)
     logger.log('🔓 handleSubmit: decrypt done', { error })
     if (error) {
       errorMsg.value = error
@@ -69,7 +82,10 @@ async function handleSubmit(pin: string) {
     }
 
     logger.log('🔓 handleSubmit: router.replace(/app) start')
-    await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    const navigationFailure = await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    // A failed navigation resolves instead of throwing; surface it, or PinInput's spinner never clears.
+    if (navigationFailure)
+      throw navigationFailure
     logger.log('🔓 handleSubmit: router.replace(/app) done')
   }
   catch (err) {
@@ -78,6 +94,9 @@ async function handleSubmit(pin: string) {
     window.setTimeout(() => {
       errorMsg.value = ''
     }, 4000)
+  }
+  finally {
+    isSubmitting = false
   }
 }
 
@@ -131,7 +150,7 @@ onMounted(async () => {
         <h1 ref="titleRef" class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>
-        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" @done="handleSubmit" />
+        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" show-loading @done="handleSubmit" />
       </IonGrid>
     </IonContent>
   </IonPage>
