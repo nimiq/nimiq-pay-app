@@ -133,7 +133,9 @@ App.addListener('resume', async () => {
     }
 
     lastPauseTimestamp = 0
+    // go(0) only schedules the reload; stop here so resume sync doesn't run on the dying page
     router.go(0)
+    return
   }
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')
