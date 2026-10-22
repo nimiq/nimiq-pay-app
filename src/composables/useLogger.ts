@@ -34,7 +34,8 @@ export function redact(text: string) {
   return text
     .replace(/\b(?:lightning:)?ln(?:bc|tb|bcrt|url)[0-9a-z]{20,}\b/gi, 'ln…')
     .replace(/\b(?:bc|tb|bcrt)1[0-9a-z]{20,}\b/gi, 'btc…')
-    .replace(/\b[13mn2][1-9A-HJ-NP-Za-km-z]{25,34}\b/g, 'btc…')
+    // Testnet m/n addresses need a digit, so long camelCase words without l/I/O/0 are not redacted.
+    .replace(/\b(?:[123]|[mn](?=[1-9A-HJ-NP-Za-km-z]*[1-9]))[1-9A-HJ-NP-Za-km-z]{25,34}\b/g, 'btc…')
     .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
     .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')
     .replace(/\b0x[0-9a-fA-F]{40}\b/g, '0x…')

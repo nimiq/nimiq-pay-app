@@ -426,6 +426,13 @@ describe('trackSwapStep', () => {
 
     expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Bad peer ln…, ln…, btc…, btc…')
   })
+
+  it('redacts testnet Bitcoin addresses but keeps long camelCase words', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'quote', ok: false, asset: Asset.NIM, error_reason: 'maxPriorityFeePerGasTooHigh for mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn' })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('maxPriorityFeePerGasTooHigh for btc…')
+  })
 })
 
 describe('trackPaymentUnknown', () => {
