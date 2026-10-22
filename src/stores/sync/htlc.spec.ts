@@ -1835,13 +1835,8 @@ describe('useSyncHtlc', () => {
       expect(state.refundPolygonSwapHtlc).toHaveBeenCalledWith(polygonRow)
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
       expect(state.updateSinglePolygonTransaction).not.toHaveBeenCalled()
-      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
-        step: 'refund',
-        ok: true,
-        asset: 'USDT',
-        swap_id: 'swap-1',
-        duration_ms: expect.any(Number),
-      }))
+      // refundPolygonSwapHtlc reports its own outcome.
+      expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
     it('does not report a pending Polygon refund as completed or failed', async () => {
@@ -1894,14 +1889,7 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.logger.error).toHaveBeenCalledWith('Polygon HTLC refund failed; will retry next sweep', expect.any(Error))
-      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
-        step: 'refund',
-        ok: false,
-        asset: 'USDT',
-        swap_id: 'swap-1',
-        error_reason: 'relay down',
-        duration_ms: expect.any(Number),
-      }))
+      expect(trackSwapStep).not.toHaveBeenCalled()
       // Row not deleted — only the swap_quotes cleanup ran
       expect(state.run).not.toHaveBeenCalledWith(expect.stringContaining('swap_htlcs'), ['0xrelayhash'])
     })

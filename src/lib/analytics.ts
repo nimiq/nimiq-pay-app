@@ -211,31 +211,41 @@ export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Ass
   capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
-export type SwapStep
-  = | 'quote'
-    | 'confirm'
-    | 'verify'
-    | 'cosign'
-    | 'relay'
-    | 'broadcast'
-    | 'funding_proof'
-    | 'settlement_slow'
-    | 'settlement'
-    | 'refund'
+interface SwapSettlementStats {
+  polls: number
+  last_status: string | null
+}
 
-// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
-// swap_id is Fastspot's id, needed to look the swap up with them.
-// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
-// the app skips it and no `broadcast` step follows.
-export function trackSwapStep(props: {
-  step: SwapStep
+// Extra properties per step, so the PostHog schema is checked at every call site.
+export interface SwapStepProps {
+  quote: { reused: boolean, invoice_expires_in_s: number, quote_expires_in_s: number }
+  confirm: { already_confirmed: boolean, swap_status: string }
+  verify: { invoice_expires_in_s: number, htlc_timeout_in_s: number }
+  cosign: { head_height: number, remote_height: number, status: number, replayed: boolean, tx_sent: boolean | null }
+  relay: { tx_state: string }
+  broadcast: { tx_state: string | null, execution_result: boolean | null }
+  funding_proof: { swap_status: string, has_preimage: boolean }
+  settlement_slow: SwapSettlementStats
+  settlement: SwapSettlementStats & { preimage_source: 'funding_proof' | 'poll' }
+  refund: { tx_state: string, execution_result: boolean | null, rebroadcast: boolean }
+}
+
+export type SwapStep = keyof SwapStepProps
+
+export type SwapStepEvent<S extends SwapStep> = {
+  step: S
   ok: boolean
   asset: Asset
   swap_id?: string
   duration_ms?: number
   error_reason?: string
-  [key: string]: unknown
-}): void {
+} & Partial<SwapStepProps[S]>
+
+// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
+// swap_id is Fastspot's id, needed to look the swap up with them.
+// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
+// the app skips it and no `broadcast` step follows.
+export function trackSwapStep<S extends SwapStep>(props: SwapStepEvent<S>): void {
   capture('swap_step', {
     ...props,
     ...(props.error_reason ? { error_reason: redact(props.error_reason) } : {}),

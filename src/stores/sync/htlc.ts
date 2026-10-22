@@ -11,6 +11,7 @@ import { trackSwapStep } from '@/lib/analytics'
 import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { HTLC_CHECK_HOLD_STARTED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
+import { errorReason } from '@/lib/swap-telemetry'
 import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
 import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -608,6 +609,12 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     return htlcReconciliationPromise
   }
 
+  // Records a refund confirmed as executed together with its swap step.
+  async function markSwapHtlcRefunded(htlc: SwapHtlc, refund: PlainTransactionDetails, extra?: { rebroadcast: boolean }) {
+    trackSwapStep({ step: 'refund', ok: true, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: refund.state, execution_result: true, ...extra })
+    await useTransactions().setSwapHtlcRefunded(htlc.address)
+  }
+
   let lastExpiredSwapHtlcCheckTimestamp = 0
   async function checkExpiredSwapHtlcs() {
     if (htlcCheckLock.value)
@@ -644,8 +651,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
                 return undefined
               })
             if (refund?.executionResult === true) {
-              trackSwapStep({ step: 'refund', ok: true, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: refund.state, execution_result: true })
-              await useTransactions().setSwapHtlcRefunded(htlc.address)
+              await markSwapHtlcRefunded(htlc, refund)
               await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
               continue
             }
@@ -665,10 +671,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
               }
               // Past its window, only a complete history scan tells whether the refund drained the HTLC.
               const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
-              if (landedRefund?.executionResult === true) {
-                trackSwapStep({ step: 'refund', ok: true, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: landedRefund.state, execution_result: true })
-                await useTransactions().setSwapHtlcRefunded(htlc.address)
-              }
+              if (landedRefund?.executionResult === true)
+                await markSwapHtlcRefunded(htlc, landedRefund)
             }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
@@ -700,37 +704,25 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           refundTx.proof = proof
           await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), validityStartHeight, htlc.address])
           const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
-          // Pending broadcasts have no outcome yet; reconciliation reports their confirmed execution.
-          if (typeof txDetails.executionResult === 'boolean' || txDetails.state === 'invalidated' || txDetails.state === 'expired') {
-            trackSwapStep({
-              step: 'refund',
-              ok: txDetails.executionResult === true,
-              asset: Asset.NIM,
-              swap_id: htlc.swap_id,
-              tx_state: txDetails.state,
-              execution_result: txDetails.executionResult ?? null,
-              rebroadcast: refundWindowOpen,
-            })
-          }
           if (txDetails.executionResult === true) {
-            await useTransactions().setSwapHtlcRefunded(htlc.address)
+            await markSwapHtlcRefunded(htlc, txDetails, { rebroadcast: refundWindowOpen })
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
           }
-          else if (txDetails.executionResult === false) {
+          else if (txDetails.executionResult === false || txDetails.state === 'invalidated' || txDetails.state === 'expired') {
             logger.error('Error while sending refund swap HTLC tx', txDetails)
-            await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
-          }
-          else if (txDetails.state === 'invalidated' || txDetails.state === 'expired') {
-            // A rebuilt copy is rejected once the original lands; keep the hash so its lookup decides.
-            logger.error('Error while sending refund swap HTLC tx', txDetails)
+            trackSwapStep({ step: 'refund', ok: false, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: txDetails.state, execution_result: txDetails.executionResult ?? null, rebroadcast: refundWindowOpen })
+            // Only an executed failure clears the hash: a rebuilt copy is rejected once the original lands, so its lookup decides.
+            if (txDetails.executionResult === false)
+              await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
           }
           else {
+            // Pending broadcasts have no outcome yet; the next sweep's lookup reports their confirmed execution.
             logger.warn('Swap HTLC refund has no execution result yet; next sweep checks its hash', txDetails)
           }
         }
         catch (error) {
           logger.error('Error while refunding swap HTLC', error)
-          trackSwapStep({ step: 'refund', ok: false, asset: Asset.NIM, swap_id: htlc.swap_id, error_reason: error instanceof Error ? error.message : String(error) })
+          trackSwapStep({ step: 'refund', ok: false, asset: Asset.NIM, swap_id: htlc.swap_id, error_reason: errorReason(error) })
         }
       }
       conn.run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
@@ -749,14 +741,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     }
 
-    const refundStartedAt = Date.now()
-    // Late-preimage reconciliation can fail after the refund lookup already completed.
-    let refundReturned = false
     try {
       const result = await polygonUsdt.refundPolygonSwapHtlc(htlc)
-      refundReturned = true
-      if (result.refunded)
-        trackSwapStep({ step: 'refund', ok: true, asset: Asset.USDT, swap_id: htlc.swap_id, duration_ms: Date.now() - refundStartedAt })
       if (result.refunded || !result.preimage)
         return
 
@@ -771,8 +757,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       // Leave the row in place so the next sweep retries. refund(...) reverts on already-refunded
       // HTLCs, so retries are safe.
       logger.error('Polygon HTLC refund failed; will retry next sweep', error)
-      if (!refundReturned)
-        trackSwapStep({ step: 'refund', ok: false, asset: Asset.USDT, swap_id: htlc.swap_id, duration_ms: Date.now() - refundStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
     }
   }
 

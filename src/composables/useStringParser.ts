@@ -7,11 +7,11 @@ import { getAddress } from 'ethers'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet, nimiqDomainUrl } from '@/lib'
-import { trackSwapStep } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, isValidEthAddress } from '@/lib/ethereum'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { startSwapStep } from '@/lib/swap-telemetry'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
@@ -251,14 +251,10 @@ export function useStringParser() {
     let quote: Quote
     const quoteStartedAt = Date.now()
     const existingQuote = await query<{ ln_invoice: string, swap_id: string } | undefined>(SQLQuery.GetSwapQuote, [swapQuoteCacheKey], { single: true })
-    const trackQuote = (props: { ok: boolean, swap_id?: string, error_reason?: string, quote_expires_in_s?: number }) => trackSwapStep({
-      step: 'quote',
-      asset: isUsdt ? Asset.USDT : Asset.NIM,
-      duration_ms: Date.now() - quoteStartedAt,
+    const quoteStep = startSwapStep('quote', { asset: isUsdt ? Asset.USDT : Asset.NIM, swap_id: existingQuote?.swap_id }, {
       reused: !!existingQuote,
       invoice_expires_in_s: Math.round(invoiceExpiresAt - Date.now() / 1e3),
-      ...props,
-    })
+    }, quoteStartedAt)
     if (existingQuote) {
       try {
         // TODO: I don't know what could happen if the swap was already created
@@ -272,7 +268,7 @@ export function useStringParser() {
       }
       catch (e) {
         logger.error('Error fetching existing swap:', { error: e, decoded })
-        trackQuote({ ok: false, swap_id: existingQuote.swap_id, error_reason: e instanceof Error ? e.message : String(e) })
+        quoteStep.fail(e)
         return { error: i18n.t('Cannot fetch existing swap'), data: undefined }
       }
     }
@@ -286,11 +282,11 @@ export function useStringParser() {
       }
       catch (e) {
         logger.error('Error creating swap:', { error: e, amountBtc, decoded, sellAssetId })
-        trackQuote({ ok: false, error_reason: e instanceof Error ? e.message : String(e) })
+        quoteStep.fail(e)
         return { error: i18n.t('Cannot create swap'), data: undefined }
       }
     }
-    trackQuote({ ok: true, swap_id: quote.id, quote_expires_in_s: Math.round(quote.expiry - Date.now() / 1e3) })
+    quoteStep.end(true, { swap_id: quote.id, quote_expires_in_s: Math.round(quote.expiry - Date.now() / 1e3) })
 
     if (quote.sell.asset !== sellAssetId)
       return { error: i18n.t('Could not fetch amount for Bitcoin Lightning swap.'), data: undefined }

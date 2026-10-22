@@ -354,6 +354,13 @@ describe('polygon refund recovery through the store', () => {
     await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).rejects.toThrow(lostResponse)
     expect(persistedHtlc).toMatchObject({ refund_hash: null, refund_timestamp: now, refund_block: headBlock })
     expect(mocks.provider.broadcastTransaction).not.toHaveBeenCalled()
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      step: 'refund',
+      ok: false,
+      asset: Asset.USDT,
+      swap_id: 'swap-id',
+      error_reason: 'relay response lost',
+    }))
 
     await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).resolves.toMatchObject({ refunded: false })
     expect(mocks.relayTransaction).toHaveBeenCalledTimes(1)
@@ -400,6 +407,7 @@ describe('polygon refund recovery through the store', () => {
     expect(mocks.transactions.setPolygonSwapHtlcRefunded).toHaveBeenCalledWith(originalHash)
     expect(persistedHtlc).toBeNull()
     expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: true, asset: Asset.USDT, swap_id: 'swap-id' }))
   })
 
   it('keeps an old pending refund after receipt RPC failure without resubmitting', async () => {

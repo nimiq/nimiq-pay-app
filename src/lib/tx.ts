@@ -7,8 +7,8 @@ import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { nimiqPayCosignerPublicKeys } from '@/lib'
-import { trackSwapStep } from '@/lib/analytics'
 import { Asset } from '@/lib/assets'
+import { errorReason, startSwapStep } from '@/lib/swap-telemetry'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -71,15 +71,15 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     // Confirm swap with Fastspot
-    const swapId = partialArgs.paymentRef!
+    const swapContext = { asset: Asset.NIM, swap_id: partialArgs.paymentRef! }
     const localWallet = useLocalWallet().localAddress
     const { confirmSwap, getSwap } = await useFastspotApiV1()
-    const confirmStartedAt = Date.now()
+    const confirm = startSwapStep('confirm', swapContext)
     let alreadyConfirmed = false
     let swap: Swap
     try {
       swap = await confirmSwap(
-        /* swap */ { id: swapId } as PreSwap,
+        /* swap */ { id: swapContext.swap_id } as PreSwap,
         /* redeem */ { asset: SwapAsset.BTC_LN },
         /* refund */ { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
         /* uid */ localWallet.toHex(),
@@ -87,14 +87,14 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
         if (!(error instanceof Error && error.message === 'The swap was already confirmed before.'))
           throw error
         alreadyConfirmed = true
-        return await getSwap(swapId) as Swap
+        return await getSwap(swapContext.swap_id) as Swap
       })
     }
     catch (error) {
-      trackSwapStep({ step: 'confirm', ok: false, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - confirmStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
+      confirm.fail(error)
       throw error
     }
-    trackSwapStep({ step: 'confirm', ok: true, asset: Asset.NIM, swap_id: swapId, duration_ms: Date.now() - confirmStartedAt, already_confirmed: alreadyConfirmed, swap_status: swap.status })
+    confirm.end(true, { already_confirmed: alreadyConfirmed, swap_status: swap.status })
 
     const decoded = await parseBitcoinLightningInvoice(partialArgs.recipient)
     logger.log({ swap, decoded })
@@ -103,12 +103,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     const nimHtlc = nimContract?.htlc as NimHtlcDetails | undefined
     const timestampSection = decoded.sections?.find(section => section.name === 'timestamp') as TimestampSection | undefined
     const expirySection = decoded.sections?.find(section => section.name === 'expiry') as ExpirySection | undefined
-    const trackVerify = (error_reason?: string) => trackSwapStep({
-      step: 'verify',
-      ok: !error_reason,
-      asset: Asset.NIM,
-      swap_id: swapId,
-      error_reason,
+    const verify = startSwapStep('verify', swapContext, {
       // Fastspot pays the invoice only before it expires; the HTLC timeout is when an unpaid swap refunds.
       invoice_expires_in_s: timestampSection ? Math.round(timestampSection.value + (expirySection?.value ?? 3600) - Date.now() / 1e3) : undefined,
       htlc_timeout_in_s: nimHtlc ? Math.round((nimHtlc.timeoutTime - Date.now()) / 1e3) : undefined,
@@ -116,13 +111,13 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
 
     // Verify swap hash
     if (swap.hash !== decoded.payment_hash) {
-      trackVerify('hash_mismatch')
+      verify.fail('hash_mismatch')
       return { outcome: 'rejected', error: i18n.t('Invalid swap hash') }
     }
 
     // Construct swap NIM HTLC data
     if (!nimContract || !nimHtlc) {
-      trackVerify('missing_nim_contract')
+      verify.fail('missing_nim_contract')
       return { outcome: 'rejected', error: i18n.t('No NIM HTLC found in swap') }
     }
 
@@ -146,10 +141,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     // Verify data gainst data given in swap
     logger.log('Verifying Swap data')
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data) {
-      trackVerify('htlc_data_mismatch')
+      verify.fail('htlc_data_mismatch')
       return { outcome: 'rejected', error: i18n.t('Invalid NIM HTLC data in swap') }
     }
-    trackVerify()
+    verify.end(true)
 
     // Setup HTLC creation transaction
     const tx = new Nimiq.Transaction(
@@ -412,17 +407,11 @@ export async function getSignedTxByRemote(
   }
 
   logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
-  const cosignStartedAt = Date.now()
-  let trackCosign = swap && ((props: { ok: boolean, error_reason?: string, [key: string]: unknown }) => trackSwapStep({
-    step: 'cosign',
-    asset: Asset.NIM,
-    swap_id: swap.id,
-    duration_ms: Date.now() - cosignStartedAt,
+  const cosign = swap && startSwapStep('cosign', { asset: Asset.NIM, swap_id: swap.id }, {
     // Lets a stale validity start height be told apart from a slow cosigner.
     head_height: height.value,
     remote_height: useRemoteSigner().remoteHeight,
-    ...props,
-  }))
+  })
   try {
     const response = await promiseWithTimeout(
       useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx }),
@@ -430,7 +419,7 @@ export async function getSignedTxByRemote(
     )
     logger.log({ receipt: response.data, error: response.error })
     if (response.hasError) {
-      trackCosign?.({ ok: false, status: response.status, replayed: !!response.replayed, error_reason: response.error?.message || 'unknown' })
+      cosign?.fail(response.error?.message || 'unknown', { status: response.status, replayed: !!response.replayed })
       const plainTx = tx.toPlain()
       logger.error('Cosigner failed to sign transaction', {
         status: response.status,
@@ -455,9 +444,8 @@ export async function getSignedTxByRemote(
     }
 
     const receipt = response.data
-    trackCosign?.({ ok: true, tx_sent: receipt.txSent ?? null })
-    // The cosigner signed and may have broadcast, so a failure building the local copy is not a failed cosign.
-    trackCosign = undefined
+    // The cosigner signed and may have broadcast, so a failure building the local copy below is not a failed cosign.
+    cosign?.end(true, { tx_sent: receipt.txSent ?? null })
     const signedTx = new Nimiq.Transaction(
       Nimiq.Address.fromString(receipt.details.sender),
       typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType),
@@ -475,9 +463,8 @@ export async function getSignedTxByRemote(
     return { outcome: 'signed', signedTx, swap, txSent: receipt.txSent }
   }
   catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    trackCosign?.({ ok: false, error_reason: errorMessage })
-    return { outcome: 'unknown', error: errorMessage }
+    cosign?.fail(error)
+    return { outcome: 'unknown', error: errorReason(error) }
   }
 }
 
