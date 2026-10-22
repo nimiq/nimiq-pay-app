@@ -1,9 +1,9 @@
 import type { MaybeRef } from 'vue'
-import type { Crypto, Fiat } from '@/stores/app'
+import type { Fiat } from '@/stores/app'
 import { FormattableNumber } from '@nimiq/utils'
 import { storeToRefs } from 'pinia'
 import { toValue } from 'vue'
-import { useApp } from '@/stores/app'
+import { Crypto, DECIMALS, useApp } from '@/stores/app'
 
 export interface FormatFiatOptions {
   /**
@@ -52,12 +52,11 @@ export function useCurrencyFormatter() {
     return `${options.isPayment ? '- ' : ''}${amount < 0.01 && amount > 0 ? '~' : ''}${formatter.format(amount)}`
   }
 
-  function formatCrypto(amountInLuna: number, options?: FormatCryptoOptions): string {
-    if (!amountInLuna)
-      return '0 NIM'
+  function formatCrypto(amountInUnits: number, options?: FormatCryptoOptions): string {
     const currency = toValue(options?.currency)
-    const amountInNim = amountInLuna / 1e5 // Convert to NIM
-    return `${new FormattableNumber(amountInNim).toString({ maxDecimals: 2, useGrouping: true })}${currency ? ` ${currency}` : ''}`
+    // FormattableNumber throws on NaN; render missing amounts as 0
+    const amount = (amountInUnits || 0) / 10 ** DECIMALS[currency ?? Crypto.NIM]
+    return `${new FormattableNumber(amount).toString({ maxDecimals: 2, useGrouping: true })}${currency ? ` ${currency}` : ''}`
   }
 
   return {
