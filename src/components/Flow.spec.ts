@@ -431,6 +431,136 @@ describe('flow', () => {
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PaymentPreview)
   })
 
+  it.each<{ skipped: (StepName.EnableBiometric | StepName.GetNotified)[] }>([
+    { skipped: [StepName.EnableBiometric] },
+    { skipped: [StepName.EnableBiometric, StepName.GetNotified] },
+  ])('prev() returns to the previous step after skipping $skipped', async ({ skipped }) => {
+    const PinConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="pin-confirm-done" @click="$emit(\'done\', \'1111\')">Pin confirm</button>',
+    }))
+    const PhoneStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-done" @click="$emit(\'done\', \'+15550100\')">Phone</button>',
+    }))
+    const PhoneConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-confirm-resend" @click="$emit(\'done\', \'back\')">Resend</button>',
+    }))
+    const SkippedStep = markRaw(defineComponent({ template: '<div>Skipped</div>' }))
+
+    const flow: Flow = {
+      flowName: FlowName.SetupWithPromoCode,
+      steps: [
+        {
+          step: StepName.PinCodeConfirm,
+          main: PinConfirmStep,
+          beforeNext: async (_state, { navigateTo }) => navigateTo({ skipAheadBy: skipped.length + 1 }),
+        },
+        ...skipped.map(step => ({ step, main: SkippedStep })),
+        {
+          step: StepName.PhoneNumber,
+          main: PhoneStep,
+        },
+        {
+          step: StepName.PhoneNumberConfirm,
+          main: PhoneConfirmStep,
+          beforeNext: async ({ phoneNumberConfirm }, { prev }) => {
+            if (phoneNumberConfirm === 'back')
+              prev()
+          },
+        },
+      ],
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="pin-confirm-done"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="phone-done"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PhoneNumberConfirm)
+
+    await wrapper.get('[data-testid="phone-confirm-resend"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PhoneNumber)
+    expect(wrapper.find('[data-testid="phone-confirm-resend"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="phone-done"]')).toHaveLength(1)
+  })
+
+  it('prev() does not reopen a step that was skipped', async () => {
+    const PinConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="pin-confirm-done" @click="$emit(\'done\', \'1111\')">Pin confirm</button>',
+    }))
+    const PhoneStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-prev" @click="$emit(\'done\', \'+15550100\')">Phone</button>',
+    }))
+    const BiometricStep = markRaw(defineComponent({ template: '<div data-testid="biometric-step">Biometric</div>' }))
+
+    const flow: Flow = {
+      flowName: FlowName.SetupWithPromoCode,
+      steps: [
+        {
+          step: StepName.PinCodeConfirm,
+          main: PinConfirmStep,
+          beforeNext: async (_state, { navigateTo }) => navigateTo({ skipAheadBy: 2 }),
+        },
+        { step: StepName.EnableBiometric, main: BiometricStep },
+        {
+          step: StepName.PhoneNumber,
+          main: PhoneStep,
+          beforeNext: async (_state, { prev }) => prev(),
+        },
+      ],
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="pin-confirm-done"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="phone-prev"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PinCodeConfirm)
+    expect(wrapper.find('[data-testid="biometric-step"]').exists()).toBe(false)
+  })
+
   it('allows retrying when beforeNext returns without navigation', async () => {
     const AmountStep = markRaw(defineComponent({
       emits: ['done'],
