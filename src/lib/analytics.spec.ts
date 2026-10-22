@@ -9,7 +9,9 @@ import {
   trackAppOpened,
   trackFeatureOpened,
   trackFundsBlocked,
+  trackPaymentFailed,
   trackPaymentUnknown,
+  trackSwapFailed,
   trackSwapStep,
   trackTopUpReceived,
   trackWalletCreated,
@@ -453,5 +455,29 @@ describe('trackPaymentUnknown', () => {
       event: 'payment_unknown',
       properties: expect.objectContaining({ is_atomic_swap: true, duration_ms: 31000, error_reason: 'Timeout for NQ…' }),
     })
+  })
+})
+
+describe('failure error reasons', () => {
+  it('redacts Lightning invoices from swap_failed', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapFailed({ asset: Asset.USDT, error_reason: 'Invalid peer lnbc10u1pjqqqqqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqqcqzzsxqyz5vq' })
+
+    expect(state.capture.mock.calls[0][0]).toMatchObject({ event: 'swap_failed', properties: { error_reason: 'Invalid peer ln…', swap_pair: 'USDT_BTC_LN' } })
+  })
+
+  it('redacts addresses from payment_failed', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const { PaymentMethod } = await import('@/types/transactions')
+    trackPaymentFailed({
+      asset: Asset.NIM,
+      payment_method: PaymentMethod.NIM,
+      transfer_type: undefined,
+      amount_range: '1-10',
+      is_atomic_swap: false,
+      error_reason: 'Rejected for NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    })
+
+    expect(state.capture.mock.calls[0][0]).toMatchObject({ event: 'payment_failed', properties: { error_reason: 'Rejected for NQ…' } })
   })
 })

@@ -189,7 +189,7 @@ export function trackPaymentCompleted(props: PaymentEventProperties & { duration
 }
 
 export function trackPaymentFailed(props: PaymentEventProperties & { error_reason: string }): void {
-  capture('payment_failed', props)
+  capture('payment_failed', { ...props, error_reason: redact(props.error_reason) })
 }
 
 // The send may have reached the network, so the payment is neither completed nor failed.
@@ -259,7 +259,7 @@ export function trackConsensusEstablished(props: { duration_ms: number, network:
 }
 
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
-  capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+  capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
 // Why handleFunds (or the send right after it) left local funds unsecured.
