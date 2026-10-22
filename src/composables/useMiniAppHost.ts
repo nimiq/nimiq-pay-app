@@ -258,7 +258,29 @@ export class MiniAppHost {
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
-    this.config = config
+    // Native sheets stack instead of replacing each other, so concurrent requests
+    // let a Mini App cover one sheet with another. Show one dialog at a time, in
+    // request order. Dialogs still queued when the session is destroyed are never
+    // shown; they fail instead of resolving as a user rejection.
+    // On iOS a swipe-down closes a sheet without settling its promise, so the
+    // next dialog waits at most the Mini App's 120s request timeout, counted
+    // from when the open one was shown.
+    const { requestUserConfirmation, selectLightningAsset } = config
+    let dialogQueue: Promise<unknown> = Promise.resolve()
+    const enqueue = <T>(show: () => Promise<T>): Promise<T> => {
+      const next = dialogQueue.then(() => {
+        if (this.destroyed)
+          throw new PermissionDeniedError('Mini App session closed')
+        return show()
+      })
+      dialogQueue = dialogQueue.then(() => Promise.race([next, sleep(120_000)])).catch(() => {})
+      return next
+    }
+    this.config = {
+      ...config,
+      requestUserConfirmation: requestUserConfirmation && (request => enqueue(() => requestUserConfirmation(request))),
+      selectLightningAsset: selectLightningAsset && (app => enqueue(() => selectLightningAsset(app))),
+    }
     this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
     this.setupBirpc()

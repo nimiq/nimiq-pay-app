@@ -226,6 +226,104 @@ describe('remote address watcher', () => {
   })
 })
 
+describe('native dialog queue', () => {
+  const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+
+  async function createHostWithOpenDialog() {
+    const host = await createPermissionHost()
+    let closeFirst!: (confirmed: boolean) => void
+    host.requestUserConfirmation.mockImplementationOnce(() => new Promise<boolean>((resolve) => {
+      closeFirst = resolve
+    }))
+    const first = host.handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })
+    const second = host.handlers.requestChainApproval({ action: 'switch', chainId: '0xa' })
+    await flush()
+    return { ...host, closeFirst, first, second }
+  }
+
+  it('shows one confirmation at a time, in request order', async () => {
+    const { host, closeFirst, first, second, requestUserConfirmation } = await createHostWithOpenDialog()
+
+    expect(requestUserConfirmation).toHaveBeenCalledOnce()
+    expect(requestUserConfirmation.mock.calls[0][0].data.chainId).toBe('0x89')
+
+    closeFirst(false)
+    expect(await first).toBe(false)
+    expect(await second).toBe(true)
+    expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+    expect(requestUserConfirmation.mock.calls[1][0].data.chainId).toBe('0xa')
+    await host.destroy()
+  })
+
+  it('queues the Lightning asset picker with confirmations', async () => {
+    const { host, closeFirst, second } = await createHostWithOpenDialog()
+
+    const picked = (host as any).config.selectLightningAsset({ url: 'https://app.example', name: 'Example' })
+    await flush()
+    expect(selectLightningAsset).not.toHaveBeenCalled()
+
+    closeFirst(true)
+    await second
+    expect(await picked).toBe(Asset.NIM)
+    expect(selectLightningAsset).toHaveBeenCalledOnce()
+    await host.destroy()
+  })
+
+  it('shows the next confirmation after a dialog fails', async () => {
+    const { host, handlers, requestUserConfirmation } = await createPermissionHost()
+    requestUserConfirmation.mockRejectedValueOnce(new Error('sheet failed'))
+
+    const first = handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })
+    const second = handlers.requestChainApproval({ action: 'switch', chainId: '0xa' })
+
+    await expect(first).rejects.toThrow('sheet failed')
+    expect(await second).toBe(true)
+    expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+    await host.destroy()
+  })
+
+  it('stops waiting for a dialog that never settles after the request timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const { host, handlers, requestUserConfirmation } = await createPermissionHost()
+      // iOS swipe-down closes the sheet without settling its promise.
+      requestUserConfirmation.mockImplementationOnce(() => new Promise(() => {}))
+      requestUserConfirmation.mockImplementationOnce(() => new Promise(() => {}))
+
+      void handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })
+      void handlers.requestChainApproval({ action: 'switch', chainId: '0xa' })
+      const third = handlers.requestChainApproval({ action: 'switch', chainId: '0x1' })
+      await vi.advanceTimersByTimeAsync(119_999)
+      expect(requestUserConfirmation).toHaveBeenCalledOnce()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+
+      // The wait starts when a dialog is shown, not when it is queued.
+      await vi.advanceTimersByTimeAsync(119_999)
+      expect(requestUserConfirmation).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(await third).toBe(true)
+      await host.destroy()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drops confirmations still queued when the session is destroyed', async () => {
+    const { host, closeFirst, first, second, requestUserConfirmation } = await createHostWithOpenDialog()
+
+    await host.destroy()
+    closeFirst(true)
+
+    expect(await first).toBe(true)
+    await expect(second).rejects.toThrow('Mini App session closed')
+    expect(requestUserConfirmation).toHaveBeenCalledOnce()
+    expect(trackWeb3Request).not.toHaveBeenCalled()
+  })
+})
+
 describe('fullscreen host API', () => {
   it('changes and reads native fullscreen without a host confirmation', async () => {
     const { browser, handleRequest, requestUserConfirmation } = await createPermissionHost()
@@ -756,9 +854,10 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' })))
     useLocalWallet().localAddress = { toUserFriendlyAddress: () => 'NQ22 NEW OWNER', toHex: () => 'new-hex' }
     const newWalletRequest = handleRequest(request)
-    await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
+    // The new wallet's approval sheet is queued behind the old one.
     approveOldWallet(true)
     await expect(oldWalletRequest).rejects.toMatchObject({ type: 'NETWORK_ERROR' })
+    await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
     expect(confirmationPrompt.mock.calls.filter(([value]) => value.type === 'lightning-access')).toHaveLength(2)
     expect(query).toHaveBeenCalledTimes(1)
   })
