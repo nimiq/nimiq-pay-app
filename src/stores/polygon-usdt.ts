@@ -24,6 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
+import { startSwapRefund, startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
 import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -2408,6 +2409,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     activeSwapPayments.add(swapKey)
 
     const swapStartedAt = Date.now()
+    const swapContext = { asset: Asset.USDT, swap_id: swapKey }
+    // TODO: Validate USDT swap and refund telemetry on device once USDT payments work again.
+    const confirm = startSwapStep('confirm', swapContext, undefined, swapStartedAt)
+    // The step in progress; the catch below reports a thrown error against it unless it already ended.
+    let step: { fail: (error: unknown) => void } = confirm
     let fundingPossible = false
     let fundingRejected = false
     const ensureApprovedSender = () => {
@@ -2421,6 +2427,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const fastspotV1 = await useFastspotApiV1()
 
       let swap: import('@nimiq/fastspot-api-v1').Swap
+      let alreadyConfirmed = false
       try {
         if (isUsdtMaintenanceActive.value)
           throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
@@ -2432,24 +2439,38 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         )
       }
       catch (err) {
-        if (err instanceof Error && err.message === 'The swap was already confirmed before.')
+        if (err instanceof Error && err.message === 'The swap was already confirmed before.') {
+          alreadyConfirmed = true
           swap = await fastspotV1.getSwap(request.paymentRef!) as import('@nimiq/fastspot-api-v1').Swap
-        else throw err
+        }
+        else {
+          throw err
+        }
       }
+      confirm.end(true, { already_confirmed: alreadyConfirmed, swap_status: swap.status })
 
       // Verify swap hash against Lightning invoice
+      const verify = startSwapStep('verify', swapContext)
+      step = verify
       const { parseBitcoinLightningInvoice } = await import('@/composables/useBitcoinLightning')
       const decoded = await parseBitcoinLightningInvoice(request.recipient)
-      if (swap.hash !== decoded.payment_hash)
+      if (swap.hash !== decoded.payment_hash) {
+        verify.fail('hash_mismatch')
         return { data: undefined, error: i18n.t('Invalid swap hash'), rejected: true }
+      }
 
       // Get USDT_MATIC contract from swap
       const usdtContract = swap.contracts[fastspotV1.SwapAsset.USDT_MATIC]
-      if (!usdtContract)
+      if (!usdtContract) {
+        verify.fail('missing_usdt_contract')
         return { data: undefined, error: i18n.t('No USDT HTLC found in swap'), rejected: true }
+      }
 
       const htlcDetails = usdtContract.htlc as import('@nimiq/fastspot-api-v1').Erc20HtlcDetails
+      verify.end(true, { htlc_timeout_in_s: Math.round(usdtContract.timeout - Date.now() / 1e3) })
 
+      const relay = startSwapStep('relay', swapContext)
+      step = relay
       const feeSnapshot = await primeHtlcFee()
       if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
         throw new Error(i18n.t('Polygon fee changed; review the payment again'))
@@ -2531,6 +2552,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
               tx = { ...tx, hash: newHash }
           },
         })
+        relay.end(receipt.status !== 'rejected', { tx_state: receipt.status })
       }
       catch (error) {
         if (error instanceof PolygonRelayRejectedError && createdProvisionalRow)
@@ -2574,12 +2596,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       // Signal funding to Fastspot
       const { provideFundingProof, getSwap } = await import('@/composables/useFastspotV2').then(m => m.useFastspotApiV2())
+      const fundingProofStartedAt = Date.now()
       const patchedSwap = provideFundingProof(
         request.paymentRef!,
         usdtContract.id,
         receipt.hash,
       )
-      void patchedSwap.catch(() => undefined)
+      trackFundingProof(patchedSwap, swapContext)
 
       // State enrichment is best-effort after the relay hash and recovery data exist.
       tx = await enrichPersistedTransaction(tx, receipt.hash, 'swap transaction')
@@ -2591,9 +2614,12 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (receipt.status === 'mined')
         await options.onSubmitted?.(receipt.hash)
 
+      const settlement = startSwapSettlement(swapContext, fundingProofStartedAt)
+      step = settlement
       // Poll for preimage until the HTLC expires
       const maxPollMs = Math.max((usdtContract.timeout * 1000) - Date.now(), 60_000)
-      const secret = (await patchedSwap.catch(() => undefined))?.preimage || await new Promise<string>((resolve, reject) => {
+      const patchedSwapResult = await patchedSwap.catch(() => undefined)
+      const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
         let pollId: number
         const deadlineId = window.setTimeout(() => {
           window.clearTimeout(pollId)
@@ -2602,6 +2628,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         async function checkSecret() {
           try {
             const swapResult = await getSwap(request.paymentRef!)
+            settlement.poll(swapResult.status)
             if ('preimage' in swapResult && swapResult.preimage) {
               window.clearTimeout(deadlineId)
               resolve(swapResult.preimage)
@@ -2617,6 +2644,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
         checkSecret()
       })
+      settlement.end(patchedSwapResult?.preimage ? 'funding_proof' : 'poll')
 
       // Update transaction with secret
       const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
@@ -2646,6 +2674,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
     catch (error) {
       logger.error('Failed to send Polygon USDT swap transaction', error)
+      step.fail(error)
       trackSwapFailed({
         error_reason: error instanceof Error ? error.message : 'Polygon swap payment failed',
         asset: Asset.USDT,
@@ -2664,89 +2693,100 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Reclaims a Polygon HTLC whose Lightning leg never produced a preimage. Reuses the same OpenGSN
   // relay envelope and signing wallet as the original funding tx, so the user spends no MATIC.
   // Caller (sync sweep) wraps this in try/catch and only deletes the swap_htlcs row on success.
+  const reportedRefundFailures = new Set<string>()
   async function refundPolygonSwapHtlc(htlc: SwapHtlc): Promise<{ refunded: boolean, preimage?: string, hash?: string }> {
     if (!htlc.htlc_id)
       return { refunded: false }
 
-    const htlcId = htlc.htlc_id
-    const txHash = getSwapHtlcTxHash(htlc)
-    const { useFastspotApiV2 } = await import('@/composables/useFastspotV2')
-    const { getSwap } = await useFastspotApiV2()
-    const swap = await getSwap(htlc.swap_id).catch(() => null)
-    if (swap && 'preimage' in swap && swap.preimage)
-      return { refunded: false, preimage: swap.preimage }
+    // Every refund outcome is reported here; the sync sweep only retries.
+    const refund = startSwapRefund({ asset: Asset.USDT, swap_id: htlc.swap_id }, reportedRefundFailures)
+    try {
+      const htlcId = htlc.htlc_id
+      const txHash = getSwapHtlcTxHash(htlc)
+      const { useFastspotApiV2 } = await import('@/composables/useFastspotV2')
+      const { getSwap } = await useFastspotApiV2()
+      const swap = await getSwap(htlc.swap_id).catch(() => null)
+      if (swap && 'preimage' in swap && swap.preimage)
+        return { refunded: false, preimage: swap.preimage }
 
-    async function finishRefund(hash?: string) {
-      if (txHash)
-        await useTransactions().setPolygonSwapHtlcRefunded(txHash)
-      await run(SQLQuery.DeleteSwapHtlc, [htlc.address])
-      return { refunded: true, hash }
-    }
+      async function finishRefund(hash?: string) {
+        if (txHash)
+          await useTransactions().setPolygonSwapHtlcRefunded(txHash)
+        await run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+        refund.end(true)
+        return { refunded: true, hash }
+      }
 
-    async function finishRefundFromEvent(hash?: string, fromBlock = htlc.refund_block) {
-      if (fromBlock == null || !await hasPolygonHtlcRefundEvent((await getClient()).provider, htlcId, fromBlock))
-        return null
-      return finishRefund(hash)
-    }
+      async function finishRefundFromEvent(hash?: string, fromBlock = htlc.refund_block) {
+        if (fromBlock == null || !await hasPolygonHtlcRefundEvent((await getClient()).provider, htlcId, fromBlock))
+          return null
+        return finishRefund(hash)
+      }
 
-    if (htlc.refund_hash) {
-      const state = await getTransactionState(htlc.refund_hash, true)
-      if (state.status === 'pending' && (state.lookupFailed || !shouldRetryMissingPolygonRelay(htlc.refund_timestamp)))
-        return { refunded: false, hash: htlc.refund_hash }
-      if (state.status === 'mined' || state.status === 'confirmed')
-        return finishRefund(htlc.refund_hash)
-    }
+      if (htlc.refund_hash) {
+        const state = await getTransactionState(htlc.refund_hash, true)
+        if (state.status === 'pending' && (state.lookupFailed || !shouldRetryMissingPolygonRelay(htlc.refund_timestamp)))
+          return { refunded: false, hash: htlc.refund_hash }
+        if (state.status === 'mined' || state.status === 'confirmed')
+          return await finishRefund(htlc.refund_hash)
+      }
 
-    const recoveredRefund = await finishRefundFromEvent(htlc.refund_hash || undefined)
-    if (recoveredRefund)
-      return recoveredRefund
-    // A lost relay response can leave an attempt without a hash even after broadcast.
-    if (!htlc.refund_hash && !shouldRetryMissingPolygonRelay(htlc.refund_timestamp))
-      return { refunded: false }
-    if (htlc.refund_hash)
-      await run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
-
-    const { data: wallet, error: walletError } = useLocalWallet().getEthWallet()
-    if (walletError || !wallet) {
-      logger.error('Cannot refund Polygon HTLC: no wallet', { walletError })
-      return { refunded: false }
-    }
-
-    const [client, feeSnapshot] = await Promise.all([
-      getClient(),
-      primeHtlcFee(),
-    ])
-
-    const data = client.htlcContract.interface.encodeFunctionData('refund', [
-      htlcId,
-      wallet.address,
-      BigInt(feeSnapshot.fee),
-    ])
-    const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
-    // Retain the earliest scan boundary until a Refund event or a successful receipt proves completion.
-    const refundBlock = htlc.refund_block ?? await client.provider.getBlockNumber()
-    async function persistRefundHash(refundHash: string) {
-      await run(SQLQuery.SetSwapHtlcRefundHash, [refundHash, Date.now(), refundBlock, htlc.address])
-    }
-    const receipt = await relayTransaction(execution, {
-      beforeRelay: async () => {
-        await run(SQLQuery.SetSwapHtlcRefundAttempt, [Date.now(), refundBlock, htlc.address])
-      },
-      beforeBroadcast: persistRefundHash,
-      onReplaced: async (_oldHash, newHash) => persistRefundHash(newHash),
-    })
-
-    if (receipt.status === 'pending')
-      return { refunded: false, hash: receipt.hash }
-    if (receipt.status === 'rejected') {
-      const recoveredRefund = await finishRefundFromEvent(receipt.hash, refundBlock)
+      const recoveredRefund = await finishRefundFromEvent(htlc.refund_hash || undefined)
       if (recoveredRefund)
         return recoveredRefund
-      await run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
-      return { refunded: false, hash: receipt.hash }
-    }
+      // A lost relay response can leave an attempt without a hash even after broadcast.
+      if (!htlc.refund_hash && !shouldRetryMissingPolygonRelay(htlc.refund_timestamp))
+        return { refunded: false }
+      if (htlc.refund_hash)
+        await run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
 
-    return finishRefund(receipt.hash)
+      const { data: wallet, error: walletError } = useLocalWallet().getEthWallet()
+      if (walletError || !wallet) {
+        logger.error('Cannot refund Polygon HTLC: no wallet', { walletError })
+        return { refunded: false }
+      }
+
+      const [client, feeSnapshot] = await Promise.all([
+        getClient(),
+        primeHtlcFee(),
+      ])
+
+      const data = client.htlcContract.interface.encodeFunctionData('refund', [
+        htlcId,
+        wallet.address,
+        BigInt(feeSnapshot.fee),
+      ])
+      const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
+      // Retain the earliest scan boundary until a Refund event or a successful receipt proves completion.
+      const refundBlock = htlc.refund_block ?? await client.provider.getBlockNumber()
+      async function persistRefundHash(refundHash: string) {
+        await run(SQLQuery.SetSwapHtlcRefundHash, [refundHash, Date.now(), refundBlock, htlc.address])
+      }
+      const receipt = await relayTransaction(execution, {
+        beforeRelay: async () => {
+          await run(SQLQuery.SetSwapHtlcRefundAttempt, [Date.now(), refundBlock, htlc.address])
+        },
+        beforeBroadcast: persistRefundHash,
+        onReplaced: async (_oldHash, newHash) => persistRefundHash(newHash),
+      })
+
+      if (receipt.status === 'pending')
+        return { refunded: false, hash: receipt.hash }
+      if (receipt.status === 'rejected') {
+        const recoveredRefund = await finishRefundFromEvent(receipt.hash, refundBlock)
+        if (recoveredRefund)
+          return recoveredRefund
+        await run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+        refund.end(false, { tx_state: receipt.status })
+        return { refunded: false, hash: receipt.hash }
+      }
+
+      return await finishRefund(receipt.hash)
+    }
+    catch (error) {
+      refund.fail(error)
+      throw error
+    }
   }
 
   async function resetHistoryState() {
