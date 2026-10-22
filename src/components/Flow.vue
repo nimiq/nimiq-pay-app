@@ -156,6 +156,10 @@ watchEffect(() => errors.value = reactive(Object.fromEntries(historyStack.value.
 
 const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next: () => navigateTo(1), prev: () => navigateTo(-1) }))
 const stepCompletionInProgress = ref<StepName | null>(null)
+// performNavigation yields for the slide animation and then writes back values computed before it. A navigation
+// started meanwhile (e.g. QR "Enter manually" tapped mid back-animation) would be overwritten, so serialise them.
+// Steps also count as not visible meanwhile, so e.g. the QR scanner doesn't start and emit a scan that gets dropped.
+const navigationInProgress = ref(false)
 
 function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
@@ -198,21 +202,23 @@ function defaultErrorHandler(errorMessage: string) {
     .catch(error => logger.error('Failed to trigger haptic feedback', error))
 }
 
-function shouldBlockNavigation(source: string) {
-  if (!stepCompletionInProgress.value)
+function shouldBlockNavigation(source: string, allowDuringStepCompletion = false) {
+  if (!navigationInProgress.value && (allowDuringStepCompletion || !stepCompletionInProgress.value))
     return false
 
-  logger.warn(`Ignoring ${source} while step completion is in progress`, {
+  logger.warn(`Ignoring ${source} while step completion or navigation is in progress`, {
     inProgress: stepCompletionInProgress.value,
+    navigationInProgress: navigationInProgress.value,
     activeStep: activeStep.value.step,
   })
   return true
 }
 
 async function performNavigation(options: NavigateToOptions = 1, { allowDuringStepCompletion = false, source = 'navigateTo' }: { allowDuringStepCompletion?: boolean, source?: string } = {}) {
-  if (!allowDuringStepCompletion && shouldBlockNavigation(source))
+  if (shouldBlockNavigation(source, allowDuringStepCompletion))
     return
 
+  navigationInProgress.value = true
   try {
     if (props.isClosing)
       return
@@ -300,6 +306,7 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     }
   }
   finally {
+    navigationInProgress.value = false
     stepCompletionInProgress.value = null
   }
 }
@@ -403,13 +410,8 @@ async function onStepDone(stepName: StepName, value: OnDoneStepValue) {
     return
   if (!isCurrentStepEmitter(stepName, 'done'))
     return
-  if (stepCompletionInProgress.value) {
-    logger.warn('Ignoring duplicate step completion while navigation is in progress', {
-      emittedBy: stepName,
-      inProgress: stepCompletionInProgress.value,
-    })
+  if (shouldBlockNavigation(`done from ${stepName}`))
     return
-  }
 
   stepCompletionInProgress.value = stepName
   const activeStepName = activeStep.value.step
@@ -480,6 +482,7 @@ function isStepVisible(stepName: StepName) {
     // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
     // the background page on native, before the modal unveils the background.
     && !props.isClosing
+    && !navigationInProgress.value
 }
 
 function focus() {
