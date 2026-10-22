@@ -2,7 +2,7 @@ import type { SwapHtlc } from '@/types/swapHtlcs'
 import { Interface } from 'ethers'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Chain } from '@/lib/assets'
+import { Asset, Chain } from '@/lib/assets'
 import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   signTypedData: vi.fn(),
   confirmSwap: vi.fn(),
   provideFundingProof: vi.fn(),
+  trackSwapStep: vi.fn(),
   loggerError: vi.fn(),
   isUsdtMaintenanceActive: false,
   transactions: {
@@ -78,7 +79,7 @@ vi.mock('@/composables/useLogger', () => ({
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (text: string) => text } }))
 vi.mock('@/lib', () => ({ isTestnet: true }))
 vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
-vi.mock('@/lib/analytics', () => ({ trackSwapCompleted: vi.fn(), trackSwapFailed: vi.fn(), trackTopUpReceived: vi.fn() }))
+vi.mock('@/lib/analytics', () => ({ trackSwapCompleted: vi.fn(), trackSwapFailed: vi.fn(), trackSwapStep: mocks.trackSwapStep, trackTopUpReceived: vi.fn() }))
 vi.mock('@/stores/feature-flags', async () => {
   const { ref } = await import('vue')
   return { useFeatureFlags: () => ({ polygonRpcUrl: ref('https://polygon.example'), isUsdtMaintenanceActive: ref(mocks.isUsdtMaintenanceActive), usdtMaintenanceNotice: ref('USDT maintenance notice') }) }
@@ -327,6 +328,34 @@ afterEach(() => {
 })
 
 describe('polygon refund recovery through the store', () => {
+  it('reports a rejected refund receipt without treating it as pending', async () => {
+    mocks.wait.mockResolvedValueOnce({ ...relayReceipt(), status: 0 })
+
+    const result = await recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })
+
+    expect(result).toEqual({ refunded: false, hash: mocks.relayHash })
+    expect(persistedHtlc).not.toBeNull()
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      step: 'refund',
+      ok: false,
+      asset: Asset.USDT,
+      swap_id: 'swap-id',
+      duration_ms: 0,
+      tx_state: 'rejected',
+    }))
+  })
+
+  it('reports a refund that keeps failing only once per session', async () => {
+    mocks.wait.mockResolvedValueOnce({ ...relayReceipt(), status: 0 }).mockResolvedValueOnce({ ...relayReceipt(), status: 0 })
+    const store = recreateStore()
+
+    await store.refundPolygonSwapHtlc({ ...persistedHtlc! })
+    await store.refundPolygonSwapHtlc({ ...persistedHtlc! })
+
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(2)
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, swap_id: 'swap-id' }))
+  })
+
   it('persists the attempt before contacting the relay and waits after a lost response across store recreation', async () => {
     const lostResponse = new Error('relay response lost')
     mocks.relayTransaction.mockImplementationOnce(async () => {
@@ -336,6 +365,13 @@ describe('polygon refund recovery through the store', () => {
     await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).rejects.toThrow(lostResponse)
     expect(persistedHtlc).toMatchObject({ refund_hash: null, refund_timestamp: now, refund_block: headBlock })
     expect(mocks.provider.broadcastTransaction).not.toHaveBeenCalled()
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      step: 'refund',
+      ok: false,
+      asset: Asset.USDT,
+      swap_id: 'swap-id',
+      error_reason: 'relay response lost',
+    }))
 
     await expect(recreateStore().refundPolygonSwapHtlc({ ...persistedHtlc! })).resolves.toMatchObject({ refunded: false })
     expect(mocks.relayTransaction).toHaveBeenCalledTimes(1)
@@ -382,6 +418,7 @@ describe('polygon refund recovery through the store', () => {
     expect(mocks.transactions.setPolygonSwapHtlcRefunded).toHaveBeenCalledWith(originalHash)
     expect(persistedHtlc).toBeNull()
     expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: true, asset: Asset.USDT, swap_id: 'swap-id' }))
   })
 
   it('keeps an old pending refund after receipt RPC failure without resubmitting', async () => {
@@ -1025,6 +1062,116 @@ describe('polygon payment submission through the store', () => {
     }, 'Payment')
     expect(result.error).toBe('A transaction is already in progress')
     expect(mocks.relayTransaction).toHaveBeenCalledOnce()
+  })
+})
+
+describe('polygon swap step analytics', () => {
+  const request = {
+    recipient: 'lnbc-invoice',
+    amount: 1_000_000,
+    fee: 1000,
+    transfer: Transfer.UserPaymentToAtomicSwap,
+    paymentRef: 'swap-id',
+    rail: Rail.BitcoinLightning,
+  } as const
+
+  beforeEach(() => {
+    persistedHtlc = null
+    const receipt = relayReceipt(polygonUsdtConfig.htlcContract, refundInterface.getFunction('openWithApproval')!.selector)
+    mocks.wait.mockResolvedValue(receipt)
+    mocks.provider.getTransactionReceipt.mockResolvedValue(receipt)
+  })
+
+  it('reports each completed USDT stage with its swap id and duration', async () => {
+    mocks.relayTransaction.mockImplementationOnce(async () => {
+      vi.mocked(Date.now).mockReturnValue(now + 25)
+      return '0xserialized'
+    })
+
+    const result = await recreateStore().sendSwapPayment(request, 'Payment')
+
+    expect(result.error).toBeUndefined()
+    for (const step of ['confirm', 'verify', 'relay', 'funding_proof', 'settlement']) {
+      expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({
+        step,
+        ok: true,
+        asset: Asset.USDT,
+        swap_id: 'swap-id',
+        duration_ms: expect.any(Number),
+      }))
+    }
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'relay', duration_ms: 25 }))
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', preimage_source: 'funding_proof' }))
+    expect(mocks.trackSwapStep).not.toHaveBeenCalledWith(expect.objectContaining({ step: 'cosign' }))
+  })
+
+  it('attributes a failed confirmation to confirm without reporting later stages', async () => {
+    mocks.confirmSwap.mockRejectedValueOnce(new Error('Fastspot unavailable'))
+
+    const result = await recreateStore().sendSwapPayment(request, 'Payment')
+
+    expect(result).toMatchObject({ rejected: true, error: 'Fastspot unavailable' })
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      step: 'confirm',
+      ok: false,
+      asset: Asset.USDT,
+      error_reason: 'Fastspot unavailable',
+      duration_ms: 0,
+    }))
+  })
+
+  it('reports an invoice hash mismatch before relay funding', async () => {
+    mocks.confirmSwap.mockResolvedValueOnce({ hash: 'different-hash' })
+
+    const result = await recreateStore().sendSwapPayment(request, 'Payment')
+
+    expect(result).toMatchObject({ rejected: true, error: 'Invalid swap hash' })
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'verify', ok: false, error_reason: 'hash_mismatch' }))
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
+  })
+
+  it('reports a lost relay response without claiming funding was rejected', async () => {
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('relay response lost'))
+
+    const result = await recreateStore().sendSwapPayment(request, 'Payment')
+
+    expect(result).toMatchObject({ rejected: false, error: 'relay response lost' })
+    expect(persistedHtlc).not.toBeNull()
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'relay', ok: false, error_reason: 'relay response lost' }))
+  })
+
+  it('records a funding proof failure while polling still settles the payment', async () => {
+    mocks.provideFundingProof.mockRejectedValueOnce(new Error('funding proof unavailable'))
+    mocks.getSwap.mockResolvedValueOnce({ status: 'SUCCESS', preimage: 'secret' })
+
+    const result = await recreateStore().sendSwapPayment(request, 'Payment')
+
+    expect(result.error).toBeUndefined()
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'funding_proof', ok: false, error_reason: 'funding proof unavailable' }))
+    expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: true, polls: 1, last_status: 'SUCCESS', preimage_source: 'poll' }))
+  })
+
+  it('reports slow settlement once and a failed wait at the deadline', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      mocks.provideFundingProof.mockResolvedValueOnce({ status: 'PENDING' })
+      mocks.getSwap.mockResolvedValue({ status: 'PENDING' })
+      const payment = recreateStore().sendSwapPayment(request, 'Payment')
+      await vi.waitFor(() => expect(mocks.getSwap).toHaveBeenCalled())
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mocks.trackSwapStep.mock.calls.filter(([event]) => event.step === 'settlement_slow')).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(540_000)
+
+      expect(await payment).toMatchObject({ rejected: false, error: 'Swap timed out waiting for Lightning payment confirmation' })
+      expect(mocks.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: false, last_status: 'PENDING' }))
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mocks.trackSwapStep.mock.calls.filter(([event]) => event.step === 'settlement_slow')).toHaveLength(1)
+      expect(persistedHtlc).not.toBeNull()
+    }
+    finally {
+      vi.useRealTimers()
+    }
   })
 })
 

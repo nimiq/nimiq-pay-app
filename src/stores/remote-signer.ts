@@ -1533,9 +1533,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       if (!isWalletContextCurrent(context))
         return { ...scan, errors: ['Wallet changed during discovery'] }
 
-      logger.log('All Transactions from Blockchain', transactions)
       scan.sawHtlcTransaction ||= transactions.some(transaction => transaction.recipientType === 'htlc')
-      scan.creations.push(...transactions.filter((transaction) => {
+      const pageCreations = transactions.filter((transaction) => {
         if (seenTransactions.has(transaction.transactionHash))
           return false
         seenTransactions.add(transaction.transactionHash)
@@ -1548,7 +1547,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && data.type === 'htlc'
           && data.sender === owner
           && isCosignerAddress(data.recipient)
-      }))
+      })
+      scan.creations.push(...pageCreations)
+      // Full pages are ~150 KB each; logging them filled the 5 MB log in a few sessions and rotated swaps out.
+      logger.log('All Transactions from Blockchain', {
+        count: transactions.length,
+        startAt: startAt ?? null,
+        first: transactions[0]?.transactionHash ?? null,
+        last: transactions.at(-1)?.transactionHash ?? null,
+        htlcCreations: pageCreations.map(transaction => transaction.transactionHash),
+      })
 
       if (transactions.length < HISTORY_PAGE_SIZE) {
         scan.historyComplete = true
