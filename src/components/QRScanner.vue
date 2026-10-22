@@ -54,9 +54,11 @@ const { isWeb, isIOS } = useDevice()
 watchDebounced(() => props.isVisible, async (isVisible) => {
   if (isVisible) {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
-    useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
+    const activatingMessage = i18n.t('Activating scanner')
+    useToast().setToast({ message: activatingMessage, type: 'spinner', keepOpen: true })
     await start()
-    useToast().clearToast()
+    // Only clear the spinner: start() may have replaced it with an error toast the user must see
+    useToast().clearToast(activatingMessage)
   }
   else if (cameraFeedContainer.value) {
     // Stop scanner, if the container has actually been mounted yet.
