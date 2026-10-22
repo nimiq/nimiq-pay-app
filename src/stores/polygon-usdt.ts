@@ -24,7 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
-import { startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
+import { startSwapRefund, startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
 import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -2693,12 +2693,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Reclaims a Polygon HTLC whose Lightning leg never produced a preimage. Reuses the same OpenGSN
   // relay envelope and signing wallet as the original funding tx, so the user spends no MATIC.
   // Caller (sync sweep) wraps this in try/catch and only deletes the swap_htlcs row on success.
+  const reportedRefundFailures = new Set<string>()
   async function refundPolygonSwapHtlc(htlc: SwapHtlc): Promise<{ refunded: boolean, preimage?: string, hash?: string }> {
     if (!htlc.htlc_id)
       return { refunded: false }
 
     // Every refund outcome is reported here; the sync sweep only retries.
-    const refund = startSwapStep('refund', { asset: Asset.USDT, swap_id: htlc.swap_id })
+    const refund = startSwapRefund({ asset: Asset.USDT, swap_id: htlc.swap_id }, reportedRefundFailures)
     try {
       const htlcId = htlc.htlc_id
       const txHash = getSwapHtlcTxHash(htlc)

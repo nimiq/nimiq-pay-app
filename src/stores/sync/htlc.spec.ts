@@ -1968,6 +1968,20 @@ describe('useSyncHtlc', () => {
       expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, execution_result: false }))
     })
 
+    it('reports a refund that keeps failing only once across sweeps', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-id' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      state.client.sendTransaction = vi.fn(() => Promise.resolve({ state: 'included', executionResult: false })) as any
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      state.headTimestamp += 1000
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.client.sendTransaction).toHaveBeenCalledTimes(2)
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, swap_id: 'swap-id' }))
+    })
+
     it('holds the swap lock until the refund flag is written', async () => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any

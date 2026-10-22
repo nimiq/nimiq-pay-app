@@ -345,6 +345,17 @@ describe('polygon refund recovery through the store', () => {
     }))
   })
 
+  it('reports a refund that keeps failing only once per session', async () => {
+    mocks.wait.mockResolvedValueOnce({ ...relayReceipt(), status: 0 }).mockResolvedValueOnce({ ...relayReceipt(), status: 0 })
+    const store = recreateStore()
+
+    await store.refundPolygonSwapHtlc({ ...persistedHtlc! })
+    await store.refundPolygonSwapHtlc({ ...persistedHtlc! })
+
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(2)
+    expect(mocks.trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, swap_id: 'swap-id' }))
+  })
+
   it('persists the attempt before contacting the relay and waits after a lost response across store recreation', async () => {
     const lostResponse = new Error('relay response lost')
     mocks.relayTransaction.mockImplementationOnce(async () => {

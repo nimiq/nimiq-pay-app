@@ -33,6 +33,25 @@ export function startSwapStep<S extends SwapStep>(step: S, context: SwapTelemetr
   }
 }
 
+// Expired-HTLC sweeps retry a stuck refund every few blocks, so only its first failure per swap is reported. The caller
+// owns `reportedFailures` and keeps it for the session.
+export function startSwapRefund(context: SwapTelemetryContext & { swap_id: string }, reportedFailures: Set<string>) {
+  const step = startSwapStep('refund', context)
+  const isFirstFailure = () => !reportedFailures.has(context.swap_id) && !!reportedFailures.add(context.swap_id)
+  return {
+    end(ok: boolean, props?: StepProps<'refund'>) {
+      if (ok || isFirstFailure())
+        step.end(ok, props)
+    },
+    fail(error: unknown) {
+      if (isFirstFailure())
+        step.fail(error)
+    },
+  }
+}
+
+export type SwapRefundTracker = ReturnType<typeof startSwapRefund>
+
 export function trackFundingProof(patchedSwap: Promise<{ status: string, preimage?: string }>, context: SwapTelemetryContext): void {
   const step = startSwapStep('funding_proof', context)
   void patchedSwap.then(
