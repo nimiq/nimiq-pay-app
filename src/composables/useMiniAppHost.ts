@@ -19,6 +19,7 @@ import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { safeOrigin } from '@/lib/url-safety'
 import { sleep } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -59,6 +60,20 @@ export interface MiniAppSessionState {
   title: string
   chainId: string
   evmRpcUrls?: Record<string, string>
+  /** Persisted so a reconnect after app reload keeps a closed gate closed. */
+  bridgeGate?: BridgeGate
+}
+
+/**
+ * Origin gate of the main webview. Popups share the plugin's event stream and
+ * inherit the bridge, so events are keyed by webview id and only `mainId` counts.
+ * `open` is what the bridge honors; `urlOk` is whether the latest reported URL is
+ * on the Mini App origin.
+ */
+export interface BridgeGate {
+  mainId?: string
+  urlOk: boolean
+  open: boolean
 }
 
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
@@ -233,6 +248,8 @@ export class MiniAppHost {
   private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
   private fullscreenChangeListener: PluginListenerHandle | null = null
+  private urlChangeListener: PluginListenerHandle | null = null
+  private pageLoadedListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
@@ -246,6 +263,11 @@ export class MiniAppHost {
   private readonly evmRpcUrls: Record<string, string>
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
+  /**
+   * The injected bridge survives navigation and reaches popups, so only the main
+   * webview, while on `origin`, may talk to the host.
+   */
+  private bridgeGate: BridgeGate = { urlOk: true, open: true }
   private readonly pendingLightningInvoices = new Set<string>()
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
@@ -269,6 +291,7 @@ export class MiniAppHost {
       title: config.title,
       chainId: this.currentChainId,
       evmRpcUrls: this.evmRpcUrls,
+      bridgeGate: this.bridgeGate,
     }
     this.sessionState = _activeMiniAppSession
     isMiniAppActive.value = true
@@ -295,10 +318,15 @@ export class MiniAppHost {
     inAppBrowser: typeof InAppBrowser,
     config: MiniAppHostConfig,
     restoredChainId: string,
+    restoredBridgeGate?: BridgeGate,
   ): MiniAppHost {
     const host = new MiniAppHost(inAppBrowser, config)
     host.currentChainId = restoredChainId
+    // The hidden webview may sit on a foreign page and no navigation event will say
+    // so; without saved state, it stays closed until it loads a page on origin again.
+    host.bridgeGate = restoredBridgeGate ?? { urlOk: false, open: false }
     host.sessionState.chainId = restoredChainId
+    host.sessionState.bridgeGate = host.bridgeGate
     return host
   }
 
@@ -321,6 +349,8 @@ export class MiniAppHost {
       this.inAppBrowser?.clearAllCookies(),
       this.messageFromWebviewListener?.remove(),
       this.fullscreenChangeListener?.remove(),
+      this.urlChangeListener?.remove(),
+      this.pageLoadedListener?.remove(),
     ])
     for (const result of cleanupResults) {
       if (result.status === 'rejected')
@@ -328,6 +358,8 @@ export class MiniAppHost {
     }
     this.messageFromWebviewListener = null
     this.fullscreenChangeListener = null
+    this.urlChangeListener = null
+    this.pageLoadedListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
@@ -457,15 +489,18 @@ export class MiniAppHost {
       },
     }, {
       post: (data) => {
-        if (this.destroyed || !browser)
+        const mainId = this.bridgeGate.mainId
+        if (this.destroyed || !browser || mainId === undefined || !this.bridgeGate.open)
           return
         logger.log('[MiniAppHost] birpc post:', data)
-        browser.postMessage({ detail: data })
+        // Without an id the plugin broadcasts to every webview, popups included.
+        browser.postMessage({ detail: data, id: mainId })
       },
       on: (fn) => {
         // @ts-expect-error - TS cannot detect the correct overload
-        browser.addListener('messageFromWebview', (event: { detail: unknown }) => {
-          if (event.detail)
+        browser.addListener('messageFromWebview', (event: { id?: string, detail: unknown }) => {
+          const id = event.id ?? ''
+          if (event.detail && this.isMainWebview(id) && this.bridgeGate.open)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
           if (this.destroyed)
@@ -490,6 +525,43 @@ export class MiniAppHost {
       else
         this.fullscreenChangeListener = handle
     }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
+
+    void browser.addListener('urlChangeEvent', ({ id, url }) => {
+      if (!this.isMainWebview(id ?? ''))
+        return
+      const origin = safeOrigin(url, '')
+      const gate = this.bridgeGate
+      gate.urlOk = origin === this.origin
+      // Close at once; reopen only on browserPageLoaded. iOS reports the URL when a
+      // navigation starts, so a foreign page that starts navigating back to the
+      // Mini App must not regain the bridge before its document is replaced.
+      if (!gate.urlOk) {
+        gate.open = false
+        // Origin only: full URLs can carry OAuth codes/tokens into persisted logs.
+        logger.warn('[MiniAppHost] Webview left the Mini App origin; bridge paused:', origin)
+      }
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.urlChangeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App navigation', error))
+
+    void browser.addListener('browserPageLoaded', ({ id }: { id?: string }) => {
+      if (this.isMainWebview(id ?? ''))
+        this.bridgeGate.open = this.bridgeGate.urlOk
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.pageLoadedListener = handle
+    }).catch(error => logger.error('Could not observe Mini App page loads', error))
+  }
+
+  /** The first webview the host hears from is the main one; popups need its page to run first. */
+  private isMainWebview(id: string): boolean {
+    this.bridgeGate.mainId ??= id
+    return id === this.bridgeGate.mainId
   }
 
   private showErrorToast(message: string): void {
