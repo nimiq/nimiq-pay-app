@@ -413,7 +413,7 @@ export async function getSignedTxByRemote(
 
   logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const cosignStartedAt = Date.now()
-  const trackCosign = swap && ((props: { ok: boolean, error_reason?: string, [key: string]: unknown }) => trackSwapStep({
+  let trackCosign = swap && ((props: { ok: boolean, error_reason?: string, [key: string]: unknown }) => trackSwapStep({
     step: 'cosign',
     asset: Asset.NIM,
     swap_id: swap.id,
@@ -455,6 +455,9 @@ export async function getSignedTxByRemote(
     }
 
     const receipt = response.data
+    trackCosign?.({ ok: true, tx_sent: receipt.txSent ?? null })
+    // The cosigner signed and may have broadcast, so a failure building the local copy is not a failed cosign.
+    trackCosign = undefined
     const signedTx = new Nimiq.Transaction(
       Nimiq.Address.fromString(receipt.details.sender),
       typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType),
@@ -469,7 +472,6 @@ export async function getSignedTxByRemote(
       networkId.value,
     )
     signedTx.proof = Nimiq.BufferUtils.fromHex(typeof receipt.details.proof === 'string' ? receipt.details.proof : receipt.details.proof.raw)
-    trackCosign?.({ ok: true, tx_sent: receipt.txSent ?? null })
     return { outcome: 'signed', signedTx, swap, txSent: receipt.txSent }
   }
   catch (error) {

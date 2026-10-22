@@ -225,6 +225,8 @@ export type SwapStep
 
 // One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
 // swap_id is Fastspot's id, needed to look the swap up with them.
+// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
+// the app skips it and no `broadcast` step follows.
 export function trackSwapStep(props: {
   step: SwapStep
   ok: boolean
