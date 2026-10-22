@@ -1817,6 +1817,22 @@ describe('useSyncHtlc', () => {
       expect(state.query.mock.calls.length).toBe(firstQueryCalls)
     })
 
+    it('measures the throttle window in batch time, not raw block count', async () => {
+      const { useSyncHtlc } = await import('./htlc')
+      const htlc = useSyncHtlc()
+      await htlc.checkExpiredSwapHtlcs()
+      const firstQueryCalls = state.query.mock.calls.length
+
+      // headTimestamp is in ms: BLOCKS_PER_BATCH (32) + 1 ms later is still inside the batch.
+      state.headTimestamp += 33
+      await htlc.checkExpiredSwapHtlcs()
+      expect(state.query.mock.calls.length).toBe(firstQueryCalls)
+
+      state.headTimestamp += 32 * 1000
+      await htlc.checkExpiredSwapHtlcs()
+      expect(state.query.mock.calls.length).toBeGreaterThan(firstQueryCalls)
+    })
+
     it('marks legacy polygon row (no htlc_id) as expired without on-chain refund', async () => {
       state.query.mockResolvedValue([{ address: '0xabc', htlc_id: null }])
       const { useSyncHtlc } = await import('./htlc')

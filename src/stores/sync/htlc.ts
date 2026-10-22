@@ -623,7 +623,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     htlcCheckLock.value = true
     try {
       const heightTimestamp = headTimestamp.value > 1 ? headTimestamp.value : Date.now()
-      if (heightTimestamp <= lastExpiredSwapHtlcCheckTimestamp + Nimiq.Policy.BLOCKS_PER_BATCH)
+      if (heightTimestamp <= lastExpiredSwapHtlcCheckTimestamp + Nimiq.Policy.BLOCKS_PER_BATCH * Number(Nimiq.Policy.BLOCK_SEPARATION_TIME))
         return
       lastExpiredSwapHtlcCheckTimestamp = heightTimestamp
 
