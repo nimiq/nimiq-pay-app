@@ -2805,16 +2805,26 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   // Real-time Transfer listener — fires per incoming USDT event so notifications
   // don't depend on the poll interval (10s/30s) or the active-asset gate in
   // usePolygonSync. The poll still runs for backfill on cold start / missed events.
-  let transferListenerAddress: string | null = null
-  let transferListener: ((...args: any[]) => void) | null = null
+  // Keeps the contract it was registered on: an RPC-URL change rebuilds the client,
+  // and off() on the new contract would not remove a listener from the old one.
+  let transferListener: { address: string, contract: Contract, listener: (...args: any[]) => void } | null = null
+  // Bumped per watcher run. A run superseded while awaiting a slow RPC stops instead of
+  // blocking newer runs or attaching after them (e.g. after a logout's detach).
+  let transferListenerRun = 0
 
-  async function attachTransferListener(address: string) {
+  async function attachTransferListener(address: string, run: number) {
     const normalized = getAddress(address)
-    if (transferListenerAddress === normalized)
+    // Another account's listener goes now; the same account's stays until the new client
+    // is up, so a failed RPC switch keeps the working one.
+    if (transferListener?.address !== normalized)
+      await detachTransferListener()
+    const client = await getClient()
+    if (run !== transferListenerRun || transferListener?.contract === client.tokenContract)
       return
     await detachTransferListener()
+    if (run !== transferListenerRun)
+      return
 
-    const client = await getClient()
     const filter = client.tokenContract.filters.Transfer(null, normalized)
 
     const listener = async (...args: any[]) => {
@@ -2883,42 +2893,44 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
 
     await client.tokenContract.on(filter, listener)
-    transferListenerAddress = normalized
-    transferListener = listener
+    if (run !== transferListenerRun) {
+      await client.tokenContract.off(filter, listener)
+      return
+    }
+    transferListener = { address: normalized, contract: client.tokenContract, listener }
     logger.log('📬 Polygon Transfer listener attached', { address: normalized })
   }
 
   async function detachTransferListener() {
-    if (!transferListenerAddress || !transferListener)
+    if (!transferListener)
       return
+    const { address, contract, listener } = transferListener
+    transferListener = null
     try {
-      const client = await getClient()
-      const filter = client.tokenContract.filters.Transfer(null, transferListenerAddress)
-      await client.tokenContract.off(filter, transferListener)
-      logger.log('📬 Polygon Transfer listener detached', { address: transferListenerAddress })
+      await contract.off(contract.filters.Transfer(null, address), listener)
+      logger.log('📬 Polygon Transfer listener detached', { address })
     }
     catch (err) {
       logger.error('📬 Failed to detach Polygon Transfer listener', err)
     }
-    transferListenerAddress = null
-    transferListener = null
   }
 
-  // Re-attach on address change. getEthAddress() reads ethWallet.value internally,
+  // Re-attach on address or RPC-URL change. getEthAddress() reads ethWallet.value internally,
   // so wrapping in computed makes the watch reactive without changing the store API.
   const ethAddress = computed(() => useLocalWallet().getEthAddress().data)
-  watch(ethAddress, async (addr) => {
+  watch([ethAddress, polygonRpcUrl], async ([addr]) => {
+    if (isTestnet)
+      return
+    const run = ++transferListenerRun
     try {
-      if (isTestnet)
-        return
       if (!addr) {
         await detachTransferListener()
         return
       }
       await init()
-      if (consensus.value !== 'established')
+      if (run !== transferListenerRun || consensus.value !== 'established')
         return
-      await attachTransferListener(addr)
+      await attachTransferListener(addr, run)
     }
     catch (err) {
       logger.error('📬 Polygon Transfer listener (re)attach failed', err)
