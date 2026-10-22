@@ -216,6 +216,7 @@ export type SwapStep
     | 'confirm'
     | 'verify'
     | 'cosign'
+    | 'relay'
     | 'broadcast'
     | 'funding_proof'
     | 'settlement_slow'

@@ -1835,6 +1835,23 @@ describe('useSyncHtlc', () => {
       expect(state.refundPolygonSwapHtlc).toHaveBeenCalledWith(polygonRow)
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
       expect(state.updateSinglePolygonTransaction).not.toHaveBeenCalled()
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        step: 'refund',
+        ok: true,
+        asset: 'USDT',
+        swap_id: 'swap-1',
+        duration_ms: expect.any(Number),
+      }))
+    })
+
+    it('does not report a pending Polygon refund as completed or failed', async () => {
+      state.query.mockResolvedValue([{ address: '0xrelayhash', htlc_id: '0xhtlcid', swap_id: 'swap-1' }])
+      state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: false, hash: '0xrefundhash' })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
     it('falls back to updateSingleTransaction when Lightning preimage arrives late', async () => {
@@ -1859,6 +1876,17 @@ describe('useSyncHtlc', () => {
       expect(state.updateSinglePolygonTransaction).not.toHaveBeenCalled()
     })
 
+    it('does not mislabel late-preimage reconciliation errors as refund failures', async () => {
+      state.query.mockResolvedValue([{ address: '0xrelayhash', htlc_id: '0xhtlcid', swap_id: 'swap-1' }])
+      state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: false, preimage: '0xdeadbeef' })
+      state.updateSinglePolygonTransaction.mockRejectedValueOnce(new Error('receipt unavailable'))
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(trackSwapStep).not.toHaveBeenCalled()
+    })
+
     it('logs and continues when refundPolygonSwapHtlc throws (row left for retry)', async () => {
       const polygonRow = { address: '0xrelayhash', htlc_id: '0xhtlcid', swap_id: 'swap-1' }
       state.query.mockResolvedValue([polygonRow])
@@ -1866,6 +1894,14 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.logger.error).toHaveBeenCalledWith('Polygon HTLC refund failed; will retry next sweep', expect.any(Error))
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        step: 'refund',
+        ok: false,
+        asset: 'USDT',
+        swap_id: 'swap-1',
+        error_reason: 'relay down',
+        duration_ms: expect.any(Number),
+      }))
       // Row not deleted — only the swap_quotes cleanup ran
       expect(state.run).not.toHaveBeenCalledWith(expect.stringContaining('swap_htlcs'), ['0xrelayhash'])
     })

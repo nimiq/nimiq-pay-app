@@ -749,8 +749,14 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     }
 
+    const refundStartedAt = Date.now()
+    // Late-preimage reconciliation can fail after the refund lookup already completed.
+    let refundReturned = false
     try {
       const result = await polygonUsdt.refundPolygonSwapHtlc(htlc)
+      refundReturned = true
+      if (result.refunded)
+        trackSwapStep({ step: 'refund', ok: true, asset: Asset.USDT, swap_id: htlc.swap_id, duration_ms: Date.now() - refundStartedAt })
       if (result.refunded || !result.preimage)
         return
 
@@ -765,6 +771,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       // Leave the row in place so the next sweep retries. refund(...) reverts on already-refunded
       // HTLCs, so retries are safe.
       logger.error('Polygon HTLC refund failed; will retry next sweep', error)
+      if (!refundReturned)
+        trackSwapStep({ step: 'refund', ok: false, asset: Asset.USDT, swap_id: htlc.swap_id, duration_ms: Date.now() - refundStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
     }
   }
 

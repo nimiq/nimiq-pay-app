@@ -1,6 +1,7 @@
 import type { RelayRequest } from '@opengsn/common/dist/EIP712/RelayRequest'
 import type { Log, TransactionReceipt } from 'ethers'
 import type { HDNodeWallet } from 'ethers/wallet'
+import type { SwapStep } from '@/lib/analytics'
 import type { PolygonTransferFeeSnapshot, PolygonTransferQuote, RelayServerInfo } from '@/lib/polygon/types'
 import type { SavedAddress } from '@/stores/app'
 import type { Result } from '@/types'
@@ -13,7 +14,7 @@ import { useLogger } from '@/composables/useLogger'
 import { toSeconds } from '@/composables/useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { trackSwapCompleted, trackSwapFailed, trackTopUpReceived } from '@/lib/analytics'
+import { trackSwapCompleted, trackSwapFailed, trackSwapStep, trackTopUpReceived } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, getRequiredContractEvent, toAddressTopic } from '@/lib/ethereum'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -2408,6 +2409,26 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     activeSwapPayments.add(swapKey)
 
     const swapStartedAt = Date.now()
+    const swapContext = { asset: Asset.USDT, swap_id: swapKey }
+    // TODO: Validate USDT swap and refund telemetry on device once USDT payments work again.
+    let activeStep: { name: SwapStep, startedAt: number } | undefined = { name: 'confirm', startedAt: swapStartedAt }
+    let settlementSlowTimer: number | undefined
+    let polls = 0
+    let lastStatus: string | undefined
+    function trackStep(ok: boolean, extra: Record<string, unknown> = {}): void {
+      if (!activeStep)
+        return
+      trackSwapStep({
+        step: activeStep.name,
+        ok,
+        ...swapContext,
+        duration_ms: Date.now() - activeStep.startedAt,
+        ...(activeStep.name === 'settlement' ? { polls, last_status: lastStatus ?? null } : {}),
+        ...extra,
+      })
+      // Later bookkeeping errors must not report this completed step a second time.
+      activeStep = undefined
+    }
     let fundingPossible = false
     let fundingRejected = false
     const ensureApprovedSender = () => {
@@ -2421,6 +2442,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const fastspotV1 = await useFastspotApiV1()
 
       let swap: import('@nimiq/fastspot-api-v1').Swap
+      let alreadyConfirmed = false
       try {
         if (isUsdtMaintenanceActive.value)
           throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
@@ -2432,24 +2454,36 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         )
       }
       catch (err) {
-        if (err instanceof Error && err.message === 'The swap was already confirmed before.')
+        if (err instanceof Error && err.message === 'The swap was already confirmed before.') {
+          alreadyConfirmed = true
           swap = await fastspotV1.getSwap(request.paymentRef!) as import('@nimiq/fastspot-api-v1').Swap
-        else throw err
+        }
+        else {
+          throw err
+        }
       }
+      trackStep(true, { already_confirmed: alreadyConfirmed, swap_status: swap.status })
 
       // Verify swap hash against Lightning invoice
+      activeStep = { name: 'verify', startedAt: Date.now() }
       const { parseBitcoinLightningInvoice } = await import('@/composables/useBitcoinLightning')
       const decoded = await parseBitcoinLightningInvoice(request.recipient)
-      if (swap.hash !== decoded.payment_hash)
+      if (swap.hash !== decoded.payment_hash) {
+        trackStep(false, { error_reason: 'hash_mismatch' })
         return { data: undefined, error: i18n.t('Invalid swap hash'), rejected: true }
+      }
 
       // Get USDT_MATIC contract from swap
       const usdtContract = swap.contracts[fastspotV1.SwapAsset.USDT_MATIC]
-      if (!usdtContract)
+      if (!usdtContract) {
+        trackStep(false, { error_reason: 'missing_usdt_contract' })
         return { data: undefined, error: i18n.t('No USDT HTLC found in swap'), rejected: true }
+      }
 
       const htlcDetails = usdtContract.htlc as import('@nimiq/fastspot-api-v1').Erc20HtlcDetails
+      trackStep(true, { htlc_timeout_in_s: Math.round(usdtContract.timeout - Date.now() / 1e3) })
 
+      activeStep = { name: 'relay', startedAt: Date.now() }
       const feeSnapshot = await primeHtlcFee()
       if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
         throw new Error(i18n.t('Polygon fee changed; review the payment again'))
@@ -2531,6 +2565,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
               tx = { ...tx, hash: newHash }
           },
         })
+        trackStep(receipt.status !== 'rejected', { tx_state: receipt.status })
       }
       catch (error) {
         if (error instanceof PolygonRelayRejectedError && createdProvisionalRow)
@@ -2574,12 +2609,19 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       // Signal funding to Fastspot
       const { provideFundingProof, getSwap } = await import('@/composables/useFastspotV2').then(m => m.useFastspotApiV2())
+      const fundingProofStartedAt = Date.now()
       const patchedSwap = provideFundingProof(
         request.paymentRef!,
         usdtContract.id,
         receipt.hash,
       )
-      void patchedSwap.catch(() => undefined)
+      void patchedSwap.then(
+        patched => trackSwapStep({ step: 'funding_proof', ok: true, ...swapContext, duration_ms: Date.now() - fundingProofStartedAt, swap_status: patched.status, has_preimage: !!patched.preimage }),
+        (error: unknown) => {
+          logger.warn('Fastspot rejected the Polygon funding proof', { swapId: swapKey, error })
+          trackSwapStep({ step: 'funding_proof', ok: false, ...swapContext, duration_ms: Date.now() - fundingProofStartedAt, error_reason: error instanceof Error ? error.message : String(error) })
+        },
+      )
 
       // State enrichment is best-effort after the relay hash and recovery data exist.
       tx = await enrichPersistedTransaction(tx, receipt.hash, 'swap transaction')
@@ -2591,9 +2633,20 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (receipt.status === 'mined')
         await options.onSubmitted?.(receipt.hash)
 
+      const settlementStartedAt = Date.now()
+      activeStep = { name: 'settlement', startedAt: settlementStartedAt }
+      settlementSlowTimer = window.setTimeout(() => trackSwapStep({
+        step: 'settlement_slow',
+        ok: false,
+        ...swapContext,
+        duration_ms: Date.now() - settlementStartedAt,
+        polls,
+        last_status: lastStatus ?? null,
+      }), 60_000)
       // Poll for preimage until the HTLC expires
       const maxPollMs = Math.max((usdtContract.timeout * 1000) - Date.now(), 60_000)
-      const secret = (await patchedSwap.catch(() => undefined))?.preimage || await new Promise<string>((resolve, reject) => {
+      const patchedSwapResult = await patchedSwap.catch(() => undefined)
+      const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
         let pollId: number
         const deadlineId = window.setTimeout(() => {
           window.clearTimeout(pollId)
@@ -2602,6 +2655,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         async function checkSecret() {
           try {
             const swapResult = await getSwap(request.paymentRef!)
+            polls++
+            if (swapResult.status !== lastStatus) {
+              logger.log('⚡ Swap status changed', { asset: Asset.USDT, swapId: swapKey, from: lastStatus ?? null, to: swapResult.status, polls })
+              lastStatus = swapResult.status
+            }
             if ('preimage' in swapResult && swapResult.preimage) {
               window.clearTimeout(deadlineId)
               resolve(swapResult.preimage)
@@ -2617,6 +2675,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
         checkSecret()
       })
+      window.clearTimeout(settlementSlowTimer)
+      trackStep(true, { preimage_source: patchedSwapResult?.preimage ? 'funding_proof' : 'poll' })
 
       // Update transaction with secret
       const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
@@ -2646,6 +2706,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
     catch (error) {
       logger.error('Failed to send Polygon USDT swap transaction', error)
+      trackStep(false, { error_reason: error instanceof Error ? error.message : String(error) })
       trackSwapFailed({
         error_reason: error instanceof Error ? error.message : 'Polygon swap payment failed',
         asset: Asset.USDT,
@@ -2657,6 +2718,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       }
     }
     finally {
+      window.clearTimeout(settlementSlowTimer)
       activeSwapPayments.delete(swapKey)
     }
   }
@@ -2668,6 +2730,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     if (!htlc.htlc_id)
       return { refunded: false }
 
+    const refundStartedAt = Date.now()
     const htlcId = htlc.htlc_id
     const txHash = getSwapHtlcTxHash(htlc)
     const { useFastspotApiV2 } = await import('@/composables/useFastspotV2')
@@ -2743,6 +2806,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (recoveredRefund)
         return recoveredRefund
       await run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+      trackSwapStep({ step: 'refund', ok: false, asset: Asset.USDT, swap_id: htlc.swap_id, duration_ms: Date.now() - refundStartedAt, tx_state: receipt.status })
       return { refunded: false, hash: receipt.hash }
     }
 
