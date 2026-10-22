@@ -133,10 +133,23 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
       consensus.value = newConsensus
     })
+    let headEvents = 0
+    let appliedHeadEvent = 0
     client.value.addHeadChangedListener(async (blockHash) => {
-      head.value = await client.value?.getBlock(blockHash)
-      if (head.value?.type === 'macro')
-        lastMacroBlockHeight.value = head.value.height
+      const event = ++headEvents
+      const block = await client.value?.getBlock(blockHash)
+      if (!block)
+        return
+      // Head events fire back to back (a macro block twice, then the next micro block) with getBlock calls
+      // still in flight, so results can land out of order. Macro blocks are final: record each one, but never
+      // let an older event overwrite a newer head. Ordered by event, not height: Albatross prefers the branch
+      // with the earlier skip block, so a rebranch can lower the head.
+      if (block.type === 'macro')
+        lastMacroBlockHeight.value = Math.max(lastMacroBlockHeight.value, block.height)
+      if (event > appliedHeadEvent) {
+        appliedHeadEvent = event
+        head.value = block
+      }
     })
 
     client.value.addPeerChangedListener(async (_peerId, _reason, newPeerCount) => {
