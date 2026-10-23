@@ -52,7 +52,7 @@ Each flow's `result.json` has an `outcome`:
 | `INTERMITTENT` | Failed, then passed the diagnostic rerun. Not green: possibly a real intermittent app bug |
 | `DETERMINISTIC` | Failed twice at the same step |
 | `INFRA` / `HARNESS` | BrowserStack or our CI/config failed (see `signal`) |
-| `APP_BUG` / `TEST_BUG` | Crash logs captured, or the flow launches the wrong app id |
+| `APP_BUG` / `TEST_BUG` | Crash logs captured, a crash in the device log (Android crash/ANR, iOS web view crash), or the flow launches the wrong app id |
 | `UNKNOWN` | Not classifiable by the rules |
 | `NOT_RUN` | Skipped: circuit breaker, fatal harness problem, time budget, unset secret, a secret sharing words with the suite, or `androidOnly` on iOS |
 

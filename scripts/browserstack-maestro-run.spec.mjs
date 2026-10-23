@@ -309,6 +309,32 @@ describe('findAppCrash', () => {
     expect(findAppCrash(fake, ['com.nimiq.pay.debug'])).toBeUndefined()
   })
 
+  // iOS device log of BrowserStack run 39940894400 (security_wrong_pin), shortened.
+  const webContentCrashLog = `Oct 23 11:20:45 App(WebKit)[1342] <Error>: 0x1160f40c0 - [PID=1344] WebProcessProxy::didClose: (web process 0 crash)
+Oct 23 11:20:45 App(WebKit)[1342] <Error>: 0x10dc1d518 - [pageProxyID=7, webPageID=8, PID=1344] WebPageProxy::dispatchProcessDidTerminate: reason=Crash
+Oct 23 11:20:45 App(WebKit)[1342] <Notice>: 0x10dc1d518 - [pageProxyID=7, webPageID=8, PID=1344] WebPageProxy::reload:`
+
+  it('finds a crash of the iOS app\'s web view content process', () => {
+    expect(findAppCrash(webContentCrashLog, ['com.nimiq.pay'])).toBe('WebContent process (WebKit)')
+  })
+
+  it('ignores web view crashes of other iOS processes and other termination reasons', () => {
+    expect(findAppCrash(webContentCrashLog.replace(/App\(WebKit\)/g, 'MobileSafari(WebKit)'), ['com.nimiq.pay'])).toBeUndefined()
+    expect(findAppCrash('Oct 23 11:20:45 App(WebKit)[1342] <Error>: 0x1 - [pageProxyID=7, webPageID=8, PID=1344] WebPageProxy::dispatchProcessDidTerminate: reason=IdleExit', ['com.nimiq.pay'])).toBeUndefined()
+  })
+
+  it('cannot be faked from the iOS app\'s own log output', () => {
+    const fake = 'Oct 23 11:20:45 App(CapgoCapacitorUpdater)[1342] <Error>: App(WebKit)[1342] <Error>: WebPageProxy::dispatchProcessDidTerminate: reason=Crash'
+
+    expect(findAppCrash(fake, ['com.nimiq.pay'])).toBeUndefined()
+  })
+
+  it('turns an iOS web view crash into APP_BUG without a rerun', () => {
+    const verdict = diagnoseTestcase({ session: {}, testcase: FAILED_TESTCASE, maestroLog: ASSERTION_LOG, deviceLog: webContentCrashLog, appId: 'com.nimiq.pay' })
+
+    expect(verdict).toMatchObject({ diagnosis: 'APP_BUG', disposition: 'NO_RETRY', signal: 'App crashed: WebContent process (WebKit)' })
+  })
+
   it('turns an infra-looking failure with an app crash in logcat into APP_BUG', () => {
     const verdict = diagnoseTestcase({ session: {}, testcase: FAILED_TESTCASE, maestroLog: DRIVER_UNAVAILABLE_LOG, deviceLog: crashLog, appId: 'com.nimiq.pay.debug' })
 

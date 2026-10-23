@@ -31,9 +31,9 @@ const SESSION_NOT_STARTED = /Could not start a session/i
 const SESSION_NOT_STARTED_VERDICT = Object.freeze({ diagnosis: 'INFRA', disposition: 'RETRYABLE', signal: 'BrowserStack could not start the session' })
 const ARTIFACT_HOST = /^https:\/\/[\w.-]+\.browserstack\.com\//
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4B, 0x03, 0x04])
-// Maestro's step and error wording, logcat crash markers, JSON literals, and BrowserStack's
-// statuses and session error, which diagnosis, triage and the reports show as-is.
-const LOG_WORDING = 'true false null tap on assert that is visible not long press input text run launch app clear state stop repeat while times wait for animation to end take screenshot scroll until swipe back hide keyboard open link element found matching regex assertion timed out failed completed running pending skipped fatal exception process anr in error device session test flow command unavailable stream transport host passed timedout timeout queued done stopped cancelled canceled aborted could not start a session something went wrong during execution please try to again'
+// Maestro's step and error wording, logcat and iOS web view crash markers, JSON literals, and
+// BrowserStack's statuses and session error, which diagnosis, triage and the reports show as-is.
+const LOG_WORDING = 'true false null tap on assert that is visible not long press input text run launch app clear state stop repeat while times wait for animation to end take screenshot scroll until swipe back hide keyboard open link element found matching regex assertion timed out failed completed running pending skipped fatal exception process anr in webcontent webkit error device session test flow command unavailable stream transport host passed timedout timeout queued done stopped cancelled canceled aborted could not start a session something went wrong during execution please try to again'
 const GZIP_SIGNATURE = Buffer.from([0x1F, 0x8B])
 
 // Taken from real failures of this suite. BrowserStack reports some device/driver losses as a
@@ -384,13 +384,19 @@ function withoutElementDumps(lines) {
 }
 
 /**
- * A crash or ANR of the app under test in BrowserStack's logcat (`MM-DD HH:MM:SS.mmm L/Tag(PID): msg`).
- * Matched on the logcat tag, not the message, so console output (which Mini Apps control) cannot
- * fake it. BrowserStack's crash_logs_count can be 0 while logcat shows the crash.
+ * A crash or ANR of the app under test in BrowserStack's logcat (`MM-DD HH:MM:SS.mmm L/Tag(PID): msg`),
+ * or on iOS a crash of the app's web view content process. Matched on the log tag, not the message,
+ * so console output (which Mini Apps control) cannot fake it. BrowserStack's crash_logs_count can be
+ * 0 while the device log shows the crash.
  */
 export function findAppCrash(deviceLog, packages) {
   const lines = String(deviceLog ?? '').split(/\r?\n/)
   for (const [index, line] of lines.entries()) {
+    // WebKit, logging from the app's own process (`App` is Capacitor's executable name). The app
+    // process survives and WebKit reloads the page, so a flow sees the locked app instead (run 39940894400).
+    if (/^\w{3} +\d+ [\d:]+ App\(WebKit\)\[\d+\] <Error>: .*WebPageProxy::dispatchProcessDidTerminate: reason=Crash\b/.test(line)) {
+      return 'WebContent process (WebKit)'
+    }
     if (/^\S+ \S+ [EF]\/AndroidRuntime\(\s*\d+\): FATAL EXCEPTION/.test(line)) {
       const crashed = lines.slice(index + 1, index + 4).join('\n').match(/[EF]\/AndroidRuntime\(\s*\d+\): Process: ([\w.]+)/)?.[1]
       if (packages.includes(crashed)) {
