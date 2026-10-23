@@ -331,7 +331,7 @@ jobs:
             Suite upload: ${{ needs.upload_maestro_suite.result }} · Android: ${{ needs.run_browserstack_maestro.outputs.status_android || 'not run' }} · iOS (non-blocking): ${{ needs.run_browserstack_maestro.outputs.status_ios || 'not run' }}
             Android: ${{ needs.run_browserstack_maestro.outputs.summary_android }}
             iOS: ${{ needs.run_browserstack_maestro.outputs.summary_ios }}
-            Reports: https://maestro-nimiq-pay-android-results.netlify.app/ · iOS: https://github.com/franciscodiaz4/Maestro-Results-Nimiq-Pay-iOS
+            Reports: Android: https://maestro-nimiq-pay-android-results.netlify.app/ · iOS: https://maestro-nimiq-pay-ios-results.netlify.app/
             Run and failure evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Automation Tests Status
           SLACK_USERNAME: Francisco_Diaz
