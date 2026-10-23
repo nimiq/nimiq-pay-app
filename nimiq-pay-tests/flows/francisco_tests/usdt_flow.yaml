@@ -1,0 +1,25 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.home.switchAssetBtn}
+- waitForAnimationToEnd
+- tapOn: ${output.home.usdtBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+- assertVisible: ${output.home.usdtBtn}
+- assertVisible:
+    text: ${output.home.usdtAmount}
+    below: ${output.home.fiatAmount}
+    enabled: true
+
+- stopApp

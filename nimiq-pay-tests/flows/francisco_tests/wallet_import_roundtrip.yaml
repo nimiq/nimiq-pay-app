@@ -1,0 +1,60 @@
+appId: ${APP_ID}
+name: Wallet import roundtrip
+
+tags:
+  - franciscoTest
+
+---
+# Scope: after logging out, logging in with the wallet's recovery words restores the same
+# wallet: the Top Up address after the import equals the one before the logout.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- evalScript: ${output.originalAddress = output.topUpAddress}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+- runFlow: ../../subflows/capture_recovery_words.yaml
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+# An empty wallet logs out without the backup warning.
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.logoutBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.logoutBtn}
+- extendedWaitUntil:
+    visible: ${output.logout.title}
+    timeout: 5000
+- tapOn: ${output.logout.confirmBtn}
+- extendedWaitUntil:
+    visible: ${output.launchScreen.loginBtn}
+    timeout: 30000
+- assertNotVisible: ${output.home.payTitle}
+
+- runFlow:
+    file: ../../subflows/import_wallet.yaml
+    env:
+      RECOVERY_PHRASE: ${output.recoveryWords.join(' ')}
+
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- assertTrue:
+    condition: ${output.topUpAddress == output.originalAddress}
+    label: Imported wallet has the original address
+
+- stopApp

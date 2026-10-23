@@ -1,0 +1,22 @@
+appId: ${APP_ID}
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.withdrawBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.withdraw.title}
+- assertVisible: ${output.withdraw.usd}
+- assertVisible:
+    text: ${output.withdraw.nim}
+- assertVisible:
+    text: ${output.withdraw.selectAddress}
+- assertVisible: ${output.withdraw.amount25}
+- assertVisible: ${output.withdraw.amount50}
+- assertVisible: ${output.withdraw.amount100}
+
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- stopApp

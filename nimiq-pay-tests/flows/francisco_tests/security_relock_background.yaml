@@ -1,0 +1,75 @@
+appId: ${APP_ID}
+name: Security re-lock after background
+
+tags:
+  - franciscoTest
+  # The iOS job skips it: on BrowserStack the release .ipa reloaded its page when sent to the
+  # background right after onboarding (2 runs, 2026-10-20), so even a short background asked for
+  # the PIN. Cause unknown; over-the-air updates (on in that build) are suspected, not shown.
+  - androidOnly
+
+env:
+  # Never on screen: waiting for it is the only way to sleep in Maestro.
+  NEVER_VISIBLE: "maestro-background-wait-sentinel"
+  # Brings the running app back to the front. launchApp with stopApp: false relaunched it on a
+  # BrowserStack iPhone (new process, Maestro 2.6.1). The app ignores this unknown action
+  # (src/lib/deep-link.ts); the activity is singleTask on Android.
+  RESUME_LINK: "nimiqpay://resume"
+
+---
+# Scope: resuming after more than 2 minutes in the background asks for the PIN again
+# (App.vue, RELOAD_AFTER_BACKGROUND_TIMEOUT_MS), while a short trip to the background does not.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Short background: the wallet stays unlocked. This also proves that the link resumes the
+# running app; a cold start would ask for the PIN.
+- pressKey: Home
+- extendedWaitUntil:
+    notVisible: ${output.navigation.topUpBtn}
+    timeout: 5000
+- openLink: ${RESUME_LINK}
+- extendedWaitUntil:
+    visible: ${output.navigation.topUpBtn}
+    timeout: 15000
+# Same sleep exception as below: give an unwanted re-lock time to render, then assert none came.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 10000
+    optional: true
+    label: Give an unwanted re-lock time to show
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+
+# Long background: over the 2 min threshold.
+- pressKey: Home
+- extendedWaitUntil:
+    notVisible: ${output.navigation.topUpBtn}
+    timeout: 5000
+- evalScript: ${output.backgroundSince = Date.now()}
+# Named exception to the no-optional rule: this is a sleep, not an assertion.
+- extendedWaitUntil:
+    visible: ${NEVER_VISIBLE}
+    timeout: 140000
+    optional: true
+    label: Stay in the background for over 2 minutes
+- assertTrue:
+    condition: ${Date.now() - output.backgroundSince > 130000}
+    label: The app stayed in the background for over 2 minutes
+- openLink: ${RESUME_LINK}
+# Limit: if the OS killed the app during the wait, the link cold-starts it, which also shows the
+# PIN. Only the app's log ("Reloading app after being in background for more than 2 minutes")
+# tells them apart.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.navigation.topUpBtn}
+
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+
+- stopApp
