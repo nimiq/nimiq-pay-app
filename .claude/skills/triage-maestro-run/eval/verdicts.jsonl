@@ -15,3 +15,5 @@
 {"buildId": "b1a3062909df741354e166112e2f5c66d1fbffe5", "flow": "security_relock_background", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-20"}
 {"buildId": "4ab84568ab6afce38309a89aac9704138ceeacc8", "flow": "settings_nim_decimals", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-10-20"}
 {"buildId": "10f26c9962a92793d89cb1ce1d81cb7f2c8ccc4a", "flow": "whats_new", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-20"}
+{"buildId": "9c0d40050fe5535060bb0de6859165299cb24ead", "flow": "mini_apps_cinima_app", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-23"}
+{"buildId": "452aef80a36a005012c099974f8e2e642cd2d8c3", "flow": "returning_to_app_mini_apps", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-23"}
