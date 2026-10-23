@@ -683,18 +683,22 @@ describe('collectEvidence', () => {
     // The 0xE9 byte is not UTF-8; masking must leave it alone.
     'https://api.browserstack.com/logcat': { key: 'device_log', contentType: 'text/plain', body: Buffer.concat([Buffer.from('10-08 13:19:12.380 I/IME( 812): commit text=ability '), Buffer.from([0xE9])]) },
     'https://api.browserstack.com/network': { key: 'network_log', contentType: 'application/gzip', body: zlib.gzipSync('request text=abuse') },
-    // A screenshot zip can show the words on screen, but images cannot be masked; it is kept as-is,
-    // recognised by content even when served as octet-stream.
+    // A screenshot zip can show the words on screen, but images cannot be masked; recognised by
+    // content even when served as octet-stream.
     'https://api.browserstack.com/screenshots': { key: 'screenshots', contentType: 'application/octet-stream', body: 'PK\u0003\u0004screen_device_1.png' },
   }
+  const ALL_ARTIFACTS_TESTCASE = { ...FAILED_TESTCASE, ...Object.fromEntries(Object.entries(ARTIFACTS).map(([url, { key }]) => [key, url])) }
 
-  it('writes no secret word to the evidence or the failing step, and keeps screenshots as-is', async () => {
+  it('writes no secret word to the evidence or the failing step, and keeps no screenshots', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'maestro-evidence-'))
     try {
-      const testcase = { ...FAILED_TESTCASE, ...Object.fromEntries(Object.entries(ARTIFACTS).map(([url, { key }]) => [key, url])) }
-      const download = async url => ({ status: 200, contentType: ARTIFACTS[url].contentType, buffer: Buffer.from(ARTIFACTS[url].body) })
+      const downloaded = []
+      const download = async (url) => {
+        downloaded.push(url)
+        return { status: 200, contentType: ARTIFACTS[url].contentType, buffer: Buffer.from(ARTIFACTS[url].body) }
+      }
 
-      const result = await collectEvidence(download, { session: { id: 's1', status: 'failed' }, testcase, appId: 'com.nimiq.pay.debug', bundleId: 'com.nimiq.pay.debug', secrets: [SECRET_PHRASE] }, directory)
+      const result = await collectEvidence(download, { session: { id: 's1', status: 'failed' }, testcase: ALL_ARTIFACTS_TESTCASE, appId: 'com.nimiq.pay.debug', bundleId: 'com.nimiq.pay.debug', secrets: [SECRET_PHRASE] }, directory)
 
       for (const file of ['maestro_log.txt', 'maestro_commands.json', 'device_log.txt', 'network_log.bin', 'evidence.json']) {
         expect(fs.readFileSync(path.join(directory, file), 'utf8')).not.toMatch(SECRET_WORD)
@@ -702,9 +706,26 @@ describe('collectEvidence', () => {
       expect(fs.readFileSync(path.join(directory, 'device_log.txt')).at(-1)).toBe(0xE9)
       expect(fs.readFileSync(path.join(directory, 'network_log.bin'), 'utf8')).toBe('request text=[redacted]')
       expect(result.failingStep).toBe('Input text [redacted]')
-      expect(fs.readFileSync(path.join(directory, 'screenshots.zip'))).toEqual(Buffer.from(ARTIFACTS['https://api.browserstack.com/screenshots'].body))
+      // The Login screen shows the typed words: never downloaded, and evidence.json says why.
+      expect(downloaded).not.toContain('https://api.browserstack.com/screenshots')
+      expect(fs.existsSync(path.join(directory, 'screenshots.zip'))).toBe(false)
+      expect(JSON.parse(fs.readFileSync(path.join(directory, 'evidence.json'), 'utf8')).files.screenshots).toMatch(/^withheld: the flow ran with a secret/)
       // Diagnosed from the unmasked evidence: "device" is a secret word here, yet the ADB signature still matches.
       expect(result.signal).toBe('Device dropped off ADB')
+    }
+    finally {
+      fs.rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps the screenshots as-is when the flow ran without a secret', async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'maestro-evidence-'))
+    try {
+      const download = async url => ({ status: 200, contentType: ARTIFACTS[url].contentType, buffer: Buffer.from(ARTIFACTS[url].body) })
+
+      await collectEvidence(download, { session: { id: 's1', status: 'failed' }, testcase: ALL_ARTIFACTS_TESTCASE, appId: 'com.nimiq.pay.debug', bundleId: 'com.nimiq.pay.debug' }, directory)
+
+      expect(fs.readFileSync(path.join(directory, 'screenshots.zip'))).toEqual(Buffer.from(ARTIFACTS['https://api.browserstack.com/screenshots'].body))
     }
     finally {
       fs.rmSync(directory, { recursive: true, force: true })
