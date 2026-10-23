@@ -28,7 +28,7 @@ export function apkHasOtaDisabled(apkPath) {
   return packaged.plugins?.CapacitorUpdater?.autoUpdate === 'off'
 }
 
-function run(command, options = {}) {
+export function run(command, options = {}) {
   console.log(`▶ ${command}`)
   execSync(command, { stdio: 'inherit', ...options })
 }
