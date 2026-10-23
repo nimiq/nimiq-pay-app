@@ -243,7 +243,9 @@ output.miniApps = {
     // exposes a clickable "Cinima" chip, so a looser pattern taps the suggestion instead
     // of the row and the Mini App never opens.
     cinimaEntry: "^Cinima Runs on Nimiq.*",
-    // Anchored so it matches only the native Mini App toolbar title, not the list row
-    // (which reads "Cinima Runs on Nimiq Cinima ...").
-    cinimaAppTitle: "^Cinima$"
+    // Anchored so it matches only the native Mini App browser, not the list row
+    // ("Cinima Runs on Nimiq Cinima ..."). Cinima asks for fullscreen at load when the host
+    // offers it within 2 s (2.21.0+, #12); the browser then hides its title and shows its own
+    // "Exit fullscreen" button, so either can appear.
+    cinimaAppTitle: "^(Cinima|Exit fullscreen)$"
 };

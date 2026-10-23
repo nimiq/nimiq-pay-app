@@ -28,7 +28,7 @@ tags:
 - tapOn: ${output.miniApps.cinimaEntry}
 
 # The native webview is presented only after the page loads, so the modal being covered
-# plus the toolbar title appearing is what proves Cinima actually loaded.
+# plus the browser's title or its Exit fullscreen button appearing is what proves Cinima actually loaded.
 - extendedWaitUntil:
     notVisible: ${output.miniApps.discoverTitle}
     timeout: 60000
