@@ -150,7 +150,8 @@ Options:
                            setEnvVariables; repeat for several (e.g. APP_ID, PIN)
   --secret-env <NAME>      Like --env, with the value read from the environment variable NAME
                            (or .env): it stays off the command line and is masked in the
-                           evidence files and failing step; repeat for several
+                           evidence files and failing step (screenshots are not kept);
+                           repeat for several
   --project <value>        BrowserStack project name (default: Maestro Nimiq Pay)
   --output <value>         Report directory, or an .html file path (default: nimiq-pay-tests/tests_output/maestro_report.html)
   --evidence <dir>         Where logs/screenshots of failed attempts are saved; keep it out of
@@ -824,6 +825,12 @@ export async function collectEvidence(download, { session, testcase, appId, bund
     .filter(([key, url]) => key !== 'video' && typeof url === 'string' && url.startsWith('https://'))
 
   await Promise.all(artifacts.map(async ([key, url]) => {
+    // Images can't be masked, and the Login screen shows the typed words. The evidence artifact
+    // is public (any signed-in GitHub user can download a public repo's artifacts).
+    if (key === 'screenshots' && secrets.length > 0) {
+      files[key] = 'withheld: the flow ran with a secret, which screenshots can show'
+      return
+    }
     try {
       const { status, contentType, buffer } = await download(url)
       if (status !== 200) {

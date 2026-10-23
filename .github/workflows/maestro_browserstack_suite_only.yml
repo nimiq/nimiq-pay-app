@@ -281,8 +281,9 @@ jobs:
             echo 'MAESTRO_SUMMARY_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Keep failure evidence (private to this repository)
-        # Logs and screenshots can show recovery words, so they never go to the public report site.
+      - name: Keep failure evidence
+        # Not private: any signed-in GitHub user can download a public repo's artifacts. Logs are
+        # masked, and flows run with the wallet secret keep no screenshots (images can't be masked).
         if: always()
         uses: actions/upload-artifact@v4
         with:
