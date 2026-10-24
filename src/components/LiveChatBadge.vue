@@ -80,6 +80,12 @@ async function pollMessages() {
 
     messages.value = [...messages.value, ...uniqueNewMessages]
       .sort((a, b) => a.timestamp === b.timestamp ? 0 : a.timestamp > b.timestamp ? 1 : -1)
+
+    // Support can close the session from Slack; end the chat like a user-initiated close
+    if (uniqueNewMessages.some(m => m.sender === 'system' && m.event === 'session_closed')) {
+      sessionId.value = ''
+      conversationEnded.value = true
+    }
   }
   catch {
     // Silently ignore polling errors
