@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { getActiveMiniAppSession, MiniAppHost } from './useMiniAppHost'
+import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -665,9 +665,26 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ description: 'Coffee', btcAmount: 0.0001, asset: 'NIM', amount: 1_000_000 }),
-    }))
+    }), expect.any(Number))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO mini_app_lightning_payments'), expect.arrayContaining(['invoice-hash', 'https://app.example', 'NQ11 LOCAL', 'swap-id']))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['nim-hash', 'submitted', expect.any(String), 'invoice-hash'])
+  })
+
+  it('closes all sheets of one payment at the request deadline', async () => {
+    sendTx.mockImplementation(async (_payment, _context, onSubmitted) => {
+      await onSubmitted('nim-hash')
+      return new Promise(() => {})
+    })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+    const start = Date.now()
+    await handleRequest(request)
+
+    const deadline = confirmationPrompt.mock.calls[0][1]
+    expect(deadline).toBeGreaterThanOrEqual(start + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(deadline).toBeLessThanOrEqual(Date.now() + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(confirmationPrompt.mock.calls.map(([prompt, promptDeadline]) => [prompt.type, promptDeadline]))
+      .toEqual([['lightning-access', deadline], ['lightning-payment', deadline]])
+    expect(selectLightningAsset).toHaveBeenCalledWith(expect.anything(), deadline)
   })
 
   it('lets the user choose USDT and returns when Polygon funding is submitted', async () => {
@@ -685,7 +702,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ asset: 'USDT', amount: 1_000_000, usdtFeeAllowance: 50_000 }),
-    }))
+    }), expect.any(Number))
     expect(sendSwapPayment).toHaveBeenCalledWith(expect.anything(), 'Payment', expect.objectContaining({ expectedSender: ethAddress, maxFee: 50_000 }))
     expect(sendTx).not.toHaveBeenCalled()
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['usdt-hash', 'submitted', expect.any(String), 'invoice-hash'])
@@ -788,7 +805,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     const response = await handleRequest(request).catch(error => error)
     expect(response).toMatchObject({ type: 'DUPLICATE_PAYMENT' })
     expect(response).not.toHaveProperty('data')
-    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }))
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number))
     expect(sendTx).not.toHaveBeenCalled()
   })
 
@@ -821,7 +838,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     confirmationPrompt.mockImplementationOnce(() => new Promise(resolve => approveOldWallet = resolve))
 
     const oldWalletRequest = handleRequest(request)
-    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' })))
+    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number)))
     useLocalWallet().localAddress = { toUserFriendlyAddress: () => 'NQ22 NEW OWNER', toHex: () => 'new-hex' }
     const newWalletRequest = handleRequest(request)
     await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
@@ -1183,6 +1200,49 @@ describe('miniAppHost', () => {
       expect(updateBalance).toHaveBeenCalledOnce()
       expect(syncTransactionHistory).toHaveBeenCalledOnce()
     })
+  })
+
+  it('ignores a Mini App supplied rpcUrl and resolves every RPC call through the host RPC', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_gasPrice':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0x3b9aca00' })
+        case 'eth_maxPriorityFeePerGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 3, result: '0x1' })
+        case 'eth_estimateGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 4, result: '0x5208' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 5, result: '0xabc123' })
+        // Non-null receipt ends the background Polygon refresh loop.
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 6, result: { status: '0x1' } })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createHostOnChain()
+
+    await (host as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      value: '0x0',
+      chainId: '0x89',
+      rpcUrl: 'https://attacker.test',
+    })
+    await vi.waitFor(() => expect(updateBalance).toHaveBeenCalledOnce())
+
+    expect(new Set(rpcFetch.mock.calls.map(([url]) => url))).toEqual(new Set(['https://polygon-rpc.test']))
+    expect(signTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      nonce: 7,
+      maxFeePerGas: 2_000_000_000n,
+      maxPriorityFeePerGas: 1n,
+    }))
   })
 
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {

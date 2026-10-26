@@ -149,6 +149,10 @@ interface MiniAppBase {
 
 type Network = 'ethereum' | 'nimiq'
 
+// Matches the birpc timeout of Mini App requests in web3-provider/src/provider.ts.
+// A sheet still open after it would approve a request the Mini App gave up on.
+export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
+
 export type UserConfirmationRequest
   = | (MiniAppBase & { type: 'accounts', network: Network })
     | (MiniAppBase & {
@@ -222,7 +226,6 @@ export interface MiniAppHostConfig {
   /**
    * Map of hex chain IDs to their JSON-RPC endpoints.
    * Used for nonce fetching, gas estimation, and transaction broadcasting.
-   * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
    */
   evmRpcUrls?: Record<string, string>
 
@@ -231,8 +234,9 @@ export interface MiniAppHostConfig {
    * @param request - Confirmation request to show to the user
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
-  requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
-  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
+  /** `deadline` (ms timestamp) closes the dialog as a rejection; defaults to the Mini App request timeout. */
+  requestUserConfirmation?: (request: UserConfirmationRequest, deadline?: number) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }, deadline?: number) => Promise<Asset | undefined>
 }
 
 /**
@@ -971,7 +975,6 @@ export class MiniAppHost {
       gasPrice?: string
       nonce?: string | number
       chainId?: string
-      rpcUrl?: string
     }
 
     if (Array.isArray(params) && params.length > 0) {
@@ -997,7 +1000,6 @@ export class MiniAppHost {
       nonce: txParams.nonce,
       nonceType: typeof txParams.nonce,
       chainId: txParams.chainId,
-      rpcUrl: txParams.rpcUrl,
     })
 
     // Validate required fields
@@ -1049,7 +1051,9 @@ export class MiniAppHost {
     const chainName = validatedChainIdNumber ? EVM_CHAIN_NAMES[validatedChainIdNumber] : undefined
 
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
-    const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
+    // Host RPC only, keyed by the chain being signed. A Mini App chosen RPC would supply the
+    // nonce and fees the user signs, and receive the signed transaction.
+    const rpcUrl = this.getRpcUrlForChain(validatedChainIdNumber ? `0x${validatedChainIdNumber.toString(16)}` : undefined)
 
     // Nonce resolution: fetch from broadcast RPC if not provided by dApp
     logger.log('[ETH_TX] Step 3 - Nonce analysis:', {
@@ -1815,6 +1819,8 @@ export class MiniAppHost {
   }
 
   private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    // One Mini App request shows up to three sheets; all close when the request times out.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     const invoice = (params as { invoice?: unknown } | null)?.invoice
     if (typeof invoice !== 'string' || !invoice.trim())
       throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
@@ -1850,7 +1856,7 @@ export class MiniAppHost {
             type: 'lightning-access',
             network: 'nimiq',
             description: decoded.description || undefined,
-          }),
+          }, deadline),
         }
       }
       let allowed: boolean
@@ -1891,7 +1897,7 @@ export class MiniAppHost {
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
 
-      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined }, deadline)
       if (!asset)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
       if (asset !== Asset.NIM && asset !== Asset.USDT)
@@ -1956,7 +1962,7 @@ export class MiniAppHost {
           usdtFeeAllowance,
           fees: payment.swap?.fees || [],
         },
-      })
+      }, deadline)
       if (!confirmed)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
 
