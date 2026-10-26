@@ -138,15 +138,27 @@ export function useDecrypt() {
   }
 
   async function changePin(pin: string, oldPin: string) {
+    let ok = true
     try {
+      // Native rekey closes every connection; close (and lock) first so queries wait for the reopen.
+      await closeDb()
       await sqlite.changeEncryptionSecret(pin, oldPin)
-      await openDb()
-      pinHash.value = sha256Hex(pin)
     }
     catch (e) {
       logger.error(e)
-      return i18n.t('Something went wrong changing the PIN')
+      ok = false
     }
+    // Reopen even if the rekey failed (with the still-stored old secret), or queries wait forever.
+    try {
+      await openDb()
+    }
+    catch (e) {
+      logger.error(e)
+      ok = false
+    }
+    if (!ok)
+      return i18n.t('Something went wrong changing the PIN')
+    pinHash.value = sha256Hex(pin)
   }
 
   function hasPin() {
