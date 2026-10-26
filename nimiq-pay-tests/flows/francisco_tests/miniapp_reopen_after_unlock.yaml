@@ -1,0 +1,72 @@
+appId: ${APP_ID}
+name: Mini App reopen after unlock
+
+tags:
+  - franciscoTest
+  - quarantine
+  # The iOS job skips it for the same reason as security_relock_background: on BrowserStack the
+  # release .ipa reloaded its page on any background right after onboarding.
+  - androidOnly
+
+env:
+  # Never on screen: waiting for it is the only way to sleep in Maestro.
+  NEVER_VISIBLE: "maestro-background-wait-sentinel"
+  # Brings the running app back to the front; the app ignores this unknown action
+  # (src/lib/deep-link.ts). See security_relock_background.
+  RESUME_LINK: "nimiqpay://resume"
+  # Not curated: the link shows the anti-scam warning first.
+  MINI_APP_LINK: nimiqpay://miniapp?url=https://example.org
+
+---
+# Scope: after more than 2 minutes in the background the app asks for the PIN again
+# (App.vue). With Settings > "Reopen Mini App on unlock" on (the default) the open Mini App is
+# back after the PIN; with it off, the PIN leads to home and the Mini App is closed.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Setting on (default): the Mini App comes back.
+- runFlow: ../../subflows/open_mini_app_link_background.yaml
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 60000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- tapOn: ${output.miniApps.browserCloseBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+# Setting off: the PIN leads to home and the Mini App stays closed.
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 10000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.reopenMiniAppOnUnlock}
+    timeout: 5000
+- tapOn: ${output.settings.reopenMiniAppOnUnlock}
+- waitForAnimationToEnd
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.settings.reopenMiniAppOnUnlock}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
+
+- runFlow: ../../subflows/open_mini_app_link_background.yaml
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+# Named exception to the no-optional rule: this is a wait for an unwanted Mini App, not an
+# assertion.
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 15000
+    optional: true
+    label: Give an unwanted Mini App time to show
+- assertNotVisible: ${output.miniApps.browserCloseBtn}
+- assertVisible: ${output.navigation.topUpBtn}
+
+- stopApp

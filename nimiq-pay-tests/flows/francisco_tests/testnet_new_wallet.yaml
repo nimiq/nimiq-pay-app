@@ -1,0 +1,57 @@
+appId: ${APP_ID}
+name: Testnet new wallet
+
+tags:
+  - franciscoTest
+  - quarantine
+
+---
+# Scope: a new wallet switched to testnet in the dev modal shows the TESTNET badge, the empty
+# testnet account message and the faucet on home and on Top Up, and keeps testnet after a
+# relaunch. It never taps the faucet (about 3 taps per 12 h) and never touches the shared wallet.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+# On mainnet the empty home offers no faucet.
+- assertNotVisible: ${output.home.faucetBtn}
+
+# Checks the TESTNET badge.
+- runFlow: ../../subflows/switch_to_testnet.yaml
+
+# Needs the testnet balance and history, so allow for consensus.
+- extendedWaitUntil:
+    visible: ${output.home.testnetEmptyMessage}
+    timeout: 90000
+- assertVisible: ${output.home.faucetBtn}
+
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- assertVisible:
+    text: ${output.home.faucetBtn}
+    below: ${output.topUp.title}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    notVisible: ${output.topUp.copyAddress}
+    timeout: 10000
+
+# The network choice is kept (localStorage) across a relaunch.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertVisible: ${output.home.testnetBadge}
+- extendedWaitUntil:
+    visible: ${output.home.testnetEmptyMessage}
+    timeout: 90000
+
+- stopApp

@@ -7,9 +7,9 @@ tags:
   - needsTestnetWallet
 
 ---
-# Scope: setting Minimum NIM Decimals to 5 shows the home NIM balance with 5 decimals; the
-# default (None) shows none. A zero balance always reads "0 NIM", so this imports the shared
-# funded testnet wallet (MAESTRO_TESTNET_WALLET_WORDS; locally via scripts/maestro-local.sh).
+# Scope: setting Minimum NIM Decimals to 5 shows the home NIM balance with 5 decimals, and 2 with
+# 2; the default (None) shows none. A zero balance always reads "0 NIM", so this imports the
+# shared funded testnet wallet (MAESTRO_TESTNET_WALLET_WORDS; locally via scripts/maestro-local.sh).
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - launchApp:
@@ -72,5 +72,36 @@ tags:
     visible: ${output.home.nimBalanceFiveDecimals}
     timeout: 60000
 - assertNotVisible: ${output.home.nimBalanceNoDecimals}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 10000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.nimDecimalsFiveSelected}
+    timeout: 5000
+- tapOn: ${output.settings.nimDecimalsFiveSelected}
+- extendedWaitUntil:
+    visible: ${output.nimDecimalsAlert.twoOption}
+    timeout: 5000
+- tapOn: ${output.nimDecimalsAlert.twoOption}
+- tapOn: ${output.nimDecimalsAlert.okBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.nimDecimalsTwoSelected}
+    timeout: 5000
+- waitForAnimationToEnd
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.settings.minimumNimDecimals}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
+
+- extendedWaitUntil:
+    visible: ${output.home.nimBalanceTwoDecimals}
+    timeout: 60000
+- assertNotVisible: ${output.home.nimBalanceFiveDecimals}
 
 - stopApp

@@ -1,0 +1,174 @@
+appId: ${APP_ID}
+name: Withdraw NIM validation
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # The testnet faucet (as in withdraw_nim_testnet). Nothing is sent: the new wallet is empty.
+  FAUCET_ADDRESS: NQ377C3VVMN8FRPNFXS9PLAGJMRE8SC6KUSQ
+  # The same address with wrong check digits ("38" instead of "37").
+  BAD_CHECKSUM_ADDRESS: NQ387C3VVMN8FRPNFXS9PLAGJMRE8SC6KUSQ
+  ALIAS: Faucet
+
+---
+# Scope: on an empty wallet, Withdraw rejects an amount above the balance ("Insufficient funds",
+# Withdraw stays disabled even with an address), refuses the wallet's own address and an address
+# with a bad checksum, and the address book saves, renames, selects and deletes an address
+# (deleting the selected one clears the selection).
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# The wallet's own address, from Top Up.
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- evalScript: ${output.ownAddress = output.topUpAddress}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+# On iOS a tap while the flow is still closing is lost.
+- waitForAnimationToEnd
+
+- tapOn: ${output.navigation.withdrawBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.enterInNimBtn}
+    timeout: 10000
+- assertVisible: ${output.withdraw.amount25}
+- assertVisible: ${output.withdraw.amount50}
+- assertVisible: ${output.withdraw.amount100}
+- assertNotVisible: ${output.withdraw.insufficientFunds}
+- tapOn: ${output.withdraw.enterInNimBtn}
+- tapOn: ${output.withdraw.emptyAmount}
+- inputText: "1"
+- extendedWaitUntil:
+    visible: ${output.withdraw.insufficientFunds}
+    timeout: 10000
+
+- tapOn: ${output.withdraw.selectAddress}
+- extendedWaitUntil:
+    visible: ${output.withdraw.noSavedAddresses}
+    timeout: 10000
+- tapOn: ${output.withdraw.addAnotherAddressBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.addressTitle}
+    timeout: 10000
+
+- evalScript: ${output.typeAddress = output.ownAddress}
+- runFlow: ../../subflows/type_nim_address.yaml
+- extendedWaitUntil:
+    visible: ${output.withdraw.ownAddressError}
+    timeout: 10000
+- assertVisible:
+    text: ${output.withdraw.saveAddressBtn}
+    enabled: false
+
+# Back and Add another address again starts from empty inputs. `above` skips the Android
+# keyboard's own "Back" key, which matches too (Maestro ignores case) and only hides the keyboard.
+- tapOn:
+    text: ${output.navigation.backBtn}
+    above: ${output.withdraw.addressTitle}
+- extendedWaitUntil:
+    visible: ${output.withdraw.noSavedAddresses}
+    timeout: 10000
+- tapOn: ${output.withdraw.addAnotherAddressBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.addressTitle}
+    timeout: 10000
+
+# A wrong checksum is not a valid address: no error text, but Save stays disabled.
+- evalScript: ${output.typeAddress = BAD_CHECKSUM_ADDRESS}
+- runFlow: ../../subflows/type_nim_address.yaml
+- assertNotVisible: ${output.withdraw.ownAddressError}
+- assertVisible:
+    text: ${output.withdraw.saveAddressBtn}
+    enabled: false
+
+# Fixing the check digits in the first group makes it valid.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          id: "0"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: ${output.withdraw.addressSegmentLabel + '0'}
+- eraseText: 4
+- inputText: ${FAUCET_ADDRESS.substring(0, 4)}
+- extendedWaitUntil:
+    visible:
+      text: ${output.withdraw.saveAddressBtn}
+      enabled: true
+    timeout: 20000
+- tapOn: ${output.withdraw.saveAddressBtn}
+
+# The list shows the saved address as its first and last group.
+- extendedWaitUntil:
+    visible: ${output.withdraw.chooseAddressTitle}
+    timeout: 10000
+- assertNotVisible: ${output.withdraw.noSavedAddresses}
+- assertVisible:
+    text: ${FAUCET_ADDRESS.substring(32)}
+    below: ${output.withdraw.chooseAddressTitle}
+
+# Rename it. The alias input has no selector on Android, so tap it by position; editing
+# focuses it, but typing without a tap is lost.
+- tapOn: ${output.withdraw.editAliasBtn}
+- tapOn:
+    leftOf: ${output.withdraw.saveAliasBtn}
+    below: ${output.withdraw.chooseAddressTitle}
+- inputText: ${ALIAS}
+- tapOn: ${output.withdraw.saveAliasBtn}
+- extendedWaitUntil:
+    visible:
+      text: ${ALIAS}
+      below: ${output.withdraw.chooseAddressTitle}
+    timeout: 10000
+
+# Selecting it closes the list and shows it on the Withdraw screen, which still refuses to send.
+- tapOn:
+    text: ${ALIAS}
+    below: ${output.withdraw.chooseAddressTitle}
+- extendedWaitUntil:
+    notVisible: ${output.withdraw.chooseAddressTitle}
+    timeout: 10000
+- assertVisible:
+    text: ${ALIAS}
+    below: ${output.withdraw.title}
+- assertNotVisible: ${output.withdraw.selectAddress}
+- assertVisible: ${output.withdraw.insufficientFunds}
+- assertVisible:
+    text: ${output.withdraw.title}
+    enabled: false
+
+# Delete it: the list is empty again and the Withdraw screen drops the selection.
+- tapOn:
+    text: ${ALIAS}
+    below: ${output.withdraw.title}
+- extendedWaitUntil:
+    visible: ${output.withdraw.chooseAddressTitle}
+    timeout: 10000
+- tapOn: ${output.withdraw.deleteAddressBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.deleteConfirmHint}
+    timeout: 10000
+- tapOn:
+    text: ${output.withdraw.deleteConfirmBtn}
+    below: ${output.withdraw.deleteConfirmHint}
+- extendedWaitUntil:
+    visible: ${output.withdraw.noSavedAddresses}
+    timeout: 10000
+- assertNotVisible:
+    text: ${ALIAS}
+    below: ${output.withdraw.chooseAddressTitle}
+- assertVisible: ${output.withdraw.selectAddress}
+
+- stopApp

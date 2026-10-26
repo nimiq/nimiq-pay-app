@@ -1,0 +1,105 @@
+appId: ${APP_ID}
+name: Mini Apps deep links
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Not in the curated list (nimiq/awesome), so the first link to it shows the warning.
+  UNTRUSTED_LINK: nimiqpay://miniapp?url=https://example.org
+  # A private-network target: refused before the warning, so "Open anyway" can never reach it.
+  LAN_LINK: nimiqpay://miniapp?url=http://192.168.1.1
+  # Cinima is curated (https://cinima.app in nimiq/awesome).
+  CURATED_LINK: nimiqpay://miniapp?url=https://cinima.app
+
+---
+# Scope: nimiqpay://miniapp links. An untrusted URL shows the anti-scam warning: "Don't open"
+# opens nothing, "Open anyway" opens the Mini App browser, and the visited URL is trusted from
+# then on (no warning). A private-network URL opens nothing. A curated link that arrives while
+# the wallet is locked opens the Mini App after the PIN. https://nimpay.app/miniapps/open links
+# are not covered: the debug build is not a verified handler, so Android opens them in Chrome.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Trust needs the curated list, which a new install fetches from the network: wait for it in
+# Discover first.
+- tapOn: ${output.navigation.miniAppsBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.nimtrisEntry}
+    timeout: 20000
+- tapOn: ${output.miniApps.closeBtn}
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.discoverTitle}
+    timeout: 10000
+
+# "Don't open" opens nothing.
+- openLink: ${UNTRUSTED_LINK}
+- extendedWaitUntil:
+    visible: ${output.miniApps.warningTitle}
+    timeout: 15000
+- tapOn: ${output.miniApps.warningDontOpenBtn}
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.warningTitle}
+    timeout: 10000
+- assertNotVisible: ${output.miniApps.browserCloseBtn}
+- assertVisible: ${output.home.payTitle}
+
+# "Open anyway" opens it in the Mini App browser.
+- openLink: ${UNTRUSTED_LINK}
+- extendedWaitUntil:
+    visible: ${output.miniApps.warningTitle}
+    timeout: 15000
+- tapOn: ${output.miniApps.warningOpenAnywayBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 30000
+- assertNotVisible: ${output.miniApps.warningTitle}
+- tapOn: ${output.miniApps.browserCloseBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+# Visited once, it is now trusted: the link opens the browser without asking.
+- openLink: ${UNTRUSTED_LINK}
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 30000
+- assertNotVisible: ${output.miniApps.warningTitle}
+- tapOn: ${output.miniApps.browserCloseBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+# A private-network target is refused silently (deep-link.ts isExternalDeepLinkUrlSafe).
+- openLink: ${LAN_LINK}
+# Named exception to the no-optional rule: this is a wait for an unwanted warning or browser,
+# not an assertion.
+- extendedWaitUntil:
+    visible: ${output.miniApps.warningTitle + '|' + output.miniApps.browserCloseBtn}
+    timeout: 10000
+    optional: true
+    label: Give an unwanted warning or browser time to show
+- assertNotVisible: ${output.miniApps.warningTitle}
+- assertNotVisible: ${output.miniApps.browserCloseBtn}
+- assertVisible: ${output.home.payTitle}
+
+# A link that starts the app waits for the PIN, then opens the Mini App.
+- stopApp
+- openLink: ${CURATED_LINK}
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.miniApps.cinimaAppTitle}
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+# The native browser is presented only after the page loads; Cinima may go fullscreen at once
+# (see miniApps.cinimaAppTitle).
+- extendedWaitUntil:
+    visible: ${output.miniApps.cinimaAppTitle}
+    timeout: 60000
+- assertNotVisible: ${output.miniApps.warningTitle}
+
+- stopApp

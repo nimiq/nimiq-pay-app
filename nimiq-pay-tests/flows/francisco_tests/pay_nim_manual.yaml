@@ -1,0 +1,111 @@
+appId: ${APP_ID}
+name: Pay NIM manual request
+
+tags:
+  - franciscoTest
+  - quarantine
+  # CI skips it until the MAESTRO_TESTNET_WALLET_WORDS secret is set.
+  - needsTestnetWallet
+
+env:
+  # The testnet faucet (as in withdraw_nim_testnet), so paid NIM goes back to it.
+  FAUCET_ADDRESS: NQ377C3VVMN8FRPNFXS9PLAGJMRE8SC6KUSQ
+  # Not a URL, so not a payment request.
+  NOT_A_REQUEST: zzqx77
+
+---
+# Scope: on the shared funded testnet wallet, Pay > Enter manually rejects text that is no
+# payment request ("Invalid URL"); a Nimiq request without an amount asks for one, refuses more
+# than the balance ("Insufficient funds"), and paying 1 NIM sends it: the NIM balance drops by
+# exactly 1 and the newest history entry is a confirmed 1.0 NIM Payment to the faucet.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/testnet_wallet_send.yaml
+
+# testnet_wallet_send.yaml waited until Pay is enabled.
+- extendedWaitUntil:
+    visible:
+      text: ${output.home.payTitle}
+      enabled: true
+    timeout: 120000
+- tapOn:
+    text: ${output.home.payTitle}
+    enabled: true
+- extendedWaitUntil:
+    visible: ${output.pay.enterManuallyBtn}
+    timeout: 15000
+- tapOn: ${output.pay.enterManuallyBtn}
+- extendedWaitUntil:
+    visible: ${output.pay.manualTitle}
+    timeout: 10000
+- waitForAnimationToEnd
+
+# The text box has no selector: tap below the title. `rightOf` skips the scanner step, which
+# iOS keeps in the hierarchy at the left edge.
+- tapOn:
+    below: ${output.pay.manualTitle}
+    rightOf: ${output.navigation.backBtn}
+- inputText: ${NOT_A_REQUEST}
+- extendedWaitUntil:
+    visible: ${output.pay.invalidUrlError}
+    timeout: 10000
+
+# Replace it with a request without amount. Erase right after typing: the cursor is still at the
+# end (after a tap it can sit mid-text, and eraseText only deletes to its left).
+- eraseText
+- inputText: ${'nimiq:' + FAUCET_ADDRESS}
+- extendedWaitUntil:
+    visible: ${output.pay.requestSummary}
+    timeout: 15000
+- assertNotVisible: ${output.pay.invalidUrlError}
+# Continue only shows once the text box loses focus.
+- tapOn: ${output.pay.manualTitle}
+- tapOn: ${output.pay.continueBtn}
+
+- extendedWaitUntil:
+    visible: ${output.pay.amountTitle}
+    timeout: 10000
+- tapOn: ${output.withdraw.emptyAmount}
+- inputText: "99999999"
+- extendedWaitUntil:
+    visible: ${output.withdraw.insufficientFunds}
+    timeout: 10000
+- eraseText
+- inputText: "1"
+- extendedWaitUntil:
+    notVisible: ${output.withdraw.insufficientFunds}
+    timeout: 10000
+- tapOn: ${output.pay.amountTitle}
+- tapOn:
+    text: ${output.pay.continueBtn}
+    enabled: true
+    rightOf: ${output.navigation.backBtn}
+
+- extendedWaitUntil:
+    visible: ${output.pay.previewTitle}
+    timeout: 20000
+- assertVisible: ${output.withdraw.oneNimAmount}
+- tapOn:
+    text: ${output.pay.payBtn}
+    below: ${output.withdraw.oneNimAmount}
+# Next comes either the PIN step or home (see withdraw_nim_testnet).
+- extendedWaitUntil:
+    notVisible: ${output.pay.previewTitle}
+    timeout: 90000
+- runFlow:
+    when:
+      visible: ${output.withdraw.pinTitle}
+    commands:
+      - inputText: ${PIN}
+
+- extendedWaitUntil:
+    visible: ${output.expectedBalance}
+    timeout: 90000
+    label: The NIM balance dropped by exactly 1
+
+- runFlow:
+    file: ../../subflows/newest_tx_confirmed.yaml
+    env:
+      TX_TITLE: ${output.transaction.paymentTitle}
+- assertVisible: ${output.withdraw.oneNimAmount}
+- assertVisible: ${FAUCET_ADDRESS.substring(0, 4) + '\\.\\.\\.' + FAUCET_ADDRESS.substring(32)}

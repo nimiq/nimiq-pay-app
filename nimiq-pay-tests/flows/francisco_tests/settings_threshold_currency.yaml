@@ -1,0 +1,138 @@
+appId: ${APP_ID}
+name: Settings threshold currency
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Default threshold (app.ts), the one saved, and an edit that is dismissed without saving.
+  DEFAULT_THRESHOLD: "5"
+  SAVED_THRESHOLD: "20"
+  DISCARDED_THRESHOLD: "7"
+
+---
+# Scope: Settings saves an auto-deposit threshold and drops an edit closed without Save; Reduce
+# Animations and the CRC currency change the home amount (one "₡0" node instead of one node
+# per character); all three survive a relaunch, and GMD works too.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 10000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.changePin}
+    timeout: 5000
+- assertVisible: ${output.settings.pushNotifications}
+
+# Save a new threshold.
+- tapOn: ${output.settings.autoDepositThresholdPrefix + DEFAULT_THRESHOLD + ' NIM'}
+- extendedWaitUntil:
+    visible: ${output.autoDepositSheet.description}
+    timeout: 5000
+- tapOn:
+    text: ${DEFAULT_THRESHOLD}
+    below: ${output.autoDepositSheet.description}
+- eraseText: 3
+- inputText: ${SAVED_THRESHOLD}
+- tapOn: ${output.autoDepositSheet.saveBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
+    timeout: 5000
+
+# An edit closed without Save is dropped.
+- tapOn: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
+- extendedWaitUntil:
+    visible: ${output.autoDepositSheet.description}
+    timeout: 5000
+- tapOn:
+    text: ${SAVED_THRESHOLD}
+    below: ${output.autoDepositSheet.description}
+- eraseText: 3
+- inputText: ${DISCARDED_THRESHOLD}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- extendedWaitUntil:
+    notVisible: ${output.autoDepositSheet.description}
+    timeout: 5000
+- assertVisible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
+- assertNotVisible: ${output.settings.autoDepositThresholdPrefix + DISCARDED_THRESHOLD + ' NIM'}
+
+- tapOn: ${output.settings.reduceAnimations}
+- tapOn: ${output.settings.currency}
+- extendedWaitUntil:
+    visible: ${output.currencyAlert.crcOption}
+    timeout: 5000
+- tapOn: ${output.currencyAlert.crcOption}
+- tapOn: ${output.currencyAlert.okBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.currencyCrcSelected}
+    timeout: 5000
+# Leaving Settings is ignored while the alert is still animating out.
+- waitForAnimationToEnd
+
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
+- assertNotVisible: ${output.settings.currency}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
+
+# The home amount replaces its skeleton only once the balance is resolved (needs consensus).
+- extendedWaitUntil:
+    visible: ${output.home.crcZeroReduced}
+    timeout: 90000
+- assertNotVisible: ${output.home.usdSymbol}
+
+# All three are kept across a relaunch.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.crcZeroReduced}
+    timeout: 90000
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 10000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.currencyCrcSelected}
+    timeout: 5000
+- assertVisible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
+
+- tapOn: ${output.settings.currencyCrcSelected}
+- extendedWaitUntil:
+    visible: ${output.currencyAlert.gmdOption}
+    timeout: 5000
+- tapOn: ${output.currencyAlert.gmdOption}
+- tapOn: ${output.currencyAlert.okBtn}
+- extendedWaitUntil:
+    notVisible: ${output.settings.currencyCrcSelected}
+    timeout: 5000
+- waitForAnimationToEnd
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.settings.currency}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.home.gmdZeroReduced}
+    timeout: 15000
+- assertNotVisible: ${output.home.crcZeroReduced}
+
+- stopApp

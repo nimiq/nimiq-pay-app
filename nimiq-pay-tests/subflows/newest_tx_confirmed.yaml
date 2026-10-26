@@ -1,0 +1,50 @@
+appId: ${APP_ID}
+---
+# After testnet_wallet_send.yaml and a send: relaunches, opens the newest history entry and
+# waits until it is Confirmed, checks its title is ${TX_TITLE} and that it is newer than
+# output.previousNewestDate. Leaves the detail open for the caller's own checks.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+# The send sheet's keyboard can leave the home list scrolled down, and Maestro then counts the
+# rows above the view (zero height) as index 0. A relaunch shows the list from the top, read
+# from the local database (the testnet choice is kept in localStorage).
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.transaction.row}
+    timeout: 60000
+- tapOn:
+    text: ${output.transaction.row}
+    index: 0
+- extendedWaitUntil:
+    visible: ${TX_TITLE}
+    timeout: 30000
+
+# Confirmation takes about a minute. In the testnet spike an open detail kept showing Pending
+# after the app had logged the confirmation (suspected app bug), so reopen it until Confirmed.
+- repeat:
+    times: 40
+    while:
+      notVisible: ${output.transaction.confirmed}
+    commands:
+      - tapOn: ${output.navigation.closeFlowModalBtn}
+      - waitForAnimationToEnd
+      - tapOn:
+          text: ${output.transaction.row}
+          index: 0
+      - waitForAnimationToEnd
+- assertVisible: ${output.transaction.confirmed}
+- assertVisible: ${TX_TITLE}
+# Earlier runs' entries look the same. The time changes once the block is in (it was the send
+# time while pending), so compare with the newest entry before the send only.
+- copyTextFrom: ${output.transaction.date}
+- assertTrue:
+    condition: ${maestro.copiedText != output.previousNewestDate}
+    label: The top transaction is from this run

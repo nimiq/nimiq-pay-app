@@ -1,0 +1,42 @@
+appId: ${APP_ID}
+---
+# For miniapp_reopen_after_unlock: opens ${MINI_APP_LINK} (through the anti-scam warning when
+# it shows), sends the app to the background for over 2 minutes, brings it back with
+# ${RESUME_LINK} and unlocks it with ${PIN}. The caller checks what shows after the PIN.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- openLink: ${MINI_APP_LINK}
+# The first link to a URL that isn't curated asks; once visited it is trusted.
+- extendedWaitUntil:
+    visible: ${output.miniApps.warningTitle + '|' + output.miniApps.browserCloseBtn}
+    timeout: 30000
+- runFlow:
+    when:
+      visible: ${output.miniApps.warningTitle}
+    commands:
+      - tapOn: ${output.miniApps.warningOpenAnywayBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 30000
+
+- pressKey: Home
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.browserCloseBtn}
+    timeout: 5000
+- evalScript: ${output.backgroundSince = Date.now()}
+# Named exception to the no-optional rule: this is a sleep, not an assertion.
+- extendedWaitUntil:
+    visible: ${NEVER_VISIBLE}
+    timeout: 140000
+    optional: true
+    label: Stay in the background for over 2 minutes
+- assertTrue:
+    condition: ${Date.now() - output.backgroundSince > 130000}
+    label: The app stayed in the background for over 2 minutes
+- openLink: ${RESUME_LINK}
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}

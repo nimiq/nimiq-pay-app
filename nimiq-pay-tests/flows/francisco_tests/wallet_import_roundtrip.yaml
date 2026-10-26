@@ -6,7 +6,8 @@ tags:
 
 ---
 # Scope: after logging out, logging in with the wallet's recovery words restores the same
-# wallet: the Top Up address after the import equals the one before the logout.
+# wallet: the NIM and the USDT (Polygon) Top Up addresses after the import equal the ones before
+# the logout, and the imported wallet shows no backup reminder.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/create_account.yaml
@@ -21,6 +22,9 @@ tags:
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
     timeout: 10000
+
+- runFlow: ../../subflows/capture_usdt_top_up_address.yaml
+- evalScript: ${output.originalUsdtAddress = output.topUpAddress}
 
 - runFlow: ../../subflows/capture_recovery_words.yaml
 - tapOn: ${output.navigation.closeFlowModalBtn}
@@ -56,5 +60,16 @@ tags:
 - assertTrue:
     condition: ${output.topUpAddress == output.originalAddress}
     label: Imported wallet has the original address
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+# An import counts as backed up (app.ts), so home shows no reminder.
+- assertNotVisible: ${output.navigation.recoveryWordsBtn}
+
+- runFlow: ../../subflows/capture_usdt_top_up_address.yaml
+- assertTrue:
+    condition: ${output.topUpAddress == output.originalUsdtAddress}
+    label: Imported wallet has the original USDT address
 
 - stopApp

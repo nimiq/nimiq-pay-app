@@ -25,23 +25,46 @@ tags:
 # toolbar back button, which only the quiz options are.
 - waitForAnimationToEnd
 
-# A wrong answer is rejected: "Try again" shows and the quiz restarts with new questions.
-- copyTextFrom: ${output.backup.question}
-- evalScript: ${output.quizPosition = parseInt(maestro.copiedText.match(/\d+/)[0])}
-# The options are the wallet's other words (ValidateWords.vue), so name those: a catch-all like
-# [a-z]+ (case-insensitive) also hit the previous step's CONTINUE button.
-- tapOn:
-    text: ${'(' + output.recoveryWords.filter(w => w != output.recoveryWords[output.quizPosition - 1]).join('|') + ')'}
-    below: ${output.backup.question}
-    rightOf: ${output.navigation.backBtn}
-- extendedWaitUntil:
-    visible: ${output.backup.tryAgainBtn}
-    timeout: 5000
-- tapOn: ${output.backup.tryAgainBtn}
-- extendedWaitUntil:
-    notVisible: ${output.backup.tryAgainBtn}
-    timeout: 5000
-- waitForAnimationToEnd
+# A wrong answer is rejected and offers two ways on: the first time "Try again" restarts the
+# quiz with new questions, the second time "See words" goes back to the words, and Continue
+# returns to the quiz.
+- evalScript: ${output.wrongAnswers = 0}
+- repeat:
+    times: 2
+    commands:
+      - copyTextFrom: ${output.backup.question}
+      - evalScript: ${output.quizPosition = parseInt(maestro.copiedText.match(/\d+/)[0])}
+      # The options are the wallet's other words (ValidateWords.vue), so name those: a catch-all
+      # like [a-z]+ (case-insensitive) also hit the previous step's CONTINUE button.
+      - tapOn:
+          text: ${'(' + output.recoveryWords.filter(w => w != output.recoveryWords[output.quizPosition - 1]).join('|') + ')'}
+          below: ${output.backup.question}
+          rightOf: ${output.navigation.backBtn}
+      - extendedWaitUntil:
+          visible: ${output.backup.tryAgainBtn}
+          timeout: 5000
+      - runFlow:
+          when:
+            true: ${output.wrongAnswers == 0}
+          commands:
+            - tapOn: ${output.backup.tryAgainBtn}
+      - runFlow:
+          when:
+            true: ${output.wrongAnswers == 1}
+          commands:
+            - tapOn: ${output.backup.seeWordsBtn}
+            - extendedWaitUntil:
+                notVisible: ${output.backup.tryAgainBtn}
+                timeout: 5000
+            - tapOn: ${output.backup.continueBtn}
+            - extendedWaitUntil:
+                visible: ${output.backup.question}
+                timeout: 10000
+      - extendedWaitUntil:
+          notVisible: ${output.backup.tryAgainBtn}
+          timeout: 5000
+      - waitForAnimationToEnd
+      - evalScript: ${output.wrongAnswers++}
 
 # The quiz asks 3 positions (ValidateWords.vue QUESTION_COUNT), each with 6 shuffled options.
 - repeat:

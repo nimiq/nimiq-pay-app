@@ -10,58 +10,43 @@ tags:
   - needsTestnetWallet
 
 ---
-# Scope: withdrawing 1 NIM (entered in NIM) from the shared funded testnet wallet to the faucet
-# sends it: the NIM balance drops by exactly 1 (NIM withdrawals have no fee), and the newest
-# history entry is a confirmed 1.0 NIM Withdrawal to the faucet.
+# Scope: on the shared funded testnet wallet, the Withdraw amount presets are in fiat ($25 sets
+# 25), All fills the whole NIM balance, and the NIM unit is kept when Withdraw reopens. Withdrawing
+# 1 NIM to the faucet sends it: the NIM balance drops by exactly 1 (NIM withdrawals have no fee),
+# and the newest history entry is a confirmed 1.0 NIM Withdrawal to the faucet.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
-- launchApp:
-    clearState: true
-- extendedWaitUntil:
-    visible: ${output.launchScreen.loginBtn}
-    timeout: 45000
-- runFlow:
-    file: ../../subflows/import_wallet.yaml
-    env:
-      RECOVERY_PHRASE: ${MAESTRO_TESTNET_WALLET_WORDS}
-- runFlow: ../../subflows/switch_to_testnet.yaml
+- runFlow: ../../subflows/testnet_wallet_send.yaml
 
-# Same balance guards as settings_nim_decimals: the balance needs testnet consensus, and pending
-# NIM would change it while this flow measures it.
-- extendedWaitUntil:
-    visible: ${output.home.nimBalanceNoDecimals}
-    timeout: 120000
-    label: The shared testnet wallet shows a balance of at least 10 NIM
-- extendedWaitUntil:
-    notVisible: ${output.home.pendingNim}
-    timeout: 120000
-    label: The shared testnet wallet has no pending NIM
-- copyTextFrom: ${output.home.nimBalanceNoDecimals}
-# The balance after withdrawing 1 NIM, formatted like home (thousands grouped with U+202F).
-- evalScript: ${output.expectedBalance = String(parseInt(maestro.copiedText.replace(/[^0-9]/g, '')) - 1).replace(/\B(?=(\d{3})+(?!\d))/g, String.fromCharCode(0x202f)) + ' ?'}
-
-# Every run sends the same withdrawal, so remember when the newest history entry happened to
-# tell this run's apart. The history loads from the network and grows by one entry per run.
-- extendedWaitUntil:
-    visible: ${output.transaction.row}
-    timeout: 120000
-- tapOn:
-    text: ${output.transaction.row}
-    index: 0
-- extendedWaitUntil:
-    visible: ${output.transaction.date}
-    timeout: 10000
-- copyTextFrom: ${output.transaction.date}
-- evalScript: ${output.previousNewestDate = maestro.copiedText}
-- tapOn: ${output.navigation.closeFlowModalBtn}
-# On iOS a tap while the detail is still closing is lost.
-- waitForAnimationToEnd
-
+# A new import starts in fiat. Presets are fiat amounts.
 - tapOn: ${output.navigation.withdrawBtn}
 - extendedWaitUntil:
     visible: ${output.withdraw.enterInNimBtn}
     timeout: 10000
+- tapOn: ${output.withdraw.amount25}
+- extendedWaitUntil:
+    visible:
+      text: ${output.withdraw.amount25Value}
+      below: ${output.withdraw.title}
+    timeout: 5000
+# All, in NIM, is the whole balance (decimals allowed: home rounds them away).
 - tapOn: ${output.withdraw.enterInNimBtn}
+- tapOn: ${output.withdraw.allBtn}
+- extendedWaitUntil:
+    visible:
+      text: ${output.balanceDigits + '(\\.[0-9]+)?'}
+      below: ${output.withdraw.title}
+    timeout: 5000
+- assertNotVisible: ${output.withdraw.insufficientFunds}
+
+# The unit is kept: reopened, Withdraw starts empty and in NIM.
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- tapOn: ${output.navigation.withdrawBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.enterInUsdBtn}
+    timeout: 10000
+- assertNotVisible: ${output.withdraw.enterInNimBtn}
 - tapOn: ${output.withdraw.emptyAmount}
 - inputText: "1"
 - tapOn: ${output.withdraw.selectAddress}
@@ -69,25 +54,8 @@ tags:
 - extendedWaitUntil:
     visible: ${output.withdraw.addressTitle}
     timeout: 10000
-# One group per input: typed in one go, the 36 characters lost one on a slow emulator.
-- evalScript: ${output.addressGroups = FAUCET_ADDRESS.match(/.{4}/g); output.typedGroups = 0}
-- repeat:
-    while:
-      true: ${output.typedGroups < output.addressGroups.length}
-    commands:
-      - runFlow:
-          when:
-            platform: Android
-          commands:
-            - tapOn:
-                id: ${String(output.typedGroups)}
-      - runFlow:
-          when:
-            platform: iOS
-          commands:
-            - tapOn: ${output.withdraw.addressSegmentLabel + output.typedGroups}
-      - inputText: ${output.addressGroups[output.typedGroups]}
-      - evalScript: ${output.typedGroups++}
+- evalScript: ${output.typeAddress = FAUCET_ADDRESS}
+- runFlow: ../../subflows/type_nim_address.yaml
 # Save only enables for a valid address, so a dropped character fails here.
 - extendedWaitUntil:
     visible:
@@ -116,13 +84,13 @@ tags:
     when:
       platform: iOS
     commands:
-      - evalScript: ${output.checkedGroups = 0}
+      - evalScript: ${output.faucetGroups = FAUCET_ADDRESS.match(/.{4}/g); output.checkedGroups = 0}
       - repeat:
           while:
-            true: ${output.checkedGroups < output.addressGroups.length}
+            true: ${output.checkedGroups < output.faucetGroups.length}
           commands:
             - assertVisible:
-                text: ${output.addressGroups[output.checkedGroups]}
+                text: ${output.faucetGroups[output.checkedGroups]}
                 below: ${output.withdraw.confirmTitle}
                 above: ${output.withdraw.confirmAndSendBtn}
             - evalScript: ${output.checkedGroups++}
@@ -144,46 +112,9 @@ tags:
     timeout: 90000
     label: The NIM balance dropped by exactly 1
 
-# The withdraw sheet's keyboard can leave the home list scrolled down, and Maestro then counts
-# the rows above the view (zero height) as index 0. A relaunch shows the list from the top, read
-# from the local database (the testnet choice is kept in localStorage).
-- stopApp
-- launchApp:
-    clearState: false
-- extendedWaitUntil:
-    visible: ${output.onboarding.enterPinTitle}
-    timeout: 45000
-- inputText: ${PIN}
-- extendedWaitUntil:
-    visible: ${output.transaction.row}
-    timeout: 60000
-- tapOn:
-    text: ${output.transaction.row}
-    index: 0
-- extendedWaitUntil:
-    visible: ${output.transaction.withdrawalTitle}
-    timeout: 30000
-
-# Confirmation takes about a minute. In the testnet spike an open detail kept showing Pending
-# after the app had logged the confirmation (suspected app bug), so reopen it until Confirmed.
-- repeat:
-    times: 40
-    while:
-      notVisible: ${output.transaction.confirmed}
-    commands:
-      - tapOn: ${output.navigation.closeFlowModalBtn}
-      - waitForAnimationToEnd
-      - tapOn:
-          text: ${output.transaction.row}
-          index: 0
-      - waitForAnimationToEnd
-- assertVisible: ${output.transaction.confirmed}
-- assertVisible: ${output.transaction.withdrawalTitle}
+- runFlow:
+    file: ../../subflows/newest_tx_confirmed.yaml
+    env:
+      TX_TITLE: ${output.transaction.withdrawalTitle}
 - assertVisible: ${output.withdraw.oneNimAmount}
 - assertVisible: ${FAUCET_ADDRESS.substring(0, 4) + '\\.\\.\\.' + FAUCET_ADDRESS.substring(32)}
-# Earlier runs' withdrawals look the same. The time changes once the block is in (it was the
-# send time while pending), so compare with the newest entry before the send only.
-- copyTextFrom: ${output.transaction.date}
-- assertTrue:
-    condition: ${maestro.copiedText != output.previousNewestDate}
-    label: The top transaction is from this run

@@ -9,7 +9,9 @@ output.onboarding = {
     enterPinTitle: "Enter PIN",
     biometricTitle: "Biometric Authentication",
     enableNotificationsTitle: "Enable notifications",
-    skipForNowBtn: "Skip for now"
+    skipForNowBtn: "Skip for now",
+    // Confirm PIN step, when the second PIN differs from the first.
+    pinMismatchError: "PIN did not match"
 };
 
 // iOS shows a one-time slide-to-type intro over the letter keyboard the first time it opens on
@@ -22,13 +24,16 @@ output.iosKeyboard = {
 output.home = {
     payTitle: "Pay",
     switchAssetBtn: "Switch asset",
-    usdtBtn: "USDT",
     fiatAmount: "\\$",
     usdtAmount: "USDT",
     // Home amount by currency symbol. With animations on, each character is its own text node
     // ("$", "€"); with Reduce Animations it is one node ("$0.00", "0.00 €"), so match both.
     usdSymbol: "\\$.*",
     eurSymbol: ".*€",
+    // A zero balance with Reduce Animations, as one node (CRC has no decimals; GMD is followed by
+    // a no-break space). With animations each character is its own node, so these don't match.
+    crcZeroReduced: "₡0",
+    gmdZeroReduced: "GMD.0",
     testnetBadge: "TESTNET",
     // The NIM balance under the fiat amount, without its separate "NIM" node. Thousands are
     // grouped with U+202F (not matched by \s) and the node ends with a space. Two or more
@@ -36,8 +41,14 @@ output.home = {
     // match only because their aria-label "Transaction NIM" hides the amounts (TransactionItem.vue).
     nimBalanceNoDecimals: "[1-9][0-9\u202f]+ ?",
     nimBalanceFiveDecimals: "[0-9][0-9\u202f]*\\.[0-9]{5} ?",
+    nimBalanceTwoDecimals: "[0-9][0-9\u202f]*\\.[0-9]{2} ?",
     // "+<amount> NIM pending" under the balance; its amount node has the same format.
-    pendingNim: ".*pending"
+    pendingNim: ".*pending",
+    // Testnet only, NIM active, no balance and no history (TheHomeTransactions.vue showFaucet).
+    testnetEmptyMessage: "Your testnet account is empty.",
+    // Testnet faucet button, on the empty home and on Top Up. Each tap spends one of the
+    // faucet's ~3 taps per 12 h, so flows only check it is offered.
+    faucetBtn: "Get free NIM"
 };
 
 output.navigation = {
@@ -73,14 +84,28 @@ output.settings = {
     autoDepositThreshold: "Auto-deposit threshold.*",
     pushNotifications: "Receive Push Notifications",
     reduceAnimations: "Reduce Animations",
+    // On by default; Mini Apps builds only.
+    reopenMiniAppOnUnlock: "Reopen Mini App on unlock",
     changePin: "Change PIN",
     // Ionic select exposes "<label>, <selected value>" as its accessible name.
     currencyEurSelected: "Currency, EUR",
-    nimDecimalsFiveSelected: "Minimum NIM Decimals, 5"
+    currencyCrcSelected: "Currency, CRC",
+    nimDecimalsFiveSelected: "Minimum NIM Decimals, 5",
+    nimDecimalsTwoSelected: "Minimum NIM Decimals, 2",
+    // The row reads "Auto-deposit threshold <n> NIM": autoDepositThresholdPrefix + n + " NIM".
+    autoDepositThresholdPrefix: "Auto-deposit threshold "
+};
+
+// Sheet opened from Settings > Auto-deposit threshold. Its close button has no label: close it
+// without saving with a tap on navigation.sheetBackdrop.
+output.autoDepositSheet = {
+    description: "Incoming funds accumulate.*",
+    saveBtn: "Save"
 };
 
 // Ionic select alert opened from Settings > Minimum NIM Decimals (options None, 2, 5).
 output.nimDecimalsAlert = {
+    twoOption: "2",
     fiveOption: "5",
     okBtn: "OK"
 };
@@ -88,6 +113,8 @@ output.nimDecimalsAlert = {
 // Ionic select alert opened from Settings > Currency.
 output.currencyAlert = {
     eurOption: "EUR",
+    crcOption: "CRC",
+    gmdOption: "GMD",
     okBtn: "OK"
 };
 
@@ -117,16 +144,22 @@ output.unlock = {
 
 // Settings > Change PIN reuses the onboarding "Choose a PIN" / "Confirm your PIN" steps.
 output.changePin = {
-    currentPinTitle: "Insert PIN to confirm"
+    currentPinTitle: "Insert PIN to confirm",
+    // Wrong current PIN. The unlock screen says "Invalid PIN" instead (unlock.invalidPinError).
+    invalidPinError: "Invalid PIN code"
 };
 
 output.topUp = {
     title: "Top up address",
     addressPrefix: "NQ.*",
-    // One text node per address on Android; nine 4-character nodes on iOS. Matches any 4-letter
-    // text too (Maestro ignores case), so capture_top_up_address.yaml bounds it to the address.
-    addressPart: "NQ.*|[0-9A-Z]{4}",
-    copyAddress: "Copy address"
+    // One text node per address on Android; on iOS nine 4-character nodes (NIM) or three
+    // 14-character nodes (USDT, AddressDisplay.vue). Matches any 4-letter text too (Maestro
+    // ignores case), so capture_top_up_address.yaml bounds it to the address.
+    addressPart: "NQ.*|0x.*|[0-9A-Z]{4}|[0-9A-F]{14}",
+    copyAddress: "Copy address",
+    // USDT only: subtitle and the warning under the address.
+    usdtSubtitle: "Send USDT on Polygon to the address below.",
+    polygonWarning: "Make sure you are sending from a Polygon address.*"
 };
 
 output.withdraw = {
@@ -137,9 +170,13 @@ output.withdraw = {
     amount25: "$25",
     amount50: "$50",
     amount100: "$100",
+    // The fiat amount the $25 preset fills in (with the amount in USD).
+    amount25Value: "25",
     allBtn: "All",
     // Switches the amount to NIM and blurs the input; the empty input then reads " 0 ".
     enterInNimBtn: "Enter amount in NIM",
+    // Shown instead of enterInNimBtn while the amount is in NIM; the unit is kept across opens.
+    enterInUsdBtn: "Enter amount in USD",
     emptyAmount: " 0 ",
     // Address picker sheet ("Choose an address"); the list is empty after clearState.
     addAnotherAddressBtn: "Add another address",
@@ -148,6 +185,20 @@ output.withdraw = {
     // exposes only the ids; iOS only their aria-labels, "Address segment 0".."8".
     addressSegmentLabel: "Address segment ",
     saveAddressBtn: "Save",
+    // The wallet's own address (NimAddressInput.vue validAddress).
+    ownAddressError: "You can not use this address",
+    insufficientFunds: "Insufficient funds",
+    chooseAddressTitle: "Choose an address",
+    noSavedAddresses: "No saved addresses",
+    // Address list row actions. The alias inputs (new address and Edit alias) expose no text,
+    // label or hint on Android, so flows reach them by position (leftOf saveAliasBtn).
+    editAliasBtn: "Edit alias",
+    saveAliasBtn: "Save alias",
+    deleteAddressBtn: "Delete address",
+    // Delete confirmation sheet. Its button "Delete Address" also matches deleteAddressBtn
+    // (Maestro ignores case), so tap it below deleteConfirmHint.
+    deleteConfirmHint: "This .* cannot be undone",
+    deleteConfirmBtn: "Delete Address",
     confirmTitle: "Confirm Withdrawal",
     // The 1 NIM withdraw_nim_testnet sends, as the confirmation and the transaction detail show it.
     // iOS splits it into "1.0" and "NIM".
@@ -162,9 +213,29 @@ output.withdraw = {
 output.transaction = {
     row: "Transaction NIM",
     withdrawalTitle: "Withdrawal",
+    paymentTitle: "Payment",
     confirmed: "Confirmed",
     // e.g. "10/9/26, 3:05 PM"; minute precision.
     date: "[0-9]+/[0-9]+/[0-9]+, .*"
+};
+
+// Pay flow (footer Pay): QR scanner, then manual entry, amount and preview steps.
+output.pay = {
+    // Native builds only: the scanner's way to type a request.
+    enterManuallyBtn: "Enter manually",
+    // The manual entry text box exposes no text, label or hint: tap it below this title.
+    manualTitle: "Enter payment request",
+    // Shown under the text box for text that is no URL at all (useStringParser.ts).
+    invalidUrlError: "Invalid URL",
+    // Live summary of a parsed request: "<merchant, message or Payment Request> - <fiat>".
+    requestSummary: "Payment Request - .*",
+    // Hidden while the text box has focus; on the manual and the amount step.
+    continueBtn: "Continue and Pay",
+    // Only for requests without an amount.
+    amountTitle: "Set an amount",
+    previewTitle: "Payment preview",
+    // The preview's Pay button; home's footer Pay matches too, so tap it below the amount.
+    payBtn: "Pay"
 };
 
 output.backup = {
@@ -183,7 +254,9 @@ output.backup = {
     questionPrefix: "What's the ",
     questionSuffix: "(st|nd|rd|th) word\\?",
     // Shown after a wrong answer; restarts the quiz with new questions.
-    tryAgainBtn: "Try again"
+    tryAgainBtn: "Try again",
+    // Shown next to tryAgainBtn; goes back to the words step.
+    seeWordsBtn: "See words"
 };
 
 // Setup > Login: the recovery words step.
@@ -201,6 +274,12 @@ output.whatsNew = {
     versionHeader: "Version [0-9]+\\.[0-9]+\\.[0-9]+",
     previousVersions: "Previous versions",
     closeBtn: "Close"
+};
+
+// Home card shown while the installed version has an unseen changelog entry (useChangelog.ts).
+// Its title equals the menu item and the modal title, so flows use the subtitle.
+output.whatsNewCard = {
+    subtitle: "Learn what is new in this update"
 };
 
 output.about = {
@@ -231,6 +310,9 @@ output.miniApps = {
     closeBtn: "close modal",
     matchingAppsTitle: "Matching Apps",
     noResultsMessage: "No apps found.",
+    // Shown only when not searching and something was opened before. Its rows delete with a
+    // slow swipe to the left (SwipeToDeleteRow.vue); a default-speed swipe snaps back.
+    recentlyViewedTitle: "Recently Viewed",
     // Type filter renders role="radio" buttons whose label is uppercased by CSS, so anchor
     // the patterns to avoid also matching app rows ("Runs on EVM") or names ("EVM Mini Wallet").
     filterAllBtn: "^ALL$",
@@ -247,5 +329,13 @@ output.miniApps = {
     // ("Cinima Runs on Nimiq Cinima ..."). Cinima asks for fullscreen at load when the host
     // offers it within 2 s (2.21.0+, #12); the browser then hides its title and shows its own
     // "Exit fullscreen" button, so either can appear.
-    cinimaAppTitle: "^(Cinima|Exit fullscreen)$"
+    cinimaAppTitle: "^(Cinima|Exit fullscreen)$",
+    // Native Mini App browser (capacitor-inappbrowser). Android labels its X "Close Button";
+    // iOS shows an xmark bar button, which VoiceOver names "Close".
+    browserCloseBtn: "Close Button|Close",
+    // Anti-scam sheet for deep links to URLs that are neither curated nor recently viewed
+    // (MiniAppWarningModal.vue).
+    warningTitle: "Open this mini app\\?",
+    warningOpenAnywayBtn: "Open anyway",
+    warningDontOpenBtn: "Don't open"
 };
