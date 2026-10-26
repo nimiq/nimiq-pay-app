@@ -735,14 +735,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   }
 
   async function handleExpiredPolygonSwapHtlc(htlc: SwapHtlc, polygonUsdt: ReturnType<typeof import('@/stores/polygon-usdt').usePolygonUsdt>) {
-    // Pre-migration rows have no on-chain HTLC ID; can't broadcast refund. Fall back to
-    // the original cosmetic-only behavior so the UI still moves the tx out of "pending".
-    if (!htlc.htlc_id) {
-      await useConn().run(SQLQuery.DeleteSwapHtlc, [htlc.address])
-      await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'expired', timestamp: undefined })
-      return
-    }
-
     try {
       const result = await polygonUsdt.refundPolygonSwapHtlc(htlc)
       if (result.refunded || !result.preimage)
