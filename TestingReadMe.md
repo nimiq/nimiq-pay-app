@@ -60,21 +60,21 @@ maestro test \
   --output=nimiq-pay-tests/tests_output/maestro_report.html \
   -e APP_ID=com.nimiq.pay.debug \
   -e PIN=1111 \
-  nimiq-pay-tests/flows/francisco_tests/general_settings.yaml
+  nimiq-pay-tests/flows/francisco_tests/settings_threshold_currency.yaml
 
 maestro test \
   --format=HTML-DETAILED \
   --output=nimiq-pay-tests/tests_output/maestro_report.html \
   -e APP_ID=com.nimiq.pay.debug \
   -e PIN=1111 \
-  nimiq-pay-tests/flows/francisco_tests/withdraw_flow.yaml
+  nimiq-pay-tests/flows/francisco_tests/withdraw_nim_validation.yaml
 
 maestro test \
   --format=HTML-DETAILED \
   --output=nimiq-pay-tests/tests_output/maestro_report.html \
   -e APP_ID=com.nimiq.pay.debug \
   -e PIN=1111 \
-  nimiq-pay-tests/flows/francisco_tests/top_up_flow.yaml
+  nimiq-pay-tests/flows/francisco_tests/wallet_import_roundtrip.yaml
 
 
 # Upload Pay App in APK to BrowserStack
