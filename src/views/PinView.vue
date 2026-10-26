@@ -10,9 +10,10 @@ import PinInput from '@/components/PinInput.vue'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
-import { clearSession, hasPendingSession, reconnectAndShow } from '@/composables/useMiniAppSession'
+import { clearSession, getSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { i18n } from '@/i18n/i18n-setup'
 import { promiseWithTimeout } from '@/lib/utils'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 
 const logger = useLogger('PinView')
@@ -51,15 +52,27 @@ async function handleSubmit(pin: string) {
       return
     }
 
-    // If a mini-app webview was hidden before the reload, reconnect and show it
-    if (hasPendingSession()) {
-      logger.log('🔓 handleSubmit: reconnectAndShow start')
+    // A Mini App hidden before the reload is relaunched, not reattached: its page may
+    // have navigated off origin while no host was listening, and the plugin can't
+    // report the current URL. Cookies stay so the user remains logged in.
+    const session = getSession()
+    if (session) {
+      logger.log('🔓 handleSubmit: Mini App relaunch start')
       try {
-        await promiseWithTimeout(reconnectAndShow(), UNLOCK_PHASE_TIMEOUT)
-        logger.log('🔓 handleSubmit: reconnectAndShow done')
+        const { launchMiniApp } = await import('@/lib/mini-app-launcher')
+        const app = useApp()
+        await promiseWithTimeout(launchMiniApp({
+          url: session.url,
+          title: session.title,
+          source: 'resume',
+          language: app.language,
+          userFiat: app.selectedFiat,
+          keepCookies: true,
+        }), UNLOCK_PHASE_TIMEOUT)
+        logger.log('🔓 handleSubmit: Mini App relaunch done')
       }
       catch (err) {
-        logger.error('Failed to reconnect mini-app session:', err)
+        logger.error('Failed to relaunch Mini App session:', err)
         await clearSession()
         try {
           await InAppBrowser.close()
