@@ -136,6 +136,10 @@ interface MiniAppBase {
 
 type Network = 'ethereum' | 'nimiq'
 
+// Matches the birpc timeout of Mini App requests in web3-provider/src/provider.ts.
+// A sheet still open after it would approve a request the Mini App gave up on.
+export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
+
 export type UserConfirmationRequest
   = | (MiniAppBase & { type: 'accounts', network: Network })
     | (MiniAppBase & {
@@ -217,8 +221,9 @@ export interface MiniAppHostConfig {
    * @param request - Confirmation request to show to the user
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
-  requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
-  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
+  /** `deadline` (ms timestamp) closes the dialog as a rejection; defaults to the Mini App request timeout. */
+  requestUserConfirmation?: (request: UserConfirmationRequest, deadline?: number) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }, deadline?: number) => Promise<Asset | undefined>
 }
 
 /**
@@ -1765,6 +1770,8 @@ export class MiniAppHost {
   }
 
   private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    // One Mini App request shows up to three sheets; all close when the request times out.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     const invoice = (params as { invoice?: unknown } | null)?.invoice
     if (typeof invoice !== 'string' || !invoice.trim())
       throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
@@ -1800,7 +1807,7 @@ export class MiniAppHost {
             type: 'lightning-access',
             network: 'nimiq',
             description: decoded.description || undefined,
-          }),
+          }, deadline),
         }
       }
       let allowed: boolean
@@ -1841,7 +1848,7 @@ export class MiniAppHost {
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
 
-      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined }, deadline)
       if (!asset)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
       if (asset !== Asset.NIM && asset !== Asset.USDT)
@@ -1906,7 +1913,7 @@ export class MiniAppHost {
           usdtFeeAllowance,
           fees: payment.swap?.fees || [],
         },
-      })
+      }, deadline)
       if (!confirmed)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
 
