@@ -474,6 +474,23 @@ describe('mini-app-launcher', () => {
     expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
 
+  it('relaunches a preserved session in a fresh webview without clearing its cookies', async () => {
+    sessionStorage.setItem('miniAppSession', JSON.stringify({
+      url: 'https://app.uniswap.org/',
+      title: 'Uniswap',
+      chainId: '0x1',
+      hiddenAt: Date.now(),
+    }))
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://app.uniswap.org/', title: 'Uniswap', source: 'resume', keepCookies: true })
+
+    expect(clearAllCookies).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('miniAppSession')).toBeNull()
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
+    expect(trackDAppOpened).toHaveBeenCalledWith('https://app.uniswap.org/', 'Uniswap', 'resume')
+  })
+
   it('fails the launch on pageLoadError and skips success bookkeeping', async () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
     const deferred = createDeferred<void>()

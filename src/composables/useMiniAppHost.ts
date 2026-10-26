@@ -60,8 +60,6 @@ export interface MiniAppSessionState {
   title: string
   chainId: string
   evmRpcUrls?: Record<string, string>
-  /** Persisted so a reconnect after app reload keeps a closed gate closed. */
-  bridgeGate?: BridgeGate
 }
 
 /**
@@ -70,7 +68,7 @@ export interface MiniAppSessionState {
  * `open` is what the bridge honors; `urlOk` is whether the latest reported URL is
  * on the Mini App origin.
  */
-export interface BridgeGate {
+interface BridgeGate {
   mainId?: string
   urlOk: boolean
   open: boolean
@@ -291,7 +289,6 @@ export class MiniAppHost {
       title: config.title,
       chainId: this.currentChainId,
       evmRpcUrls: this.evmRpcUrls,
-      bridgeGate: this.bridgeGate,
     }
     this.sessionState = _activeMiniAppSession
     isMiniAppActive.value = true
@@ -308,26 +305,6 @@ export class MiniAppHost {
         this.birpc?.clearAccountCache('nimiq')
       },
     )
-  }
-
-  /**
-   * Factory method to reconnect to an existing hidden webview after app reload.
-   * Re-registers listeners without opening a new webview.
-   */
-  static reconnect(
-    inAppBrowser: typeof InAppBrowser,
-    config: MiniAppHostConfig,
-    restoredChainId: string,
-    restoredBridgeGate?: BridgeGate,
-  ): MiniAppHost {
-    const host = new MiniAppHost(inAppBrowser, config)
-    host.currentChainId = restoredChainId
-    // The hidden webview may sit on a foreign page and no navigation event will say
-    // so; without saved state, it stays closed until it loads a page on origin again.
-    host.bridgeGate = restoredBridgeGate ?? { urlOk: false, open: false }
-    host.sessionState.chainId = restoredChainId
-    host.sessionState.bridgeGate = host.bridgeGate
-    return host
   }
 
   public async destroy(): Promise<void> {

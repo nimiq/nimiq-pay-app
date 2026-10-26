@@ -26,7 +26,7 @@ export function reportCriticalError(error: unknown, context?: Record<string, unk
   reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition' | 'resume'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 

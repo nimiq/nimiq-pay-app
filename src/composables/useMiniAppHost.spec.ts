@@ -342,37 +342,6 @@ describe('bridge origin', () => {
     post('response')
     expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
   })
-
-  it('keeps a closed gate closed across reconnect until the webview loads the Mini App again', async () => {
-    const browser = createBrowser()
-    MiniAppHost.reconnect(browser as never, {
-      requestUserConfirmation,
-      title: 'Example',
-      url: 'https://app.example',
-    }, '0x1', { mainId: 'm', urlOk: false, open: false })
-    const { emit, receive } = await bridgeTransport({ browser })
-
-    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
-    expect(receive).not.toHaveBeenCalled()
-
-    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
-    emit('browserPageLoaded', { id: 'm' })
-    emit('messageFromWebview', { id: 'm', detail: 'from-app' })
-    expect(receive).toHaveBeenCalledExactlyOnceWith('from-app')
-  })
-
-  it('starts closed on reconnect without a saved gate', async () => {
-    const browser = createBrowser()
-    MiniAppHost.reconnect(browser as never, {
-      requestUserConfirmation,
-      title: 'Example',
-      url: 'https://app.example',
-    }, '0x1')
-    const { emit, receive } = await bridgeTransport({ browser })
-
-    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
-    expect(receive).not.toHaveBeenCalled()
-  })
 })
 
 describe('chain approval', () => {
@@ -453,15 +422,17 @@ function jsonRpcResponse(body: unknown) {
   } satisfies Partial<Response>
 }
 
-function createReconnectHost(chainId = '0x89') {
-  return MiniAppHost.reconnect(createBrowser() as never, {
+function createHostOnChain(chainId = '0x89') {
+  const host = new MiniAppHost(createBrowser() as never, {
     url: 'https://app.uniswap.org',
     title: 'Uniswap',
     evmRpcUrls: {
       [chainId]: 'https://polygon-rpc.test',
     },
     requestUserConfirmation,
-  }, chainId)
+  });
+  (host as any).currentChainId = chainId
+  return host
 }
 
 beforeEach(() => {
@@ -1192,7 +1163,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     const txHash = await (host as any).signEthTransaction({
       to: '0x2222222222222222222222222222222222222222',
@@ -1231,7 +1202,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await (host as any).signEthTransaction({
       to: polygonUsdtConfig.tokenContract,
@@ -1273,7 +1244,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await expect((host as any).signEthTransaction({
       to: polygonUsdtConfig.tokenContract,
@@ -1309,7 +1280,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await (host as any).signEthTransaction({
       to: '0x9999999999999999999999999999999999999999',

@@ -7,7 +7,7 @@ import { until } from '@vueuse/core'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { isMiniAppActive, MiniAppHost } from '@/composables/useMiniAppHost'
-import { clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
+import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
@@ -99,6 +99,8 @@ export interface LaunchMiniAppOptions {
   language?: string
   /** Fiat currency seeded into `window.__NIMIQ_PAY__`. Defaults to `Fiat.USD`. */
   userFiat?: Fiat
+  /** Relaunching the Mini App hidden before a resume reload: keep its login. */
+  keepCookies?: boolean
 }
 
 /**
@@ -173,13 +175,14 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
 
   try {
     // Never stack webviews: a Mini App can be live in this session (isMiniAppActive)
-    // or surviving hidden from before a resume-reload (pending session marker, which
-    // PinView's reconnectAndShow would otherwise race with). Close it and wait for
-    // its closeEvent-driven teardown, so the old host's destroy() cannot clobber the
-    // session state the new MiniAppHost is about to register.
+    // or surviving hidden from before a resume-reload (pending session marker). Close
+    // it and wait for its closeEvent-driven teardown, so the old host's destroy()
+    // cannot clobber the session state the new MiniAppHost is about to register.
     const pendingSession = hasPendingSession()
     if (isMiniAppActive.value || pendingSession) {
-      if (pendingSession)
+      if (pendingSession && options.keepCookies)
+        clearPersistedSession()
+      else if (pendingSession)
         await clearSession()
       await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
       await until(isMiniAppActive).toBe(false, { timeout: 3000 })
@@ -195,7 +198,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
 
     const [baseScript] = await Promise.all([
       getWeb3ProviderScript(),
-      InAppBrowser.clearAllCookies(),
+      options.keepCookies ? undefined : InAppBrowser.clearAllCookies(),
     ])
     const hostContext = JSON.stringify({
       lang: options.language ?? 'en',
