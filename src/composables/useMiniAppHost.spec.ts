@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { getActiveMiniAppSession, MiniAppHost } from './useMiniAppHost'
+import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -597,9 +597,26 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ description: 'Coffee', btcAmount: 0.0001, asset: 'NIM', amount: 1_000_000 }),
-    }))
+    }), expect.any(Number))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO mini_app_lightning_payments'), expect.arrayContaining(['invoice-hash', 'https://app.example', 'NQ11 LOCAL', 'swap-id']))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['nim-hash', 'submitted', expect.any(String), 'invoice-hash'])
+  })
+
+  it('closes all sheets of one payment at the request deadline', async () => {
+    sendTx.mockImplementation(async (_payment, _context, onSubmitted) => {
+      await onSubmitted('nim-hash')
+      return new Promise(() => {})
+    })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+    const start = Date.now()
+    await handleRequest(request)
+
+    const deadline = confirmationPrompt.mock.calls[0][1]
+    expect(deadline).toBeGreaterThanOrEqual(start + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(deadline).toBeLessThanOrEqual(Date.now() + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(confirmationPrompt.mock.calls.map(([prompt, promptDeadline]) => [prompt.type, promptDeadline]))
+      .toEqual([['lightning-access', deadline], ['lightning-payment', deadline]])
+    expect(selectLightningAsset).toHaveBeenCalledWith(expect.anything(), deadline)
   })
 
   it('lets the user choose USDT and returns when Polygon funding is submitted', async () => {
@@ -617,7 +634,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ asset: 'USDT', amount: 1_000_000, usdtFeeAllowance: 50_000 }),
-    }))
+    }), expect.any(Number))
     expect(sendSwapPayment).toHaveBeenCalledWith(expect.anything(), 'Payment', expect.objectContaining({ expectedSender: ethAddress, maxFee: 50_000 }))
     expect(sendTx).not.toHaveBeenCalled()
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['usdt-hash', 'submitted', expect.any(String), 'invoice-hash'])
@@ -720,7 +737,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     const response = await handleRequest(request).catch(error => error)
     expect(response).toMatchObject({ type: 'DUPLICATE_PAYMENT' })
     expect(response).not.toHaveProperty('data')
-    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }))
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number))
     expect(sendTx).not.toHaveBeenCalled()
   })
 
@@ -753,7 +770,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     confirmationPrompt.mockImplementationOnce(() => new Promise(resolve => approveOldWallet = resolve))
 
     const oldWalletRequest = handleRequest(request)
-    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' })))
+    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number)))
     useLocalWallet().localAddress = { toUserFriendlyAddress: () => 'NQ22 NEW OWNER', toHex: () => 'new-hex' }
     const newWalletRequest = handleRequest(request)
     await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
