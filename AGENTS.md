@@ -17,6 +17,10 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
+### CodeQL
+
+- Swift scanning needs Node dependencies installed before CocoaPods because the Podfile loads Capacitor from `node_modules`. The advanced CodeQL workflow installs dependencies and copies web assets before tracing an unsigned simulator build. GitHub default setup must be switched to advanced setup when enabling this workflow; default setup rejects its result uploads.
+
 ### Mini Apps provider submodule
 
 - `web3-provider/package.json` links to `vendor/trust-web3-provider`, a submodule of `nimiq/trust-web3-provider` (branch `nimiq`). Local builds and CI use the same pinned commit. Clone with `--recurse-submodules`, or run `git submodule update --init --recursive`.
