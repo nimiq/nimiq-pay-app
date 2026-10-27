@@ -85,7 +85,9 @@ tags:
 - extendedWaitUntil:
     visible: ${output.nimDecimalsAlert.twoOption}
     timeout: 5000
-- tapOn: ${output.nimDecimalsAlert.twoOption}
+- tapOn:
+    text: ${output.nimDecimalsAlert.twoOption}
+    below: ${output.nimDecimalsAlert.noneOption}
 - tapOn: ${output.nimDecimalsAlert.okBtn}
 - extendedWaitUntil:
     visible: ${output.settings.nimDecimalsTwoSelected}

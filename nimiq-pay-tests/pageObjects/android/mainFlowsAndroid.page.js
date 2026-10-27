@@ -18,7 +18,9 @@ output.onboarding = {
 // a device; typing goes nowhere until it is dismissed.
 output.iosKeyboard = {
     quickPathIntro: "Speed up your typing.*",
-    continueBtn: "Continue"
+    continueBtn: "Continue",
+    // The edit menu a second tap on a focused text field opens (Paste, Select, Select All, AutoFill).
+    selectAllBtn: "Select All"
 };
 
 output.home = {
@@ -105,6 +107,9 @@ output.autoDepositSheet = {
 
 // Ionic select alert opened from Settings > Minimum NIM Decimals (options None, 2, 5).
 output.nimDecimalsAlert = {
+    noneOption: "None",
+    // On iOS the alert title's node also reads "2" (its heading level) and comes first in the
+    // hierarchy, so tap this option `below: noneOption`.
     twoOption: "2",
     fiveOption: "5",
     okBtn: "OK"
@@ -225,8 +230,9 @@ output.pay = {
     enterManuallyBtn: "Enter manually",
     // The manual entry text box exposes no text, label or hint: tap it below this title.
     manualTitle: "Enter payment request",
-    // Shown under the text box for text that is no URL at all (useStringParser.ts).
-    invalidUrlError: "Invalid URL",
+    // Shown under the text box for text that is no URL at all (useStringParser.ts). Builds before
+    // ota-v2.22.1 append the typed text ("Invalid URL: <text>"), and the iOS job tests a release.
+    invalidUrlError: "Invalid URL.*",
     // Live summary of a parsed request: "<merchant, message or Payment Request> - <fiat>".
     requestSummary: "Payment Request - .*",
     // Hidden while the text box has focus; on the manual and the amount step.

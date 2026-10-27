@@ -40,11 +40,25 @@ env:
     timeout: 10000
 - waitForAnimationToEnd
 
-# The text box has no selector: tap below the title. `rightOf` skips the scanner step, which
-# iOS keeps in the hierarchy at the left edge.
-- tapOn:
-    below: ${output.pay.manualTitle}
-    rightOf: ${output.navigation.backBtn}
+# The text box has no selector: tap below the title. On Android, Samsung's Edge panels handle at
+# the right edge and the system nav bar (whose Back also matches backBtn) are below it too: `leftOf`
+# the close button drops the handle and `index` takes the topmost match, the text box. On iOS,
+# `rightOf` skips the scanner step, which iOS keeps in the hierarchy at the left edge.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          below: ${output.pay.manualTitle}
+          leftOf: ${output.navigation.closeFlowModalBtn}
+          index: 0
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          below: ${output.pay.manualTitle}
+          rightOf: ${output.navigation.backBtn}
 - inputText: ${NOT_A_REQUEST}
 - extendedWaitUntil:
     visible: ${output.pay.invalidUrlError}

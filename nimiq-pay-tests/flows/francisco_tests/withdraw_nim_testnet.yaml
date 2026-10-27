@@ -23,6 +23,14 @@ tags:
 - extendedWaitUntil:
     visible: ${output.withdraw.enterInNimBtn}
     timeout: 10000
+# Withdraw focuses the amount input, and the keyboard can then cover the presets (the Galaxy S26's;
+# the iPhone 17 Pro's once it shows a suggestion bar), so a tap on $25 lands on the keyboard.
+# Tapping the title blurs the input and closes the keyboard. `above` skips the home Withdraw button
+# and the WITHDRAW button.
+- tapOn:
+    text: ${output.withdraw.title}
+    above: ${output.withdraw.enterInNimBtn}
+- waitForAnimationToEnd
 - tapOn: ${output.withdraw.amount25}
 - extendedWaitUntil:
     visible:

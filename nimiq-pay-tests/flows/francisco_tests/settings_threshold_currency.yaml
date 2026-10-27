@@ -29,14 +29,32 @@ env:
     timeout: 5000
 - assertVisible: ${output.settings.pushNotifications}
 
-# Save a new threshold.
+# Save a new threshold. A tap on the value can leave the cursor before it (the Galaxy S26 and the
+# iPhone saved "205"), and eraseText only deletes to its left, so select the value first: a double
+# tap on Android; on iOS a second tap opens the edit menu (Maestro's double tap selects nothing).
 - tapOn: ${output.settings.autoDepositThresholdPrefix + DEFAULT_THRESHOLD + ' NIM'}
 - extendedWaitUntil:
     visible: ${output.autoDepositSheet.description}
     timeout: 5000
-- tapOn:
-    text: ${DEFAULT_THRESHOLD}
-    below: ${output.autoDepositSheet.description}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - doubleTapOn:
+          text: ${DEFAULT_THRESHOLD}
+          below: ${output.autoDepositSheet.description}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: ${DEFAULT_THRESHOLD}
+          below: ${output.autoDepositSheet.description}
+      - waitForAnimationToEnd
+      - tapOn:
+          text: ${DEFAULT_THRESHOLD}
+          below: ${output.autoDepositSheet.description}
+      - tapOn: ${output.iosKeyboard.selectAllBtn}
 - eraseText: 3
 - inputText: ${SAVED_THRESHOLD}
 - tapOn: ${output.autoDepositSheet.saveBtn}
@@ -44,7 +62,7 @@ env:
     visible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
     timeout: 5000
 
-# An edit closed without Save is dropped.
+# An edit closed without Save is dropped. Wherever the cursor lands, the typed value isn't 20.
 - tapOn: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
 - extendedWaitUntil:
     visible: ${output.autoDepositSheet.description}
