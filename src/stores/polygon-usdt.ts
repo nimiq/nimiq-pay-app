@@ -24,6 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
+import { waitForSwapPreimage } from '@/lib/swap-preimage'
 import { startSwapRefund, startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
 import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
@@ -2648,7 +2649,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       }
 
       // Signal funding to Fastspot
-      const { provideFundingProof, getSwap } = await import('@/composables/useFastspotV2').then(m => m.useFastspotApiV2())
+      const { provideFundingProof } = await import('@/composables/useFastspotV2').then(m => m.useFastspotApiV2())
       const fundingProofStartedAt = Date.now()
       const patchedSwap = provideFundingProof(
         request.paymentRef!,
@@ -2669,35 +2670,14 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       const settlement = startSwapSettlement(swapContext, fundingProofStartedAt)
       step = settlement
-      // Poll for preimage until the HTLC expires
-      const maxPollMs = Math.max((usdtContract.timeout * 1000) - Date.now(), 60_000)
-      const patchedSwapResult = await patchedSwap.catch(() => undefined)
-      const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
-        let pollId: number
-        const deadlineId = window.setTimeout(() => {
-          window.clearTimeout(pollId)
-          reject(new Error(i18n.t('Swap timed out waiting for Lightning payment confirmation')))
-        }, maxPollMs)
-        async function checkSecret() {
-          try {
-            const swapResult = await getSwap(request.paymentRef!)
-            settlement.poll(swapResult.status)
-            if ('preimage' in swapResult && swapResult.preimage) {
-              window.clearTimeout(deadlineId)
-              resolve(swapResult.preimage)
-            }
-            else {
-              pollId = window.setTimeout(checkSecret, 1e3)
-            }
-          }
-          catch {
-            // Retry on transient errors; deadline timer will eventually reject
-            pollId = window.setTimeout(checkSecret, 1e3)
-          }
-        }
-        checkSecret()
-      })
-      settlement.end(patchedSwapResult?.preimage ? 'funding_proof' : 'poll')
+      const { preimage: secret, source } = await waitForSwapPreimage(
+        request.paymentRef!,
+        patchedSwap,
+        usdtContract.timeout * 1000,
+        () => useLocalWallet().getEthWallet().data?.address === wallet.address,
+        status => settlement.poll(status),
+      )
+      settlement.end(source)
 
       // Update transaction with secret
       const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))

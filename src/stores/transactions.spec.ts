@@ -2105,6 +2105,8 @@ describe('useTransactions', () => {
     it('keeps cosigner acceptance authoritative when atomic-swap bookkeeping fails', async () => {
       const { useTransactions } = await import('./transactions')
       const { signedTx } = createSignedTransaction('accepted-swap')
+      // getSwap keeps failing, so settlement retries until the HTLC deadline ends it.
+      vi.useFakeTimers()
       mockRemoteSigning(signedTx, {
         outcome: 'signed',
         signedTx,
@@ -2121,10 +2123,18 @@ describe('useTransactions', () => {
         },
       } as any)
 
-      const result = await useTransactions().sendTx({
-        transfer: Transfer.UserPaymentToAtomicSwap,
-        paymentRef: 'payment-ref',
-      } as any)
+      let result
+      try {
+        const send = useTransactions().sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'payment-ref',
+        } as any)
+        await vi.advanceTimersByTimeAsync(60_000)
+        result = await send
+      }
+      finally {
+        vi.useRealTimers()
+      }
 
       expect(result).toMatchObject({ outcome: 'submitted' })
       expect(state.pendingTransactions.map(tx => tx.transactionHash)).toContain('accepted-swap')
@@ -2133,7 +2143,7 @@ describe('useTransactions', () => {
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
       expect(state.trackSwapFailed).not.toHaveBeenCalled()
       expect(state.client.sendTransaction).not.toHaveBeenCalled()
-      expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: false, error_reason: 'bookkeeping failed' }))
+      expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: false, error_reason: 'Swap timed out waiting for Lightning payment confirmation' }))
       expect(state.trackSwapCompleted).not.toHaveBeenCalled()
     })
 
@@ -2165,6 +2175,35 @@ describe('useTransactions', () => {
 
       settleSwap({ preimage: 'secret' })
       await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+    })
+
+    it('releases the send lock while the caller waits for Lightning settlement', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('awaiting-lightning')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+
+      let settled = false
+      const send = useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+      } as any).finally(() => settled = true)
+      await vi.waitFor(() => expect(state.isSendingTx).toBe(false))
+      expect(settled).toBe(false)
+
+      settleSwap({ preimage: 'secret' })
+      await expect(send).resolves.toMatchObject({ outcome: 'submitted' })
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array))
     })
 
     it.each(['funding_proof', 'poll'])('keeps settlement successful after a %s preimage when persistence fails', async (source) => {
