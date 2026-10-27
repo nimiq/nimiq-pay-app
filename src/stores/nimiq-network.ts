@@ -8,7 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
 import { reportCriticalError, trackConsensusEstablished } from '@/lib/analytics'
-import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
+import { promiseWithTimeout, sleep, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('useNimiqNetwork')
@@ -84,13 +84,20 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     logger.log('Creating Nimiq client with config', clientConfig)
     const consensusStartedAt = Date.now()
     let consensusTracked = false
-    try {
-      client.value = await promiseWithTimeout(Nimiq.Client.create(clientConfig), 30 * 1e3)
-      logger.log('Nimiq client created')
-    }
-    catch (error) {
-      logger.error('Error creating Nimiq client', error)
-      return await init()
+    for (let attempt = 0; !client.value; attempt++) {
+      const creation = Nimiq.Client.create(clientConfig)
+      try {
+        client.value = await promiseWithTimeout(creation, 30 * 1e3)
+        logger.log('Nimiq client created')
+      }
+      catch (error) {
+        logger.error('Error creating Nimiq client', error, { attempt })
+        // Client.create cannot be cancelled, so dispose a client that appears after our timeout.
+        // A rejected creation has nothing to dispose.
+        void creation.then(lateClient => disconnectClient(lateClient, 'Failed to disconnect late Nimiq client'), () => {})
+        // Capped backoff instead of giving up: the app has no other way to get a client before restart.
+        await sleep(Math.min(2 ** attempt * 1e3, 60 * 1e3))
+      }
     }
     head.value = await client.value.getHeadBlock()
     networkId.value = await useNimiqNetwork().client!.getNetworkId()
@@ -181,9 +188,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return reconnectPromise
   }
 
-  async function disconnectHistoryClient(historyClient: Client, errorMessage: string) {
+  async function disconnectClient(nimiqClient: Client, errorMessage: string) {
     try {
-      await promiseWithTimeout(historyClient.disconnectNetwork(), 5 * 1e3)
+      await promiseWithTimeout(nimiqClient.disconnectNetwork(), 5 * 1e3)
     }
     catch (error) {
       logger.error(errorMessage, error)
@@ -199,7 +206,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
     catch (error) {
       // Client.create cannot be cancelled, so dispose a client that appears after our timeout.
-      void creation.then(client => disconnectHistoryClient(client, 'Failed to disconnect late history client'))
+      void creation.then(client => disconnectClient(client, 'Failed to disconnect late history client'))
         .catch(disconnectError => logger.error('Failed to disconnect late history client', disconnectError))
       throw error
     }
@@ -208,7 +215,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       return historyClient
     }
     catch (error) {
-      await disconnectHistoryClient(historyClient, 'Failed to disconnect unusable history client')
+      await disconnectClient(historyClient, 'Failed to disconnect unusable history client')
       throw error
     }
   }
