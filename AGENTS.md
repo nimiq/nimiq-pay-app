@@ -19,8 +19,8 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ### CodeQL
 
-- Swift scanning needs Node dependencies installed before CocoaPods because the Podfile loads Capacitor from `node_modules`. The advanced CodeQL workflow installs dependencies and copies web assets before tracing an unsigned simulator build. GitHub default setup must be switched to advanced setup when enabling this workflow; default setup rejects its result uploads.
-- Use the workflow's Ruby version for CocoaPods: macOS system Ruby's JSON formatter expands empty arrays, changing local podspec checksums and failing `pod install --deployment` even when dependency versions match.
+- CodeQL scans GitHub Actions, JavaScript/TypeScript, and Ruby. Swift and Java/Kotlin scanning are intentionally disabled to save CI minutes.
+- Keep GitHub default setup disabled when using the advanced CodeQL workflow; default setup rejects its result uploads.
 
 ### Mini Apps provider submodule
 

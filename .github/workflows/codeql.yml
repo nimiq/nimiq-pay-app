@@ -15,7 +15,7 @@ permissions:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
@@ -23,22 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: actions
-            os: ubuntu-latest
-            build-mode: none
-          - language: javascript-typescript
-            os: ubuntu-latest
-            build-mode: none
-          - language: java-kotlin
-            os: ubuntu-latest
-            build-mode: none
-          - language: ruby
-            os: ubuntu-latest
-            build-mode: none
-          - language: swift
-            os: macos-15
-            build-mode: manual
+        language: [actions, javascript-typescript, ruby]
 
     steps:
       - uses: actions/checkout@v7
@@ -46,57 +31,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      # Capacitor 8 needs Xcode 26; CodeQL cannot trace Xcode 27 builds yet.
-      - name: Select Xcode
-        if: matrix.language == 'swift'
-        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
-
-      - uses: pnpm/action-setup@v6
-        if: matrix.language == 'swift'
-
-      - uses: actions/setup-node@v7
-        if: matrix.language == 'swift'
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      # System Ruby's old JSON formatter changes local podspec checksums.
-      - uses: ruby/setup-ruby@v1
-        if: matrix.language == 'swift'
-        with:
-          ruby-version: '4.0'
-
-      - name: Install locked CocoaPods version
-        if: matrix.language == 'swift'
-        run: gem install cocoapods -v 1.15.2 --no-document
-
-      # The Podfile resolves Capacitor and plugin pods from node_modules.
-      - name: Install Swift build dependencies
-        if: matrix.language == 'swift'
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm exec vite build
-          pnpm exec cap copy ios
-          pod _1.15.2_ install --project-directory=ios/App --deployment
-
       - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
-
-      - name: Build iOS for analysis
-        if: matrix.language == 'swift'
-        run: |
-          xcodebuild \
-            -workspace ios/App/App.xcworkspace \
-            -scheme App \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/codeql-build" \
-            ARCHS=arm64 \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+          build-mode: none
 
       - uses: github/codeql-action/analyze@v4
         with:
