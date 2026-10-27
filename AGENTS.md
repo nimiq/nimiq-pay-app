@@ -47,6 +47,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Vue & components
 
 - Ionic mounts modal contents before presenting the overlay. In `onMounted`, find the owning `ion-modal` from the component's DOM; `modalController.getTop()` excludes that still-hidden overlay and can return an underlying modal.
+- Ionic 8.8 sets `--ion-safe-area-top: 0px` on sheet modals and puts the root value in `--ion-modal-offset-top`. A `--height` set on an `ion-modal` must not rely on `var(--ion-safe-area-top)`, or the sheet grows under the status bar and its header can't be tapped (APP-328).
 - Sibling blocks of the same currency: wrap in one `<template v-if="asset === Asset.USDT">` / `<template v-if="asset === Asset.NIM">` instead of repeating the condition per block.
 - Reuse existing components before creating new ones.
 - `Flow.vue` keeps visited steps mounted in `historyStack`. When wiring step handlers (`done`, `select`, `skip`, `back`, `navigateTo`), always validate the emitting step is still the active step before changing flow state.
