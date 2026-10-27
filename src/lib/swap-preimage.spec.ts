@@ -29,11 +29,13 @@ describe('waitForSwapPreimage', () => {
       .mockResolvedValueOnce({ status: 'PENDING' })
       .mockResolvedValueOnce({ status: 'SUCCESS', preimage: 'secret' })
 
-    const secret = waitForSwapPreimage('swap-id', pending, Date.now() + 600_000)
+    const onPoll = vi.fn()
+    const secret = waitForSwapPreimage('swap-id', pending, Date.now() + 600_000, undefined, onPoll)
     await vi.advanceTimersByTimeAsync(2_000)
 
-    await expect(secret).resolves.toBe('secret')
+    await expect(secret).resolves.toEqual({ preimage: 'secret', source: 'poll' })
     expect(state.getSwap).toHaveBeenCalledTimes(3)
+    expect(onPoll.mock.calls).toEqual([['PENDING'], ['SUCCESS']])
   })
 
   it('rejects at the HTLC timeout when the swap stays pending', async () => {
@@ -63,7 +65,7 @@ describe('waitForSwapPreimage', () => {
     state.getSwap.mockReturnValue(new Promise(() => {}))
     await expect(waitForSwapPreimage('swap-id', Promise.resolve({ preimage: 'secret' } as any), Date.now() + 600_000))
       .resolves
-      .toBe('secret')
+      .toEqual({ preimage: 'secret', source: 'funding_proof' })
   })
 
   it('keeps polling while the funding proof never settles', async () => {
@@ -71,7 +73,7 @@ describe('waitForSwapPreimage', () => {
 
     await expect(waitForSwapPreimage('swap-id', new Promise(() => {}), Date.now() + 600_000))
       .resolves
-      .toBe('secret')
+      .toEqual({ preimage: 'secret', source: 'poll' })
   })
 
   it('retries a request that never settles', async () => {
@@ -82,7 +84,7 @@ describe('waitForSwapPreimage', () => {
     const secret = waitForSwapPreimage('swap-id', pending, Date.now() + 600_000)
     await vi.advanceTimersByTimeAsync(31_000)
 
-    await expect(secret).resolves.toBe('secret')
+    await expect(secret).resolves.toMatchObject({ preimage: 'secret' })
   })
 
   it('falls back to the minimum deadline for an invalid timeout', async () => {

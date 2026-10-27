@@ -106,8 +106,8 @@ importers:
         specifier: 5.7.1
         version: 5.7.1
       capacitor-extended-dialog:
-        specifier: ^0.0.16
-        version: 0.0.16(@capacitor/core@8.5.2)
+        specifier: ^0.0.17
+        version: 0.0.17(@capacitor/core@8.5.2)
       capacitor-lockdown-mode:
         specifier: 0.0.1
         version: 0.0.1(@capacitor/core@8.5.2)
@@ -2859,8 +2859,8 @@ packages:
   caniuse-lite@1.0.30001814:
     resolution: {integrity: sha512-/Uaf1lAzr59XcMpW0o96WoEfr+VXK2OX4U9AgFoiSHsVJ4HppnIFUjtYzsyDH2+tgANaQb2/oxYGwCPapN1FpA==}
 
-  capacitor-extended-dialog@0.0.16:
-    resolution: {integrity: sha512-LtaRSFagXXJS6ytXb/tVS0rSgmg/bGDBDqKuob3Sh8m5LETYJZxn2VEwIInprvHtY6VmX5pBboIwubYUVWxmZA==}
+  capacitor-extended-dialog@0.0.17:
+    resolution: {integrity: sha512-de8JUC/oxSHGMfo1L0In5PNjxdsRhrtFo7Tjh5ut1+vs9L5omldZnghl3sU9FLN1nuByFJU0Sr/cL3BmS4LC3Q==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -9933,7 +9933,7 @@ snapshots:
 
   caniuse-lite@1.0.30001814: {}
 
-  capacitor-extended-dialog@0.0.16(@capacitor/core@8.5.2):
+  capacitor-extended-dialog@0.0.17(@capacitor/core@8.5.2):
     dependencies:
       '@capacitor/core': 8.5.2
 

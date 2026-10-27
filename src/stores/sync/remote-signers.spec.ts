@@ -1056,6 +1056,81 @@ describe('useSyncRemoteSigners', () => {
       expect(persistedHtlcHistoryCheck()).toBe(false)
     })
 
+    describe('cosigner-listed HTLCs', () => {
+      function scanResult(creations: string[] = [], historyComplete = true) {
+        state.scanLocalHtlcCreations.mockResolvedValue({ context: state.getWalletContext(), creations: creations.map(recipient => ({ recipient })), historyComplete, sawHtlcTransaction: false, errors: [] })
+      }
+
+      it('drains a funded HTLC the cosigner lists while local history stalls', async () => {
+        scanResult([], false)
+        state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+        mockAccounts({ [strayAddress]: htlcAccount(6_370_006_413) })
+        mockRecoverableStray(6_370_006_413)
+        const { useSyncRemoteSigners } = await import('./remote-signers')
+
+        await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+        expect(state.registerValidatedRemoteSigner).toHaveBeenCalledExactlyOnceWith({ address: strayAddress })
+        expect(state.sendTx).toHaveBeenCalledOnce()
+      })
+
+      it('ignores a listed HTLC that the chain does not show as ours', async () => {
+        scanResult()
+        state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+        mockAccounts({ [strayAddress]: htlcAccount(860_000, { sender: 'NQ00 SOMEONE ELSE' }) })
+        const { useSyncRemoteSigners } = await import('./remote-signers')
+
+        await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+        expect(state.registerValidatedRemoteSigner).not.toHaveBeenCalled()
+        expect(state.sendTx).not.toHaveBeenCalled()
+      })
+
+      it('drains a listed HTLC before walking the history of known HTLCs', async () => {
+        scanResult([activeAddress])
+        state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+        mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+        mockRecoverableStray(860_000)
+        const { useSyncRemoteSigners } = await import('./remote-signers')
+
+        await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+        expect(state.sendTx).toHaveBeenCalledOnce()
+        expect(state.getAllTransactionsForAddress.mock.calls.map(([address]) => (address as any).toUserFriendlyAddress())).not.toContain(activeAddress)
+      })
+
+      it('does not walk the history of listed HTLCs', async () => {
+        scanResult()
+        state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+        const { useSyncRemoteSigners } = await import('./remote-signers')
+
+        await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+        expect(state.client.getAccounts).toHaveBeenCalled()
+        expect(state.getAllTransactionsForAddress.mock.calls.map(([address]) => (address as any).toUserFriendlyAddress())).not.toContain(strayAddress)
+      })
+
+      it('follows extensions through a listed HTLC', async () => {
+        // A listing may predate the middle HTLC's newer, funded extension.
+        const middle = 'NQ97 TEST LISTED MIDDLE'
+        state.remoteAddress = undefined
+        scanResult([activeAddress])
+        state.listCosignerHtlcs.mockResolvedValue([activeAddress, middle])
+        state.getAllTransactionsForAddress.mockImplementation((address: any) => {
+          const from = address.toUserFriendlyAddress()
+          const to = from === activeAddress ? middle : from === middle ? strayAddress : undefined
+          return Promise.resolve({ transactions: to ? [{ sender: from, recipient: to, recipientType: 'htlc' }] : [], complete: true })
+        })
+        mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+        mockRecoverableStray(860_000)
+        const { useSyncRemoteSigners } = await import('./remote-signers')
+
+        await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+        expect(state.registerValidatedRemoteSigner).toHaveBeenCalledExactlyOnceWith({ address: strayAddress })
+      })
+    })
+
     function mockExtension(parent: string, child: string, complete = true) {
       state.getAllTransactionsForAddress.mockImplementation((address: any) => Promise.resolve({
         transactions: address.toUserFriendlyAddress() === parent ? [{ sender: parent, recipient: child, recipientType: 'htlc' }] : [],

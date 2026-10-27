@@ -18,7 +18,8 @@ export function waitForSwapPreimage(
   fundingProof: Promise<Swap>,
   timeoutAt: number,
   isCurrent = () => true,
-): Promise<string> {
+  onPoll?: (status: string) => void,
+): Promise<{ preimage: string, source: 'funding_proof' | 'poll' }> {
   return new Promise((resolve, reject) => {
     const timedOut = () => new Error(i18n.t('Swap timed out waiting for Lightning payment confirmation'))
     let done = false
@@ -31,14 +32,16 @@ export function waitForSwapPreimage(
       if (error)
         reject(error)
     }
-    const handleSwap = (swap: Swap | Quote) => {
+    const handleSwap = (swap: Swap | Quote, source: 'funding_proof' | 'poll') => {
       if (done)
         return
+      if (source === 'poll')
+        onPoll?.(swap.status)
       if (!isCurrent())
         return stop(new Error(i18n.t('Wallet or network changed before sending')))
       if ('preimage' in swap && swap.preimage) {
         stop()
-        return resolve(swap.preimage)
+        return resolve({ preimage: swap.preimage, source })
       }
       if (swap.status === 'EXPIRED')
         stop(timedOut())
@@ -50,14 +53,14 @@ export function waitForSwapPreimage(
     )
 
     // The funding proof response rarely has the preimage yet, so polling does not wait for it.
-    void fundingProof.then(handleSwap, () => {})
+    void fundingProof.then(swap => handleSwap(swap, 'funding_proof'), () => {})
 
     async function checkSecret() {
       try {
         if (!isCurrent())
           return stop(new Error(i18n.t('Wallet or network changed before sending')))
         const { getSwap } = await useFastspotApiV2()
-        handleSwap(await promiseWithTimeout(getSwap(swapId), REQUEST_TIMEOUT_MS))
+        handleSwap(await promiseWithTimeout(getSwap(swapId), REQUEST_TIMEOUT_MS), 'poll')
       }
       catch (error) {
         logger.warn('Swap preimage poll failed, retrying', { swapId, error: error instanceof Error ? error.message : String(error) })

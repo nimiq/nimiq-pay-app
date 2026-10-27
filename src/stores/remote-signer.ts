@@ -19,6 +19,7 @@ export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
 const REMOTE_SIGNER_BALANCE_BATCH_SIZE = 20
 const HISTORY_PAGE_SIZE = 100
 const DISCOVER_TIMEOUT_MS = 30_000
+const COSIGNER_LISTING_RETRY_MS = 5 * 60 * 1000
 
 export interface RemoteSignerValidationDetails {
   address: string
@@ -335,7 +336,7 @@ function useRemoteSignerDb() {
 export const useRemoteSigner = defineStore('remote-signer', () => {
   const { createHistoryClient, getAccount, getBalance } = useNimiqNetwork()
   const { headTimestamp, height, client, consensus, networkName } = storeToRefs(useNimiqNetwork())
-  const { getStatus, getRemoteSigner } = useRemoteSignerApi()
+  const { getStatus, getRemoteSigner, getOwnerWallets } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote } = storeToRefs(useLocks())
   const { getSignerWriteRevision, getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, deactivateRemoteSignerInDb, insertInactiveRemoteSigner, upsertTargetRemoteSigner, purgeRemoteSigners } = useRemoteSignerDb()
@@ -1419,6 +1420,51 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
   }
 
+  // One cosigner DB query per wallet and network per session; a failure waits before asking again.
+  let cosignerListing: { identity: WalletIdentity, request?: Promise<string[] | undefined>, retryAt?: number } | undefined
+
+  /**
+   * HTLC addresses the cosigner created for the local wallet, retired ones included. Unverified:
+   * callers must confirm each one on chain before acting. Undefined when the cosigner can't answer.
+   */
+  async function listCosignerHtlcs(): Promise<string[] | undefined> {
+    const identity = getWalletIdentity()
+    const owner = localAddress.value
+    if (!identity || !owner)
+      return undefined
+    if (!cosignerListing || !isWalletIdentityCurrent(cosignerListing.identity))
+      cosignerListing = { identity }
+    const listing = cosignerListing
+    if (Date.now() < (listing.retryAt ?? 0))
+      return undefined
+
+    listing.request ??= (async () => {
+      try {
+        // The WS request times out on its own and returns a TIMEOUT error.
+        const { data, error } = await getOwnerWallets({ owner })
+        if (error || !data)
+          throw new Error(error?.message ?? 'Invalid cosigner response')
+        const addresses = data.flatMap((wallet) => {
+          try {
+            return [Nimiq.Address.fromString(wallet.address).toUserFriendlyAddress()]
+          }
+          catch {
+            return []
+          }
+        })
+        logger.log('📇 Cosigner listed HTLCs', { count: addresses.length })
+        return addresses
+      }
+      catch (error) {
+        logger.warn('📇 Cosigner HTLC listing unavailable', error instanceof Error ? error.message : String(error))
+        listing.request = undefined
+        listing.retryAt = Date.now() + COSIGNER_LISTING_RETRY_MS
+        return undefined
+      }
+    })()
+    return listing.request
+  }
+
   async function discoverRemoteSignersFromBlockchain(): Promise<RemoteSignerDiscoveryResult> {
     const context = localAddress.value && client.value ? getWalletContext() : undefined
     if (!context)
@@ -1487,9 +1533,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       if (!isWalletContextCurrent(context))
         return { ...scan, errors: ['Wallet changed during discovery'] }
 
-      logger.log('All Transactions from Blockchain', transactions)
       scan.sawHtlcTransaction ||= transactions.some(transaction => transaction.recipientType === 'htlc')
-      scan.creations.push(...transactions.filter((transaction) => {
+      const pageCreations = transactions.filter((transaction) => {
         if (seenTransactions.has(transaction.transactionHash))
           return false
         seenTransactions.add(transaction.transactionHash)
@@ -1502,7 +1547,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && data.type === 'htlc'
           && data.sender === owner
           && isCosignerAddress(data.recipient)
-      }))
+      })
+      scan.creations.push(...pageCreations)
+      // Full pages are ~150 KB each; logging them filled the 5 MB log in a few sessions and rotated swaps out.
+      logger.log('All Transactions from Blockchain', {
+        count: transactions.length,
+        startAt: startAt ?? null,
+        first: transactions[0]?.transactionHash ?? null,
+        last: transactions.at(-1)?.transactionHash ?? null,
+        htlcCreations: pageCreations.map(transaction => transaction.transactionHash),
+      })
 
       if (transactions.length < HISTORY_PAGE_SIZE) {
         scan.historyComplete = true
@@ -1838,6 +1892,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     resolveAddressSpecificSignerMetadata,
     updateSignersTableBalance,
     discoverRemoteSignersFromBlockchain,
+    listCosignerHtlcs,
     scanLocalHtlcCreations,
     validateRemoteSignerAddress,
     registerValidatedRemoteSigner,

@@ -16,8 +16,9 @@ import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
 import { waitForSwapPreimage } from '@/lib/swap-preimage'
+import { startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
 import { getSignedTx, toAccountType } from '@/lib/tx'
-import { promiseWithTimeout } from '@/lib/utils'
+import { parseStoredTransaction, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -134,9 +135,8 @@ export const useTransactions = defineStore('transactions', () => {
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
     })
 
-    logger.log(`📚 Selected ${txs.length} transactions`, txs)
-
-    logger.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
+    // Hash and status only: full rows repeat the whole page on every refresh. filterDisplayableTxs logs what it dropped.
+    logger.log(`📚 Selected ${txs.length} transactions, ${filteredTxs.length} displayable`, filteredTxs.map(tx => `${tx.hash}:${tx.status}`))
     return filteredTxs
   }
 
@@ -176,9 +176,9 @@ export const useTransactions = defineStore('transactions', () => {
       tx.meta
         ? JSON.stringify(tx.meta)
         : null,
-      tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.senderData ?? null,
       tx.hash,
-      tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.recipientData ?? null,
       tx.hash,
       tx.validityStartHeight ?? null,
       tx.hash,
@@ -225,12 +225,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function getStoredTransaction(hash: string) {
-    const tx = await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true })
-    if (tx) {
-      tx.invoiced = typeof tx.invoiced === 'string' ? JSON.parse(tx.invoiced) : tx.invoiced
-      tx.meta = typeof tx.meta === 'string' ? JSON.parse(tx.meta) : tx.meta
-    }
-    return tx
+    return parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
   }
 
   async function clearTxHistory() {
@@ -635,7 +630,10 @@ export const useTransactions = defineStore('transactions', () => {
 
       let patchedSwap: Promise<Swap> | undefined
       let swapStartedAt = 0
-      if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      const swapContext = partialTx.transfer === Transfer.UserPaymentToAtomicSwap && swap
+        ? { asset: Asset.NIM, swap_id: partialTx.paymentRef }
+        : undefined
+      if (swap && swapContext) {
         swapStartedAt = Date.now()
         logger.log('Signaling signed transaction to Fastspot', { swap })
         const { provideFundingProof } = await useFastspotApiV2()
@@ -644,11 +642,11 @@ export const useTransactions = defineStore('transactions', () => {
         if (txSent !== true)
           broadcastPhase = 'possible'
         patchedSwap = provideFundingProof(
-          partialTx.paymentRef!,
+          swapContext.swap_id!,
           swap.contracts.NIM!.id,
           signedTx.toHex(),
         )
-        void patchedSwap.catch(() => undefined)
+        trackFundingProof(patchedSwap, swapContext)
       }
 
       let details = syncState.pendingPaymentTransactions.find(tx => tx.transactionHash === staged.tx.hash)
@@ -659,10 +657,21 @@ export const useTransactions = defineStore('transactions', () => {
           return cleanupRejectedStaged(i18n.t('Wallet or network changed before sending'))
         }
         broadcastPhase = 'possible'
-        details = await promiseWithTimeout(
-          sendContext.client.sendTransaction(signedTx),
-          BROADCAST_TIMEOUT_MS,
-        )
+        const broadcast = swapContext && startSwapStep('broadcast', swapContext)
+        try {
+          details = await promiseWithTimeout(
+            sendContext.client.sendTransaction(signedTx),
+            BROADCAST_TIMEOUT_MS,
+          )
+        }
+        catch (error) {
+          broadcast?.fail(error)
+          throw error
+        }
+        broadcast?.end(details?.executionResult !== false && details?.state !== 'invalidated' && details?.state !== 'expired', {
+          tx_state: details?.state ?? null,
+          execution_result: details?.executionResult ?? null,
+        })
         if (!remoteSigner.isWalletContextCurrent(sendContext)) {
           if (
             details?.executionResult === false
@@ -806,29 +815,31 @@ export const useTransactions = defineStore('transactions', () => {
       // Let Mini Apps return at confirmed NIM submission while swap settlement continues below.
       await onSubmitted?.(staged.tx.hash)
 
-      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      if (patchedSwap && swapContext) {
         const finishSwap = async () => {
+          const settlement = startSwapSettlement(swapContext, swapStartedAt)
           try {
-            const secret = await waitForSwapPreimage(
+            const { preimage: secret, source } = await waitForSwapPreimage(
               (partialTx as MerchantTransaction).paymentRef,
               patchedSwap,
               (swap!.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
               () => remoteSigner.isWalletContextCurrent(sendContext),
+              status => settlement.poll(status),
             )
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            // The preimage proves payment; bookkeeping failures below must not change its settlement outcome.
+            settlement.end(source)
+            trackSwapCompleted({
+              swap_duration_ms: Date.now() - swapStartedAt,
+              asset: Asset.NIM,
+            })
             // Update only the swap result; other writers may have changed the row while settlement was pending.
             const storedTx = await setSwapPreimage(staged.tx.hash, secret)
             // A removed row is recreated, or the secret would be lost once the swap bookkeeping is deleted below.
             if (!storedTx)
               await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            trackSwapCompleted({
-              swap_duration_ms: Date.now() - swapStartedAt,
-              asset: Asset.NIM,
-            })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
             await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
@@ -840,6 +851,10 @@ export const useTransactions = defineStore('transactions', () => {
           }
           catch (error) {
             logger.error('Failed to finish accepted swap bookkeeping', error)
+            settlement.fail(error)
+          }
+          finally {
+            settlement.stop()
           }
         }
         onSwapSettlement(finishSwap())

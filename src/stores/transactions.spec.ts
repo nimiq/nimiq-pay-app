@@ -113,6 +113,7 @@ const rawState = vi.hoisted(() => ({
   blockHeightToTimestamp: vi.fn(async (height: number) => height * 1000),
   trackSwapCompleted: vi.fn(),
   trackSwapFailed: vi.fn(),
+  trackSwapStep: vi.fn(),
   provideFundingProof: vi.fn(async () => ({})),
   getSwap: vi.fn(async (): Promise<any> => { throw new Error('bookkeeping failed') }),
   pendingHtlcCreationTransactions: [] as any[],
@@ -150,6 +151,7 @@ vi.mock('@/lib/analytics', () => ({
   trackSwapCompleted: state.trackSwapCompleted,
   trackSwapFailed: state.trackSwapFailed,
   trackFundsBlocked: vi.fn(),
+  trackSwapStep: state.trackSwapStep,
 }))
 
 vi.mock('@/lib/tx', () => ({
@@ -332,6 +334,7 @@ describe('useTransactions', () => {
     state.blockHeightToTimestamp.mockImplementation(async height => height * 1000)
     state.trackSwapCompleted.mockReset()
     state.trackSwapFailed.mockReset()
+    state.trackSwapStep.mockReset()
     state.provideFundingProof.mockReset()
     state.provideFundingProof.mockResolvedValue({})
     state.getSwap.mockReset()
@@ -2140,6 +2143,8 @@ describe('useTransactions', () => {
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
       expect(state.trackSwapFailed).not.toHaveBeenCalled()
       expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: false, error_reason: 'Swap timed out waiting for Lightning payment confirmation' }))
+      expect(state.trackSwapCompleted).not.toHaveBeenCalled()
     })
 
     it('signals NIM submission before waiting for Lightning settlement', async () => {
@@ -2199,6 +2204,74 @@ describe('useTransactions', () => {
       settleSwap({ preimage: 'secret' })
       await expect(send).resolves.toMatchObject({ outcome: 'submitted' })
       expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array))
+    })
+
+    it.each(['funding_proof', 'poll'])('keeps settlement successful after a %s preimage when persistence fails', async (source) => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('settled-swap')
+      const persistenceError = new Error('database write failed')
+      state.provideFundingProof.mockResolvedValue(source === 'funding_proof' ? { preimage: 'secret' } : {})
+      state.getSwap.mockResolvedValue({ status: 'CONFIRMED', preimage: 'secret' })
+      state.run.mockImplementation(async (statement) => {
+        if (statement === SQLQuery.SetSwapPreimage)
+          throw persistenceError
+      })
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: { id: 'swap-id', status: 'pending', contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } } },
+      })
+
+      await expect(useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+      } as any)).resolves.toMatchObject({ outcome: 'submitted' })
+
+      expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({
+        step: 'settlement',
+        ok: true,
+        asset: Asset.NIM,
+        swap_id: 'swap-id',
+        preimage_source: source,
+      }))
+      expect(state.trackSwapStep).not.toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: false }))
+      expect(state.trackSwapCompleted).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ asset: Asset.NIM }))
+      expect(state.logger.error).toHaveBeenCalledWith('Failed to finish accepted swap bookkeeping', persistenceError)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
+    })
+
+    it('stops the slow settlement timer while completed swap bookkeeping is pending', async () => {
+      vi.useFakeTimers()
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('settled-slow-bookkeeping')
+      let releasePersistence!: () => void
+      const persistence = new Promise<void>(resolve => releasePersistence = resolve)
+      state.provideFundingProof.mockResolvedValue({ preimage: 'secret' })
+      state.run.mockImplementation(async (statement) => {
+        if (statement === SQLQuery.SetSwapPreimage)
+          await persistence
+      })
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: { id: 'swap-id', status: 'pending', contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } } },
+      })
+      const send = useTransactions().sendTx({ transfer: Transfer.UserPaymentToAtomicSwap, paymentRef: 'swap-id' } as any)
+
+      try {
+        await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.SetSwapPreimage, ['secret', 'settled-slow-bookkeeping']))
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(state.trackSwapStep).not.toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement_slow' }))
+        expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({ step: 'settlement', ok: true }))
+      }
+      finally {
+        releasePersistence()
+        await send
+        vi.useRealTimers()
+      }
     })
 
     it('saves the Lightning secret even when the swap row is gone', async () => {
@@ -2384,6 +2457,54 @@ describe('useTransactions', () => {
         recipientData: 'ccdd',
         validityStartHeight: 789,
         meta_json: '{"secret":"preimage","hidden":true}',
+      })
+    })
+
+    it('writes staking tx data to the columns as hex', async () => {
+      state.runSet.mockImplementation(async (statements: { statement: string, values: unknown[] }[]) => {
+        for (const { statement, values } of statements)
+          db.prepare(statement).run(...values.map(value => value ?? null) as Array<string | number | null>)
+      })
+      const { useTransactions } = await import('./transactions')
+
+      await useTransactions().saveTransactions([{
+        hash: 'nim-staking',
+        timestamp: 1,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 0,
+        recipient: 'NQ77 STAKING CONTRACT',
+        recipientType: 3,
+        amount: 10,
+        fee: 0,
+        status: 'confirmed',
+        transfer: Transfer.Staking,
+        title: 'Staking Contract',
+        proofSize: 0,
+        senderData: '',
+        recipientData: 'aabb',
+      }])
+
+      expect(db.prepare('SELECT senderData, recipientData FROM transactions WHERE hash = ?').get('nim-staking')).toEqual({
+        senderData: '',
+        recipientData: 'aabb',
+      })
+    })
+
+    it('reads staking tx data columns back as hex', async () => {
+      db.prepare(`INSERT INTO transactions
+        (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain, senderData, recipientData, validityStartHeight)
+        VALUES ('nim-staking', 'confirmed', 1, 'NQ00 TEST LOCAL ADDRESS', 'NQ77 STAKING CONTRACT', 10, 0, ?, ?, ?, 'aabb', '', 789)`).run(
+        Transfer.Staking,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+      const { useTransactions } = await import('./transactions')
+
+      // setSwapPreimage only touches meta and returns the stored row.
+      await expect(useTransactions().setSwapPreimage('nim-staking', 'preimage')).resolves.toMatchObject({
+        senderData: 'aabb',
+        recipientData: '',
+        validityStartHeight: 789,
       })
     })
 
