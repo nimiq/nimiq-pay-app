@@ -13,7 +13,7 @@ const logger = useLogger('useConn')
 
 const DB_NAME = 'storage'
 const DB_VERSION = migrations.at(-1)!.toVersion
-// Cap db.open() (keying + migrations run here). Without it, a stalled open never resolves and
+// Cap open() (connection, keying + migrations). Without it, a stalled open never resolves and
 // resolveUnlockDb() is never reached, so every later query() awaits the unlock promise forever — a
 // silent app-wide wedge with no error. The timeout turns that into a surfaced, recoverable error.
 const DB_OPEN_TIMEOUT = 20 * 1e3
@@ -74,28 +74,52 @@ export const useConn = defineStore('conn', () => {
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
 
+  // Overlapping callers share one open: two runs would both see no connection, both call
+  // createConnection (the second fails on the existing name) and run the migration chain twice.
+  let opening: Promise<void> | undefined
+  // Bumped when `opening` is cleared, so a timed-out attempt can tell it was abandoned.
+  let openGeneration = 0
+
   async function open() {
-    // await init()
-    const encrypted = !isWeb // Only encrypt on mobile
-    const mode = encrypted ? 'secret' : 'no-encryption'
-    logger.log('🗄️ open: resolving connection')
-    db.value = (await sqlite.checkConnectionsConsistency()).result && (await sqlite.isConnection(DB_NAME, false)).result
-      ? await sqlite.retrieveConnection(DB_NAME, false)
-      : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
-    logger.log('🗄️ open: connection ready, opening DB (keying + migrations)')
-    // Timeout the open so a keying/migration stall surfaces as an error (caught by the decrypt
-    // caller) instead of silently leaving `locked` true forever.
-    await promiseWithTimeout(db.value!.open(), DB_OPEN_TIMEOUT)
-    logger.log('🗄️ open: DB opened')
+    if (!opening) {
+      const generation = openGeneration
+      opening = (async () => {
+        const encrypted = !isWeb // Only encrypt on mobile
+        const mode = encrypted ? 'secret' : 'no-encryption'
+        logger.log('🗄️ open: resolving connection')
+        const conn = (await sqlite.checkConnectionsConsistency()).result && (await sqlite.isConnection(DB_NAME, false)).result
+          ? await sqlite.retrieveConnection(DB_NAME, false)
+          : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
+        logger.log('🗄️ open: connection ready, opening DB (keying + migrations)')
+        await conn.open()
+        logger.log('🗄️ open: DB opened')
 
-    // https://github.com/capacitor-community/sqlite/issues/215#issuecomment-1028913155
-    if (isWeb)
-      await db.value!.execute(`PRAGMA journal_mode=WAL;`, false)
+        // https://github.com/capacitor-community/sqlite/issues/215#issuecomment-1028913155
+        if (isWeb)
+          await conn.execute(`PRAGMA journal_mode=WAL;`, false)
 
-    locked.value = false
-    resolveUnlockDb()
-    logger.log('🗄️ open: unlocked')
-    dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
+        const exists = !!(await sqlite.isDatabase(DB_NAME)).result
+        // A timed-out open is abandoned: the retry's checkEncryptionSecret closes every native
+        // connection, so this one must not become db or unlock queries onto a closed connection.
+        if (generation !== openGeneration)
+          throw new Error('DB open abandoned after timeout')
+        db.value = conn
+        dbExists.value = exists
+        locked.value = false
+        // No await after the check, so the timeout can't report a failure after the db unlocked.
+        resolveUnlockDb()
+        logger.log('🗄️ open: unlocked')
+      })()
+    }
+    const current = opening
+    // Timeout so a keying/migration stall surfaces as an error (caught by the decrypt caller)
+    // instead of silently leaving `locked` true forever. Clearing on timeout abandons the attempt.
+    await promiseWithTimeout(current, DB_OPEN_TIMEOUT).finally(() => {
+      if (opening === current) {
+        opening = undefined
+        openGeneration++
+      }
+    })
   }
 
   async function close() {

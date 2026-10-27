@@ -12,6 +12,9 @@ const logger = useLogger('useDecrypt')
 
 // Must be defined outside the useDecrypt scope, to be shared between calls
 const decrypted = ref(false)
+// Tail of the decrypt queue. A PIN re-submit after a UI timeout or a biometric autofill can land
+// while one is running; a second run would close the db under the first and race its open.
+let decrypting: Promise<unknown> = Promise.resolve()
 
 /**
  * Once the db is initialized, the database needs to be decrypted to make operations on it
@@ -89,37 +92,43 @@ export function useDecrypt() {
    */
   async function decrypt(pin: string): Promise<Option<string>> {
     logger.log('🔓 decrypt: entry')
-    if (decrypted.value) {
-      logger.log('🔓 decrypt: already decrypted, short-circuit')
-      return
-    }
+    // Queue rather than share: a later call may carry a different PIN, so it only reuses a success.
+    // Chained on the real run, not a caller's timeout wrapper, since promiseWithTimeout doesn't cancel.
+    const run = decrypting.catch(() => {}).then(async (): Promise<Option<string>> => {
+      if (decrypted.value) {
+        logger.log('🔓 decrypt: already decrypted, short-circuit')
+        return
+      }
 
-    const inputHash = sha256Hex(pin)
-    logger.log('🔓 decrypt: running', { isWeb })
-    const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
-    logger.log('🔓 decrypt: db unlock done', { error })
-    if (error)
-      return error
+      const inputHash = sha256Hex(pin)
+      logger.log('🔓 decrypt: running', { isWeb })
+      const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
+      logger.log('🔓 decrypt: db unlock done', { error })
+      if (error)
+        return error
 
-    const { setEntropy, updatePinInputTs, migrateTopUpAddresses } = useApp()
-    logger.log('🔓 decrypt: setEntropy start')
-    await setEntropy()
-    logger.log('🔓 decrypt: setEntropy done')
-    updatePinInputTs()
+      const { setEntropy, updatePinInputTs, migrateTopUpAddresses } = useApp()
+      logger.log('🔓 decrypt: setEntropy start')
+      await setEntropy()
+      logger.log('🔓 decrypt: setEntropy done')
+      updatePinInputTs()
 
-    // One-time (APP-171): fold aliased top-up entries into withdrawal history, drop the rest.
-    // Guarded so a migration failure never blocks unlock.
-    try {
-      await migrateTopUpAddresses()
-    }
-    catch (e) {
-      logger.error('topUpAddresses migration failed', e)
-    }
+      // One-time (APP-171): fold aliased top-up entries into withdrawal history, drop the rest.
+      // Guarded so a migration failure never blocks unlock.
+      try {
+        await migrateTopUpAddresses()
+      }
+      catch (e) {
+        logger.error('topUpAddresses migration failed', e)
+      }
 
-    pinHash.value = inputHash
+      pinHash.value = inputHash
 
-    decrypted.value = true
-    logger.log('🔓 decrypt: decrypted=true')
+      decrypted.value = true
+      logger.log('🔓 decrypt: decrypted=true')
+    })
+    decrypting = run
+    return run
   }
 
   /**
