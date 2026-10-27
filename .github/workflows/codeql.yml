@@ -60,6 +60,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # System Ruby's old JSON formatter changes local podspec checksums.
+      - uses: ruby/setup-ruby@v1
+        if: matrix.language == 'swift'
+        with:
+          ruby-version: '4.0'
+
       - name: Install locked CocoaPods version
         if: matrix.language == 'swift'
         run: gem install cocoapods -v 1.15.2 --no-document
