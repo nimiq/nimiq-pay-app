@@ -51,7 +51,7 @@ watchEffect(() => {
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-const { isWeb, isIOS } = useDevice()
+const { isWeb } = useDevice()
 
 watchDebounced(() => props.isVisible, async (isVisible) => {
   if (isVisible) {
@@ -130,11 +130,12 @@ function handleManualInput() {
       through which the camera can be seen (other parent / background elements are made transparent in useCameraFeed),
       with a wide white border to cover the rest. -->
       <div class="relative m-auto box-border shadow-[0_0_0_100vh_white] w-[calc(100vw-6rem)]" :style="`top: -${cameraFeedContainerTop / 4}px`">
-        <div class="aspect-square">
+        <div class="relative aspect-square">
           <Transition name="fade">
             <div v-if="state === QRScannerState.Idle" class="h-full w-full bg-space/5" />
           </Transition>
-          <svg class="absolute -inset-0.5" :class="{ '-mr-1': isIOS }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
+          <!-- Explicit size: an absolute svg without one isn't sized from its insets, so the frame missed the hole -->
+          <svg class="absolute -left-0.5 -top-0.5 size-[calc(100%+4px)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
         </div>
