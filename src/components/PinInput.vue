@@ -95,6 +95,8 @@ watch(() => props.errorMsg, (msg) => {
       wiggle.value = false
     }, 300)
     isLoading.value = false
+    // Loading blurred the standalone input; refocus so the user can retype without tapping.
+    inputRef.value?.focus()
     clearInput()
     customError.value = msg
     Haptics.notification({ type: NotificationType.Error })

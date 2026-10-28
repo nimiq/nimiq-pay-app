@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Option } from '@/types'
 import { Keyboard } from '@capacitor/keyboard'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
@@ -29,9 +28,6 @@ const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
 
 // Biometric and manual entry can both emit done, so a second submit must not start while one runs.
 let isSubmitting = false
-// promiseWithTimeout doesn't cancel decrypt(). A retry after a timeout joins the running unlock
-// instead of starting a second one (and a second conn.open() / migration run).
-let pendingDecrypt: Promise<Option<string>> | undefined
 
 // Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
 // title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
@@ -52,10 +48,7 @@ async function handleSubmit(pin: string) {
   // stuck on the PIN screen. Each phase is timeout-guarded so a hang cannot wedge the screen.
   try {
     logger.log('🔓 handleSubmit: decrypt start')
-    pendingDecrypt ??= decrypt(pin).finally(() => {
-      pendingDecrypt = undefined
-    })
-    const error = await promiseWithTimeout(pendingDecrypt, UNLOCK_PHASE_TIMEOUT)
+    const error = await promiseWithTimeout(decrypt(pin), UNLOCK_PHASE_TIMEOUT)
     logger.log('🔓 handleSubmit: decrypt done', { error })
     if (error) {
       errorMsg.value = error

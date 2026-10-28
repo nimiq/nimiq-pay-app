@@ -37,6 +37,7 @@ vi.mock('@/composables/useDecrypt', () => ({
 }))
 vi.mock('@/composables/useMiniAppSession', () => ({
   clearSession: vi.fn(async () => {}),
+  getSession: () => undefined,
   hasPendingSession: () => false,
   reconnectAndShow: vi.fn(async () => {}),
 }))
@@ -57,7 +58,8 @@ let wrapper: VueWrapper
 
 async function mountPinView() {
   const { default: PinView } = await import('./PinView.vue')
-  wrapper = mount(PinView, { global: { mocks: { $t: (s: string) => s } } })
+  // Attached so focus assertions can read document.activeElement.
+  wrapper = mount(PinView, { attachTo: document.body, global: { mocks: { $t: (s: string) => s } } })
   await flushPromises()
 }
 
@@ -103,22 +105,24 @@ describe('pinView', () => {
     expect(state.replace).toHaveBeenCalledWith('/app')
   })
 
-  it('joins the still-running decrypt when retrying after the unlock timeout', async () => {
-    const { promise, resolve } = Promise.withResolvers<undefined>()
-    state.decrypt.mockReturnValue(promise)
+  it('submits a corrected PIN after the unlock timeout', async () => {
+    const wrong = Promise.withResolvers<string>()
+    state.decrypt.mockReturnValueOnce(wrong.promise).mockResolvedValueOnce(undefined)
     await mountPinView()
 
-    await typePin()
+    await typePin('0000')
     await vi.advanceTimersByTimeAsync(15_000)
     expect(wrapper.text()).toContain('Something went wrong decrypting the database. Try reloading the app.')
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
 
-    await typePin()
-    expect(state.decrypt).toHaveBeenCalledTimes(1)
+    await typePin('1111')
+    expect(state.decrypt).toHaveBeenLastCalledWith('1111')
+    expect(state.replace).toHaveBeenCalledTimes(1)
 
-    resolve(undefined)
+    // The timed-out attempt finishing late must not navigate or show its error.
+    wrong.resolve('Invalid PIN')
     await flushPromises()
-    expect(state.replace).toHaveBeenCalledWith('/app')
+    expect(state.replace).toHaveBeenCalledTimes(1)
   })
 
   it('shows an error instead of a stuck spinner when navigation fails', async () => {
@@ -137,6 +141,7 @@ describe('pinView', () => {
 
     await typePin()
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+    expect(document.activeElement).toBe(wrapper.find('input').element)
 
     // Retry before PinView's 2s timer resets errorMsg, so the message is identical.
     await typePin()
