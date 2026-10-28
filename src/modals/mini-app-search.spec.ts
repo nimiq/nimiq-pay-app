@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
@@ -22,6 +22,31 @@ describe('normalizeMiniAppUrl', () => {
     expect(normalizeMiniAppUrl('localhost:5173')).toBe('http://localhost:5173/')
     expect(normalizeMiniAppUrl('192.168.1.1:8080')).toBe('http://192.168.1.1:8080/')
     expect(normalizeMiniAppUrl('127.0.0.1')).toBe('http://127.0.0.1/')
+  })
+
+  it('rejects cleartext http for public hosts', () => {
+    expect(normalizeMiniAppUrl('http://example.com')).toBeUndefined()
+    expect(normalizeMiniAppUrl('HTTP://app.uniswap.org/swap')).toBeUndefined()
+    expect(normalizeMiniAppUrl('http://8.8.8.8:8080')).toBeUndefined()
+    expect(normalizeMiniAppUrl('8.8.8.8')).toBeUndefined()
+  })
+
+  it('keeps http for LAN dev servers', () => {
+    expect(normalizeMiniAppUrl('http://10.0.0.5:5174')).toBe('http://10.0.0.5:5174/')
+    expect(normalizeMiniAppUrl('http://172.16.0.2:5173/')).toBe('http://172.16.0.2:5173/')
+  })
+
+  it('rejects http for LAN and localhost outside dev builds', () => {
+    vi.stubEnv('DEV', false)
+    try {
+      expect(normalizeMiniAppUrl('http://192.168.1.2:8080')).toBeUndefined()
+      expect(normalizeMiniAppUrl('192.168.1.2:8080')).toBeUndefined()
+      expect(normalizeMiniAppUrl('http://localhost:5173')).toBeUndefined()
+      expect(normalizeMiniAppUrl('https://app.uniswap.org/swap')).toBe('https://app.uniswap.org/swap')
+    }
+    finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('returns undefined for non-URL inputs', () => {
