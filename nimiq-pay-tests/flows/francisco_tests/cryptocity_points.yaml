@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Since 2.22.1 the button only shows while the PostHog flag `cryptocity-points` is on. Named
+# exception to the when-visible rule (the user's call, 2026-10-20): the Points steps run only
+# when it is shown, so with the flag off this part passes without testing anything. The flag
+# loads after start, so a late answer also skips it. The steps assume no Points campaign: with
+# one, the button opens Points or phone verification instead (HomeView.vue
+# openPointsFromHomeHeader).
+- runFlow:
+    when:
+      visible: ${output.navigation.earnPointsBtn}
+    commands:
+      - tapOn: ${output.navigation.earnPointsBtn}
+      - waitForAnimationToEnd
+      - assertVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - tapOn: ${output.navigation.closeFlowModalBtn}
+      - waitForAnimationToEnd
+      - assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - assertVisible: ${output.home.payTitle}
+
+- stopApp

@@ -14,6 +14,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Tooling & commands
 
 - Use `pnpm` for dependencies and scripts.
+- `dotenv` scripts (`pnpm release:browserstack:apk`, …) swallow flags passed after them: `pnpm release:browserstack:apk --apk x` silently drops `--apk`. Run `pnpm exec dotenv -- node scripts/<script> --flag` instead.
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
@@ -29,6 +30,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - A pull that moves the pin leaves the old submodule checkout in place, and the build silently uses it. Before debugging Mini Apps provider behavior, run `git submodule status`: a leading `+` means the checkout differs from the pin. Fix with `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
 - The build script installs `web3-provider` with `--frozen-lockfile`. After changing its dependencies, run `pnpm --dir web3-provider install` to update `web3-provider/pnpm-lock.yaml` first.
 - When a change needs new provider code, move the submodule to a reviewed commit that exists on `nimiq/trust-web3-provider` in the same PR. Publishing a new SDK version or updating the demo dependency does not move the pin. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+- An app build without the bridge still succeeds: `public/web3-provider.js` is then a placeholder (or a stale copy) and `vite build` only logs "Failed to copy web3 provider script". Before building an APK, build the provider packages and run `pnpm build:web3-provider`, then check `assets/public/web3-provider.js` in the APK is the real bundle (~1.2 MB, not a few bytes).
 
 ## Naming & terminology
 
@@ -56,6 +58,19 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
 - Run tests only before committing or when debugging a test failure.
+
+### Maestro on BrowserStack
+
+- BrowserStack's MCP server cannot see Maestro builds (its tools wrap Appium endpoints). Use the Maestro v2 REST API through `scripts/browserstack-maestro-run.js`.
+- A `failed` test case is not proof of an assertion failure: real runs show ADB device loss and an unreachable Maestro driver reported as `failed`. Classify from the failing command's error (`maestro_commands`) or the failing step's log lines, never from the status alone.
+- `vite build --mode development` is still mainnet (`isTestnet` follows `import.meta.env.DEV`, i.e. `NODE_ENV`). Switch test devices to testnet at runtime via the dev modal instead.
+- Test APKs for the suite come from `scripts/build-test-apk.mjs`, which disables Capgo over-the-air updates; otherwise a relaunch can swap in the production web bundle mid-run.
+
+### iOS simulator build (Maestro)
+
+- `node scripts/build-test-ios-sim.mjs` builds `ios/DerivedData/Build/Products/Debug-iphonesimulator/App.app` (Mini Apps on, over-the-air updates off, ad hoc signed, ~3.5 min), checks the built app, and puts back the build's rewrites of `src/i18n/en.po` and the `COCOAPODS:` line of `ios/App/Podfile.lock`. It only lists other files that changed while it ran: after a plugin change, `cap sync` updates the Podfile and pods, which need committing. Install with `xcrun simctl install booted <app>`. Simulator only: BrowserStack's real iPhones need a signed `.ipa`. With a newer local CocoaPods, the restored `Podfile.lock` no longer matches `Pods/Manifest.lock`, so a later build from Xcode fails "[CP] Check Pods Manifest.lock" until `pod install` runs in `ios/App` (the script runs it every time).
+- Building by hand: `pnpm exec cap sync ios` runs `bundle exec pod install` (the repo has a `Gemfile`), which fails while the `Gemfile.lock` gems aren't installed; its `bundle` probe can first spin at 100% CPU for minutes. `CAPACITOR_COCOAPODS_PATH=pod` makes it run plain `pod install`.
+- Never `CODE_SIGNING_ALLOWED=NO`: the app then lacks `application-identifier`, every Keychain call fails (`-34018`), and onboarding shows "Something went wrong decrypting the database", which looks like an app bug but isn't.
 
 ## Nimiq client & sync
 

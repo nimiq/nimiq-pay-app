@@ -219,6 +219,7 @@ async function openCompetitionExternal(url: string) {
 
             <!-- Search Bar -->
             <IonSearchbar
+              id="mini-apps-search"
               v-model="searchQuery"
               placeholder="Search or enter App URL"
               :debounce="300"

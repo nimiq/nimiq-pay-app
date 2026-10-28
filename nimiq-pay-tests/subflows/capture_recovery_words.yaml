@@ -1,0 +1,48 @@
+appId: ${APP_ID}
+---
+# From home, opens Menu > Backup Account and stores the 12 recovery words, in order, in
+# output.recoveryWords. Leaves the app on the "Write down these words" screen.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.backupAccountBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.backupAccountBtn}
+- extendedWaitUntil:
+    visible: ${output.backup.noOneCanSeeBtn}
+    timeout: 10000
+- tapOn: ${output.backup.noOneCanSeeBtn}
+- extendedWaitUntil:
+    visible: ${output.backup.showWordsTitle}
+    timeout: 10000
+# The modal height can still change for ~2 s after a step change (Flow.vue).
+- waitForAnimationToEnd
+
+# Each read re-queries the screen, so a pass taken while it still changes can shift the
+# indexes and misread a word (seen locally: the login checksum then failed). Read until two
+# consecutive passes agree.
+- evalScript: ${output.recoveryWords = []; output.previousCapture = ''; output.capturePasses = 0}
+- repeat:
+    while:
+      true: ${output.capturePasses < 2 || (output.recoveryWords.join(' ') != output.previousCapture && output.capturePasses < 5)}
+    commands:
+      - evalScript: ${output.previousCapture = output.recoveryWords.join(' '); output.recoveryWords = []; output.capturePasses++}
+      - repeat:
+          while:
+            true: ${output.recoveryWords.length < 12}
+          commands:
+            - copyTextFrom:
+                text: ${output.backup.recoveryWord}
+                below: ${output.backup.showWordsTitle}
+                index: ${output.recoveryWords.length}
+            - evalScript: ${output.recoveryWords.push(maestro.copiedText)}
+- assertTrue:
+    condition: ${output.recoveryWords.join(' ') == output.previousCapture}
+    label: Two consecutive recovery word reads agree
+
+# The selector regex also matches "CONTINUE"; recovery words are 3-8 lowercase letters.
+# (No "$" inside ${}: Maestro ends the script at the first "$".)
+- assertTrue:
+    condition: ${output.recoveryWords.every(w => !/[^a-z]/.test(w) && w.length >= 3 && w.length <= 8)}
+    label: Captured 12 lowercase recovery words

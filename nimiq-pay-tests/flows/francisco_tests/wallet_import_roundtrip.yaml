@@ -1,0 +1,75 @@
+appId: ${APP_ID}
+name: Wallet import roundtrip
+
+tags:
+  - franciscoTest
+
+---
+# Scope: after logging out, logging in with the wallet's recovery words restores the same
+# wallet: the NIM and the USDT (Polygon) Top Up addresses after the import equal the ones before
+# the logout, and the imported wallet shows no backup reminder.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- evalScript: ${output.originalAddress = output.topUpAddress}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+- runFlow: ../../subflows/capture_usdt_top_up_address.yaml
+- evalScript: ${output.originalUsdtAddress = output.topUpAddress}
+
+- runFlow: ../../subflows/capture_recovery_words.yaml
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+# An empty wallet logs out without the backup warning.
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.logoutBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.logoutBtn}
+- extendedWaitUntil:
+    visible: ${output.logout.title}
+    timeout: 5000
+- tapOn: ${output.logout.confirmBtn}
+- extendedWaitUntil:
+    visible: ${output.launchScreen.loginBtn}
+    timeout: 30000
+- assertNotVisible: ${output.home.payTitle}
+
+- runFlow:
+    file: ../../subflows/import_wallet.yaml
+    env:
+      RECOVERY_PHRASE: ${output.recoveryWords.join(' ')}
+
+- tapOn: ${output.navigation.topUpBtn}
+- extendedWaitUntil:
+    visible: ${output.topUp.copyAddress}
+    timeout: 10000
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- assertTrue:
+    condition: ${output.topUpAddress == output.originalAddress}
+    label: Imported wallet has the original address
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+# An import counts as backed up (app.ts), so home shows no reminder.
+- assertNotVisible: ${output.navigation.recoveryWordsBtn}
+
+- runFlow: ../../subflows/capture_usdt_top_up_address.yaml
+- assertTrue:
+    condition: ${output.topUpAddress == output.originalUsdtAddress}
+    label: Imported wallet has the original USDT address
+
+- stopApp

@@ -1,0 +1,48 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+# Scope: the asset switch turns home to USDT (balance in USDT, Top Up and Withdraw still there)
+# and the choice is kept across a relaunch (AssetSwitcher.vue stores it in the database).
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- assertNotVisible:
+    text: ${output.home.usdtAmount}
+    below: ${output.home.fiatAmount}
+# The switch toggles between the two assets.
+- tapOn: ${output.home.switchAssetBtn}
+- extendedWaitUntil:
+    visible:
+      text: ${output.home.usdtAmount}
+      below: ${output.home.fiatAmount}
+      enabled: true
+    timeout: 10000
+- waitForAnimationToEnd
+
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      text: ${output.home.usdtAmount}
+      below: ${output.home.fiatAmount}
+    timeout: 10000
+
+- stopApp

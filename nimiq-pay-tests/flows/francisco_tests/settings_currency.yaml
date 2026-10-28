@@ -1,0 +1,56 @@
+appId: ${APP_ID}
+name: Settings currency
+
+tags:
+  - franciscoTest
+
+---
+# Scope: switching the fiat currency from USD to EUR in Settings changes the home amount
+# from "$" to "€".
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# The home amount replaces its skeleton only once the balance is resolved (needs consensus).
+- extendedWaitUntil:
+    visible: ${output.home.usdSymbol}
+    timeout: 90000
+- assertNotVisible: ${output.home.eurSymbol}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.currency}
+    timeout: 5000
+- tapOn: ${output.settings.currency}
+- extendedWaitUntil:
+    visible: ${output.currencyAlert.eurOption}
+    timeout: 5000
+- tapOn: ${output.currencyAlert.eurOption}
+- tapOn: ${output.currencyAlert.okBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.currencyEurSelected}
+    timeout: 5000
+# Leaving Settings is ignored while the alert is still animating out.
+- waitForAnimationToEnd
+
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
+- assertNotVisible: ${output.settings.currency}
+- assertVisible: ${output.navigation.backupAccountBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
+
+- extendedWaitUntil:
+    visible: ${output.home.eurSymbol}
+    timeout: 15000
+- assertNotVisible: ${output.home.usdSymbol}
+- assertVisible: ${output.home.payTitle}
+
+- stopApp
