@@ -34,9 +34,7 @@ watch(() => props.errorMsg, (error) => {
 }, { immediate: true })
 
 const cameraFeedContainerTop = ref(0)
-watchEffect(() => {
-  if (!props.isVisible)
-    return
+function measureCameraFeedContainerTop() {
   let totalOffsetTop = 0
   let element: Element | null = cameraFeedContainer.value
   while (element instanceof HTMLElement) {
@@ -44,6 +42,10 @@ watchEffect(() => {
     element = element.offsetParent
   }
   cameraFeedContainerTop.value = totalOffsetTop
+}
+watchEffect(() => {
+  if (props.isVisible)
+    measureCameraFeedContainerTop()
 })
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
@@ -54,6 +56,8 @@ const { isWeb, isIOS } = useDevice()
 watchDebounced(() => props.isVisible, async (isVisible) => {
   if (isVisible) {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
+    // Measure again: the class makes sheets full screen and pads the header, which moves the container
+    measureCameraFeedContainerTop()
     useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
     await start()
     useToast().clearToast()
