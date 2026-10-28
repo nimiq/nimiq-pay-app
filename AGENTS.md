@@ -17,6 +17,11 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
+### CodeQL
+
+- CodeQL scans GitHub Actions, JavaScript/TypeScript, and Ruby. Swift and Java/Kotlin scanning are intentionally disabled to save CI minutes.
+- Keep GitHub default setup disabled when using the advanced CodeQL workflow; default setup rejects its result uploads.
+
 ### Mini Apps provider submodule
 
 - `web3-provider/package.json` links to `vendor/trust-web3-provider`, a submodule of `nimiq/trust-web3-provider` (branch `nimiq`). Local builds and CI use the same pinned commit. Clone with `--recurse-submodules`, or run `git submodule update --init --recursive`.
@@ -131,6 +136,7 @@ The sync/transactions/remote-signer paths emit emoji-prefixed events at every si
 | `grep -E "All Transactions from Blockchain"` | The local HTLC history scan (`runScanLocalHtlcCreations`, shared by discovery and DB verification) got one history page. **Absence after `Verifying remote signers in DB` means the chain query stalled.** Each page times out after 30s in `waitForLocalHistory`: the history client is reset, the scan logs `getTransactionsByAddress failed` and discovery returns incomplete. |
 | `grep -E "📇 Cosigner"` | Cosigner `owner-wallets` listing, asked once per wallet and network per session (DevModal "Scan wallet history" reuses it). `listed HTLCs` gives the count fed to the stray sweep, which checks each one on chain before draining; `unavailable` means a failure or an old cosigner without the endpoint, retried after 5 min. |
 | `grep -E "🧬 Starting to sync wallets"` | `syncWallets` made it past `verifyRemoteSignersDb`. If missing, sync is wedged earlier and listeners + periodic refresh never started — that's why home appears empty. |
+| `grep -E "⚡ Swap status changed"` | Lightning swap settlement polling saw a new Fastspot status (`from`/`to`, poll count). The in-app flow keeps the PIN screen loading until the preimage arrives or the swap expires. The same steps go to PostHog as `swap_step` events, so check those first when logs are missing. |
 | `grep -E "📚 Upsert-ing"` | DB write happening. Single writes log `Upsert-ing transaction`; history sync batches log `Upsert-ing <n> transactions` with the hashes. Sum both against the expected tx count to catch missing ingest. |
 
 ### Common diagnoses

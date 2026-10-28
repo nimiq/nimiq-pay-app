@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -40,10 +40,18 @@ console.log('📤 Uploading app builds to BrowserStack...')
 files.forEach((file) => {
   if (fs.existsSync(file.path)) {
     try {
-      const curlCmd = `curl -u "${BS_USERNAME}:${BS_ACCESS_KEY}" -X POST "https://api-cloud.browserstack.com/app-automate/upload" -F "file=@${file.path}" -F "custom_id=NimiqPay${file.platform}"`
-
       console.log(`📦 Uploading ${path.basename(file.path)}...`)
-      const output = execSync(curlCmd).toString()
+      const output = execFileSync('curl', [
+        '-u',
+        `${BS_USERNAME}:${BS_ACCESS_KEY}`,
+        '-X',
+        'POST',
+        'https://api-cloud.browserstack.com/app-automate/upload',
+        '-F',
+        `file=@${file.path}`,
+        '-F',
+        `custom_id=NimiqPay${file.platform}`,
+      ], { encoding: 'utf8' })
 
       const response = JSON.parse(output)
       if (response.app_url) {
