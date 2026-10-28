@@ -182,9 +182,18 @@ body.native-qr-scanner-modal-open ion-modal {
   --background: transparent; /* make dialog background transparent */
   --overflow: visible; /* make ::before element defined below visible */
 }
+/* The camera shows through the transparent background above a sheet, so sheets go full screen while scanning.
+!important beats the inline --height Flow.vue sets for overrideHeight steps. Ionic zeroes --ion-safe-area-top on
+sheets, so the header is pushed below the status bar via --ion-modal-offset-top instead. */
+body.native-qr-scanner-modal-open ion-modal.modal-sheet {
+  --height: 100% !important;
+  --border-radius: 0;
+}
+body.native-qr-scanner-modal-open ion-modal.modal-sheet ion-header {
+  padding-top: var(--ion-modal-offset-top, 0px);
+}
 body.native-qr-scanner-modal-open ion-modal .ion-page::before {
-  /* Simulate backdrop above modal. This area is typically var(--ion-safe-area-top) + 10px big (via definition of
-  --height on ion-modal), but a larger area is visible when the user drags the modal down to close it. */
+  /* Simulate backdrop above modal. Only visible when the user drags the modal down to close it. */
   content: '';
   position: absolute;
   width: 100%;
