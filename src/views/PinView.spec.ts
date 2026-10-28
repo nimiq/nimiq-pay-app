@@ -95,6 +95,8 @@ describe('pinView', () => {
     await mountPinView()
 
     await typePin()
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+    await vi.advanceTimersByTimeAsync(500)
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(true)
     await emitDone()
     expect(state.decrypt).toHaveBeenCalledTimes(1)
