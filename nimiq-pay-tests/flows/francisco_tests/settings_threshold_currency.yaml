@@ -32,10 +32,19 @@ env:
 # Save a new threshold. A tap on the value can leave the cursor before it (the Galaxy S26 and the
 # iPhone saved "205"), and eraseText only deletes to its left, so select the value first: a double
 # tap on Android; on iOS a second tap opens the edit menu (Maestro's double tap selects nothing).
+# Select only after the focus tap has settled: the keyboard shrinks the WebView and moves the field
+# up. On the S26 an immediate double tap's second tap went down on the field and came up after the
+# shrink, and the keyboard closed again. `index: 0` takes the field: keyboard keys labelled with
+# the same digit sit below it.
 - tapOn: ${output.settings.autoDepositThresholdPrefix + DEFAULT_THRESHOLD + ' NIM'}
 - extendedWaitUntil:
     visible: ${output.autoDepositSheet.description}
     timeout: 5000
+- tapOn:
+    text: ${DEFAULT_THRESHOLD}
+    below: ${output.autoDepositSheet.description}
+    index: 0
+- waitForAnimationToEnd
 - runFlow:
     when:
       platform: Android
@@ -43,6 +52,7 @@ env:
       - doubleTapOn:
           text: ${DEFAULT_THRESHOLD}
           below: ${output.autoDepositSheet.description}
+          index: 0
 - runFlow:
     when:
       platform: iOS
@@ -50,10 +60,7 @@ env:
       - tapOn:
           text: ${DEFAULT_THRESHOLD}
           below: ${output.autoDepositSheet.description}
-      - waitForAnimationToEnd
-      - tapOn:
-          text: ${DEFAULT_THRESHOLD}
-          below: ${output.autoDepositSheet.description}
+          index: 0
       - tapOn: ${output.iosKeyboard.selectAllBtn}
 - eraseText: 3
 - inputText: ${SAVED_THRESHOLD}

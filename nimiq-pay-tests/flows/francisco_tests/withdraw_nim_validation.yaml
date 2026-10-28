@@ -119,14 +119,36 @@ env:
     text: ${FAUCET_ADDRESS.substring(32)}
     below: ${output.withdraw.chooseAddressTitle}
 
-# Rename it. The alias input has no selector on Android, so tap it by position; editing
-# focuses it, but typing without a tap is lost.
+# Rename it. Editing focuses the alias input, but typing without a tap is lost. It has no
+# selector on Android, so tap it by position. Position alone also matched the Withdraw screen's
+# presets under the sheet (Pixel_8) and the S26's Recents button, so search only the slide that
+# holds the title. Maestro 2.6.1 searches that slide as it was when first found, so wait for the
+# edit row first. iOS shows the input's label, and keeps stale copies of the slide.
 - tapOn: ${output.withdraw.editAliasBtn}
-- tapOn:
-    leftOf: ${output.withdraw.saveAliasBtn}
-    below: ${output.withdraw.chooseAddressTitle}
+- extendedWaitUntil:
+    visible: ${output.withdraw.saveAliasBtn}
+    timeout: 10000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          childOf:
+            containsChild: ${output.withdraw.chooseAddressTitle}
+          leftOf: ${output.withdraw.saveAliasBtn}
+          below: ${output.withdraw.chooseAddressTitle}
+          index: 0
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: ${output.withdraw.aliasInput}
 - inputText: ${ALIAS}
 - tapOn: ${output.withdraw.saveAliasBtn}
+# While editing, the input's own text matches the alias check below.
+- extendedWaitUntil:
+    notVisible: ${output.withdraw.saveAliasBtn}
+    timeout: 10000
 - extendedWaitUntil:
     visible:
       text: ${ALIAS}

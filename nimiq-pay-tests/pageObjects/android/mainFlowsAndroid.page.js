@@ -196,7 +196,9 @@ output.withdraw = {
     chooseAddressTitle: "Choose an address",
     noSavedAddresses: "No saved addresses",
     // Address list row actions. The alias inputs (new address and Edit alias) expose no text,
-    // label or hint on Android, so flows reach them by position (leftOf saveAliasBtn).
+    // label or hint on Android, so flows reach them by position (leftOf saveAliasBtn). iOS shows
+    // the Edit alias input's label.
+    aliasInput: "Edit address alias",
     editAliasBtn: "Edit alias",
     saveAliasBtn: "Save alias",
     deleteAddressBtn: "Delete address",
