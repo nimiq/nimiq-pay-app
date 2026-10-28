@@ -518,11 +518,14 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
   if (!modal)
     return logger.warn('Cannot find modal element to override height')
 
+  // Ionic zeroes --ion-safe-area-top on sheet modals and sets --ion-modal-offset-top to the root safe area instead,
+  // so read that first. Otherwise the sheet grows under the status bar and its header can't be tapped (APP-328).
+  const fullHeight = 'calc(100% - (var(--ion-modal-offset-top, var(--ion-safe-area-top)) + 10px))'
   if (newHeight)
-    modal.style.setProperty('--height', newHeight === 'h-full' ? 'calc(100% - (var(--ion-safe-area-top) + 10px))' : 'auto')
+    modal.style.setProperty('--height', newHeight === 'h-full' ? fullHeight : 'auto')
   else
     // Reset to default height
-    modal.style.setProperty('--height', props.height === 'h-full' ? 'calc(100% - (var(--ion-safe-area-top) + 10px))' : 'auto')
+    modal.style.setProperty('--height', props.height === 'h-full' ? fullHeight : 'auto')
 })
 </script>
 
