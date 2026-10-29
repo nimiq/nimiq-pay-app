@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Asset, Chain } from '@/lib/assets'
 import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { getRegisteredPoolAddress } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
 import { markAsUnknownTransactionTitle, Rail, Transfer } from '@/types/transactions'
 import { isMatchingRelayCall, usePolygonUsdt } from './polygon-usdt'
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
     send: vi.fn(),
   },
   relayTransaction: vi.fn(),
+  balanceOf: vi.fn(),
   wait: vi.fn(),
   query: vi.fn(),
   run: vi.fn(),
@@ -58,6 +60,7 @@ vi.mock('ethers', async (importOriginal) => {
       return {
         interface: new actual.Interface(abi),
         getNonce: vi.fn().mockResolvedValue(0n),
+        balanceOf: mocks.balanceOf,
         getRequiredRelayGas: vi.fn().mockResolvedValue(100n),
         getGasAndDataLimits: vi.fn().mockResolvedValue({ acceptanceBudget: 100n }),
         calldataGasCost: vi.fn().mockResolvedValue(10n),
@@ -1383,5 +1386,45 @@ describe('polygon transaction reconciliation through the store', () => {
     expect(persistedHtlc).toMatchObject({ tx_hash: replacementHash })
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlcByTxHash, expect.anything())
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+  })
+})
+
+describe('polygon initial history scan through the store', () => {
+  const historyStateKey = `polygonUsdtHistoryState:${mocks.walletAddress.toLowerCase()}`
+
+  beforeEach(() => {
+    mocks.getEthAddress.mockReturnValue({ data: mocks.walletAddress })
+    mocks.query.mockImplementation(async sql => sql === SQLQuery.SelectTransactionsByAsset ? [] : null)
+    vi.mocked(getRegisteredPoolAddress).mockResolvedValue(mocks.walletAddress)
+  })
+
+  function persistedHistoryStates() {
+    return mocks.run.mock.calls
+      .filter(([sql, values]) => sql === SQLQuery.UpsertKv && values[0] === historyStateKey)
+      .map(([, values]) => JSON.parse(values[1]))
+  }
+
+  it('decides canStopEarly from a fresh balance read, not a stale store balance', async () => {
+    const store = recreateStore()
+    // updateBalance swallowed its RPC error, so the store still shows the initial 0
+    expect(store.balance).toBe(0)
+    mocks.balanceOf.mockResolvedValue(5_000_000n)
+
+    await store.syncTransactionHistory()
+
+    expect(persistedHistoryStates().at(-1)).toMatchObject({
+      mode: 'initial',
+      session: { canStopEarly: true, state: { remainingBalance: '5000000', remainingNonce: '0' } },
+    })
+  })
+
+  it('does not start an initial scan when the balance read fails', async () => {
+    const store = recreateStore()
+    mocks.balanceOf.mockRejectedValue(new Error('balanceOf unavailable'))
+
+    await expect(store.syncTransactionHistory()).rejects.toThrow('balanceOf unavailable')
+
+    expect(persistedHistoryStates()).toEqual([])
+    expect(mocks.provider.getLogs).not.toHaveBeenCalled()
   })
 })
