@@ -54,7 +54,7 @@ include ':rdlabo-capacitor-screenshot-event'
 project(':rdlabo-capacitor-screenshot-event').projectDir = new File('../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.5.2/node_modules/@rdlabo/capacitor-screenshot-event/android')
 
 include ':capacitor-extended-dialog'
-project(':capacitor-extended-dialog').projectDir = new File('../node_modules/.pnpm/capacitor-extended-dialog@0.0.16_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog/android')
+project(':capacitor-extended-dialog').projectDir = new File('../node_modules/.pnpm/capacitor-extended-dialog@0.0.17_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog/android')
 
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@8.1.1_@capacitor+core@8.5.2/node_modules/@capacitor-community/sqlite/android')

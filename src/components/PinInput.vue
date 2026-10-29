@@ -36,6 +36,9 @@ const localFocused = ref(false)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 const isLoading = ref(false)
+// Delay the spinner so a fast result (wrong PIN) doesn't blur the input and flash the keyboard.
+const LOADING_DELAY = 500
+let loadingTimer: number | undefined
 const customError = ref('')
 
 // Flow steps (which pass a stepName) share a single hidden <input> so focus never has to hand off between the
@@ -74,8 +77,11 @@ watch(pinCodeInput, async (pin) => {
   if (pin.length === props.inputLength) {
     logger.log('🔢 PIN complete, emitting done')
     emit('done', pin)
-    if (props.showLoading)
-      isLoading.value = true
+    if (props.showLoading) {
+      loadingTimer = window.setTimeout(() => {
+        isLoading.value = true
+      }, LOADING_DELAY)
+    }
 
     // Clear input when component is invisible, this will allow to clear the input without the user seeing it
     // and when the users goes back to this component, the input will be empty.
@@ -94,7 +100,10 @@ watch(() => props.errorMsg, (msg) => {
     window.setTimeout(() => {
       wiggle.value = false
     }, 300)
+    window.clearTimeout(loadingTimer)
     isLoading.value = false
+    // Loading blurred the standalone input; refocus so the user can retype without tapping.
+    inputRef.value?.focus()
     clearInput()
     customError.value = msg
     Haptics.notification({ type: NotificationType.Error })
@@ -159,6 +168,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.clearTimeout(loadingTimer)
   removeBiometricResumeListener()
   if (isFlowStep)
     sharedPin.unregister(receiver)

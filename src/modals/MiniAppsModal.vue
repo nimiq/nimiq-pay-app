@@ -424,7 +424,8 @@ async function openCompetitionExternal(url: string) {
 
 <style scoped>
 .mini-apps-flow {
-  height: calc(100dvh - 5.5rem - var(--ion-safe-area-top, 0px) - var(--ion-safe-area-bottom, 0px));
+  /* Inside a sheet modal Ionic zeroes --ion-safe-area-top and keeps the root value in --ion-modal-offset-top */
+  height: calc(100dvh - 5.5rem - var(--ion-modal-offset-top, var(--ion-safe-area-top, 0px)) - var(--ion-safe-area-bottom, 0px));
 }
 
 .mini-app-searchbar {
