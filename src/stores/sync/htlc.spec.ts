@@ -1817,6 +1817,22 @@ describe('useSyncHtlc', () => {
       expect(state.query.mock.calls.length).toBe(firstQueryCalls)
     })
 
+    it('measures the throttle window in batch time, not raw block count', async () => {
+      const { useSyncHtlc } = await import('./htlc')
+      const htlc = useSyncHtlc()
+      await htlc.checkExpiredSwapHtlcs()
+      const firstQueryCalls = state.query.mock.calls.length
+
+      // headTimestamp is in ms: BLOCKS_PER_BATCH (32) + 1 ms later is still inside the batch.
+      state.headTimestamp += 33
+      await htlc.checkExpiredSwapHtlcs()
+      expect(state.query.mock.calls.length).toBe(firstQueryCalls)
+
+      state.headTimestamp += 32 * 1000
+      await htlc.checkExpiredSwapHtlcs()
+      expect(state.query.mock.calls.length).toBeGreaterThan(firstQueryCalls)
+    })
+
     it('refunds a legacy polygon row (no htlc_id) instead of deleting it as expired', async () => {
       const legacyRow = { address: '0xfundinghash', htlc_id: null, swap_id: 'swap-1' }
       state.query.mockResolvedValue([legacyRow])
@@ -1944,7 +1960,7 @@ describe('useSyncHtlc', () => {
       expect(trackSwapStep).not.toHaveBeenCalled()
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-id', refund_hash: 'refund-hash', refund_block: 128 }])
       state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'confirmed', executionResult: true })) as any
-      state.headTimestamp += 1000
+      state.headTimestamp += 32 * 1000 + 1
       await htlc.checkExpiredSwapHtlcs()
 
       expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
@@ -1977,7 +1993,7 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
 
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      state.headTimestamp += 1000
+      state.headTimestamp += 32 * 1000 + 1
       await useSyncHtlc().checkExpiredSwapHtlcs()
 
       expect(state.client.sendTransaction).toHaveBeenCalledTimes(2)
