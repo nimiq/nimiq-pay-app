@@ -200,7 +200,7 @@ vi.mock('@/stores/remote-signer', () => ({
   }),
 }))
 vi.mock('@/stores/sync', () => ({
-  HTLC_AUTO_EXTEND_LOOKAHEAD_MS: 1,
+  MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA: 1,
   useSync: () => ({
     recoverRemoteSigner: state.recoverRemoteSigner,
     verifyRemoteSignersDb: state.verifyRemoteSignersDb,

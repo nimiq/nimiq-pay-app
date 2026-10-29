@@ -11,7 +11,7 @@ describe('useSyncState', () => {
 
   it('expresses the auto-extend lookahead as 120 one-second-block batches in ms', async () => {
     const mod = await import('./state')
-    expect(mod.HTLC_AUTO_EXTEND_LOOKAHEAD_MS).toBe(120 * Nimiq.Policy.BLOCKS_PER_BATCH * 1000)
+    expect(mod.MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA).toBe(120 * Nimiq.Policy.BLOCKS_PER_BATCH * 1000)
   })
 
   it('marks nodesAreSynced false initially and true once heights match within a batch', async () => {
@@ -54,14 +54,14 @@ describe('useSyncState', () => {
     })
 
     it('is false while head + lookahead has not passed the mid-point', async () => {
-      const { HTLC_AUTO_EXTEND_LOOKAHEAD_MS, useSyncState } = await import('./state')
-      state.headTimestamp = mid - HTLC_AUTO_EXTEND_LOOKAHEAD_MS
+      const { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSyncState } = await import('./state')
+      state.headTimestamp = mid - MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA
       expect(useSyncState().htlcCanBeExtended).toBe(false)
     })
 
     it('is true once head + lookahead passes the mid-point', async () => {
-      const { HTLC_AUTO_EXTEND_LOOKAHEAD_MS, useSyncState } = await import('./state')
-      state.headTimestamp = mid - HTLC_AUTO_EXTEND_LOOKAHEAD_MS + 1
+      const { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSyncState } = await import('./state')
+      state.headTimestamp = mid - MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA + 1
       expect(useSyncState().htlcCanBeExtended).toBe(true)
     })
 
