@@ -427,6 +427,7 @@ export const useTransactions = defineStore('transactions', () => {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
     }
     finally {
+      syncState.pendingPaymentTransactions = []
       isSendingTx.value = false
       // Lightning settlement can take until the HTLC expires. Funds already moved, so other sends and
       // reclaims may run; callers without onSubmitted still wait until settlement ends.
