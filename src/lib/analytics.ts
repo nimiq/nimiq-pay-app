@@ -3,7 +3,7 @@ import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
-import { reportException, useLogger } from '@/composables/useLogger'
+import { redact, reportException, useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
 import { useApp } from '@/stores/app'
@@ -26,7 +26,7 @@ export function reportCriticalError(error: unknown, context?: Record<string, unk
   reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition' | 'resume'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 
@@ -111,7 +111,7 @@ export interface PaymentEventProperties {
   is_atomic_swap: boolean
 }
 
-export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled'
+export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'unknown'
 
 export interface PaymentAnalyticsState {
   startedAt: number
@@ -189,7 +189,12 @@ export function trackPaymentCompleted(props: PaymentEventProperties & { duration
 }
 
 export function trackPaymentFailed(props: PaymentEventProperties & { error_reason: string }): void {
-  capture('payment_failed', props)
+  capture('payment_failed', { ...props, error_reason: redact(props.error_reason) })
+}
+
+// The send may have reached the network, so the payment is neither completed nor failed.
+export function trackPaymentUnknown(props: PaymentEventProperties & { error_reason: string, duration_ms: number }): void {
+  capture('payment_unknown', { ...props, error_reason: redact(props.error_reason) })
 }
 
 export function trackPaymentCancelled(props: PaymentEventProperties & { cancelled_at_step: 'pin' }): void {
@@ -206,12 +211,55 @@ export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Ass
   capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
+interface SwapSettlementStats {
+  polls: number
+  last_status: string | null
+}
+
+// Extra properties per step, so the PostHog schema is checked at every call site.
+export interface SwapStepProps {
+  quote: { reused: boolean, invoice_expires_in_s: number, quote_expires_in_s: number }
+  confirm: { already_confirmed: boolean, swap_status: string }
+  verify: { invoice_expires_in_s: number, htlc_timeout_in_s: number }
+  cosign: { head_height: number, remote_height: number, status: number, replayed: boolean, tx_sent: boolean | null }
+  relay: { tx_state: string }
+  broadcast: { tx_state: string | null, execution_result: boolean | null }
+  funding_proof: { swap_status: string, has_preimage: boolean }
+  settlement_slow: SwapSettlementStats
+  settlement: SwapSettlementStats & { preimage_source: 'funding_proof' | 'poll' }
+  refund: { tx_state: string, execution_result: boolean | null, rebroadcast: boolean }
+}
+
+export type SwapStep = keyof SwapStepProps
+
+export type SwapStepEvent<S extends SwapStep> = {
+  step: S
+  ok: boolean
+  asset: Asset
+  swap_id?: string
+  duration_ms?: number
+  error_reason?: string
+} & Partial<SwapStepProps[S]>
+
+// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
+// swap_id is Fastspot's id, needed to look the swap up with them.
+// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
+// the app skips it and no `broadcast` step follows.
+export function trackSwapStep<S extends SwapStep>(props: SwapStepEvent<S>): void {
+  capture('swap_step', {
+    ...props,
+    ...(props.error_reason ? { error_reason: redact(props.error_reason) } : {}),
+    swap_pair: assetToSwapPair(props.asset),
+    swap_provider: SWAP_PROVIDER,
+  })
+}
+
 export function trackConsensusEstablished(props: { duration_ms: number, network: string, sync_mode: string }): void {
   capture('consensus_established', props)
 }
 
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
-  capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+  capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
 // Why handleFunds (or the send right after it) left local funds unsecured.

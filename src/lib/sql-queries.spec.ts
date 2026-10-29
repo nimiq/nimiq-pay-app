@@ -151,8 +151,9 @@ describe('polygon recovery migrations', () => {
       'refund_hash',
       'refund_timestamp',
       'refund_block',
+      'htlc_id_recovery_failed',
     ])
-    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
     expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
       SQLQuery.AddValidityStartHeightToTxsTable,
     ])
@@ -197,6 +198,39 @@ describe('polygon recovery migrations', () => {
       ])
       if (version >= 9)
         expect(legacyDb.prepare('SELECT validityStartHeight FROM transactions').get()).toEqual({ validityStartHeight: 456 })
+    }
+    finally {
+      legacyDb.close()
+    }
+  })
+
+  it('recovers or parks pre-v8 Polygon rows without an HTLC id', () => {
+    const legacyDb = new DatabaseSync(':memory:')
+    try {
+      for (const migration of migrations.filter(migration => migration.toVersion <= 7))
+        legacyDb.exec(migration.statements.join(';'))
+      const insert = legacyDb.prepare('INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)')
+      // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; Nimiq rows store a block height.
+      insert.run('0xrecoverable', 1, 1_700_000_000, 'swap-1', 'pending')
+      insert.run('0xunrecoverable', 2, 1_700_000_000, 'swap-2', 'pending')
+      insert.run('NQ00 NATIVE', 3, 3_000_000, 'swap-3', 'pending')
+      for (const migration of migrations.filter(migration => migration.toVersion > 7))
+        legacyDb.exec(migration.statements.join(';'))
+
+      legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('htlc-id', '0xrecoverable')
+      legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xunrecoverable')
+      // A recovered id is never overwritten, and a recovered row is never parked.
+      legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('other-id', '0xrecoverable')
+      legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xrecoverable')
+
+      expect(legacyDb.prepare(SQLQuery.GetExpiredSwapHtlcs).all(1_700_000_000_001)).toMatchObject([
+        { address: '0xrecoverable', htlc_id: 'htlc-id', tx_hash: '0xrecoverable', timeout_block: 1_700_000_000_000, htlc_id_recovery_failed: null },
+        { address: 'NQ00 NATIVE', timeout_block: 3_000_000 },
+      ])
+      expect(legacyDb.prepare(SQLQuery.GetSwapHtlcByAddress).get('0xunrecoverable', '0xunrecoverable')).toMatchObject({
+        htlc_id: null,
+        htlc_id_recovery_failed: 1,
+      })
     }
     finally {
       legacyDb.close()

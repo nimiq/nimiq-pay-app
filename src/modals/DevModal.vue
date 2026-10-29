@@ -19,7 +19,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
+import { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
@@ -393,7 +393,7 @@ onMounted(async () => {
           (from <strong>{{ validityStart }}</strong>
           to <strong>{{ validityEnd }}</strong>)
         </p>
-        <p>Will be extended in: <strong> {{ Math.ceil(validityEnd - (validityEnd - validityStart) / 2) - MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA + 1 }}</strong></p>
+        <p>Will be extended in: <strong> {{ Math.ceil(validityEnd - (validityEnd - validityStart) / 2) - MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA + 1 }}</strong></p>
         <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>
         <IonButton
           :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"

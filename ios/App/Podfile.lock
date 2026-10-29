@@ -22,7 +22,7 @@ PODS:
   - CapacitorCordova (8.5.2)
   - CapacitorDevice (8.0.3):
     - Capacitor
-  - CapacitorExtendedDialog (0.0.16):
+  - CapacitorExtendedDialog (0.0.17):
     - Capacitor
     - SVGKit (~> 3.0)
   - CapacitorFilesystem (8.1.4):
@@ -140,7 +140,7 @@ DEPENDENCIES:
   - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@8.1.1_@capacitor+core@8.5.2/node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@8.5.2_@capacitor+core@8.5.2/node_modules/@capacitor/ios`)"
   - "CapacitorDevice (from `../../node_modules/.pnpm/@capacitor+device@8.0.3_@capacitor+core@8.5.2/node_modules/@capacitor/device`)"
-  - "CapacitorExtendedDialog (from `../../node_modules/.pnpm/capacitor-extended-dialog@0.0.16_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog`)"
+  - "CapacitorExtendedDialog (from `../../node_modules/.pnpm/capacitor-extended-dialog@0.0.17_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog`)"
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@8.1.4_@capacitor+core@8.5.2/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@8.0.2_@capacitor+core@8.5.2/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@8.0.6_@capacitor+core@8.5.2/node_modules/@capacitor/keyboard`)"
@@ -202,7 +202,7 @@ EXTERNAL SOURCES:
   CapacitorDevice:
     :path: "../../node_modules/.pnpm/@capacitor+device@8.0.3_@capacitor+core@8.5.2/node_modules/@capacitor/device"
   CapacitorExtendedDialog:
-    :path: "../../node_modules/.pnpm/capacitor-extended-dialog@0.0.16_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog"
+    :path: "../../node_modules/.pnpm/capacitor-extended-dialog@0.0.17_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog"
   CapacitorFilesystem:
     :path: "../../node_modules/.pnpm/@capacitor+filesystem@8.1.4_@capacitor+core@8.5.2/node_modules/@capacitor/filesystem"
   CapacitorHaptics:
@@ -249,7 +249,7 @@ SPEC CHECKSUMS:
   CapacitorCommunitySqlite: 785553c54e52da62d058238d4571db5692c022c4
   CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
   CapacitorDevice: 708e742b60a61572cd593e44c809592e8f31da14
-  CapacitorExtendedDialog: 15e914ebd645dd4b0a86c7bcaf195a37921309e5
+  CapacitorExtendedDialog: f41ed9e07b2bd140e4cfba8e30f068d7fd49127b
   CapacitorFilesystem: 17ee1862a45ef2e5012311a87e18de1d45a6811b
   CapacitorHaptics: 296f771ecd89c7a1bd92a7b6826a7d268e2e70f5
   CapacitorKeyboard: f9e85e685082e9f63404de15db4a4291448b0912
@@ -285,6 +285,6 @@ SPEC CHECKSUMS:
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: fa4686a78a702a0860edc32a571a9411096e0321
+PODFILE CHECKSUM: 508f6f78a82e161c820cd438f7c210067c51bbcb
 
 COCOAPODS: 1.15.2

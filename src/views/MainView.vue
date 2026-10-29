@@ -6,7 +6,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonPage, IonRouterOutlet, IonTabs } from '@ionic/vue'
 import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 // TODO: lazy load
 import AlertIcon from '@/components/icons/alert.vue'
@@ -261,28 +261,58 @@ async function isOwnRecipient({ recipient, chain }: PaymentRequestData) {
   return false
 }
 
+// Requests being validated (false) or validated and waiting for consensus (true).
+// Resumes before consensus would otherwise re-fetch and push the same request again.
+const pendingPaymentRequests = new Map<string, boolean>()
+
+// Invoice could be expired, so we don't want to show the notification if it's invalid
+async function isValidPaymentRequest(pr: string) {
+  const { useStringParser } = await import('@/composables/useStringParser')
+  const { isPaymentRequest, getPaymentRequestData } = useStringParser()
+  if (!isPaymentRequest(pr))
+    return false
+  const { data, error } = await getPaymentRequestData(pr)
+  return !error && !!data && !(await isOwnRecipient(data))
+}
+
 async function detectPaymentRequest() {
   try {
     const { type, value: pr } = await Clipboard.read()
-    if (type === 'text/plain' && pr) {
-      if (displayedPaymentRequests.value.includes(pr))
+    if (type !== 'text/plain' || !pr || displayedPaymentRequests.value.includes(pr))
+      return
+    const isValidated = pendingPaymentRequests.get(pr)
+    if (isValidated !== undefined) {
+      // Dismissed while waiting for consensus: show it again if still valid
+      if (!isValidated || detectedPaymentRequest.value === pr)
         return
-      const { useStringParser } = await import('@/composables/useStringParser')
-      const { isPaymentRequest, getPaymentRequestData } = useStringParser()
-      if (isPaymentRequest(pr)) {
-        // Invoice could be expired, so we don't want to show the notification if it's invalid
-        const { data, error } = await getPaymentRequestData(pr)
-        if (!error && data && !(await isOwnRecipient(data))) {
+      pendingPaymentRequests.set(pr, false)
+      try {
+        if (await isValidPaymentRequest(pr))
           detectedPaymentRequest.value = pr
-          // Wait for the animation to start before vibrating
-          // It feels weird if the vibration happens before the notification is even shown
-          await sleep(100)
-          Haptics.impact({ style: ImpactStyle.Light })
-          // If no consensus user might close the app before even opening the notification and wants to see it again
-          await until(consensus).toBe('established')
-          displayedPaymentRequests.value.push(pr)
-        }
       }
+      finally {
+        // Consensus may have arrived meanwhile and cleared the entry
+        if (pendingPaymentRequests.has(pr))
+          pendingPaymentRequests.set(pr, true)
+      }
+      return
+    }
+    pendingPaymentRequests.set(pr, false)
+    try {
+      if (await isValidPaymentRequest(pr)) {
+        pendingPaymentRequests.set(pr, true)
+        detectedPaymentRequest.value = pr
+        // Wait for the animation to start before vibrating
+        // It feels weird if the vibration happens before the notification is even shown
+        await sleep(100)
+        Haptics.impact({ style: ImpactStyle.Light })
+        // If no consensus user might close the app before even opening the notification and wants to see it again
+        await until(consensus).toBe('established')
+        displayedPaymentRequests.value.push(pr)
+      }
+    }
+    finally {
+      pendingPaymentRequests.delete(pr)
     }
   }
   catch (error) {
@@ -335,7 +365,8 @@ onMounted(async () => {
   isFirstRender.value = false
 })
 
-App.addListener('resume', detectPaymentRequest)
+const resumeListener = App.addListener('resume', detectPaymentRequest)
+onUnmounted(() => resumeListener.then(listener => listener.remove()))
 </script>
 
 <template>

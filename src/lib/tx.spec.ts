@@ -32,6 +32,10 @@ vi.mock('@/lib', () => ({
   nimiqPayCosignerPublicKeys: ['c1534c708122968212c6709526801d18218ce9303590f2bca473213d99b24aaf'],
 }))
 
+vi.mock('@/lib/analytics', () => ({
+  trackSwapStep: vi.fn(),
+}))
+
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => {
     const address = { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ00 LOCAL', toHex: () => 'local-hex' }

@@ -11,6 +11,7 @@ import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, isValidEthAddress } from '@/lib/ethereum'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { startSwapStep } from '@/lib/swap-telemetry'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
@@ -172,13 +173,16 @@ export function useStringParser() {
     if (!searchParams.has(CPL_URL_ID_PARAM))
       return { error: i18n.t('Invalid CPLink. Missing id.'), data: undefined }
 
-    const rawAmount = searchParams.get('amount') || '0'
-    const nimAmount = Number.parseFloat(rawAmount)
+    if (!ValidationUtils.isValidAddress(recipient))
+      return { error: i18n.t('Invalid Nimiq address'), data: undefined }
 
-    if (!nimAmount || !recipient)
+    const rawAmount = searchParams.get('amount') || '0'
+    const lunaAmount = Math.round(Number.parseFloat(rawAmount) * 1e5)
+
+    // Checked in luna: a sub-luna amount rounds to 0, which would route to manual amount entry
+    if (!Number.isSafeInteger(lunaAmount) || lunaAmount <= 0)
       return { error: i18n.t('Invalid CPLink. Missing amount or recipient.'), data: undefined }
 
-    const lunaAmount = Math.round(nimAmount * 1e5)
     const fee = 0 // There is no fee in NIM (yay)
     const merchantName = searchParams.get('label') || undefined
     const transfer = Transfer.UserPaymentToMerchant
@@ -248,7 +252,12 @@ export function useStringParser() {
     const swapQuoteCacheKey = `${sellAssetId}:${decoded.paymentRequest}`
 
     let quote: Quote
+    const quoteStartedAt = Date.now()
     const existingQuote = await query<{ ln_invoice: string, swap_id: string } | undefined>(SQLQuery.GetSwapQuote, [swapQuoteCacheKey], { single: true })
+    const quoteStep = startSwapStep('quote', { asset: isUsdt ? Asset.USDT : Asset.NIM, swap_id: existingQuote?.swap_id }, {
+      reused: !!existingQuote,
+      invoice_expires_in_s: Math.round(invoiceExpiresAt - Date.now() / 1e3),
+    }, quoteStartedAt)
     if (existingQuote) {
       try {
         // TODO: I don't know what could happen if the swap was already created
@@ -262,6 +271,7 @@ export function useStringParser() {
       }
       catch (e) {
         logger.error('Error fetching existing swap:', { error: e, decoded })
+        quoteStep.fail(e)
         return { error: i18n.t('Cannot fetch existing swap'), data: undefined }
       }
     }
@@ -275,9 +285,11 @@ export function useStringParser() {
       }
       catch (e) {
         logger.error('Error creating swap:', { error: e, amountBtc, decoded, sellAssetId })
+        quoteStep.fail(e)
         return { error: i18n.t('Cannot create swap'), data: undefined }
       }
     }
+    quoteStep.end(true, { swap_id: quote.id, quote_expires_in_s: Math.round(quote.expiry - Date.now() / 1e3) })
 
     if (quote.sell.asset !== sellAssetId)
       return { error: i18n.t('Could not fetch amount for Bitcoin Lightning swap.'), data: undefined }
@@ -336,15 +348,20 @@ export function useStringParser() {
     if (protocol !== 'nimiq:')
       return { error: i18n.t('Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported.'), data: undefined }
 
+    if (!ValidationUtils.isValidAddress(recipient))
+      return { error: i18n.t('Invalid Nimiq address'), data: undefined }
+
     const rawAmount = searchParams.get('amount') || '0'
     const nimAmount = Number.parseFloat(rawAmount)
+    const lunaAmount = Math.round(nimAmount * 1e5)
 
-    if (!recipient)
-      return { error: i18n.t('Invalid Nimiq Wallet request. Missing recipient.'), data: undefined }
+    // 0 means the request has no amount and the user enters it
+    if (!Number.isSafeInteger(lunaAmount) || nimAmount < 0)
+      return { error: i18n.t('Invalid amount'), data: undefined }
 
     const data: PaymentRequestData = {
       recipient,
-      amount: Math.round(nimAmount * 1e5),
+      amount: lunaAmount,
       fee: 0,
       merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the Nimiq Wallet request
       rail: Rail.NimiqWallet,
