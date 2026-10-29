@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 enableAutoUnmount(afterEach)
 
-const { env } = vi.hoisted(() => ({
+const { env, scanner } = vi.hoisted(() => ({
   env: { isMockEnabled: false },
+  scanner: { start: vi.fn(), stop: vi.fn() },
 }))
 
 vi.mock('qr-scanner-wechat', () => ({ ready: vi.fn() }))
@@ -24,8 +25,8 @@ vi.mock('@/composables/useQRScanner', () => ({
   QRScannerState: { Idle: 'idle', Scanning: 'scanning', NoPermission: 'no-permission' },
   useQRScanner: () => ({
     setDummyData: vi.fn(),
-    start: vi.fn(),
-    stop: vi.fn(),
+    start: scanner.start,
+    stop: scanner.stop,
     state: { value: 'idle' },
   }),
 }))
@@ -38,6 +39,8 @@ describe('qr scanner mock controls', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     env.isMockEnabled = false
+    scanner.start.mockReset()
+    scanner.stop.mockReset()
     vi.resetModules()
   })
 
@@ -46,10 +49,10 @@ describe('qr scanner mock controls', () => {
     vi.useRealTimers()
   })
 
-  async function mountScanner() {
+  async function mountScanner(isVisible = false) {
     const { default: QRScanner } = await import('./QRScanner.vue')
     return shallowMount(QRScanner, {
-      props: { isVisible: false, expect: 'payment-request' },
+      props: { isVisible, expect: 'payment-request' },
       global: { mocks: { $t: (text: string) => text } },
     })
   }
@@ -61,5 +64,24 @@ describe('qr scanner mock controls', () => {
   it('hides dummy controls from screenshot mock mode', async () => {
     env.isMockEnabled = true
     expect((await mountScanner()).text()).not.toContain('Click here to use mockup data.')
+  })
+
+  it('stops the scanner on unmount while start() is still pending', async () => {
+    scanner.start.mockReturnValue(new Promise(() => {}))
+    const wrapper = await mountScanner(true)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(scanner.start).toHaveBeenCalledTimes(1)
+
+    wrapper.unmount()
+
+    expect(scanner.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start the scanner when unmounted before the debounced start fires', async () => {
+    const wrapper = await mountScanner(true)
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(scanner.start).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,4 @@
-import type { PluginListenerHandle } from '@capacitor/core'
-import type { MiniAppHost, MiniAppSessionState } from '@/composables/useMiniAppHost'
+import type { MiniAppSessionState } from '@/composables/useMiniAppHost'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { useLogger } from '@/composables/useLogger'
 
@@ -15,9 +14,9 @@ interface PersistedSession extends MiniAppSessionState {
 
 /**
  * Clears only the temporary session marker from `sessionStorage`.
- * Use this after a successful reconnect, when the webview/cookies must stay intact.
+ * Use this when relaunching the saved Mini App, whose cookies must stay intact.
  */
-function clearPersistedSession(): void {
+export function clearPersistedSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
 }
 
@@ -66,58 +65,4 @@ export async function clearSession(): Promise<void> {
 
 export function hasPendingSession(): boolean {
   return getSession() !== null
-}
-
-/**
- * Reconnect to a hidden webview after PIN unlock.
- * Creates a new MiniAppHost (re-registering listeners), then shows the webview.
- * Returns the new host, or null if reconnection failed.
- */
-export async function reconnectAndShow(): Promise<MiniAppHost | null> {
-  const session = getSession()
-  if (!session) {
-    logger.log('No pending session to reconnect')
-    return null
-  }
-
-  try {
-    const { MiniAppHost } = await import('@/composables/useMiniAppHost')
-    const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
-
-    const host = MiniAppHost.reconnect(InAppBrowser, {
-      url: session.url,
-      title: session.title,
-      evmRpcUrls: session.evmRpcUrls,
-      requestUserConfirmation,
-      selectLightningAsset,
-    }, session.chainId)
-
-    // Re-register close listener so the host is destroyed when user closes the webview
-    // (host.destroy() no longer removes listeners it doesn't own). Null re-entry guard
-    // because plugin close() and dialog dismiss can both emit closeEvent.
-    let closeHandle: PluginListenerHandle | null = await InAppBrowser.addListener('closeEvent', async () => {
-      const h = closeHandle
-      if (h === null)
-        return
-      closeHandle = null
-      logger.log('Reconnected mini-app webview closed, destroying host')
-      await host.destroy()
-      await h.remove()
-    })
-
-    await InAppBrowser.show()
-    clearPersistedSession()
-    logger.log('Webview reconnected and shown successfully')
-    return host
-  }
-  catch (error) {
-    logger.error('Failed to reconnect webview:', error)
-    await clearSession()
-    // Try to close any orphaned webview
-    try {
-      await InAppBrowser.close()
-    }
-    catch {}
-    return null
-  }
 }

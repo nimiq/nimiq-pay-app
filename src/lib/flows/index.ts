@@ -18,6 +18,7 @@ import {
   trackPaymentCancelled,
   trackPaymentCompleted,
   trackPaymentFailed,
+  trackPaymentUnknown,
   trackWalletCreated,
   trackWalletImported,
 } from '@/lib/analytics'
@@ -294,7 +295,7 @@ const paymentFlow: FlowInit = async () => {
       amount: request?.amount || 0,
       transfer: request?.transfer,
     })
-    const setPaymentAnalyticsStatus = (status: 'completed' | 'failed' | 'cancelled') => {
+    const setPaymentAnalyticsStatus = (status: 'completed' | 'failed' | 'cancelled' | 'unknown') => {
       if (previewState?.paymentAnalytics)
         previewState.paymentAnalytics = finishPaymentAnalytics(previewState.paymentAnalytics, status)
     }
@@ -318,6 +319,12 @@ const paymentFlow: FlowInit = async () => {
           case 'rejected':
             return failPayment(result.error)
           case 'unknown': {
+            setPaymentAnalyticsStatus('unknown')
+            trackPaymentUnknown({
+              ...analyticsProps,
+              error_reason: result.error,
+              duration_ms: Date.now() - (previewState?.paymentAnalytics?.startedAt || Date.now()),
+            })
             const { useToast } = await import('@/composables/useToast')
             useToast().setToast({
               message: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),

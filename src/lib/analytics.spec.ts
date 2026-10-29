@@ -9,6 +9,10 @@ import {
   trackAppOpened,
   trackFeatureOpened,
   trackFundsBlocked,
+  trackPaymentFailed,
+  trackPaymentUnknown,
+  trackSwapFailed,
+  trackSwapStep,
   trackTopUpReceived,
   trackWalletCreated,
   trackWalletEntrySelected,
@@ -391,5 +395,89 @@ describe('trackFundsBlocked', () => {
     trackFundsBlocked('activation_failed', { tx_hash: 'abc' })
 
     expect(state.capture).toHaveBeenCalledWith({ event: 'funds_blocked', properties: { reason: 'activation_failed', tx_hash: 'abc' } })
+  })
+})
+
+describe('trackSwapStep', () => {
+  it('captures the step with swap pair and provider', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'cosign', ok: true, asset: Asset.NIM, swap_id: 'swap-1', duration_ms: 1200, tx_sent: true })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'swap_step',
+      properties: { step: 'cosign', ok: true, asset: 'NIM', swap_id: 'swap-1', duration_ms: 1200, tx_sent: true, swap_pair: 'NIM_BTC_LN', swap_provider: 'fastspot' },
+    })
+  })
+
+  it('redacts addresses and hashes from the error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'broadcast', ok: false, asset: Asset.NIM, error_reason: `Rejected ${'a'.repeat(64)} from NQ07 0000 0000 0000 0000 0000 0000 0000 0000` })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Rejected … from NQ…')
+  })
+
+  it('redacts Lightning invoices, LNURLs and Bitcoin addresses from the error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const invoice = 'lnbc10u1pjqqqqqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqqcqzzsxqyz5vq'
+    trackSwapStep({
+      step: 'quote',
+      ok: false,
+      asset: Asset.NIM,
+      error_reason: `Bad peer ${invoice}, LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS, bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq, 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2`,
+    })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Bad peer ln…, ln…, btc…, btc…')
+  })
+
+  it('redacts testnet Bitcoin addresses but keeps long camelCase words', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapStep({ step: 'quote', ok: false, asset: Asset.NIM, error_reason: 'maxPriorityFeePerGasTooHigh for mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn' })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('maxPriorityFeePerGasTooHigh for btc…')
+  })
+})
+
+describe('trackPaymentUnknown', () => {
+  it('captures payment_unknown with a redacted error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const { PaymentMethod } = await import('@/types/transactions')
+    trackPaymentUnknown({
+      asset: Asset.NIM,
+      payment_method: PaymentMethod.NIM,
+      transfer_type: undefined,
+      amount_range: '1-10',
+      is_atomic_swap: true,
+      duration_ms: 31000,
+      error_reason: 'Timeout for NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'payment_unknown',
+      properties: expect.objectContaining({ is_atomic_swap: true, duration_ms: 31000, error_reason: 'Timeout for NQ…' }),
+    })
+  })
+})
+
+describe('failure error reasons', () => {
+  it('redacts Lightning invoices from swap_failed', async () => {
+    const { Asset } = await import('@/lib/assets')
+    trackSwapFailed({ asset: Asset.USDT, error_reason: 'Invalid peer lnbc10u1pjqqqqqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqqcqzzsxqyz5vq' })
+
+    expect(state.capture.mock.calls[0][0]).toMatchObject({ event: 'swap_failed', properties: { error_reason: 'Invalid peer ln…', swap_pair: 'USDT_BTC_LN' } })
+  })
+
+  it('redacts addresses from payment_failed', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const { PaymentMethod } = await import('@/types/transactions')
+    trackPaymentFailed({
+      asset: Asset.NIM,
+      payment_method: PaymentMethod.NIM,
+      transfer_type: undefined,
+      amount_range: '1-10',
+      is_atomic_swap: false,
+      error_reason: 'Rejected for NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    })
+
+    expect(state.capture.mock.calls[0][0]).toMatchObject({ event: 'payment_failed', properties: { error_reason: 'Rejected for NQ…' } })
   })
 })

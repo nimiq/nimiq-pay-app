@@ -31,7 +31,7 @@ describe('useNimiqNetwork', () => {
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
     vi.stubGlobal('Nimiq', {
-      default: vi.fn(),
+      default: vi.fn(() => Promise.resolve()),
       Client: { create: vi.fn() },
       ClientConfiguration: class {
         network() {}
@@ -282,5 +282,68 @@ describe('useNimiqNetwork', () => {
     finishCreation(historyClient as any)
     await vi.waitFor(() => expect(historyClient.disconnectNetwork).toHaveBeenCalledOnce())
     expect(historyClient.waitForConsensusEstablished).not.toHaveBeenCalled()
+  })
+
+  function mainClient() {
+    return {
+      getHeadBlock: vi.fn(() => Promise.resolve({ height: 1 })),
+      getNetworkId: vi.fn(() => Promise.resolve(5)),
+      addConsensusChangedListener: vi.fn(),
+      addHeadChangedListener: vi.fn(),
+      addPeerChangedListener: vi.fn(),
+      disconnectNetwork: vi.fn(() => Promise.resolve()),
+    }
+  }
+
+  it('disconnects a main client created after the creation timeout and retries with one live client', async () => {
+    vi.useFakeTimers()
+    let finishCreation!: (client: any) => void
+    const lateClient = mainClient()
+    const retryClient = mainClient()
+    vi.mocked(Nimiq.Client.create)
+      .mockImplementationOnce(() => new Promise(resolve => finishCreation = resolve))
+      .mockResolvedValueOnce(retryClient as any)
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    const init = store.init()
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(Nimiq.Client.create).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(1_000)
+    await init
+
+    expect(Nimiq.Client.create).toHaveBeenCalledTimes(2)
+    expect(store.client).toStrictEqual(retryClient)
+    expect(retryClient.addConsensusChangedListener).toHaveBeenCalledOnce()
+
+    finishCreation(lateClient)
+    await vi.waitFor(() => expect(lateClient.disconnectNetwork).toHaveBeenCalledOnce())
+    expect(lateClient.addConsensusChangedListener).not.toHaveBeenCalled()
+    expect(retryClient.disconnectNetwork).not.toHaveBeenCalled()
+  })
+
+  it('backs off between failed main client creations', async () => {
+    vi.useFakeTimers()
+    const client = mainClient()
+    vi.mocked(Nimiq.Client.create)
+      .mockRejectedValueOnce(new Error('create failed'))
+      .mockRejectedValueOnce(new Error('create failed'))
+      .mockResolvedValueOnce(client as any)
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    const init = store.init()
+
+    await vi.advanceTimersByTimeAsync(999)
+    expect(Nimiq.Client.create).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(Nimiq.Client.create).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1_999)
+    expect(Nimiq.Client.create).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    await init
+
+    expect(Nimiq.Client.create).toHaveBeenCalledTimes(3)
+    expect(store.client).toStrictEqual(client)
+    expect(Nimiq.default).toHaveBeenCalledOnce()
   })
 })
