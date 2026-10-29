@@ -34,9 +34,7 @@ watch(() => props.errorMsg, (error) => {
 }, { immediate: true })
 
 const cameraFeedContainerTop = ref(0)
-watchEffect(() => {
-  if (!props.isVisible)
-    return
+function measureCameraFeedContainerTop() {
   let totalOffsetTop = 0
   let element: Element | null = cameraFeedContainer.value
   while (element instanceof HTMLElement) {
@@ -44,27 +42,34 @@ watchEffect(() => {
     element = element.offsetParent
   }
   cameraFeedContainerTop.value = totalOffsetTop
+}
+watchEffect(() => {
+  if (props.isVisible)
+    measureCameraFeedContainerTop()
 })
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-const { isWeb, isIOS } = useDevice()
+const { isWeb } = useDevice()
 
 watchDebounced(() => props.isVisible, async (isVisible) => {
+  // Skip if the container is not mounted: before mount, or after unmount, since the debounce timer outlives the component.
+  if (!cameraFeedContainer.value)
+    return
   if (isVisible) {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
+    // Measure again: the class makes sheets full screen and pads the header, which moves the container
+    measureCameraFeedContainerTop()
     const activatingMessage = i18n.t('Activating scanner')
     useToast().setToast({ message: activatingMessage, type: 'spinner', keepOpen: true })
     await start()
     // Only clear the spinner: start() may have replaced it with an error toast the user must see
     useToast().clearToast(activatingMessage)
   }
-  else if (cameraFeedContainer.value) {
-    // Stop scanner, if the container has actually been mounted yet.
+  else {
     document.body.classList.remove('native-qr-scanner-modal-open')
-    if (state.value === QRScannerState.Scanning)
-      stop()
+    stop()
     useToast().clearToast()
   }
 }, { immediate: true, debounce: 250, maxWait: 500 })
@@ -74,8 +79,7 @@ onMounted(ready)
 
 onBeforeUnmount(() => {
   document.body.classList.remove('native-qr-scanner-modal-open')
-  if (state.value === QRScannerState.Scanning)
-    stop()
+  stop()
 
   if (props.isVisible)
     useToast().clearToast()
@@ -128,11 +132,12 @@ function handleManualInput() {
       through which the camera can be seen (other parent / background elements are made transparent in useCameraFeed),
       with a wide white border to cover the rest. -->
       <div class="relative m-auto box-border shadow-[0_0_0_100vh_white] w-[calc(100vw-6rem)]" :style="`top: -${cameraFeedContainerTop / 4}px`">
-        <div class="aspect-square">
+        <div class="relative aspect-square">
           <Transition name="fade">
             <div v-if="state === QRScannerState.Idle" class="h-full w-full bg-space/5" />
           </Transition>
-          <svg class="absolute -inset-0.5" :class="{ '-mr-1': isIOS }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
+          <!-- Explicit size: an absolute svg without one isn't sized from its insets, so the frame missed the hole -->
+          <svg class="absolute -left-0.5 -top-0.5 size-[calc(100%+4px)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
         </div>
@@ -184,9 +189,18 @@ body.native-qr-scanner-modal-open ion-modal {
   --background: transparent; /* make dialog background transparent */
   --overflow: visible; /* make ::before element defined below visible */
 }
+/* The camera shows through the transparent background above a sheet, so sheets go full screen while scanning.
+!important beats the inline --height Flow.vue sets for overrideHeight steps. Ionic zeroes --ion-safe-area-top on
+sheets, so the header is pushed below the status bar via --ion-modal-offset-top instead. */
+body.native-qr-scanner-modal-open ion-modal.modal-sheet {
+  --height: 100% !important;
+  --border-radius: 0;
+}
+body.native-qr-scanner-modal-open ion-modal.modal-sheet ion-header {
+  padding-top: var(--ion-modal-offset-top, 0px);
+}
 body.native-qr-scanner-modal-open ion-modal .ion-page::before {
-  /* Simulate backdrop above modal. This area is typically var(--ion-safe-area-top) + 10px big (via definition of
-  --height on ion-modal), but a larger area is visible when the user drags the modal down to close it. */
+  /* Simulate backdrop above modal. Only visible when the user drags the modal down to close it. */
   content: '';
   position: absolute;
   width: 100%;

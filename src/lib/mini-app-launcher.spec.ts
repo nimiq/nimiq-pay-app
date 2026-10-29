@@ -474,6 +474,40 @@ describe('mini-app-launcher', () => {
     expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
 
+  it('relaunches a preserved session in a fresh webview without clearing its cookies', async () => {
+    sessionStorage.setItem('miniAppSession', JSON.stringify({
+      url: 'https://app.uniswap.org/',
+      title: 'Uniswap',
+      chainId: '0x1',
+      hiddenAt: Date.now(),
+    }))
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://app.uniswap.org/', title: 'Uniswap', source: 'resume', keepCookies: true })
+
+    expect(clearAllCookies).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('miniAppSession')).toBeNull()
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
+    expect(trackDAppOpened).toHaveBeenCalledWith('https://app.uniswap.org/', 'Uniswap', 'resume')
+  })
+
+  it('relaunches a preserved session when its hidden webview is already gone', async () => {
+    sessionStorage.setItem('miniAppSession', JSON.stringify({
+      url: 'https://app.uniswap.org/',
+      title: 'Uniswap',
+      chainId: '0x1',
+      hiddenAt: Date.now(),
+    }))
+    // Native close() rejects without a closeEvent when no webview exists.
+    close.mockRejectedValueOnce(new Error('WebView is not initialized'))
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://app.uniswap.org/', title: 'Uniswap', source: 'resume', keepCookies: true })
+
+    expect(openWebView).toHaveBeenCalledTimes(1)
+    expect(sessionStorage.getItem('miniAppSession')).toBeNull()
+  })
+
   it('fails the launch on pageLoadError and skips success bookkeeping', async () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
     const deferred = createDeferred<void>()

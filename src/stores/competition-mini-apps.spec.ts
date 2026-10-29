@@ -112,6 +112,19 @@ describe('competition Mini Apps store', () => {
     expect(store.apps.map(app => app.name)).toEqual(['Roundtrip'])
   })
 
+  it('drops entries whose Mini App URL is cleartext http', async () => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp(),
+      remoteApp({ app_name: 'Cleartext', url: 'http://cleartext.example/' }),
+    ]))
+    const { useCompetitionMiniApps } = await import('./competition-mini-apps')
+    const store = useCompetitionMiniApps()
+
+    await store.load()
+
+    expect(store.apps.map(app => app.name)).toEqual(['Roundtrip'])
+  })
+
   it('sorts cycles newest-first and preserves app order inside each cycle', async () => {
     state.httpGet.mockResolvedValue(response([
       remoteApp({ cycle: 'cycle2', app_name: 'First', url: 'https://first.example/' }),

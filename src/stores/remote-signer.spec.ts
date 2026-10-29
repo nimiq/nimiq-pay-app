@@ -318,6 +318,7 @@ describe('useRemoteSigner', () => {
       },
       Policy: {
         BLOCKS_PER_BATCH: 32,
+        BLOCK_SEPARATION_TIME: 1000n,
       },
     })
 

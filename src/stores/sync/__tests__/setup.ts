@@ -181,7 +181,7 @@ export function remoteSignerFixture(address: string, balance: number, active = f
 
 export function stubNimiqGlobal() {
   vi.stubGlobal('Nimiq', {
-    Policy: { BLOCKS_PER_BATCH: 32, TRANSACTION_VALIDITY_WINDOW_BLOCKS: 120 },
+    Policy: { BLOCKS_PER_BATCH: 32, BLOCK_SEPARATION_TIME: 1000n, TRANSACTION_VALIDITY_WINDOW_BLOCKS: 120 },
     Address: {
       fromString: (value: string) => createAddress(value),
       fromUserFriendlyAddress: (value: string) => createAddress(value),
@@ -403,6 +403,7 @@ vi.mock('@/lib/analytics', () => ({
   trackTopUpReceived: vi.fn(),
   trackFundsBlocked: vi.fn(),
   trackSyncSlow: vi.fn(),
+  trackSwapStep: vi.fn(),
 }))
 
 vi.mock('@/lib/utils', async importOriginal => ({

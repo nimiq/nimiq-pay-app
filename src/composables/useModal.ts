@@ -148,7 +148,9 @@ function _useModal() {
       logger.log('closeModal', modal)
 
     if (modal) {
-      modal.canDismiss = true
+      // Only override boolean guards; a function canDismiss (flows) must run to start their close teardown.
+      if (typeof modal.canDismiss !== 'function')
+        modal.canDismiss = true
       await modal.dismiss(data, role)
     }
   }

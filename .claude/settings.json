@@ -1,1 +1,30 @@
-{}
+{
+  "permissions": {
+    "allow": [
+      "Bash(adb exec-out screencap -p)",
+      "Bash(pnpm vitest run)",
+      "Bash(pnpm vitest run *)",
+      "Bash(pnpm exec vitest run *)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(adb logcat -d)",
+      "Bash(adb shell run-as com.nimiq.pay.debug cat cache/logs.txt)",
+      "Bash(adb shell run-as com.nimiq.pay.debug cat shared_prefs/CapWebViewSettings.xml)",
+      "Bash(adb devices)",
+      "Bash(adb shell dumpsys window)",
+      "Bash(adb shell dumpsys package com.nimiq.pay.debug)",
+      "Bash(adb shell pidof com.nimiq.pay.debug)",
+      "Bash(adb forward tcp:9333 *)",
+      "Bash(xcrun simctl io booted screenshot *)",
+      "Bash(xcrun devicectl list *)",
+      "mcp__claude_ai_Linear__get_issue",
+      "mcp__claude_ai_Linear__list_issues",
+      "mcp__claude_ai_Linear__list_comments",
+      "mcp__claude-in-chrome__find",
+      "mcp__claude-in-chrome__read_page",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__t3-code__device_screenshot",
+      "mcp__t3-code__device_list"
+    ]
+  }
+}

@@ -82,6 +82,9 @@ App.addListener('appUrlOpen', async (event) => {
 })
 
 let lastPauseTimestamp = 0
+// Stays true until the page reloads: InAppBrowser.close() fires its own pause/resume on Android,
+// and those later resumes must not start sync on the page being torn down
+let isReloadingAfterResume = false
 App.addListener('pause', () => {
   const { isAppInBackground } = storeToRefs(useLocks())
   lastPauseTimestamp = Date.now()
@@ -89,12 +92,15 @@ App.addListener('pause', () => {
 })
 
 App.addListener('resume', async () => {
+  if (isReloadingAfterResume)
+    return
   const { reopenMiniAppWebviewAfterResume } = storeToRefs(useApp())
   const now = Date.now()
   const timeInBackground = now - lastPauseTimestamp
   logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
   // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
   if (shouldReloadAppAfterBackground(lastPauseTimestamp, now)) {
+    isReloadingAfterResume = true
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
 
@@ -133,7 +139,9 @@ App.addListener('resume', async () => {
     }
 
     lastPauseTimestamp = 0
+    // go(0) only schedules the reload; stop here so resume sync doesn't run on the dying page
     router.go(0)
+    return
   }
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')

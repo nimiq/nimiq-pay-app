@@ -147,6 +147,9 @@ export enum SQLQuery {
   AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
   AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
   BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
+  AddHtlcIdRecoveryFailedColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id_recovery_failed INTEGER',
+  // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; later rows and the sweep use ms.
+  NormalizeLegacyPolygonSwapHtlcTimeout = 'UPDATE swap_htlcs SET timeout_block = timeout_block * 1000 WHERE htlc_id IS NULL AND address LIKE \'0x%\' AND timeout_block < 100000000000',
   // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
   BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
@@ -159,10 +162,12 @@ export enum SQLQuery {
   SetNativeSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = ? WHERE address = ?',
   SetSwapHtlcRefundAttempt = 'UPDATE swap_htlcs SET refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
   ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
+  SetRecoveredSwapHtlcId = 'UPDATE swap_htlcs SET htlc_id = ?, tx_hash = COALESCE(tx_hash, address) WHERE address = ? AND htlc_id IS NULL',
+  SetSwapHtlcIdRecoveryFailed = 'UPDATE swap_htlcs SET htlc_id_recovery_failed = 1 WHERE address = ? AND htlc_id IS NULL',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
   DeleteSwapHtlcByTxHash = 'DELETE FROM swap_htlcs WHERE address = ? OR tx_hash = ?',
   GetSwapHtlcByAddress = 'SELECT * FROM swap_htlcs WHERE address = ? OR htlc_id = ? LIMIT 1',
-  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
+  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ? AND htlc_id_recovery_failed IS NULL',
   GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? OR tx_hash = ? LIMIT 1',
   PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
@@ -303,6 +308,13 @@ export const migrations: Migration[] = [
     toVersion: 13,
     statements: [
       SQLQuery.BackfillHtlcHistoryChecked,
+    ],
+  },
+  {
+    toVersion: 14,
+    statements: [
+      SQLQuery.AddHtlcIdRecoveryFailedColumnToSwapHtlcs,
+      SQLQuery.NormalizeLegacyPolygonSwapHtlcTimeout,
     ],
   },
 ]
