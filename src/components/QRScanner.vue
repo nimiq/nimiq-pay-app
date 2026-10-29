@@ -61,9 +61,11 @@ watchDebounced(() => props.isVisible, async (isVisible) => {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
     // Measure again: the class makes sheets full screen and pads the header, which moves the container
     measureCameraFeedContainerTop()
-    useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
+    const activatingMessage = i18n.t('Activating scanner')
+    useToast().setToast({ message: activatingMessage, type: 'spinner', keepOpen: true })
     await start()
-    useToast().clearToast()
+    // Only clear the spinner: start() may have replaced it with an error toast the user must see
+    useToast().clearToast(activatingMessage)
   }
   else {
     document.body.classList.remove('native-qr-scanner-modal-open')

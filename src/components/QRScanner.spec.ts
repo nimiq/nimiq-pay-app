@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 enableAutoUnmount(afterEach)
 
-const { env, scanner } = vi.hoisted(() => ({
+const { env, scanner, toast } = vi.hoisted(() => ({
   env: { isMockEnabled: false },
   scanner: { start: vi.fn(), stop: vi.fn() },
+  toast: { current: null as string | null, setToast: vi.fn(), clearToast: vi.fn() },
 }))
 
 vi.mock('qr-scanner-wechat', () => ({ ready: vi.fn() }))
@@ -31,7 +32,7 @@ vi.mock('@/composables/useQRScanner', () => ({
   }),
 }))
 vi.mock('@/composables/useToast', () => ({
-  useToast: () => ({ setToast: vi.fn(), clearToast: vi.fn() }),
+  useToast: () => toast,
 }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (text: string) => text } }))
 
@@ -41,6 +42,12 @@ describe('qr scanner mock controls', () => {
     env.isMockEnabled = false
     scanner.start.mockReset()
     scanner.stop.mockReset()
+    toast.current = null
+    toast.setToast.mockReset().mockImplementation(({ message }: { message: string }) => toast.current = message)
+    toast.clearToast.mockReset().mockImplementation((message?: string) => {
+      if (message === undefined || message === toast.current)
+        toast.current = null
+    })
     vi.resetModules()
   })
 
@@ -83,5 +90,41 @@ describe('qr scanner mock controls', () => {
     await vi.advanceTimersByTimeAsync(500)
 
     expect(scanner.start).not.toHaveBeenCalled()
+  })
+
+  it('preserves a camera error raised during scanner startup', async () => {
+    scanner.start.mockImplementation(async () => {
+      toast.setToast({ message: 'No permission to use the camera', type: 'error' })
+    })
+    await mountScanner(true)
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(scanner.start).toHaveBeenCalledOnce()
+    expect(toast.current).toBe('No permission to use the camera')
+  })
+
+  it('clears the activation spinner after successful scanner startup', async () => {
+    scanner.start.mockResolvedValue(undefined)
+    await mountScanner(true)
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(scanner.start).toHaveBeenCalledOnce()
+    expect(toast.current).toBeNull()
+  })
+
+  it('remeasures the camera position after the native scanner class moves its container', async () => {
+    const offsetTop = vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(() =>
+      document.body.classList.contains('native-qr-scanner-modal-open') ? 120 : 0,
+    )
+    try {
+      const wrapper = await mountScanner()
+      await wrapper.setProps({ isVisible: true })
+      await vi.advanceTimersByTimeAsync(250)
+
+      expect(wrapper.find('[style]').attributes('style')).toBe('top: -30px;')
+    }
+    finally {
+      offsetTop.mockRestore()
+    }
   })
 })
