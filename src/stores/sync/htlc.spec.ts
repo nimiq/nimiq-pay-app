@@ -1960,7 +1960,7 @@ describe('useSyncHtlc', () => {
       expect(trackSwapStep).not.toHaveBeenCalled()
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-id', refund_hash: 'refund-hash', refund_block: 128 }])
       state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'confirmed', executionResult: true })) as any
-      state.headTimestamp += 1000
+      state.headTimestamp += 32 * 1000 + 1
       await htlc.checkExpiredSwapHtlcs()
 
       expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
@@ -1993,7 +1993,7 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
 
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      state.headTimestamp += 1000
+      state.headTimestamp += 32 * 1000 + 1
       await useSyncHtlc().checkExpiredSwapHtlcs()
 
       expect(state.client.sendTransaction).toHaveBeenCalledTimes(2)
