@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { getActiveMiniAppSession, MiniAppHost } from './useMiniAppHost'
+import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -261,7 +261,8 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded
+    expect(browser.removeListener).toHaveBeenCalledTimes(3)
   })
 
   it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
@@ -272,9 +273,74 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded
+    expect(browser.removeListener).toHaveBeenCalledTimes(3)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
+  })
+})
+
+describe('bridge origin', () => {
+  async function bridgeTransport(host: { browser: ReturnType<typeof createBrowser> }) {
+    await Promise.resolve()
+    const [, transport] = createBirpc.mock.calls.at(-1)! as any[]
+    const receive = vi.fn()
+    transport.on(receive)
+    const emit = (event: string, payload: unknown) =>
+      (host.browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
+    return { emit, post: transport.post as (data: unknown) => void, receive }
+  }
+
+  it('ignores and withholds bridge messages while the webview is on another origin', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, post, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-app' })
+    expect(receive).toHaveBeenCalledExactlyOnceWith('from-app')
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://evil.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    post('response')
+    expect(receive).toHaveBeenCalledOnce()
+    expect(browser.postMessage).not.toHaveBeenCalled()
+
+    // A navigation back to the Mini App only reopens the bridge once it has loaded.
+    emit('urlChangeEvent', { id: 'm', url: 'https://APP.example/after-login?x=1' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    expect(receive).toHaveBeenCalledOnce()
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-app-again' })
+    post('response')
+    expect(receive).toHaveBeenLastCalledWith('from-app-again')
+    expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
+  })
+
+  it('never accepts popup webviews, even when the main webview is on the Mini App origin', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'p', url: 'https://evil.example/' })
+    emit('browserPageLoaded', { id: 'p' })
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'p', detail: 'from-popup' })
+    expect(receive).not.toHaveBeenCalled()
+  })
+
+  it('only talks to the main webview, the first one it hears from', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, post, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('urlChangeEvent', { id: 'p', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'p' })
+    emit('messageFromWebview', { id: 'p', detail: 'from-popup' })
+    expect(receive).not.toHaveBeenCalled()
+
+    post('response')
+    expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
   })
 })
 
@@ -356,15 +422,17 @@ function jsonRpcResponse(body: unknown) {
   } satisfies Partial<Response>
 }
 
-function createReconnectHost(chainId = '0x89') {
-  return MiniAppHost.reconnect(createBrowser() as never, {
+function createHostOnChain(chainId = '0x89') {
+  const host = new MiniAppHost(createBrowser() as never, {
     url: 'https://app.uniswap.org',
     title: 'Uniswap',
     evmRpcUrls: {
       [chainId]: 'https://polygon-rpc.test',
     },
     requestUserConfirmation,
-  }, chainId)
+  });
+  (host as any).currentChainId = chainId
+  return host
 }
 
 beforeEach(() => {
@@ -631,9 +699,26 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ description: 'Coffee', btcAmount: 0.0001, asset: 'NIM', amount: 1_000_000 }),
-    }))
+    }), expect.any(Number))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO mini_app_lightning_payments'), expect.arrayContaining(['invoice-hash', 'https://app.example', 'NQ11 LOCAL', 'swap-id']))
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['nim-hash', 'submitted', expect.any(String), 'invoice-hash'])
+  })
+
+  it('closes all sheets of one payment at the request deadline', async () => {
+    sendTx.mockImplementation(async (_payment, _context, onSubmitted) => {
+      await onSubmitted('nim-hash')
+      return new Promise(() => {})
+    })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+    const start = Date.now()
+    await handleRequest(request)
+
+    const deadline = confirmationPrompt.mock.calls[0][1]
+    expect(deadline).toBeGreaterThanOrEqual(start + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(deadline).toBeLessThanOrEqual(Date.now() + MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(confirmationPrompt.mock.calls.map(([prompt, promptDeadline]) => [prompt.type, promptDeadline]))
+      .toEqual([['lightning-access', deadline], ['lightning-payment', deadline]])
+    expect(selectLightningAsset).toHaveBeenCalledWith(expect.anything(), deadline)
   })
 
   it('lets the user choose USDT and returns when Polygon funding is submitted', async () => {
@@ -651,7 +736,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       type: 'lightning-payment',
       data: expect.objectContaining({ asset: 'USDT', amount: 1_000_000, usdtFeeAllowance: 50_000 }),
-    }))
+    }), expect.any(Number))
     expect(sendSwapPayment).toHaveBeenCalledWith(expect.anything(), 'Payment', expect.objectContaining({ expectedSender: ethAddress, maxFee: 50_000 }))
     expect(sendTx).not.toHaveBeenCalled()
     expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['usdt-hash', 'submitted', expect.any(String), 'invoice-hash'])
@@ -754,7 +839,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     const response = await handleRequest(request).catch(error => error)
     expect(response).toMatchObject({ type: 'DUPLICATE_PAYMENT' })
     expect(response).not.toHaveProperty('data')
-    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }))
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number))
     expect(sendTx).not.toHaveBeenCalled()
   })
 
@@ -787,7 +872,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     confirmationPrompt.mockImplementationOnce(() => new Promise(resolve => approveOldWallet = resolve))
 
     const oldWalletRequest = handleRequest(request)
-    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' })))
+    await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' }), expect.any(Number)))
     useLocalWallet().localAddress = { toUserFriendlyAddress: () => 'NQ22 NEW OWNER', toHex: () => 'new-hex' }
     const newWalletRequest = handleRequest(request)
     await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
@@ -1129,7 +1214,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     const txHash = await (host as any).signEthTransaction({
       to: '0x2222222222222222222222222222222222222222',
@@ -1151,6 +1236,49 @@ describe('miniAppHost', () => {
     })
   })
 
+  it('ignores a Mini App supplied rpcUrl and resolves every RPC call through the host RPC', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_gasPrice':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0x3b9aca00' })
+        case 'eth_maxPriorityFeePerGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 3, result: '0x1' })
+        case 'eth_estimateGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 4, result: '0x5208' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 5, result: '0xabc123' })
+        // Non-null receipt ends the background Polygon refresh loop.
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 6, result: { status: '0x1' } })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createHostOnChain()
+
+    await (host as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      value: '0x0',
+      chainId: '0x89',
+      rpcUrl: 'https://attacker.test',
+    })
+    await vi.waitFor(() => expect(updateBalance).toHaveBeenCalledOnce())
+
+    expect(new Set(rpcFetch.mock.calls.map(([url]) => url))).toEqual(new Set(['https://polygon-rpc.test']))
+    expect(signTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      nonce: 7,
+      maxFeePerGas: 2_000_000_000n,
+      maxPriorityFeePerGas: 1n,
+    }))
+  })
+
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
     const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const payload = JSON.parse(String(init?.body)) as { method: string }
@@ -1168,7 +1296,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await (host as any).signEthTransaction({
       to: polygonUsdtConfig.tokenContract,
@@ -1210,7 +1338,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await expect((host as any).signEthTransaction({
       to: polygonUsdtConfig.tokenContract,
@@ -1246,7 +1374,7 @@ describe('miniAppHost', () => {
     })
     vi.stubGlobal('fetch', rpcFetch)
 
-    const host = createReconnectHost()
+    const host = createHostOnChain()
 
     await (host as any).signEthTransaction({
       to: '0x9999999999999999999999999999999999999999',

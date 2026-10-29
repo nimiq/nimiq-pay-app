@@ -3,6 +3,7 @@ import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
+import { MINI_APP_REQUEST_TIMEOUT_MS } from '@/composables/useMiniAppHost'
 import { i18n } from '@/i18n/i18n-setup'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
@@ -18,7 +19,10 @@ function resolveMiniAppLogo(url: string): string {
   return useMiniApps().iconForUrl(url) ?? getFaviconUrl(url)
 }
 
-export async function selectLightningAsset(app: { url: string, name: string, description?: string }): Promise<Asset | undefined> {
+export async function selectLightningAsset(app: { url: string, name: string, description?: string }, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS): Promise<Asset | undefined> {
+  const timeout = deadline - Date.now()
+  if (timeout <= 0)
+    return undefined
   const result = await ExtendedDialog.singleSelect({
     title: 'Pay Bitcoin Lightning',
     message: `${app.name} requests a Lightning payment${app.description ? ` for ${app.description}` : ''}. Choose what to spend.`,
@@ -28,6 +32,7 @@ export async function selectLightningAsset(app: { url: string, name: string, des
     ],
     okButtonTitle: 'Continue',
     cancelButtonTitle: 'Cancel',
+    timeout,
   })
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
@@ -36,7 +41,10 @@ export async function selectLightningAsset(app: { url: string, name: string, des
  * Request user confirmation for sensitive mini-app operations.
  * Extracted from MiniAppsModal so it can be reused during session reconnection.
  */
-export async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
+export async function requestUserConfirmation(request: UserConfirmationRequest, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS): Promise<boolean> {
+  const timeout = deadline - Date.now()
+  if (timeout <= 0)
+    return false
   switch (request.type) {
     case 'accounts': {
       const appName = request.name || new URL(request.url).hostname
@@ -62,6 +70,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         ],
         confirmButtonTitle: 'Connect',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -135,6 +144,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: 'Confirm',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -149,6 +159,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows: request.description ? [{ title: 'Invoice', value: request.description }] : [],
         confirmButtonTitle: 'Continue',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -183,6 +194,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: `Pay with ${asset}`,
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -279,6 +291,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: 'Confirm',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -298,6 +311,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         message: displayMessage,
         confirmButtonTitle: 'Sign',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -332,6 +346,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: action === 'add' ? 'Approve Network' : 'Switch Network',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -348,6 +363,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         ],
         confirmButtonTitle: 'Share',
         cancelButtonTitle: 'Deny',
+        timeout,
       })
       return result.confirmed
     }

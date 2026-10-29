@@ -19,6 +19,7 @@ import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { safeOrigin } from '@/lib/url-safety'
 import { sleep } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -59,6 +60,18 @@ export interface MiniAppSessionState {
   title: string
   chainId: string
   evmRpcUrls?: Record<string, string>
+}
+
+/**
+ * Origin gate of the main webview. Popups share the plugin's event stream and
+ * inherit the bridge, so events are keyed by webview id and only `mainId` counts.
+ * `open` is what the bridge honors; `urlOk` is whether the latest reported URL is
+ * on the Mini App origin.
+ */
+interface BridgeGate {
+  mainId?: string
+  urlOk: boolean
+  open: boolean
 }
 
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
@@ -136,6 +149,10 @@ interface MiniAppBase {
 
 type Network = 'ethereum' | 'nimiq'
 
+// Matches the birpc timeout of Mini App requests in web3-provider/src/provider.ts.
+// A sheet still open after it would approve a request the Mini App gave up on.
+export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
+
 export type UserConfirmationRequest
   = | (MiniAppBase & { type: 'accounts', network: Network })
     | (MiniAppBase & {
@@ -209,7 +226,6 @@ export interface MiniAppHostConfig {
   /**
    * Map of hex chain IDs to their JSON-RPC endpoints.
    * Used for nonce fetching, gas estimation, and transaction broadcasting.
-   * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
    */
   evmRpcUrls?: Record<string, string>
 
@@ -218,8 +234,9 @@ export interface MiniAppHostConfig {
    * @param request - Confirmation request to show to the user
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
-  requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
-  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
+  /** `deadline` (ms timestamp) closes the dialog as a rejection; defaults to the Mini App request timeout. */
+  requestUserConfirmation?: (request: UserConfirmationRequest, deadline?: number) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }, deadline?: number) => Promise<Asset | undefined>
 }
 
 /**
@@ -233,6 +250,8 @@ export class MiniAppHost {
   private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
   private fullscreenChangeListener: PluginListenerHandle | null = null
+  private urlChangeListener: PluginListenerHandle | null = null
+  private pageLoadedListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
@@ -246,6 +265,11 @@ export class MiniAppHost {
   private readonly evmRpcUrls: Record<string, string>
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
+  /**
+   * The injected bridge survives navigation and reaches popups, so only the main
+   * webview, while on `origin`, may talk to the host.
+   */
+  private bridgeGate: BridgeGate = { urlOk: true, open: true }
   private readonly pendingLightningInvoices = new Set<string>()
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
@@ -287,21 +311,6 @@ export class MiniAppHost {
     )
   }
 
-  /**
-   * Factory method to reconnect to an existing hidden webview after app reload.
-   * Re-registers listeners without opening a new webview.
-   */
-  static reconnect(
-    inAppBrowser: typeof InAppBrowser,
-    config: MiniAppHostConfig,
-    restoredChainId: string,
-  ): MiniAppHost {
-    const host = new MiniAppHost(inAppBrowser, config)
-    host.currentChainId = restoredChainId
-    host.sessionState.chainId = restoredChainId
-    return host
-  }
-
   public async destroy(): Promise<void> {
     if (this.destroyed) {
       return
@@ -321,6 +330,8 @@ export class MiniAppHost {
       this.inAppBrowser?.clearAllCookies(),
       this.messageFromWebviewListener?.remove(),
       this.fullscreenChangeListener?.remove(),
+      this.urlChangeListener?.remove(),
+      this.pageLoadedListener?.remove(),
     ])
     for (const result of cleanupResults) {
       if (result.status === 'rejected')
@@ -328,6 +339,8 @@ export class MiniAppHost {
     }
     this.messageFromWebviewListener = null
     this.fullscreenChangeListener = null
+    this.urlChangeListener = null
+    this.pageLoadedListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
@@ -457,15 +470,18 @@ export class MiniAppHost {
       },
     }, {
       post: (data) => {
-        if (this.destroyed || !browser)
+        const mainId = this.bridgeGate.mainId
+        if (this.destroyed || !browser || mainId === undefined || !this.bridgeGate.open)
           return
         logger.log('[MiniAppHost] birpc post:', data)
-        browser.postMessage({ detail: data })
+        // Without an id the plugin broadcasts to every webview, popups included.
+        browser.postMessage({ detail: data, id: mainId })
       },
       on: (fn) => {
         // @ts-expect-error - TS cannot detect the correct overload
-        browser.addListener('messageFromWebview', (event: { detail: unknown }) => {
-          if (event.detail)
+        browser.addListener('messageFromWebview', (event: { id?: string, detail: unknown }) => {
+          const id = event.id ?? ''
+          if (event.detail && this.isMainWebview(id) && this.bridgeGate.open)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
           if (this.destroyed)
@@ -490,6 +506,43 @@ export class MiniAppHost {
       else
         this.fullscreenChangeListener = handle
     }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
+
+    void browser.addListener('urlChangeEvent', ({ id, url }) => {
+      if (!this.isMainWebview(id ?? ''))
+        return
+      const origin = safeOrigin(url, '')
+      const gate = this.bridgeGate
+      gate.urlOk = origin === this.origin
+      // Close at once; reopen only on browserPageLoaded. iOS reports the URL when a
+      // navigation starts, so a foreign page that starts navigating back to the
+      // Mini App must not regain the bridge before its document is replaced.
+      if (!gate.urlOk) {
+        gate.open = false
+        // Origin only: full URLs can carry OAuth codes/tokens into persisted logs.
+        logger.warn('[MiniAppHost] Webview left the Mini App origin; bridge paused:', origin)
+      }
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.urlChangeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App navigation', error))
+
+    void browser.addListener('browserPageLoaded', ({ id }: { id?: string }) => {
+      if (this.isMainWebview(id ?? ''))
+        this.bridgeGate.open = this.bridgeGate.urlOk
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.pageLoadedListener = handle
+    }).catch(error => logger.error('Could not observe Mini App page loads', error))
+  }
+
+  /** The first webview the host hears from is the main one; popups need its page to run first. */
+  private isMainWebview(id: string): boolean {
+    this.bridgeGate.mainId ??= id
+    return id === this.bridgeGate.mainId
   }
 
   private showErrorToast(message: string): void {
@@ -922,7 +975,6 @@ export class MiniAppHost {
       gasPrice?: string
       nonce?: string | number
       chainId?: string
-      rpcUrl?: string
     }
 
     if (Array.isArray(params) && params.length > 0) {
@@ -948,7 +1000,6 @@ export class MiniAppHost {
       nonce: txParams.nonce,
       nonceType: typeof txParams.nonce,
       chainId: txParams.chainId,
-      rpcUrl: txParams.rpcUrl,
     })
 
     // Validate required fields
@@ -1000,7 +1051,9 @@ export class MiniAppHost {
     const chainName = validatedChainIdNumber ? EVM_CHAIN_NAMES[validatedChainIdNumber] : undefined
 
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
-    const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
+    // Host RPC only, keyed by the chain being signed. A Mini App chosen RPC would supply the
+    // nonce and fees the user signs, and receive the signed transaction.
+    const rpcUrl = this.getRpcUrlForChain(validatedChainIdNumber ? `0x${validatedChainIdNumber.toString(16)}` : undefined)
 
     // Nonce resolution: fetch from broadcast RPC if not provided by dApp
     logger.log('[ETH_TX] Step 3 - Nonce analysis:', {
@@ -1769,6 +1822,8 @@ export class MiniAppHost {
   }
 
   private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    // One Mini App request shows up to three sheets; all close when the request times out.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     const invoice = (params as { invoice?: unknown } | null)?.invoice
     if (typeof invoice !== 'string' || !invoice.trim())
       throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
@@ -1804,7 +1859,7 @@ export class MiniAppHost {
             type: 'lightning-access',
             network: 'nimiq',
             description: decoded.description || undefined,
-          }),
+          }, deadline),
         }
       }
       let allowed: boolean
@@ -1845,7 +1900,7 @@ export class MiniAppHost {
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
 
-      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined }, deadline)
       if (!asset)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
       if (asset !== Asset.NIM && asset !== Asset.USDT)
@@ -1910,7 +1965,7 @@ export class MiniAppHost {
           usdtFeeAllowance,
           fees: payment.swap?.fees || [],
         },
-      })
+      }, deadline)
       if (!confirmed)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
 

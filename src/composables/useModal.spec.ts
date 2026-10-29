@@ -63,3 +63,26 @@ describe('useModal analytics', () => {
     expect(state.trackFeatureOpened).not.toHaveBeenCalled()
   })
 })
+
+describe('useModal closeModal', () => {
+  it('keeps a function canDismiss so dismiss() still runs the flow close hook', async () => {
+    const { useModal } = await import('./useModal')
+    const canDismiss = vi.fn(async () => true)
+    const modal = { canDismiss, dismiss: vi.fn(async () => true) } as unknown as HTMLIonModalElement
+
+    await useModal().closeModal({ modal, role: 'cancel' })
+
+    expect(modal.canDismiss).toBe(canDismiss)
+    expect(modal.dismiss).toHaveBeenCalledWith(null, 'cancel')
+  })
+
+  it('forces a boolean canDismiss guard to true before dismissing', async () => {
+    const { useModal } = await import('./useModal')
+    const modal = { canDismiss: false, dismiss: vi.fn(async () => true) } as unknown as HTMLIonModalElement
+
+    await useModal().closeModal({ modal })
+
+    expect(modal.canDismiss).toBe(true)
+    expect(modal.dismiss).toHaveBeenCalledWith(null, 'confirm')
+  })
+})
