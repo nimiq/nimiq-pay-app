@@ -283,8 +283,18 @@ async function detectPaymentRequest() {
     const isValidated = pendingPaymentRequests.get(pr)
     if (isValidated !== undefined) {
       // Dismissed while waiting for consensus: show it again if still valid
-      if (isValidated && detectedPaymentRequest.value !== pr && await isValidPaymentRequest(pr))
-        detectedPaymentRequest.value = pr
+      if (!isValidated || detectedPaymentRequest.value === pr)
+        return
+      pendingPaymentRequests.set(pr, false)
+      try {
+        if (await isValidPaymentRequest(pr))
+          detectedPaymentRequest.value = pr
+      }
+      finally {
+        // Consensus may have arrived meanwhile and cleared the entry
+        if (pendingPaymentRequests.has(pr))
+          pendingPaymentRequests.set(pr, true)
+      }
       return
     }
     pendingPaymentRequests.set(pr, false)

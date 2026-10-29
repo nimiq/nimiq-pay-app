@@ -574,6 +574,34 @@ describe('mainView', () => {
     expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
   })
 
+  it('does not revalidate a dismissed request twice on overlapping resumes', async () => {
+    const pr = 'nimiq:NQ00?amount=1'
+    consensusWait.promise = new Promise(() => {})
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: pr })
+    stringParser.isPaymentRequest.mockReturnValue(true)
+    stringParser.getPaymentRequestData.mockResolvedValue({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+    let finishRevalidation!: (value: unknown) => void
+    stringParser.getPaymentRequestData
+      .mockResolvedValueOnce({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+      .mockReturnValueOnce(new Promise(resolve => finishRevalidation = resolve))
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    wrapper.findComponent({ name: 'PaymentRequestDetectedNotification' }).vm.$emit('onContinue')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(false))
+
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    const slowResume = onResume()
+    await vi.waitFor(() => expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2))
+    await onResume()
+    finishRevalidation({ data: { recipient: 'NQ11', chain: Chain.Polygon } })
+    await slowResume
+    await flushPromises()
+
+    expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(true)
+  })
+
   it('does not show a dismissed request again on resume once it is no longer valid', async () => {
     const pr = 'nimiq:NQ00?amount=1'
     consensusWait.promise = new Promise(() => {})
