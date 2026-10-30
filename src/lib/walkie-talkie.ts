@@ -9,6 +9,11 @@ export interface WtMessage {
   failed?: boolean // Client-side only: true if the message failed to send
 }
 
+/** Whether the history contains the entry the backend adds when support closes the session */
+export function isSessionClosed(messages: WtMessage[]) {
+  return messages.some(m => m.sender === 'system' && m.event === 'session_closed')
+}
+
 export interface UserStatus {
   session_id: string | null
   online: boolean

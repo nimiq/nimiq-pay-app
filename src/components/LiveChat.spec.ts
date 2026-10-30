@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, reactive, ref } from 'vue'
 
 const messages = ref<WtMessage[]>([])
+const conversationEnded = ref(false)
 const sendLogs = vi.fn()
 
 vi.mock('@ionic/vue', () => {
@@ -47,15 +48,15 @@ vi.mock('@/stores/livechat', () => ({
     error: ref(false),
     messages,
     online: ref(true),
-    conversationEnded: ref(false),
+    conversationEnded,
     sendLogs,
     sendMessage: vi.fn(),
     closeSession: vi.fn(),
   }),
 }))
 
-function message(id: string, sender: string, content: string): WtMessage {
-  return { id, sender, content, timestamp: `2026-09-28 10:00:0${id}` }
+function message(id: string, sender: string, content: string, event?: string): WtMessage {
+  return { id, sender, event, content, timestamp: `2026-09-28 10:00:0${id}` }
 }
 
 async function mountChat() {
@@ -74,6 +75,7 @@ function button(wrapper: Awaited<ReturnType<typeof mountChat>>, text: string) {
 describe('liveChat logs request notice', () => {
   beforeEach(() => {
     messages.value = []
+    conversationEnded.value = false
     sendLogs.mockReset().mockResolvedValue(undefined)
   })
 
@@ -150,5 +152,39 @@ describe('liveChat logs request notice', () => {
     await wrapper.find('button[aria-label="Dismiss"]').trigger('click')
 
     expect(wrapper.text()).not.toContain('Attach logs')
+  })
+})
+
+describe('liveChat session end', () => {
+  beforeEach(() => {
+    messages.value = []
+    conversationEnded.value = false
+  })
+
+  it('keeps the history visible when support closes the session', async () => {
+    messages.value = [
+      message('1', 'agent:Ana', 'Fixed, please send logs if it happens again'),
+      message('2', 'system', 'Session closed by support.', 'session_closed'),
+    ]
+    conversationEnded.value = true
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.text()).toContain('Fixed, please send logs if it happens again')
+    expect(wrapper.text()).toContain('Session closed')
+    expect(wrapper.text()).not.toContain('Session closed by support.')
+    expect(wrapper.text()).not.toContain('Thanks for reaching out!')
+    expect(wrapper.text()).not.toContain('Attach logs')
+    expect(wrapper.find('textarea').exists()).toBe(false)
+  })
+
+  it('shows the thank-you screen when the user ends the chat', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Hello!')]
+    conversationEnded.value = true
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.text()).toContain('Thanks for reaching out!')
+    expect(wrapper.find('textarea').exists()).toBe(false)
   })
 })
