@@ -382,6 +382,7 @@ msgid "Continue"
 msgstr ""
 
 #: src/components/PaymentAmountInput.vue:65
+#: src/components/PaymentRequestManualInput.vue:22
 msgid "Continue and Pay"
 msgstr ""
 
@@ -1253,6 +1254,10 @@ msgstr ""
 msgid "Opening…"
 msgstr ""
 
+#: src/components/PaymentRequestManualInput.vue:9
+msgid "Paste or type the invoice here"
+msgstr ""
+
 #: src/components/PaymentPreview.vue:248
 #: src/components/TheHomeFooter.vue:19
 msgid "Pay"
@@ -1314,6 +1319,7 @@ msgid "Payment rejected due to unknown reason"
 msgstr ""
 
 #: src/components/PaymentRequestDetectedNotification.vue:12
+#: src/components/PaymentRequestManualInput.vue:17
 #: src/lib/flows/steps.ts:457
 #: src/lib/flows/steps.ts:468
 msgid "Payment Request"
@@ -1817,6 +1823,10 @@ msgstr ""
 msgid "Submissions"
 msgstr ""
 
+#: src/modals/TaskModal.vue:49
+msgid "Submit"
+msgstr ""
+
 #: src/components/competition/CompetitionAppDetail.vue:93
 msgid "Submitted {date}"
 msgstr ""
@@ -2067,6 +2077,10 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
+#: src/components/PaymentRequestManualInput.vue:28
+msgid "Unknown error processing payment request"
+msgstr ""
+
 #: src/composables/useBiometric.ts:39
 msgid "Unlock Nimiq Pay with your biometric data"
 msgstr ""
@@ -2173,6 +2187,10 @@ msgstr ""
 
 #: src/components/LiveChat.vue:64
 msgid "We hope your issue was resolved. Close and reopen this chat to start a new conversation."
+msgstr ""
+
+#: src/modals/TaskModal.vue:20
+msgid "We value your opinion. Please enter at least ten characters."
 msgstr ""
 
 #: src/lib/flows/steps.ts:724
@@ -2341,6 +2359,10 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:189
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
+msgstr ""
+
+#: src/modals/TaskModal.vue:7
+msgid "You earn {amount}"
 msgstr ""
 
 #: src/views/HomeView.vue:201
