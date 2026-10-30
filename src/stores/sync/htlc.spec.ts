@@ -384,7 +384,7 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
-      expect(state.getBalance).toHaveBeenCalledWith(state.remoteAddress)
+      expect(state.getBalance).toHaveBeenCalledWith(state.remoteAddress, 'htlc')
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
 

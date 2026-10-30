@@ -725,7 +725,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
     // Drained creations need no activation metadata, which may already be unavailable in the cosigner.
-    if (transaction.state === 'confirmed' && transaction.executionResult !== false && account.balance === 0) {
+    // A drained HTLC that later receives NIM is a basic account nobody can spend from.
+    if (transaction.state === 'confirmed' && transaction.executionResult !== false
+      && (account.type !== 'htlc' || account.balance === 0)) {
       if (remoteAddress.value?.toUserFriendlyAddress() === transaction.recipient
         && !await deactivateRemoteSigner(address, context, true)) {
         throw new Error('Cannot resolve drained HTLC transaction')
@@ -796,7 +798,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (areEqual)
       return
 
-    const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address), client.value?.getAccount(newRemoteSigner.address)])
+    const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), client.value?.getAccount(newRemoteSigner.address)])
     // Don't replace remote signer if old balance is higher than 0 and new balance is 0
     if (oldRemoteBalance.status === 'fulfilled' && newRemoteAccount.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteAccount.value && newRemoteAccount.value.balance === 0)
       return
@@ -874,7 +876,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       logger.warn(`⚠️ remote signer publicKey mismatch — stored=${remoteSigner.value.publicKey} api=${newRemoteSigner.publicKey}. Likely stale cross-network state.`)
     }
     if (remoteSigner.value) {
-      const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
+      const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), getBalance(newRemoteSigner.address, 'htlc')])
       if (!isWalletContextCurrent(context))
         return
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0
