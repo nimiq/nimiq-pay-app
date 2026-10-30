@@ -172,7 +172,7 @@ watch(sessionId, (newId) => {
 <template>
   <button class="badge flex flex-row items-center gap-1 rounded-full text-white px-3 py-1.5 font-semibold bg-space" @click="shown = !shown">
     <LiveChatIcon class="size-5 text-white" />
-    Chat
+    {{ $t('Chat') }}
     <template v-if="pendingMessageCount">
       <div class="absolute top-1 -right-1 rounded-full bg-fire size-3" />
       <div class="absolute top-1 -right-1 rounded-full bg-fire size-3 animate-ping" />

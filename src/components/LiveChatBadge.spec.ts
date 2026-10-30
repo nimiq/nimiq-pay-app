@@ -64,7 +64,7 @@ describe('liveChatBadge polling', () => {
 
   it('ends the chat but keeps the session when support closes it', async () => {
     const { default: LiveChatBadge } = await import('./LiveChatBadge.vue')
-    mount(LiveChatBadge)
+    mount(LiveChatBadge, { global: { mocks: { $t: (value: string) => value } } })
     await flushPromises()
 
     mocks.getHistory.mockResolvedValueOnce([message('2', 'system', 'Session closed by support.', 'session_closed')])
@@ -80,7 +80,7 @@ describe('liveChatBadge polling', () => {
 
   it('keeps the chat going for other messages', async () => {
     const { default: LiveChatBadge } = await import('./LiveChatBadge.vue')
-    mount(LiveChatBadge)
+    mount(LiveChatBadge, { global: { mocks: { $t: (value: string) => value } } })
     await flushPromises()
 
     mocks.getHistory.mockResolvedValueOnce([message('2', 'agent:Ana', 'Hello!')])
@@ -112,7 +112,7 @@ describe('liveChatBadge restored session', () => {
 
   it('shows a session support closed as ended without polling', async () => {
     const { default: LiveChatBadge } = await import('./LiveChatBadge.vue')
-    mount(LiveChatBadge)
+    mount(LiveChatBadge, { global: { mocks: { $t: (value: string) => value } } })
     await flushPromises()
 
     expect(state.conversationEnded.value).toBe(true)

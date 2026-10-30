@@ -125,7 +125,7 @@ function formatTime(timestamp: string): string {
       <IonToolbar>
         <IonTitle slot="start" class="font-bold text-2xl tracking-normal">
           <span class="flex items-center gap-2">
-            Live Chat
+            {{ $t('Live Chat') }}
             <span
               class="inline-block size-2 rounded-full"
               :class="online ? 'bg-green-500' : 'bg-neutral-300'"
@@ -224,7 +224,7 @@ function formatTime(timestamp: string): string {
               >
                 <template v-if="msg.id">{{ formatTime(msg.timestamp) }}</template>
                 <template v-else-if="msg.failed">{{ $t('Failed to send') }}</template>
-                <template v-else>Sending...</template>
+                <template v-else>{{ $t('Sending...') }}</template>
               </span>
             </div>
           </template>
@@ -282,6 +282,8 @@ function formatTime(timestamp: string): string {
               <IonIcon v-else slot="icon-only" :icon="documentTextOutline" />
             </IonButton>
           </div>
+          <!-- Not self-closing: the i18n extractor's HTML parser reads everything after a <textarea /> as its text and skips the rest of the template -->
+          <!-- eslint-disable vue/html-self-closing -->
           <textarea
             ref="textareaRef"
             v-model="inputText"
@@ -290,7 +292,8 @@ function formatTime(timestamp: string): string {
             :placeholder="$t('Type a message...')"
             @input="autoResize"
             @keydown="onKeydown"
-          />
+          ></textarea>
+          <!-- eslint-enable vue/html-self-closing -->
           <IonButton
             fill="solid"
             shape="round"

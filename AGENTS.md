@@ -16,6 +16,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Use `pnpm` for dependencies and scripts.
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
+- Never self-close `<textarea>` in Vue templates. `pnpm i18n:extract` parses templates as HTML, reads everything after `<textarea />` as its text, and silently drops every later `$t` string in that file. Write `<textarea ...></textarea>` inside an `eslint-disable vue/html-self-closing` block (see `LiveChat.vue`).
 
 ### CodeQL
 
