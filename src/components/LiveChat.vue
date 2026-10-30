@@ -4,18 +4,21 @@ import { checkmarkCircle, close, documentTextOutline, send } from 'ionicons/icon
 import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
+import { isSessionClosed } from '@/lib/walkie-talkie'
 import { useApp } from '@/stores/app'
 import { useLiveChat } from '@/stores/livechat'
 import ChatConfirmDialog from './ChatConfirmDialog.vue'
 import LoadingSpinnerIcon from './icons/loading-spinner.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, error, messages, online, conversationEnded } = storeToRefs(livechat)
+const { shown, loading, error, messages, online, conversationEnded, sessionId } = storeToRefs(livechat)
 const { showAnimations } = storeToRefs(useApp())
 
 const inputText = ref('')
 const showEndConfirm = ref(false)
 const chatEnded = computed(() => conversationEnded.value && messages.value.length > 0)
+// Support closed the session (e.g. from Slack): keep the history visible so the user can read the last reply
+const closedBySupport = computed(() => isSessionClosed(messages.value))
 const messageListRef = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const sending = ref(false)
@@ -122,7 +125,7 @@ function formatTime(timestamp: string): string {
       <IonToolbar>
         <IonTitle slot="start" class="font-bold text-2xl tracking-normal">
           <span class="flex items-center gap-2">
-            Live Chat
+            {{ $t('Live Chat') }}
             <span
               class="inline-block size-2 rounded-full"
               :class="online ? 'bg-green-500' : 'bg-neutral-300'"
@@ -169,7 +172,7 @@ function formatTime(timestamp: string): string {
       </div>
 
       <!-- Chat ended thank-you screen -->
-      <div v-else-if="chatEnded" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <div v-else-if="chatEnded && !closedBySupport" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
         <div class="size-14 rounded-full bg-green-500 flex items-center justify-center">
           <IonIcon :icon="checkmarkCircle" class="text-white text-4xl" />
         </div>
@@ -191,41 +194,49 @@ function formatTime(timestamp: string): string {
           </div>
 
           <!-- Messages -->
-          <div
-            v-for="msg in messages"
-            :key="msg.id || `pending-${msg.timestamp}`"
-            class="flex flex-col max-w-[80%]"
-            :class="msg.sender === 'user' ? 'self-end items-end' : 'self-start items-start'"
-          >
-            <span v-if="msg.sender !== 'user'" class="text-xs text-space/50 mb-1 px-1">
-              {{ agentName(msg.sender) }}
-            </span>
+          <template v-for="msg in messages" :key="msg.id || `pending-${msg.timestamp}`">
             <div
-              class="rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
-              :class="msg.sender === 'user'
-                ? 'bg-sky text-white rounded-br-sm'
-                : 'bg-neutral-100 text-space rounded-bl-sm'"
+              v-if="msg.event === 'session_closed'"
+              class="self-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-space/60"
+              role="status"
             >
-              {{ msg.content }}
+              {{ $t('Session closed') }}
             </div>
-            <span
-              class="text-xs mt-1 px-1"
-              :class="msg.failed ? 'text-cherry font-medium' : 'text-space/40'"
+            <div
+              v-else
+              class="flex flex-col max-w-[80%]"
+              :class="msg.sender === 'user' ? 'self-end items-end' : 'self-start items-start'"
             >
-              <template v-if="msg.id">{{ formatTime(msg.timestamp) }}</template>
-              <template v-else-if="msg.failed">{{ $t('Failed to send') }}</template>
-              <template v-else>Sending...</template>
-            </span>
-          </div>
+              <span v-if="msg.sender !== 'user'" class="text-xs text-space/50 mb-1 px-1">
+                {{ agentName(msg.sender) }}
+              </span>
+              <div
+                class="rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+                :class="msg.sender === 'user'
+                  ? 'bg-sky text-white rounded-br-sm'
+                  : 'bg-neutral-100 text-space rounded-bl-sm'"
+              >
+                {{ msg.content }}
+              </div>
+              <span
+                class="text-xs mt-1 px-1"
+                :class="msg.failed ? 'text-cherry font-medium' : 'text-space/40'"
+              >
+                <template v-if="msg.id">{{ formatTime(msg.timestamp) }}</template>
+                <template v-else-if="msg.failed">{{ $t('Failed to send') }}</template>
+                <template v-else>{{ $t('Sending...') }}</template>
+              </span>
+            </div>
+          </template>
         </div>
 
-        <p v-if="sendLogsFailed" class="text-xs text-cherry font-medium px-4 pb-2">
+        <p v-if="sendLogsFailed && !chatEnded" class="text-xs text-cherry font-medium px-4 pb-2">
           {{ $t('Failed to send logs') }}
         </p>
 
         <AnimatePresence>
           <motion.div
-            v-if="logsRequestId && !sendingLogs"
+            v-if="logsRequestId && !sendingLogs && !chatEnded"
             key="logs-request"
             class="mx-3 mb-2 flex items-center gap-2 rounded-xl bg-sky/10 py-1 pl-3"
             role="status"
@@ -254,10 +265,11 @@ function formatTime(timestamp: string): string {
           </motion.div>
         </AnimatePresence>
 
-        <!-- Input area -->
-        <div class="border-t border-neutral-100 p-3 flex gap-2 items-end">
-          <!-- Same height as the single-line textarea, so the icon lines up with its last line -->
-          <div class="h-12 flex items-center shrink-0">
+        <!-- Input area. After support closed the session, sending starts a new one -->
+        <div v-if="!chatEnded || closedBySupport" class="border-t border-neutral-100 p-3 flex gap-2 items-end">
+          <!-- Logs go to an existing session, so only offer them once the first message started one.
+               Same height as the single-line textarea, so the icon lines up with its last line -->
+          <div v-if="sessionId && !closedBySupport" class="h-12 flex items-center shrink-0">
             <IonButton
               fill="clear"
               shape="round"
@@ -270,15 +282,18 @@ function formatTime(timestamp: string): string {
               <IonIcon v-else slot="icon-only" :icon="documentTextOutline" />
             </IonButton>
           </div>
+          <!-- Not self-closing: the i18n extractor's HTML parser reads everything after a <textarea /> as its text and skips the rest of the template -->
+          <!-- eslint-disable vue/html-self-closing -->
           <textarea
             ref="textareaRef"
             v-model="inputText"
             rows="1"
             class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32 min-h-12"
-            :placeholder="$t('Type a message...')"
+            :placeholder="closedBySupport ? $t('Start a new chat') : $t('Type your message')"
             @input="autoResize"
             @keydown="onKeydown"
-          />
+          ></textarea>
+          <!-- eslint-enable vue/html-self-closing -->
           <IonButton
             fill="solid"
             shape="round"
