@@ -90,7 +90,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
       }
     }
 
-    const { data: balance, error } = await useNimiqNetwork().getBalance(address)
+    const { data: balance, error } = await useNimiqNetwork().getBalance(address, 'htlc')
     if (error) {
       logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress() })
       const errorMessage = (error as unknown) instanceof Error ? (error as unknown as Error).message : String(error)
@@ -328,7 +328,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     const remoteSignersWithBalance: RemoteSigner[] = []
     for (const remoteSigner of remoteSigners) {
-      const { data: balance, error } = await getBalance(remoteSigner.address)
+      const { data: balance, error } = await getBalance(remoteSigner.address, 'htlc')
       if (!remoteSignerStore.isWalletContextCurrent(context))
         return false
       if (error) {
@@ -369,7 +369,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     if (remoteSigners.length === 1) {
       const { active, balance, address, start, end, proofSize, publicKey } = remoteSigners[0]
-      const { data: newBalance, error } = await getBalance(address)
+      const { data: newBalance, error } = await getBalance(address, 'htlc')
       if (!remoteSignerStore.isWalletContextCurrent(context))
         return false
       if (error) {
