@@ -7,7 +7,7 @@ import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { isTestnet } from '@/lib'
 import { logDiagnostics } from '@/lib/diagnostics'
-import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, uploadAttachment as apiUploadAttachment, getStatus, MAX_ATTACHMENT_SIZE } from '@/lib/walkie-talkie'
+import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, uploadAttachment as apiUploadAttachment, getHistory, getStatus, isSessionClosed, MAX_ATTACHMENT_SIZE } from '@/lib/walkie-talkie'
 import { kvPreferences, useApp } from './app'
 import { useLocalWallet } from './local-wallet'
 
@@ -50,6 +50,7 @@ export const useLiveChat = defineStore('livechat', () => {
   /**
    * Called on app startup. If a session was persisted, verify it still exists on the backend
    * and restore the enabled state so the badge appears. Does nothing if no session was persisted.
+   * A session support closed is kept until the user has seen it, which resets the chat on close.
    */
   async function initFromBackground() {
     await new Promise(resolve => setTimeout(resolve, 500)) // Wait a bit for the async storage to have been read
@@ -65,6 +66,10 @@ export const useLiveChat = defineStore('livechat', () => {
         enabled.value = true
         sessionId.value = status.session_id
         conversationEnded.value = false
+      }
+      else if (isSessionClosed(await getHistory(userId, sessionId.value, '0'))) {
+        enabled.value = true
+        conversationEnded.value = true
       }
       else {
         // Session no longer exists on the backend — clean up

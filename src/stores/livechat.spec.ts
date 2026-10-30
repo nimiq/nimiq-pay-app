@@ -1,10 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
 const mocks = vi.hoisted(() => ({
   appInfo: vi.fn(),
   deviceInfo: vi.fn(),
+  getHistory: vi.fn(),
+  getStatus: vi.fn(),
   readLogsBase64: vi.fn(),
   sendMessage: vi.fn(),
   startSession: vi.fn(),
@@ -40,13 +42,14 @@ vi.mock('@/lib', () => ({
   isTestnet: true,
 }))
 
-vi.mock('@/lib/walkie-talkie', () => ({
+vi.mock('@/lib/walkie-talkie', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/walkie-talkie')>(),
   closeSession: vi.fn(),
-  getStatus: vi.fn(),
+  getHistory: mocks.getHistory,
+  getStatus: mocks.getStatus,
   sendMessage: mocks.sendMessage,
   startSession: mocks.startSession,
   uploadAttachment: mocks.uploadAttachment,
-  MAX_ATTACHMENT_SIZE: 10 * 1024 * 1024,
 }))
 
 vi.mock('./app', () => ({
@@ -142,5 +145,52 @@ describe('useLiveChat support context', () => {
 
     expect(mocks.startSession).not.toHaveBeenCalled()
     expect(mocks.uploadAttachment).toHaveBeenCalledWith(expect.any(String), 'session-2', expect.any(String), 'bG9ncw==')
+  })
+})
+
+describe('useLiveChat restore on startup', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setActivePinia(createPinia())
+    mocks.getStatus.mockReset().mockResolvedValue({ session_id: null, online: false })
+    mocks.getHistory.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function init() {
+    const { useLiveChat } = await import('./livechat')
+    const livechat = useLiveChat()
+    livechat.sessionId = 'session-1'
+    const done = livechat.initFromBackground()
+    await vi.advanceTimersByTimeAsync(500)
+    await done
+    return livechat
+  }
+
+  it('keeps a session support closed until the user has seen it', async () => {
+    mocks.getHistory.mockResolvedValue([
+      { id: '1', sender: 'agent:Ana', content: 'Fixed!', timestamp: '2026-10-10 10:00:01' },
+      { id: '2', sender: 'system', event: 'session_closed', content: 'Session closed by support.', timestamp: '2026-10-10 10:00:02' },
+    ])
+
+    const livechat = await init()
+
+    expect(livechat.enabled).toBe(true)
+    expect(livechat.conversationEnded).toBe(true)
+    expect(livechat.sessionId).toBe('session-1')
+  })
+
+  it('clears a session that ended without a close entry', async () => {
+    mocks.getHistory.mockResolvedValue([
+      { id: '1', sender: 'user', content: 'Hi', timestamp: '2026-10-10 10:00:01' },
+    ])
+
+    const livechat = await init()
+
+    expect(livechat.enabled).toBe(false)
+    expect(livechat.sessionId).toBe('')
   })
 })

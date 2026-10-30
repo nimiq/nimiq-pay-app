@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { onMounted, onUnmounted, watch } from 'vue'
-import { getHistory, getStatus } from '@/lib/walkie-talkie'
+import { getHistory, getStatus, isSessionClosed } from '@/lib/walkie-talkie'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocalWallet } from '@/stores/local-wallet'
 import LiveChatIcon from './icons/live-chat.vue'
@@ -39,7 +39,7 @@ function stopStatusPolling() {
 
 function startPolling() {
   stopPolling()
-  if (!sessionId.value)
+  if (!sessionId.value || isSessionClosed(messages.value))
     return
   const interval = shown.value ? 3000 : 15000
   pollInterval = setInterval(pollMessages, interval)
@@ -53,7 +53,7 @@ function stopPolling() {
 }
 
 async function pollMessages() {
-  if (!sessionId.value) {
+  if (!sessionId.value || isSessionClosed(messages.value)) {
     stopPolling()
     return
   }
@@ -81,9 +81,10 @@ async function pollMessages() {
     messages.value = [...messages.value, ...uniqueNewMessages]
       .sort((a, b) => a.timestamp === b.timestamp ? 0 : a.timestamp > b.timestamp ? 1 : -1)
 
-    // Support can close the session from Slack; end the chat like a user-initiated close
-    if (uniqueNewMessages.some(m => m.sender === 'system' && m.event === 'session_closed')) {
-      sessionId.value = ''
+    // Support can close the session from Slack. Keep the session (also across restarts) so the user can
+    // read the last reply; closing the chat window then resets it
+    if (isSessionClosed(uniqueNewMessages)) {
+      stopPolling()
       conversationEnded.value = true
     }
   }
@@ -103,9 +104,9 @@ onMounted(async () => {
     }
 
     if (sessionId.value) {
-      conversationEnded.value = false
       const history = await getHistory(userId, sessionId.value, '0')
       messages.value = history
+      conversationEnded.value = isSessionClosed(history)
       if (history.length > 0) {
         lastMessageId.value = history.at(-1)!.id
 

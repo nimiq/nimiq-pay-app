@@ -16,7 +16,8 @@ const state = {
   conversationEnded: ref(false),
 }
 
-vi.mock('@/lib/walkie-talkie', () => ({
+vi.mock('@/lib/walkie-talkie', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/walkie-talkie')>(),
   getHistory: mocks.getHistory,
   getStatus: mocks.getStatus,
 }))
@@ -61,7 +62,7 @@ describe('liveChatBadge polling', () => {
     vi.useRealTimers()
   })
 
-  it('ends the chat when support closes the session', async () => {
+  it('ends the chat but keeps the session when support closes it', async () => {
     const { default: LiveChatBadge } = await import('./LiveChatBadge.vue')
     mount(LiveChatBadge)
     await flushPromises()
@@ -70,7 +71,7 @@ describe('liveChatBadge polling', () => {
     await vi.advanceTimersByTimeAsync(3000)
 
     expect(state.conversationEnded.value).toBe(true)
-    expect(state.sessionId.value).toBe('')
+    expect(state.sessionId.value).toBe('session-1')
 
     // Polling stops with the session
     await vi.advanceTimersByTimeAsync(15_000)
@@ -87,5 +88,38 @@ describe('liveChatBadge polling', () => {
 
     expect(state.conversationEnded.value).toBe(false)
     expect(state.sessionId.value).toBe('session-1')
+  })
+})
+
+describe('liveChatBadge restored session', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    state.shown.value = false
+    state.sessionId.value = 'session-1'
+    state.messages.value = []
+    state.lastMessageId.value = '0'
+    state.conversationEnded.value = false
+    mocks.getStatus.mockReset()
+    mocks.getHistory.mockReset().mockResolvedValue([
+      message('1', 'agent:Ana', 'Fixed!'),
+      message('2', 'system', 'Session closed by support.', 'session_closed'),
+    ])
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows a session support closed as ended without polling', async () => {
+    const { default: LiveChatBadge } = await import('./LiveChatBadge.vue')
+    mount(LiveChatBadge)
+    await flushPromises()
+
+    expect(state.conversationEnded.value).toBe(true)
+    expect(state.messages.value).toHaveLength(2)
+
+    state.shown.value = true
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(mocks.getHistory).toHaveBeenCalledTimes(1)
   })
 })
