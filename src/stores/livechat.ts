@@ -102,6 +102,15 @@ export const useLiveChat = defineStore('livechat', () => {
     if (!trimmed)
       return
 
+    // After support closed the session, the next message starts a new one with fresh history
+    if (isSessionClosed(messages.value)) {
+      sessionId.value = ''
+      lastReadMessageId.value = '0'
+      messages.value = []
+      lastMessageId.value = '0'
+      pendingMessageCount.value = 0
+    }
+
     const walletAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
     const userId = walletAddress.replaceAll(' ', '')
 

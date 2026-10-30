@@ -5,6 +5,7 @@ import { defineComponent, reactive, ref } from 'vue'
 
 const messages = ref<WtMessage[]>([])
 const conversationEnded = ref(false)
+const sessionId = ref('')
 const sendLogs = vi.fn()
 
 vi.mock('@ionic/vue', () => {
@@ -49,6 +50,7 @@ vi.mock('@/stores/livechat', () => ({
     messages,
     online: ref(true),
     conversationEnded,
+    sessionId,
     sendLogs,
     sendMessage: vi.fn(),
     closeSession: vi.fn(),
@@ -159,14 +161,16 @@ describe('liveChat session end', () => {
   beforeEach(() => {
     messages.value = []
     conversationEnded.value = false
+    sessionId.value = ''
   })
 
-  it('keeps the history visible when support closes the session', async () => {
+  it('keeps the history and input when support closes the session', async () => {
     messages.value = [
       message('1', 'agent:Ana', 'Fixed, please send logs if it happens again'),
       message('2', 'system', 'Session closed by support.', 'session_closed'),
     ]
     conversationEnded.value = true
+    sessionId.value = 'session-1'
 
     const wrapper = await mountChat()
 
@@ -175,7 +179,8 @@ describe('liveChat session end', () => {
     expect(wrapper.text()).not.toContain('Session closed by support.')
     expect(wrapper.text()).not.toContain('Thanks for reaching out!')
     expect(wrapper.text()).not.toContain('Attach logs')
-    expect(wrapper.find('textarea').exists()).toBe(false)
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
   })
 
   it('shows the thank-you screen when the user ends the chat', async () => {
@@ -186,5 +191,29 @@ describe('liveChat session end', () => {
 
     expect(wrapper.text()).toContain('Thanks for reaching out!')
     expect(wrapper.find('textarea').exists()).toBe(false)
+  })
+})
+
+describe('liveChat send logs button', () => {
+  beforeEach(() => {
+    messages.value = []
+    conversationEnded.value = false
+    sessionId.value = ''
+  })
+
+  it('is hidden before the first message started a session', async () => {
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
+  })
+
+  it('shows once a session exists', async () => {
+    messages.value = [message('1', 'user', 'Help me')]
+    sessionId.value = 'session-1'
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(true)
   })
 })

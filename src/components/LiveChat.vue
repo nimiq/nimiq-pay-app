@@ -11,7 +11,7 @@ import ChatConfirmDialog from './ChatConfirmDialog.vue'
 import LoadingSpinnerIcon from './icons/loading-spinner.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, error, messages, online, conversationEnded } = storeToRefs(livechat)
+const { shown, loading, error, messages, online, conversationEnded, sessionId } = storeToRefs(livechat)
 const { showAnimations } = storeToRefs(useApp())
 
 const inputText = ref('')
@@ -265,10 +265,11 @@ function formatTime(timestamp: string): string {
           </motion.div>
         </AnimatePresence>
 
-        <!-- Input area -->
-        <div v-if="!chatEnded" class="border-t border-neutral-100 p-3 flex gap-2 items-end">
-          <!-- Same height as the single-line textarea, so the icon lines up with its last line -->
-          <div class="h-12 flex items-center shrink-0">
+        <!-- Input area. After support closed the session, sending starts a new one -->
+        <div v-if="!chatEnded || closedBySupport" class="border-t border-neutral-100 p-3 flex gap-2 items-end">
+          <!-- Logs go to an existing session, so only offer them once the first message started one.
+               Same height as the single-line textarea, so the icon lines up with its last line -->
+          <div v-if="sessionId && !closedBySupport" class="h-12 flex items-center shrink-0">
             <IonButton
               fill="clear"
               shape="round"

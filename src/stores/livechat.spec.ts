@@ -194,3 +194,31 @@ describe('useLiveChat restore on startup', () => {
     expect(livechat.sessionId).toBe('')
   })
 })
+
+describe('useLiveChat after support closed the session', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    mocks.startSession.mockReset().mockResolvedValue({ session_id: 'session-2' })
+    mocks.sendMessage.mockReset().mockResolvedValue({ message_id: 'message-3' })
+  })
+
+  it('starts a new session with fresh history on the next message', async () => {
+    const { useLiveChat } = await import('./livechat')
+    const livechat = useLiveChat()
+    livechat.sessionId = 'session-1'
+    livechat.lastMessageId = '2'
+    livechat.messages = [
+      { id: '1', sender: 'agent:Ana', content: 'Fixed!', timestamp: '2026-10-10 10:00:01' },
+      { id: '2', sender: 'system', event: 'session_closed', content: 'Session closed by support.', timestamp: '2026-10-10 10:00:02' },
+    ]
+    livechat.conversationEnded = true
+
+    await livechat.sendMessage('One more thing')
+
+    expect(mocks.startSession).toHaveBeenCalledTimes(1)
+    expect(mocks.sendMessage).toHaveBeenCalledWith(expect.any(String), 'session-2', 'One more thing')
+    expect(livechat.messages.map(m => m.content)).toEqual(['One more thing'])
+    expect(livechat.lastMessageId).toBe('0')
+    expect(livechat.conversationEnded).toBe(false)
+  })
+})
