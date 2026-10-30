@@ -179,7 +179,7 @@ describe('liveChat session end', () => {
     expect(wrapper.text()).not.toContain('Session closed by support.')
     expect(wrapper.text()).not.toContain('Thanks for reaching out!')
     expect(wrapper.text()).not.toContain('Attach logs')
-    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.find('textarea').attributes('placeholder')).toBe('Start a new chat')
     expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
   })
 
@@ -204,7 +204,7 @@ describe('liveChat send logs button', () => {
   it('is hidden before the first message started a session', async () => {
     const wrapper = await mountChat()
 
-    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.find('textarea').attributes('placeholder')).toBe('Type your message')
     expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
   })
 

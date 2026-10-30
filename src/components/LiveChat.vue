@@ -289,7 +289,7 @@ function formatTime(timestamp: string): string {
             v-model="inputText"
             rows="1"
             class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32 min-h-12"
-            :placeholder="$t('Type a message...')"
+            :placeholder="closedBySupport ? $t('Start a new chat') : $t('Type your message')"
             @input="autoResize"
             @keydown="onKeydown"
           ></textarea>

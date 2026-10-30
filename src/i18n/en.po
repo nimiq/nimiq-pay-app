@@ -1811,6 +1811,10 @@ msgstr ""
 msgid "Start a conversation..."
 msgstr ""
 
+#: src/components/LiveChat.vue:173
+msgid "Start a new chat"
+msgstr ""
+
 #: src/components/TransactionDetails.vue:20
 msgid "Status"
 msgstr ""
@@ -2054,7 +2058,7 @@ msgid "Turn it off, then reopen Nimiq Pay."
 msgstr ""
 
 #: src/components/LiveChat.vue:173
-msgid "Type a message..."
+msgid "Type your message"
 msgstr ""
 
 #: src/stores/points.ts:106
