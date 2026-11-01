@@ -204,6 +204,16 @@ export type UserConfirmationRequest
       /** From the Mini App's widget file: untrusted text. */
       widgetName: string
       description?: string
+      /** What the widget will show as its Mini App's name, unless that is only the address. */
+      appName?: string
+    }
+    | {
+      type: 'widgetName'
+      url: string
+      /** The folder's address, which names on one host keep apart. */
+      address: string
+      /** From the Mini App's widget file: untrusted text. */
+      to: string
     }
 
 /**
@@ -271,6 +281,9 @@ export class MiniAppHost {
   private readonly pendingLightningInvoices = new Set<string>()
   /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
   private readonly declinedWidgets = new Set<string>()
+  private declinedWidgetName = false
+  /** One sheet, however many widgets a Mini App calls `add` for at once. */
+  private widgetNameOffer: Promise<void> | undefined
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
   private lastPageUrl: string | null = null
   /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
@@ -1514,8 +1527,10 @@ export class MiniAppHost {
     if (!found.ok)
       throw new InvalidRequestError(found.error)
     const { scope, file } = found.value
-    if (widgets.isOnHome(scope, id))
+    if (widgets.isOnHome(scope, id)) {
+      await this.offerWidgetName(scope)
       return true
+    }
     if (this.declinedWidgets.has(id))
       return false
     const definition = file.widgets.find(d => d.id === id)
@@ -1526,11 +1541,13 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation)
       throw new InternalError('Confirmation handler not provided')
     const { name, description } = localizeDefinition(definition, useApp().language)
+    const identity = widgets.identityOnAdd(scope, definition)
     const confirmed = await this.config.requestUserConfirmation({
       url: this.sessionUrl,
       type: 'widget',
       widgetName: name,
       description,
+      appName: identity.appAddress ? identity.appName : undefined,
     })
     trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed) {
@@ -1538,6 +1555,24 @@ export class MiniAppHost {
       return false
     }
     return widgets.add(scope, definition)
+  }
+
+  /** A rename the user has not approved waits: this is where a Mini App can ask for it. */
+  private async offerWidgetName(scope: string) {
+    const widgets = useMiniAppWidgets()
+    const pending = widgets.pendingName(scope)
+    const confirm = this.config.requestUserConfirmation
+    if (!pending || this.declinedWidgetName || !confirm)
+      return
+    this.widgetNameOffer ??= (async () => {
+      const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetName', address: pending.address, to: pending.to })
+      trackWeb3Request({ requestType: 'widget_name', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+      if (confirmed)
+        widgets.approveName(scope, pending.to)
+      else
+        this.declinedWidgetName = true
+    })().finally(() => this.widgetNameOffer = undefined)
+    await this.widgetNameOffer
   }
 
   private async updateWidget(params: unknown): Promise<boolean> {

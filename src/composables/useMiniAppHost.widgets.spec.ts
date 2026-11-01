@@ -17,6 +17,9 @@ const { createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted(() => (
     isOnHome: vi.fn(() => false),
     canAdd: true,
     canAddTo: vi.fn(() => true),
+    identityOnAdd: vi.fn((): { appName: string, appAddress?: string, launchTitle: string } => ({ appName: 'swap.example', launchTitle: 'swap.example' })),
+    pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
+    approveName: vi.fn(),
     add: vi.fn(() => true),
     update: vi.fn(() => true),
     remove: vi.fn(),
@@ -85,6 +88,7 @@ beforeEach(() => {
   widgets.isOnHome.mockReturnValue(false)
   widgets.canAdd = true
   widgets.canAddTo.mockReturnValue(true)
+  widgets.pendingName.mockReturnValue(undefined)
   widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } })
   vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
@@ -107,6 +111,39 @@ describe('widgets.add', () => {
     expect(widgets.add).not.toHaveBeenCalled()
   })
 
+  const pendingRename = () => {
+    widgets.isOnHome.mockReturnValue(true)
+    widgets.pendingName.mockReturnValue({ to: 'New', address: 'swap.example/app' })
+  }
+
+  it('asks about a new name when the Mini App calls add for a widget on Home, and applies it on yes', async () => {
+    pendingRename()
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(true)
+    await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetName', to: 'New', address: 'swap.example/app' }))
+    expect(widgets.approveName).toHaveBeenCalledWith(SCOPE, 'New')
+    expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_name', approved: true }))
+  })
+
+  it('keeps the approved name on no, and does not ask again until the Mini App is opened again', async () => {
+    pendingRename()
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(false)
+    await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
+    await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(widgets.approveName).not.toHaveBeenCalled()
+  })
+
+  it('shows one sheet for add calls at once on several widgets, however many the Mini App fires', async () => {
+    pendingRename()
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(false)
+    await Promise.all(['a', 'b', 'c'].map(id => request('widgets.add', { id })))
+    expect(confirm).toHaveBeenCalledTimes(1)
+  })
+
   it('answers true without asking when the widget is already on Home', async () => {
     widgets.isOnHome.mockReturnValue(true)
     const { confirm, request } = createHost()
@@ -125,6 +162,20 @@ describe('widgets.add', () => {
   it('fails for an id the file does not declare', async () => {
     const { request } = createHost()
     await expect(request('widgets.add', { id: 'nope' })).rejects.toMatchObject({ message: 'https://swap.example/app/nimiq-pay-widgets.json declares no widget "nope"' })
+  })
+
+  it('tells the sheet the name the widget will show under, and none when that is only the address', async () => {
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(true)
+    widgets.identityOnAdd.mockReturnValue({ appName: 'SwapSpace', appAddress: 'swap.example', launchTitle: 'swap.example' })
+    await request('widgets.add', { id: 'swap' })
+    expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: 'SwapSpace' }))
+
+    widgets.identityOnAdd.mockReturnValue({ appName: 'swap.example', launchTitle: 'swap.example' })
+    const second = createHost()
+    second.confirm.mockResolvedValue(true)
+    await second.request('widgets.add', { id: 'swap' })
+    expect(second.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: undefined }))
   })
 
   it('fails when the Mini App has all the widgets it may have on Home', async () => {

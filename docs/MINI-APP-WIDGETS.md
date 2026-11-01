@@ -26,7 +26,7 @@ Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 wi
 | Field | Meaning |
 | --- | --- |
 | `v` | Always `1`. |
-| `name` | Optional. Your Mini App's name, shown on your widgets instead of your site's address; the address stays in each widget's menu and in the gallery. At most 24 characters (longer text is cut, an emoji counts once), not translated. A Mini App in the Nimiq Pay catalog shows its catalog name instead. Like every text, a `name` that is not a non-empty string makes the file invalid. |
+| `name` | Optional. Your Mini App's name, shown on your widgets instead of your site's address; the address stays in each widget's menu and in the gallery. At most 24 characters (longer text is cut, an emoji counts once), not translated. A Mini App in the Nimiq Pay catalog shows its catalog name instead. Once a widget is on Home, a new name needs the user's approval (see below). Like every text, a `name` that is not a non-empty string makes the file invalid. |
 | `widgets[].id` | Lower-case letters, digits and dashes, not starting with a dash, at most 32 characters, unique in the file. |
 | `widgets[].name` | Shown in the gallery and the consent sheet. At most 32 characters (longer text is cut). |
 | `widgets[].description` | Optional, at most 120 characters. |
@@ -55,6 +55,7 @@ Live states you send are not translated by this field: send them in your current
 
 - Nimiq Pay reads the file when the gallery opens, and when your Mini App opens unless the folder it opened in was checked in the last day (then on your Mini App's first widget call instead), and keeps the result until Nimiq Pay is restarted. For widgets that are already on Home it re-checks the file about once a day.
 - An edit to the file therefore reaches a widget on Home at the next daily re-check, up to a day later, not when the user reopens the Mini App. To see an edit at once while testing, restart Nimiq Pay, then remove the widget and add it again.
+- **A new `name` waits for approval.** Once the re-check finds it, all your widgets in that folder keep the name the user approved until they accept the new one from a widget's menu, or your Mini App calls `add` for a widget on Home, which asks them once while the Mini App stays open. Dropping `name`, or setting it to your address, applies at once, since that only shows your address. Everything else in the file applies with the re-check.
 - A widget is removed from Home only when a valid file no longer declares it. An empty list, `{ "v": 1, "widgets": [] }`, withdraws every widget of that folder; `add` then fails with "declares no widget".
 - A missing or broken file (404, invalid, a network or server error) keeps the widgets on Home as they are.
 - **Do not move the file to another folder** once users have added widgets: those widgets stay tied to the old folder, so your Mini App can no longer update or remove them (the user still can, from the "⋯" menu). Adding the widget again picks up the new folder.
@@ -165,7 +166,7 @@ if (window.nimiqPay?.widgets) {
 | `remove(id)` | Removes the widget from Home. |
 | `list()` | The ids of your Mini App's widgets that are on Home. |
 
-The sheet tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
+The sheet says the name your widget will appear under (your `name`, or your catalog name), and tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
 
 Requests are accepted only from the site the Mini App session belongs to. They are refused while the in-app browser shows another site, while it navigates between sites, while a popup your page opened is open, and after Nimiq Pay reloads behind an open Mini App until the page has loaded again. Refused calls fail quietly: `add` rejects, `update` answers `false`, `remove` does nothing and `list` answers `[]`.
 

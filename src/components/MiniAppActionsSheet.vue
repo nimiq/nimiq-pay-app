@@ -7,6 +7,7 @@ import { Share } from '@capacitor/share'
 import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, watch } from 'vue'
 import FlagIcon from '@/components/icons/flag.vue'
+import PenIcon from '@/components/icons/pen.vue'
 import RemoveIcon from '@/components/icons/remove.vue'
 import ShareIcon from '@/components/icons/share.vue'
 import { i18n } from '@/i18n/i18n-setup'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   (e: 'remove'): void
   (e: 'size', size: WidgetSize): void
   (e: 'removeWidget'): void
+  (e: 'useNewName'): void
 }>()
 
 const widgetSizes = computed(() => WIDGET_SIZES.filter(size => props.context?.widget?.sizes.includes(size)))
@@ -62,6 +64,11 @@ function onSize(size: WidgetSize) {
   close()
 }
 
+function onUseNewName() {
+  emit('useNewName')
+  close()
+}
+
 function onRemoveWidget() {
   emit('removeWidget')
   close()
@@ -73,6 +80,9 @@ const actions = computed(() => {
   if (!context)
     return []
   return [
+    ...(context.newName
+      ? [{ testid: 'mini-app-use-new-name-action', label: i18n.t('Use the new name: {name}', { name: context.newName }), icon: PenIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUseNewName }]
+      : []),
     ...(context.shareable === false
       ? []
       : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),

@@ -10,7 +10,7 @@ const { background, launchMiniApp, showModal, store, visible } = await vi.hoiste
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 
@@ -140,6 +140,16 @@ describe('theHomeWidgets', () => {
     sheet.vm.$emit('removeWidget')
     expect(store.setSize).toHaveBeenCalledWith('https://swap.example/', 'swap', 'medium')
     expect(store.remove).toHaveBeenCalledWith('https://swap.example/', 'swap')
+  })
+
+  it('offers a new name in the menu, and applies it for that folder', async () => {
+    store.views.value = [{ ...view('small', 'swap'), pendingAppName: 'SwapSpace' }]
+    const wrapper = render()
+    await wrapper.find('[data-testid="widget-menu"]').trigger('click')
+    const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
+    expect(sheet.props('context')).toMatchObject({ newName: 'SwapSpace' })
+    sheet.vm.$emit('useNewName')
+    expect(store.approveName).toHaveBeenCalledWith('https://swap.example/', 'SwapSpace')
   })
 
   it('opens the gallery from Add', async () => {

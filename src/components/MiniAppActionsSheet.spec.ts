@@ -126,6 +126,16 @@ describe('miniAppActionsSheet', () => {
     expect(action('mini-app-remove-widget-action')).not.toBeNull()
   })
 
+  it('offers a widget\'s new name when there is one, and emits when chosen', async () => {
+    await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
+    expect(action('mini-app-use-new-name-action')).toBeNull()
+    wrapper?.unmount()
+    await mountSheet({ app, removable: false, newName: 'SwapSpace', widget: { size: 'small', sizes: ['small'] } })
+    action('mini-app-use-new-name-action')!.click()
+    expect(wrapper!.emitted('useNewName')).toHaveLength(1)
+    expect(wrapper!.emitted('update:open')).toEqual([[false]])
+  })
+
   it('shows no Size row for a single-size widget, but still offers Remove', async () => {
     await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
     expect(document.body.querySelector('[data-testid="mini-app-widget-size"]')).toBeNull()

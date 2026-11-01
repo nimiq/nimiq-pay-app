@@ -360,12 +360,28 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
+          ...(request.appName ? [{ title: `• Appears as ${request.appName} on Home` }] : []),
           { title: `• Shows what ${host} sends` },
           { title: `• May contact ${host} regularly to stay up to date` },
           { title: '• Cannot see your balance or move funds' },
           { title: '• Remove it any time from its menu' },
         ],
         confirmButtonTitle: 'Add to Home',
+        cancelButtonTitle: 'Not now',
+      })
+      return result.confirmed
+    }
+
+    case 'widgetName': {
+      const result = await ExtendedDialog.sheet({
+        title: `Show ${request.address} as ${request.to}?`,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: '• Shown on its widgets on Home' },
+          { title: '• The address stays in each widget\'s menu' },
+        ],
+        confirmButtonTitle: 'Use this name',
         cancelButtonTitle: 'Not now',
       })
       return result.confirmed

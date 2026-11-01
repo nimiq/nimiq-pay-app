@@ -42,6 +42,8 @@ export interface MiniAppMenuContext {
   /** The site a widget comes from, shown under its name. */
   address?: string
   widget?: { size: WidgetSize, sizes: WidgetSize[] }
+  /** A name the widget file now declares, waiting for the user's approval. */
+  newName?: string
 }
 
 interface BaseDApp {

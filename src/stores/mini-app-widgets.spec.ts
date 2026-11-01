@@ -727,6 +727,120 @@ describe('a widget\'s demo', () => {
   })
 })
 
+describe('approving a new name', () => {
+  const NAMED = 'https://named.example/'
+  const DAY = 25 * 3600_000
+  const named = (appName?: string, extra: Partial<WidgetDefinition> = {}) => definition({ ...(appName ? { appName } : {}), ...extra })
+  const dailyCheck = async (store: Awaited<ReturnType<typeof setup>>, file: WidgetDefinition[], days = 1) => {
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: file } })
+    await store.tick({ chain: fakeChain(), at: NOW + days * DAY })
+  }
+
+  it('keeps showing the approved name when the file changes it, while the rest of the file applies', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    await dailyCheck(store, [named('New', { description: 'Changed' })])
+    expect(store.views[0]).toMatchObject({ appName: 'Old', pendingAppName: 'New' })
+    expect(store.widgets[0]!.definition.description).toBe('Changed')
+  })
+
+  it('asks too when a Mini App that showed its address starts declaring a name', async () => {
+    const store = await setup()
+    store.add(NAMED, named())
+    await dailyCheck(store, [named('Bank of Nimiq')])
+    expect(store.views[0]).toMatchObject({ appName: 'named.example', pendingAppName: 'Bank of Nimiq' })
+  })
+
+  it('treats a folder as one Mini App: a re-check of one widget offers the name on all, and approving covers them', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    vi.setSystemTime(NOW + DAY)
+    store.add(NAMED, named('Old', { id: 'other' }))
+    await dailyCheck(store, [named('New'), named('New', { id: 'other' })])
+    expect(store.views.map(view => view.pendingAppName)).toEqual(['New', 'New'])
+    store.approveName(NAMED, 'New')
+    expect(store.views.map(view => view.appName)).toEqual(['New', 'New'])
+    expect(store.views[1]!.pendingAppName).toBeUndefined()
+  })
+
+  it('applies only the name the user saw', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    await dailyCheck(store, [named('Seen')])
+    await dailyCheck(store, [named('Newer')], 2)
+    store.approveName(NAMED, 'Seen')
+    expect(store.views[0]).toMatchObject({ appName: 'Old', pendingAppName: 'Newer' })
+  })
+
+  it('does not touch another folder', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    store.add('https://else.example/', named('Elsewhere', { id: 'else' }))
+    await dailyCheck(store, [named('New'), named('Elsewhere', { id: 'else' })])
+    store.approveName(NAMED, 'New')
+    expect(store.views[1]!.appName).toBe('Elsewhere')
+  })
+
+  it('gives a widget added later the folder\'s approved name, leaving the new one waiting', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    store.add(NAMED, named('New', { id: 'other' }))
+    expect(store.views.map(view => view.appName)).toEqual(['Old', 'Old'])
+    expect(store.views.map(view => view.pendingAppName)).toEqual(['New', 'New'])
+    expect(store.previewView(NAMED, named('New', { id: 'third' })).appName).toBe('Old')
+    expect(store.identityOnAdd(NAMED, named('New', { id: 'third' })).appName).toBe('Old')
+  })
+
+  it('stops asking when the file goes back to the approved name', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    await dailyCheck(store, [named('New')])
+    await dailyCheck(store, [named('Old')], 2)
+    expect(store.views[0]).toMatchObject({ appName: 'Old' })
+    expect(store.views[0]!.pendingAppName).toBeUndefined()
+  })
+
+  it.each([['dropping the name', undefined], ['declaring only the address', 'named.example']])('needs no approval for %s, as that only shows the address', async (_name, offered) => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    await dailyCheck(store, [named(offered)])
+    expect(store.views[0]).toMatchObject({ appName: 'named.example' })
+    expect(store.views[0]!.pendingAppName).toBeUndefined()
+  })
+
+  it('offers nothing for a catalog Mini App, which shows its catalog name', async () => {
+    const store = await setup()
+    store.add(SCOPE, named('Old'))
+    await dailyCheck(store, [named('New')])
+    expect(store.views[0]).toMatchObject({ appName: 'Swap' })
+    expect(store.views[0]!.pendingAppName).toBeUndefined()
+    expect(store.pendingName(SCOPE)).toBeUndefined()
+  })
+
+  it('tells the host what to ask about, with the folder\'s full address', async () => {
+    const store = await setup()
+    const FOLDER = 'https://name.github.io/my-app/'
+    store.add(FOLDER, named('Old'))
+    await dailyCheck(store, [named('New')])
+    expect(store.pendingName(FOLDER)).toEqual({ to: 'New', address: 'name.github.io/my-app' })
+  })
+
+  it('tells the host the name a widget will show under, before it is added', async () => {
+    const store = await setup()
+    expect(store.identityOnAdd(NAMED, named('Declared'))).toMatchObject({ appName: 'Declared', appAddress: 'named.example' })
+    expect(store.identityOnAdd(NAMED, named()).appAddress).toBeUndefined()
+    expect(store.identityOnAdd(SCOPE, named('Declared')).appName).toBe('Swap')
+  })
+
+  it('offers nothing on a blocked card', async () => {
+    const store = await setup()
+    store.add(NAMED, named('Old'))
+    await dailyCheck(store, [named('New')])
+    flags.blockedWidgetOrigins = ['https://named.example']
+    expect(store.views[0]!.pendingAppName).toBeUndefined()
+  })
+})
+
 describe('the remote kill switch', () => {
   const blockSwap = () => {
     flags.blockedWidgetOrigins = ['https://swap.example']

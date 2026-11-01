@@ -44,6 +44,7 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
     reportUrl: useMiniApps().getMiniAppReportUrl(view.scope),
     removable: false,
     widget: { size: view.size, sizes: view.sizes },
+    newName: view.pendingAppName,
   }
 })
 
@@ -91,6 +92,7 @@ function open(view: WidgetView, url: string) {
       :context="menuContext"
       @size="size => { if (menuView) { widgets.setSize(menuView.scope, menuView.widgetId, size); void widgets.tick({ force: true }) } }"
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
+      @use-new-name="menuView?.pendingAppName && widgets.approveName(menuView.scope, menuView.pendingAppName)"
     />
   </section>
   <AddWidgetsPill

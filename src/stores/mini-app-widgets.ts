@@ -43,6 +43,8 @@ export interface HomeWidget {
   size: WidgetSize
   definition: WidgetDefinition
   definitionCheckedAt: number
+  /** A name the widget file now declares and the user has not approved; `definition` keeps the approved one. */
+  pendingAppName?: string
   /** undefined means the resting state. */
   state?: WidgetState
   refreshDueAt?: number
@@ -71,6 +73,7 @@ export interface WidgetView {
   appAddress?: string
   /** The catalog name or the address: a declared name never reaches the signing sheets of the launched Mini App. */
   launchTitle: string
+  pendingAppName?: string
   appIcon: string
   size: WidgetSize
   sizes: WidgetSize[]
@@ -126,6 +129,11 @@ function liveSpecs(content: WidgetContent | WidgetDemo, size: WidgetSize): LiveS
 
 function refreshOf(state: WidgetState | undefined, definition: WidgetDefinition): WidgetRefresh | undefined {
   return state ? state.refresh : definition.refresh
+}
+
+function addressOf(scope: string): string {
+  const url = new URL(scope)
+  return stripTrailingSlash(`${url.hostname}${url.pathname}`)
 }
 
 function byLongestWaiting(list: HomeWidget[]): HomeWidget[] {
@@ -213,18 +221,21 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     if (!canAddTo(scope))
       return false
     const at = Date.now()
+    const hasSiblings = listForScope(scope).length > 0
     stored.value = [...stored.value, {
       scope,
       widgetId: definition.id,
       network,
       size: definition.sizes[0]!,
-      definition,
+      definition: approvedDefinition(scope, definition),
       definitionCheckedAt: at,
       // A resting state with a refresh fetches its first content right away.
       refreshDueAt: definition.refresh ? at : undefined,
       failures: 0,
       updatedAt: at,
     }]
+    if (hasSiblings)
+      offerName(scope, definition.appName)
     return true
   }
 
@@ -309,12 +320,15 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return shownState(widget, at)?.content ?? localizeDefinition(widget.definition, useApp().language).content
   }
 
-  function identity(widget: HomeWidget): Pick<WidgetView, 'appName' | 'appAddress' | 'launchTitle'> {
+  function catalogEntry(scope: string) {
+    return useMiniApps().popularDApps.find(app => stripTrailingSlash(app.url) === stripTrailingSlash(scope))
+  }
+
+  function identity(widget: Pick<HomeWidget, 'scope' | 'definition'>): Pick<WidgetView, 'appName' | 'appAddress' | 'launchTitle'> {
     if (widget.scope === BUILTIN_WIDGET_SCOPE)
       return { appName: 'Nimiq Pay', launchTitle: 'Nimiq Pay' }
-    const url = new URL(widget.scope)
-    const address = stripTrailingSlash(`${url.hostname}${url.pathname}`)
-    const listed = useMiniApps().popularDApps.find(app => stripTrailingSlash(app.url) === stripTrailingSlash(widget.scope))
+    const address = addressOf(widget.scope)
+    const listed = catalogEntry(widget.scope)
     if (listed)
       return { appName: listed.name, appAddress: listed.name === address ? undefined : address, launchTitle: listed.name }
     const declared = widget.definition.appName
@@ -348,6 +362,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       rows: content.rows.map(row => ({ label: row.label, value: display(row.value), url: row.path })),
       chart: !chart ? undefined : 'points' in chart ? { kind: chart.kind, points: chart.points } : Array.isArray(history) ? { kind: 'line', points: history } : undefined,
       url: content.path ?? (builtin ? undefined : widget.scope),
+      pendingAppName: catalogEntry(widget.scope) ? undefined : widget.pendingAppName,
       staleSince: widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
     }
   }
@@ -364,6 +379,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       appIcon: MINI_APP_FALLBACK_ICON,
       url: undefined,
       staleSince: undefined,
+      pendingAppName: undefined,
     }
   }
 
@@ -375,7 +391,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function previewView(scope: string, definition: WidgetDefinition): WidgetView {
-    return toView({ scope, widgetId: definition.id, network, size: definition.sizes[0]!, definition, definitionCheckedAt: 0, failures: 0, updatedAt: 0 }, now.value, previewContent(definition))
+    return toView({ scope, widgetId: definition.id, network, size: definition.sizes[0]!, definition: approvedDefinition(scope, definition), definitionCheckedAt: 0, failures: 0, updatedAt: 0 }, now.value, previewContent(definition))
   }
 
   function lookupBudget(enabled: boolean) {
@@ -480,6 +496,39 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
   }
 
+  function approvedDefinition(scope: string, definition: WidgetDefinition): WidgetDefinition {
+    const sibling = widgets.value.find(w => w.scope === scope)
+    return sibling ? { ...definition, appName: sibling.definition.appName } : definition
+  }
+
+  // A name belongs to the whole folder. Only a new one waits: content can change with any state anyway, and dropping a name only shows the address.
+  function offerName(scope: string, offered: string | undefined) {
+    const shownAsAddress = offered === undefined || offered === addressOf(scope)
+    stored.value = stored.value.map((w) => {
+      if (w.network !== network || w.scope !== scope)
+        return w
+      if (shownAsAddress)
+        return { ...w, definition: { ...w.definition, appName: undefined }, pendingAppName: undefined }
+      return { ...w, pendingAppName: offered === w.definition.appName ? undefined : offered }
+    })
+  }
+
+  function pendingName(scope: string): { to: string, address: string } | undefined {
+    const to = widgets.value.find(w => w.scope === scope)?.pendingAppName
+    return to && !catalogEntry(scope) ? { to, address: addressOf(scope) } : undefined
+  }
+
+  /** Takes the name the user saw: a newer one that arrived meanwhile keeps waiting. */
+  function approveName(scope: string, name: string) {
+    stored.value = stored.value.map(w => w.network === network && w.scope === scope && w.pendingAppName === name
+      ? { ...w, definition: { ...w.definition, appName: name }, pendingAppName: undefined }
+      : w)
+  }
+
+  function identityOnAdd(scope: string, definition: WidgetDefinition) {
+    return identity({ scope, definition: approvedDefinition(scope, definition) })
+  }
+
   async function recheckDefinition(widget: HomeWidget, at: number, files: Map<string, Promise<FetchOutcome<WidgetFile>>>) {
     if (!files.has(widget.scope))
       files.set(widget.scope, widget.scope === BUILTIN_WIDGET_SCOPE ? Promise.resolve({ ok: true, value: builtinWidgetFile() }) : fetchWidgetFile(widget.scope, at))
@@ -494,7 +543,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       remove(widget.scope, widget.widgetId)
       return
     }
-    patch(widget.scope, widget.widgetId, w => ({ definition, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
+    patch(widget.scope, widget.widgetId, w => ({ definition: { ...definition, appName: w.definition.appName }, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
+    offerName(widget.scope, definition.appName)
   }
 
   async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize, origin?: string }[], chain: WidgetChain, at: number, budget: Budget) {
@@ -603,6 +653,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     canAdd,
     canAddTo,
     isBlocked,
+    identityOnAdd,
+    pendingName,
+    approveName,
     isOnHome,
     listForScope,
     listForOrigin,

@@ -34,6 +34,31 @@ describe('requestUserConfirmation Lightning payment', () => {
 })
 
 describe('requestUserConfirmation widget', () => {
+  it('asks to use a Mini App\'s new name, saying where it shows and that the address stays', async () => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+
+    const confirmed = await requestUserConfirmation({ type: 'widgetName', url: 'https://name.github.io/my-app/', address: 'name.github.io/my-app', to: 'SwapSpace' })
+
+    expect(confirmed).toBe(true)
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Show name.github.io/my-app as SwapSpace?',
+      rows: [
+        { title: '• Shown on its widgets on Home' },
+        { title: '• The address stays in each widget\'s menu' },
+      ],
+      confirmButtonTitle: 'Use this name',
+      cancelButtonTitle: 'Not now',
+    }))
+  })
+
+  it('says the name the widget will show under, so that approving it means having seen it', async () => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+
+    await requestUserConfirmation({ type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status', appName: 'SwapSpace' })
+
+    expect(vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].rows![0]).toEqual({ title: '• Appears as SwapSpace on Home' })
+  })
+
   it('asks to add the widget, naming the site and what the widget cannot do', async () => {
     vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: false })
 
