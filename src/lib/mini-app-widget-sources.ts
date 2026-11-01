@@ -7,7 +7,7 @@ import { isMiniAppActive } from '@/lib/mini-app-active'
 import { isAllowedWidgetOrigin, parseWidgetFile, parseWidgetState, WIDGET_FILE_NAME, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { headerValue } from '@/lib/site-metadata'
 
-export type FetchOutcome<T> = { ok: true, value: T } | { ok: false, error: string, transient: boolean }
+export type FetchOutcome<T> = { ok: true, value: T } | { ok: false, error: string, transient: boolean, status?: number, retryAfterMs?: number }
 
 const MAX_REDIRECTS = 3
 const DEADLINE_MS = 15_000
@@ -22,6 +22,13 @@ function definiteError(error: string): FetchOutcome<never> {
 
 function statusError(url: string, status: number): FetchOutcome<never> {
   return { ok: false, error: `${url} ${status === 404 ? 'not found' : `answered ${status}`}`, transient: status >= 500 || status === 429 }
+}
+
+function retryAfterMs(value: string | null, now: number): number | undefined {
+  if (!value)
+    return undefined
+  const ms = /^\d+$/.test(value.trim()) ? Number(value) * 1000 : Date.parse(value) - now
+  return ms > 0 ? ms : undefined
 }
 
 function isAllowedProtocol(url: URL): boolean {
@@ -172,6 +179,7 @@ export async function fetchWidgetRefresh(
   params: { lang: string, network: NetworkMode },
   scope: string,
   now = Date.now(),
+  token?: string,
 ): Promise<FetchOutcome<WidgetState | null>> {
   let origin: string
   let target: URL
@@ -198,7 +206,7 @@ export async function fetchWidgetRefresh(
     // Refreshes skip the native client because it sends and stores the site's cookies.
     let response: Response
     try {
-      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', signal: controller.signal })
+      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: controller.signal })
     }
     catch {
       return transientError(`could not reach ${href}`)
@@ -206,7 +214,7 @@ export async function fetchWidgetRefresh(
     if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400))
       return definiteError(`refresh URLs must not redirect (${href})`)
     if (response.status !== 200)
-      return statusError(href, response.status)
+      return { ...statusError(href, response.status), status: response.status, retryAfterMs: retryAfterMs(response.headers?.get('retry-after') ?? null, now) } as FetchOutcome<never>
 
     let bytes: Uint8Array
     try {

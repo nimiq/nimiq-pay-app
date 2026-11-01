@@ -68,6 +68,8 @@ export declare global {
         add: (id: string) => Promise<boolean>
         /** Replaces the widget's state; null returns it to its resting state. False when not applied, e.g. not on Home. */
         update: (id: string, state: Record<string, unknown> | null) => Promise<boolean>
+        /** Sent as a bearer token with this widget's refreshes; null clears it. False when not applied, e.g. not on Home. */
+        setToken: (id: string, token: string | null) => Promise<boolean>
         remove: (id: string) => Promise<void>
         /** Ids of this Mini App's widgets on Home. */
         list: () => Promise<string[]>

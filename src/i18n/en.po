@@ -790,7 +790,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2295
+#: src/composables/useMiniAppHost.ts:2308
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1072,7 +1072,7 @@ msgstr ""
 msgid "Minimum NIM Decimals"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:96
+#: src/components/MiniAppWidget.vue:99
 msgid "More actions for {name}"
 msgstr ""
 
@@ -1158,6 +1158,10 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
+#: src/stores/mini-app-widgets.ts:401
+msgid "No longer available"
+msgstr ""
+
 #: src/components/competition/MiniAppsCompetitionView.vue:125
 msgid "No matching submissions"
 msgstr ""
@@ -1212,11 +1216,11 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:372
+#: src/stores/mini-app-widgets.ts:386
 msgid "Not available"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:87
+#: src/components/MiniAppWidget.vue:90
 msgid "Not updated since {time}"
 msgstr ""
 
@@ -1254,6 +1258,10 @@ msgstr ""
 
 #: src/modals/MiniAppWarningModal.vue:22
 msgid "Open this mini app?"
+msgstr ""
+
+#: src/components/MiniAppWidget.vue:87
+msgid "Open to reconnect"
 msgstr ""
 
 #: src/components/competition/CompetitionAppDetail.vue:136
@@ -1758,7 +1766,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2296
+#: src/composables/useMiniAppHost.ts:2309
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371

@@ -163,6 +163,7 @@ if (window.nimiqPay?.widgets) {
 | `add(id)` | Asks the user (a native sheet: "Add Swap status to Home?"). Resolves `true` if the widget is on Home afterwards, `false` if the user said no. Rejects when the file cannot be read or declares no such widget, when your Mini App already has 6 widgets on Home, or when Home already holds 10. |
 | `update(id, state)` | Replaces the widget's state. No prompt, and only for a widget already on Home. Resolves `true` when applied, `false` when it was not (not on Home, the request was refused, or the widget file could not be found). Rejects with `Invalid widget state: <field>: <problem>` when the state is invalid; the widget keeps its last good state. |
 | `update(id, null)` | Back to the resting state from the widget file. |
+| `setToken(id, token)` | Stores a token for this widget, sent as `Authorization: Bearer <token>` with its refreshes, and resumes refreshes paused by a 401 or 403. At most 2048 visible ASCII characters; `null` clears it. Resolves `false` when not applied. Nothing reads it back. |
 | `remove(id)` | Removes the widget from Home. |
 | `list()` | The ids of your Mini App's widgets that are on Home. |
 
@@ -200,7 +201,15 @@ The refresh endpoint must:
 - answer HTTP 200 (204 and 304 count as failures) and not redirect (a redirect is an error);
 - answer within 15 seconds and with at most 8 KB;
 - be https on your site's origin, with no credentials in the URL; and
-- identify what to show by something in the URL (for example `?id=XyZ`), since there are no cookies.
+- identify what to show by something in the URL (for example `?id=XyZ`) or a token set with `setToken`, since there are no cookies. A token makes the browser send a CORS preflight first, so answer `OPTIONS` with `Access-Control-Allow-Headers: Authorization`.
+
+What an error answer does:
+
+| Answer | What Nimiq Pay does |
+| --- | --- |
+| 401, 403 | Keeps the content, adds "Open to reconnect", and pauses refreshes until your Mini App calls `setToken` or `update` |
+| 410 | Shows "No longer available", stops refreshing and lookups until your Mini App calls `setToken` or `update`. The user can remove it from the menu |
+| 429, 503 and others | A failure, with the back-off below. With `Retry-After` (seconds or a date, at most a day counts, and `Access-Control-Expose-Headers: Retry-After` so that it can be read), the next try waits at least that long |
 
 A minimal endpoint (Cloudflare Worker style):
 

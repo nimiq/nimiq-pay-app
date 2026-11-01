@@ -235,6 +235,12 @@ describe('miniAppWidget', () => {
     expect(render({ view: view({ size: 'small' }) }).classes()).toContain('bg-white')
   })
 
+  it('asks to reconnect when the server wants a new token, without a stale note', () => {
+    const text = render({ view: view({ size: 'medium', reconnect: true }) }).text()
+    expect(text).toContain('Open to reconnect')
+    expect(text).not.toContain('Not updated')
+  })
+
   it('holds a demo\'s countdown still', () => {
     expect(render({ view: view({ size: 'medium', countdown: { label: 'Deposit window', left: 1_740_000 } }), preview: true }).text()).toContain('29 min')
   })

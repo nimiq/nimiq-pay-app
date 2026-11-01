@@ -247,6 +247,11 @@ function originOf(url: string): string | null {
   }
 }
 
+/** The logs can be exported, and a token works for anyone who holds it. */
+function withoutToken(request: RequestParams): RequestParams {
+  return request.name === 'widgets.setToken' ? { ...request, params: '[hidden]' } : request
+}
+
 function widgetIdParam(params: unknown): string {
   const id = (params as { id?: unknown } | null | undefined)?.id
   if (typeof id !== 'string' || !WIDGET_ID_RE.test(id))
@@ -406,7 +411,7 @@ export class MiniAppHost {
         if (this.destroyed)
           throw new InternalError('Host is destroyed')
 
-        logger.log('[MiniAppHost] handleRequest:', params)
+        logger.log('[MiniAppHost] handleRequest:', withoutToken(params))
 
         try {
           switch (params.network) {
@@ -1466,7 +1471,7 @@ export class MiniAppHost {
   }
 
   private async _handleHostMessage(message: RequestParams) {
-    logger.log('[MiniAppHost] Handling host message:', message)
+    logger.log('[MiniAppHost] Handling host message:', withoutToken(message))
     switch (message.name) {
       case 'setFullscreen': {
         const enabled = (message.params as { enabled?: unknown } | null | undefined)?.enabled
@@ -1483,6 +1488,8 @@ export class MiniAppHost {
         return this.addWidget(message.params)
       case 'widgets.update':
         return this.updateWidget(message.params)
+      case 'widgets.setToken':
+        return this.setWidgetToken(message.params)
       case 'widgets.remove': {
         const id = widgetIdParam(message.params)
         if (!this.canChangeWidgets())
@@ -1573,6 +1580,17 @@ export class MiniAppHost {
         this.declinedWidgetName = true
     })().finally(() => this.widgetNameOffer = undefined)
     await this.widgetNameOffer
+  }
+
+  private async setWidgetToken(params: unknown): Promise<boolean> {
+    const id = widgetIdParam(params)
+    const token = (params as { token?: unknown }).token
+    if (token !== null && (typeof token !== 'string' || token.length > WIDGET_LIMITS.tokenLength || !/^[\x21-\x7E]+$/.test(token)))
+      throw new InvalidRequestError(`token must be null or at most ${WIDGET_LIMITS.tokenLength} visible ASCII characters`)
+    if (!this.canChangeWidgets())
+      return false
+    const found = await useMiniAppWidgets().discover(this.sessionUrl)
+    return found.ok && useMiniAppWidgets().setToken(found.value.scope, id, token as string | null)
   }
 
   private async updateWidget(params: unknown): Promise<boolean> {

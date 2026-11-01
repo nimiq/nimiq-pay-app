@@ -39,6 +39,7 @@ export const WIDGET_LIMITS = {
   refreshMinS: 60,
   refreshMaxS: 24 * 60 * 60,
   refreshJitterS: 30,
+  tokenLength: 2048,
   refreshBudgets: [
     { windowMs: 60 * 60_000, max: 30 },
     { windowMs: 3 * 60 * 60_000, max: 60 },

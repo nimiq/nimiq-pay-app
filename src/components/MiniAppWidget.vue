@@ -196,6 +196,9 @@ function onClickCapture(event: MouseEvent) {
         </svg>
       </template>
 
+      <span v-if="view.reconnect" class="pointer-events-none relative mt-1 text-xs text-space/50">
+        {{ $t('Open to reconnect') }}
+      </span>
       <span v-if="staleTime" class="pointer-events-none relative mt-1 text-xs text-space/50">
         {{ $t('Not updated since {time}', { time: staleTime }) }}
       </span>

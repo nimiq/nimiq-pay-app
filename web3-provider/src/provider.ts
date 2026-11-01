@@ -279,6 +279,7 @@ window.nimiqPay = Object.freeze({
         widgets: Object.freeze({
           add: (id: string): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'widgets.add', params: { id } }) as Promise<boolean>,
           update: (id: string, state: Record<string, unknown> | null): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'widgets.update', params: { id, state } }) as Promise<boolean>,
+          setToken: (id: string, token: string | null): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'widgets.setToken', params: { id, token } }) as Promise<boolean>,
           remove: (id: string): Promise<void> => birpc.handleRequest({ network: 'host', name: 'widgets.remove', params: { id } }) as Promise<void>,
           list: (): Promise<string[]> => birpc.handleRequest({ network: 'host', name: 'widgets.list' }) as Promise<string[]>,
         }),

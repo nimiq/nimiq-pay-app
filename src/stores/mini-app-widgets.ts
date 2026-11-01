@@ -47,6 +47,12 @@ export interface HomeWidget {
   pendingAppName?: string
   /** undefined means the resting state. */
   state?: WidgetState
+  /** Sent to its refresh URL: set by the Mini App, never shown or read back. */
+  token?: string
+  /** Why refreshes stopped, until the Mini App sends a state or a token. */
+  halted?: 'reconnect' | 'gone'
+  /** Counts what the Mini App sent, so that an answer to an older request is ignored. */
+  revision?: number
   refreshDueAt?: number
   lastAttemptAt?: number
   failures: number
@@ -89,6 +95,7 @@ export interface WidgetView {
   url?: string
   /** After repeated refresh failures: when the content last updated. */
   staleSince?: number
+  reconnect?: boolean
 }
 
 interface TickOptions { chain?: WidgetChain, at?: number, force?: boolean }
@@ -164,7 +171,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     const blocked = useFeatureFlags().blockedWidgetOrigins
     return scope !== BUILTIN_WIDGET_SCOPE && (blocked.includes('*') || blocked.includes(safeOrigin(scope)))
   }
-  const unblocked = computed(() => widgets.value.filter(w => !isBlocked(w.scope)))
+  const running = computed(() => widgets.value.filter(w => !isBlocked(w.scope) && w.halted !== 'gone'))
 
   function canAddTo(scope: string): boolean {
     return !isBlocked(scope) && canAdd.value && listForOrigin(originOf(scope)).length < WIDGET_LIMITS.widgetsPerMiniApp
@@ -243,6 +250,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     if (!isOnHome(scope, widgetId))
       return false
     replaceState(scope, widgetId, state ?? undefined, Date.now())
+    patch(scope, widgetId, w => ({ halted: undefined, revision: (w.revision ?? 0) + 1 }))
+    return true
+  }
+
+  function setToken(scope: string, widgetId: string, token: string | null): boolean {
+    if (!isOnHome(scope, widgetId))
+      return false
+    patch(scope, widgetId, w => ({ token: token ?? undefined, halted: undefined, refreshDueAt: w.halted ? Date.now() : w.refreshDueAt, revision: (w.revision ?? 0) + 1 }))
     return true
   }
 
@@ -363,7 +378,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       chart: !chart ? undefined : 'points' in chart ? { kind: chart.kind, points: chart.points } : Array.isArray(history) ? { kind: 'line', points: history } : undefined,
       url: content.path ?? (builtin ? undefined : widget.scope),
       pendingAppName: catalogEntry(widget.scope) ? undefined : widget.pendingAppName,
-      staleSince: widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
+      staleSince: !widget.halted && widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
+      reconnect: widget.halted === 'reconnect',
     }
   }
 
@@ -383,7 +399,15 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
   }
 
-  const views = computed(() => widgets.value.map(w => isBlocked(w.scope) ? blockedView(w, now.value) : toView(w, now.value)))
+  function goneView(widget: HomeWidget, at: number): WidgetView {
+    return toView(widget, at, { value: { text: i18n.t('No longer available') }, tone: 'neutral', rows: [] })
+  }
+
+  const views = computed(() => widgets.value.map((w) => {
+    if (isBlocked(w.scope))
+      return blockedView(w, now.value)
+    return w.halted === 'gone' ? goneView(w, now.value) : toView(w, now.value)
+  }))
 
   function previewContent(definition: WidgetDefinition): WidgetContent | WidgetDemo {
     const { content, demo } = localizeDefinition(definition, useApp().language)
@@ -451,7 +475,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   function dueRefresh(widget: HomeWidget, at: number, force: boolean): WidgetRefresh | undefined {
     const refresh = refreshOf(shownState(widget, at), widget.definition)
-    if (!refresh || !fetchesRead.value)
+    if (!refresh || !fetchesRead.value || widget.halted)
       return undefined
     const countdown = shownContent(widget, at).countdown
     const sinceLastAttempt = at - (widget.lastAttemptAt ?? Number.NEGATIVE_INFINITY)
@@ -473,9 +497,10 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     noteRefresh(originOf(widget.scope), at)
     const from = widget.state
     try {
-      const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at)
-      // A Mini App may have pushed a newer state while the request ran.
-      if (find(widget.scope, widget.widgetId)?.state !== from) {
+      const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at, widget.token)
+      // A Mini App may have pushed a newer state or token while the request ran.
+      const now = find(widget.scope, widget.widgetId)
+      if (now?.state !== from || now?.revision !== widget.revision) {
         // Still an attempt, so a forced tick right after does not ask the Mini App again.
         patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at }))
         return
@@ -486,9 +511,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         return
       }
       logger.warn('Widget refresh failed', key, result.error)
+      if (result.status === 410 || result.status === 401 || result.status === 403) {
+        patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at, halted: result.status === 410 ? 'gone' : 'reconnect' }))
+        return
+      }
       patch(widget.scope, widget.widgetId, (w) => {
         const failures = w.failures + 1
-        return { failures, lastAttemptAt: at, refreshDueAt: at + Math.min(MAX_BACKOFF_MS, refresh.every * 1000 * 2 ** failures) }
+        const backoff = Math.min(MAX_BACKOFF_MS, refresh.every * 1000 * 2 ** failures)
+        return { failures, lastAttemptAt: at, refreshDueAt: at + Math.max(backoff, Math.min(result.retryAfterMs ?? 0, DAY_MS)) }
       })
     }
     finally {
@@ -581,7 +611,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     // Each chain check starts one widget after the previous one, so no widget always loses the budget.
     if (checkChain)
       void useFeatureFlags().refreshBlockedWidgetOrigins()
-    const all = unblocked.value
+    const all = running.value
     const start = checkChain && all.length ? chainStart % all.length : 0
     if (checkChain)
       chainStart = start + 1
@@ -596,14 +626,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
     // The longest waiting first, so a Mini App's fast widget cannot keep taking the budget from its slow one.
-    await Promise.all(byLongestWaiting(unblocked.value).map(async (widget) => {
+    await Promise.all(byLongestWaiting(running.value).map(async (widget) => {
       const refresh = dueRefresh(widget, at, force)
       if (refresh)
         await runRefresh(widget, refresh, at)
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
-    await resolveLive(unblocked.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
+    await resolveLive(running.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
@@ -653,6 +683,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     canAdd,
     canAddTo,
     isBlocked,
+    setToken,
     identityOnAdd,
     pendingName,
     approveName,

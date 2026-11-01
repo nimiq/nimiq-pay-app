@@ -414,7 +414,7 @@ describe('tick', () => {
     await store.tick({ chain: fakeChain(), at: NOW + 59_000 })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
     await store.tick({ chain: fakeChain(), at: NOW + 60_000 })
-    expect(fetchWidgetRefresh).toHaveBeenCalledWith({ url: 'https://swap.example/w', every: 60 }, { lang: 'en', network: 'mainnet' }, SCOPE, NOW + 60_000)
+    expect(fetchWidgetRefresh).toHaveBeenCalledWith({ url: 'https://swap.example/w', every: 60 }, { lang: 'en', network: 'mainnet' }, SCOPE, NOW + 60_000, undefined)
     expect(store.views[0]!.label).toBe('Exchanging')
     await store.tick({ chain: fakeChain(), at: NOW + 600_000 })
     expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
@@ -724,6 +724,115 @@ describe('a widget\'s demo', () => {
     const price = vi.fn<WidgetChain['price']>(async () => 0.0004)
     await store.resolvePreviews([definition({ content: { value: { live: { price: 'BTC' } }, tone: 'neutral', rows: [] }, demo: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } })], fakeChain({ price }))
     expect(price.mock.calls.map(([asset]) => asset)).toEqual(['NIM'])
+  })
+})
+
+describe('what a refresh server answers', () => {
+  const NEXT = NOW + 120_000
+  const refreshing = () => definition({ refresh: { url: `${SCOPE}w`, every: 60 } })
+  const answered = async (result: object) => {
+    const store = await setup()
+    store.add(SCOPE, refreshing())
+    fetchWidgetRefresh.mockResolvedValue({ ok: false, error: 'no', transient: false, ...result })
+    await store.tick({ chain: fakeChain(), at: NOW })
+    fetchWidgetRefresh.mockClear()
+    return store
+  }
+
+  it('410: says it is no longer available, stops refreshing, and can still be removed', async () => {
+    const store = await answered({ status: 410 })
+    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'No longer available' }, tone: 'neutral' })
+    expect(store.views[0]!.staleSince).toBeUndefined()
+    await store.tick({ chain: fakeChain(), at: NEXT, force: true })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    store.remove(SCOPE, 'swap')
+    expect(store.widgets).toHaveLength(0)
+  })
+
+  it('410: comes back when the Mini App sends a state', async () => {
+    const store = await answered({ status: 410 })
+    store.update(SCOPE, 'swap', live('Back'))
+    expect(store.views[0]).toMatchObject({ label: 'Back' })
+  })
+
+  it.each([[401], [403]])('%i: keeps the content, asks to reconnect, and pauses until a new token', async (status) => {
+    const store = await answered({ status })
+    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Start a swap' }, reconnect: true })
+    await store.tick({ chain: fakeChain(), at: NEXT, force: true })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    expect(store.setToken(SCOPE, 'swap', 'fresh')).toBe(true)
+    expect(store.views[0]!.reconnect).toBe(false)
+    await store.tick({ chain: fakeChain(), at: NEXT + 60_000 })
+    expect(fetchWidgetRefresh.mock.calls[0]![4]).toBe('fresh')
+  })
+
+  const heldRefresh = async (act: (store: Awaited<ReturnType<typeof setup>>) => void) => {
+    const store = await setup()
+    store.add(SCOPE, refreshing())
+    let answer = (_result: object) => {}
+    fetchWidgetRefresh.mockReturnValue(new Promise((resolve) => {
+      answer = resolve
+    }))
+    const tick = store.tick({ chain: fakeChain(), at: NOW })
+    await flushPromises()
+    act(store)
+    answer({ ok: false, error: 'expired', transient: false, status: 401 })
+    await tick
+    return store
+  }
+
+  it('ignores an old request\'s 401 once a new token is in', async () => {
+    const store = await heldRefresh(s => s.setToken(SCOPE, 'swap', 'fresh'))
+    expect(store.views[0]!.reconnect).toBe(false)
+    expect(store.widgets[0]!.failures).toBe(0)
+  })
+
+  it('ignores an old request\'s 401 once the Mini App has sent a state, even the resting one', async () => {
+    const store = await heldRefresh(s => s.update(SCOPE, 'swap', null))
+    expect(store.views[0]!.reconnect).toBe(false)
+  })
+
+  it('sends the stored token with every refresh, and none after it is cleared', async () => {
+    const store = await setup()
+    store.add(SCOPE, refreshing())
+    store.setToken(SCOPE, 'swap', 'secret')
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(fetchWidgetRefresh.mock.calls[0]![4]).toBe('secret')
+    store.setToken(SCOPE, 'swap', null)
+    await store.tick({ chain: fakeChain(), at: NOW + 120_000 })
+    expect(fetchWidgetRefresh.mock.calls[1]![4]).toBeUndefined()
+  })
+
+  it('answers false for a token on a widget not on Home', async () => {
+    expect((await setup()).setToken(SCOPE, 'swap', 'x')).toBe(false)
+  })
+
+  it('429: waits at least Retry-After, even past the usual back-off', async () => {
+    const store = await answered({ status: 429, retryAfterMs: 3_600_000 })
+    expect(store.widgets[0]!.refreshDueAt).toBe(NOW + 3_600_000)
+  })
+
+  it('caps Retry-After at a day, so a server cannot stop a widget for good', async () => {
+    const store = await answered({ status: 503, retryAfterMs: 90 * 24 * 3_600_000 })
+    expect(store.widgets[0]!.refreshDueAt).toBe(NOW + 24 * 3_600_000)
+  })
+
+  it('keeps the usual back-off when Retry-After is shorter', async () => {
+    const store = await answered({ status: 503, retryAfterMs: 1000 })
+    expect(store.widgets[0]!.refreshDueAt).toBe(NOW + 120_000)
+  })
+
+  it('looks up nothing for a widget that is no longer available', async () => {
+    const store = await setup()
+    const nimiqBalance = vi.fn(async () => 1e5)
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 }, content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
+    fetchWidgetRefresh.mockResolvedValue({ ok: false, error: 'gone', transient: false, status: 410 })
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
+    nimiqBalance.mockClear()
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 120_000 })
+    expect(nimiqBalance).not.toHaveBeenCalled()
   })
 })
 

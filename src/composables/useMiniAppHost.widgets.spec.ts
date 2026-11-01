@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MiniAppHost } from './useMiniAppHost'
 
-const { createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted(() => ({
+const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted(() => ({
+  logged: vi.fn(),
   createBirpc: vi.fn(() => ({
     $close: vi.fn(),
     onChainAdded: { asEvent: vi.fn() },
@@ -17,6 +18,7 @@ const { createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted(() => (
     isOnHome: vi.fn(() => false),
     canAdd: true,
     canAddTo: vi.fn(() => true),
+    setToken: vi.fn(() => true),
     identityOnAdd: vi.fn((): { appName: string, appAddress?: string, launchTitle: string } => ({ appName: 'swap.example', launchTitle: 'swap.example' })),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
     approveName: vi.fn(),
@@ -42,7 +44,7 @@ vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ hasDeviceIdConsent:
 vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => widgets }))
 vi.mock('@/stores/app', async importOriginal => ({ ...await importOriginal<typeof import('@/stores/app')>(), useApp: () => ({ language: 'en' }) }))
 vi.mock('../../web3-provider/src/utils', () => ({ generateUUID: () => 'test-uuid' }))
-vi.mock('./useLogger', () => ({ useLogger: () => ({ error: vi.fn(), log: vi.fn(), warn: vi.fn() }) }))
+vi.mock('./useLogger', () => ({ useLogger: () => ({ error: logged, log: logged, warn: logged }) }))
 
 const DEFINITION = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['medium'], content: { value: { text: 'Start' }, tone: 'neutral', rows: [] }, translations: {} }
 const SCOPE = 'https://swap.example/app/'
@@ -189,6 +191,30 @@ describe('widgets.add', () => {
     widgets.canAddTo.mockReturnValue(false)
     const { request } = createHost()
     await expect(request('widgets.add', { id: 'swap' })).rejects.toMatchObject({ message: expect.stringContaining('10 widgets') })
+  })
+})
+
+describe('widgets.setToken', () => {
+  it('stores a token for the Mini App\'s scope, and clears it with null', async () => {
+    const { request } = createHost()
+    await request('widgets.setToken', { id: 'swap', token: 'opaque' })
+    expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', 'opaque')
+    await request('widgets.setToken', { id: 'swap', token: null })
+    expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', null)
+  })
+
+  it('keeps the token out of the logs, also for a refused one', async () => {
+    const { request } = createHost()
+    await request('widgets.setToken', { id: 'swap', token: 'top-secret' })
+    await request('widgets.setToken', { id: 'swap', token: 'top secret' }).catch(() => {})
+    expect(JSON.stringify(logged.mock.calls)).not.toContain('secret')
+    expect(JSON.stringify(logged.mock.calls)).toContain('widgets.setToken')
+  })
+
+  it.each([[''], ['has space'], ['line\nbreak'], ['x'.repeat(2049)], [42]])('refuses the token %j', async (token) => {
+    const { request } = createHost()
+    await expect(request('widgets.setToken', { id: 'swap', token })).rejects.toMatchObject({ message: expect.stringContaining('token') })
+    expect(widgets.setToken).not.toHaveBeenCalled()
   })
 })
 

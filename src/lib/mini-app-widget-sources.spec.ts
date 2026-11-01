@@ -40,6 +40,33 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+describe('what a refresh tells the store', () => {
+  it('sends a token as a bearer header, and no such header without one', async () => {
+    fetchMock.mockResolvedValue(streamed([STATE]))
+    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW, 'opaque-token')
+    expect(fetchMock.mock.calls[0]![1].headers).toEqual({ Authorization: 'Bearer opaque-token' })
+    fetchMock.mockResolvedValue(streamed([STATE]))
+    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW)
+    expect(fetchMock.mock.calls[1]![1].headers).toEqual({})
+  })
+
+  it.each([[401], [403], [410], [429], [503]])('reports status %i', async (status) => {
+    fetchMock.mockResolvedValue({ ...streamed([]), status, headers: new Headers() })
+    expect(await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW)).toMatchObject({ ok: false, status })
+  })
+
+  it('reads Retry-After in seconds or as a date, ignoring anything else', async () => {
+    const answer = async (value: string) => {
+      fetchMock.mockResolvedValue({ ...streamed([]), status: 429, headers: new Headers({ 'Retry-After': value }) })
+      return await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW) as { retryAfterMs?: number }
+    }
+    expect((await answer('120')).retryAfterMs).toBe(120_000)
+    expect((await answer(new Date(NOW + 60_000).toUTCString())).retryAfterMs).toBe(60_000)
+    expect((await answer('soon')).retryAfterMs).toBeUndefined()
+    expect((await answer(new Date(NOW - 60_000).toUTCString())).retryAfterMs).toBeUndefined()
+  })
+})
+
 describe('cookies around a widget file download', () => {
   it('clears them before and after, so one a site sets never comes back', async () => {
     const order: string[] = []
