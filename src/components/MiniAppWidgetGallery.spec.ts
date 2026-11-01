@@ -141,6 +141,14 @@ describe('miniAppWidgetGallery', () => {
     expect(confirm).toHaveBeenCalledTimes(1)
   })
 
+  it('forgets preview images when the gallery goes away without closing first', async () => {
+    const wrapper = render()
+    await flushPromises()
+    store.clearPreviewImages.mockClear()
+    wrapper.unmount()
+    expect(store.clearPreviewImages).toHaveBeenCalled()
+  })
+
   it('starts no preview downloads once closed, when the files arrive late', async () => {
     let done = () => {}
     store.loadGallery.mockReturnValueOnce(new Promise<void>((resolve) => {

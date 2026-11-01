@@ -125,6 +125,11 @@ const DOWNLOADS_AT_ONCE = 6
 const IMAGE_RETRY_MS = 5 * 60_000
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
 
+/** One download per site: another site can name the same hash with a URL that fails. */
+function uniqueImages<T extends { image: WidgetImage, scope: string }>(pinned: T[]): T[] {
+  return [...new Map(pinned.map(entry => [`${entry.scope} ${entry.image.sha256}`, entry])).values()]
+}
+
 async function inTurns<T>(items: T[], work: (item: T) => Promise<unknown>) {
   const waiting = [...items]
   await Promise.all(Array.from({ length: DOWNLOADS_AT_ONCE }, async () => {
@@ -671,7 +676,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const pinnedHashes = computed(() => new Set(pinnedImages.value.map(({ image }) => image.sha256)))
 
   async function keepImages() {
-    const unread = pinnedImages.value.filter(({ image }) => !savedImages.has(image.sha256))
+    const unread = uniqueImages(pinnedImages.value).filter(({ image }) => !savedImages.has(image.sha256))
     const missing: typeof unread = []
     await Promise.all(unread.map(async (pinned) => {
       const saved = await kv().getItem(imageKey(pinned.image.sha256))
@@ -704,9 +709,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     for (const hash of before.split(',').filter(hash => hash && !pinnedHashes.value.has(hash))) {
       images.delete(hash)
       savedImages.delete(hash)
+      for (const refusal of refusedImages) {
+        if (refusal.endsWith(hash))
+          refusedImages.delete(refusal)
+      }
       void kv().removeItem(imageKey(hash))
     }
-    refusedImages.clear()
     queueKeepImages()
   })
 
@@ -723,7 +731,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
             return image && definition.sizes[0] !== 'icon' && !isOnHome(scope, definition.id) ? [{ image, scope }] : []
           })
     })
-    await inTurns(wanted, async ({ image, scope }) => {
+    await inTurns(uniqueImages(wanted), async ({ image, scope }) => {
       if (session !== previewSession || images.has(image.sha256) || previews.has(image.sha256))
         return
       const src = await downloadImage(image, scope)

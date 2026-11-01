@@ -2,7 +2,7 @@
 import type { WidgetDefinition, WidgetSize } from '@/lib/mini-app-widgets'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { useToast } from '@/composables/useToast'
@@ -75,6 +75,9 @@ const appSections = computed(() => scopes.value.flatMap((scope) => {
   return file && file !== 'loading' && file.widgets.length ? [toSection(scope, file.widgets)] : []
 }))
 const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
+
+// Closing the modal unmounts this without `active` turning false.
+onUnmounted(() => widgets.clearPreviewImages())
 
 let asking = false
 

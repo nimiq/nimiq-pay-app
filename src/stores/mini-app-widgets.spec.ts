@@ -1244,6 +1244,34 @@ describe('images', () => {
     expect(second.views.find(view => view.widgetId === 'swap')!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
   })
 
+  it('does not download a refused image again when the set of images on Home changes', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockResolvedValue({ ok: false, error: 'hash', transient: false })
+    store.add(SCOPE, old)
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+    store.add(SCOPE, { ...next, id: 'other' })
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(2)
+  })
+
+  it('downloads an image two widgets share once, for previews and when kept', async () => {
+    const store = await setup()
+    const sharing = [old, { ...old, id: 'other' }, { ...old, id: 'third' }]
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: sharing } })
+    await store.loadGallery([SCOPE])
+    await store.loadPreviewImages([SCOPE])
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+    store.clearPreviewImages()
+    fetchWidgetImage.mockClear()
+    store.add(SCOPE, sharing[0]!)
+    store.add(SCOPE, sharing[1]!)
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+  })
+
   it('draws a chart background, with no download', async () => {
     const store = await setup()
     store.add(SCOPE, definition({ content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { chart: { kind: 'bars', points: [1, 2] } } } }))
