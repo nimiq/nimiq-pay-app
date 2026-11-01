@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { WidgetDefinition, WidgetSize } from '@/lib/mini-app-widgets'
-import type { WidgetView } from '@/stores/mini-app-widgets'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -33,10 +32,13 @@ const scopes = computed(() => lookedInCatalog.value ? [...new Set([...recentScop
 const canLookInCatalog = computed(() => !lookedInCatalog.value && catalog.value.some(scope => !recentScopes.value.includes(scope)))
 
 watch([() => active, scopes], async ([isActive, list]) => {
-  if (!isActive)
+  if (!isActive) {
+    widgets.clearPreviewImages()
     return
+  }
   void widgets.resolvePreviews(builtinWidgetFile().widgets)
   await widgets.loadGallery(list)
+  void widgets.loadPreviewImages(list)
   const definitions = list.flatMap((scope) => {
     const file = widgets.galleryFiles.get(scope)
     return file && file !== 'loading' ? file.widgets : []
@@ -73,11 +75,15 @@ const appSections = computed(() => scopes.value.flatMap((scope) => {
 }))
 const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
 
-async function add(scope: string, definition: WidgetDefinition, view: WidgetView) {
+let asking = false
+
+async function add(scope: string, definition: WidgetDefinition) {
   const permissions = definition.permissions ?? []
   if (permissions.length && widgets.canAddTo(scope)) {
-    const { name, description } = localizeDefinition(definition, app.language)
-    const confirmed = await requestUserConfirmation({ type: 'widget', url: scope, widgetName: name, description, appName: view.appAddress ? view.appName : undefined, permissions })
+    if (asking)
+      return
+    asking = true
+    const confirmed = await requestUserConfirmation({ type: 'widget', url: scope, ...widgets.consentFor(scope, definition) }).finally(() => asking = false)
     if (!confirmed)
       return
   }
@@ -137,7 +143,7 @@ async function add(scope: string, definition: WidgetDefinition, view: WidgetView
             :disabled="item.onHome"
             class="relative shrink-0 rounded-full px-4 py-1.5 before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
             :class="item.onHome ? 'bg-space/[0.06] text-space/50' : 'bg-sky text-white active:bg-sky/80'"
-            @click="add(section.scope, item.definition, item.view)"
+            @click="add(section.scope, item.definition)"
           >
             {{ item.onHome ? $t('On Home') : $t('Add') }}
           </button>

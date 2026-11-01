@@ -23,6 +23,7 @@ import { localizeDefinition, parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widg
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
+import { nimiqAddresses } from '@/lib/wallet-addresses'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -220,7 +221,6 @@ export type UserConfirmationRequest
       url: string
       /** From the Mini App's widget file: untrusted text. */
       widgetName: string
-      permissions: WidgetPermission[]
     }
     | {
       type: 'widgetName'
@@ -262,11 +262,6 @@ function originOf(url: string): string | null {
   }
 }
 
-/** The logs can be exported, and a token works for anyone who holds it. */
-function withoutToken(request: RequestParams): RequestParams {
-  return request.name === 'widgets.setToken' ? { ...request, params: '[hidden]' } : request
-}
-
 function widgetIdParam(params: unknown): string {
   const id = (params as { id?: unknown } | null | undefined)?.id
   if (typeof id !== 'string' || !WIDGET_ID_RE.test(id))
@@ -300,10 +295,7 @@ export class MiniAppHost {
   private readonly origin: string
   private readonly pendingLightningInvoices = new Set<string>()
   /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
-  private readonly declinedWidgets = new Set<string>()
-  private declinedWidgetName = false
-  private readonly declinedWidgetPermissions = new Set<string>()
-  private readonly declinedWidgetImages = new Set<string>()
+  private readonly declinedWidgetOffers = new Set<string>()
   /** One sheet at a time, however many widgets a Mini App calls `add` for at once. */
   private widgetSheets: Promise<void> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
@@ -428,7 +420,8 @@ export class MiniAppHost {
         if (this.destroyed)
           throw new InternalError('Host is destroyed')
 
-        logger.log('[MiniAppHost] handleRequest:', withoutToken(params))
+        // Names only: the logs can be exported, and a host call can carry a token.
+        logger.log('[MiniAppHost] handleRequest:', params.network, params.name)
 
         try {
           switch (params.network) {
@@ -1488,7 +1481,6 @@ export class MiniAppHost {
   }
 
   private async _handleHostMessage(message: RequestParams) {
-    logger.log('[MiniAppHost] Handling host message:', withoutToken(message))
     switch (message.name) {
       case 'setFullscreen': {
         const enabled = (message.params as { enabled?: unknown } | null | undefined)?.enabled
@@ -1564,86 +1556,48 @@ export class MiniAppHost {
     const widgets = useMiniAppWidgets()
     if (!this.mayAskAboutWidgets())
       return false
+    const url = this.sessionUrl
+    const definition = file.widgets.find(d => d.id === id)
     if (widgets.isOnHome(scope, id)) {
-      await this.offerWidgetName(scope)
-      await this.offerWidgetPermissions(scope, file, id)
-      await this.offerWidgetImages(scope, file, id)
+      const widgetName = definition ? localizeDefinition(definition, useApp().language).name : id
+      const name = widgets.pendingName(scope)
+      if (name)
+        await this.offerWidgetChange('name', 'widget_name', { url, type: 'widgetName', address: name.address, to: name.to }, () => widgets.approveName(scope, name.to))
+      const permissions = widgets.missingPermissions(scope, id)
+      if (permissions.length)
+        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', { url, type: 'widgetPermissions', widgetName }, () => widgets.grantPermissions(scope, id, permissions))
+      if (widgets.hasPendingImages(scope, id))
+        await this.offerWidgetChange(`images:${id}`, 'widget_images', { url, type: 'widgetImages', widgetName }, () => widgets.approveImages(scope, id))
       return true
     }
-    if (this.declinedWidgets.has(id))
+    if (this.declinedWidgetOffers.has(`add:${id}`))
       return false
-    const definition = file.widgets.find(d => d.id === id)
     if (!definition)
       throw new InvalidRequestError(`${widgetFileUrl(scope)} declares no widget "${id}"`)
     if (!widgets.canAddTo(scope))
       throw new InvalidRequestError(widgets.canAdd ? `This Mini App already has ${WIDGET_LIMITS.widgetsPerMiniApp} widgets on Home` : `Home already holds ${WIDGET_LIMITS.widgetsOnHome} widgets`)
     if (!this.config.requestUserConfirmation)
       throw new InternalError('Confirmation handler not provided')
-    const { name, description } = localizeDefinition(definition, useApp().language)
-    const identity = widgets.identityOnAdd(scope, definition)
-    const confirmed = await this.config.requestUserConfirmation({
-      url: this.sessionUrl,
-      type: 'widget',
-      widgetName: name,
-      description,
-      appName: identity.appAddress ? identity.appName : undefined,
-      permissions: definition.permissions,
-    })
+    const confirmed = await this.config.requestUserConfirmation({ url, type: 'widget', ...widgets.consentFor(scope, definition) })
     trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed) {
-      this.declinedWidgets.add(id)
+      this.declinedWidgetOffers.add(`add:${id}`)
       return false
     }
     return this.mayAskAboutWidgets() && widgets.add(scope, definition, definition.permissions ?? [])
   }
 
-  /** A rename the user has not approved waits: this is where a Mini App can ask for it. */
-  private async offerWidgetName(scope: string) {
-    const widgets = useMiniAppWidgets()
-    const pending = widgets.pendingName(scope)
+  /** A change the file made waits for the user. This is where a Mini App can ask, once per session. */
+  private async offerWidgetChange(key: string, requestType: Web3RequestType, request: UserConfirmationRequest, apply: () => void) {
     const confirm = this.config.requestUserConfirmation
-    if (!pending || this.declinedWidgetName || !confirm || !this.mayAskAboutWidgets())
+    if (this.declinedWidgetOffers.has(key) || !confirm || !this.mayAskAboutWidgets())
       return
-    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetName', address: pending.address, to: pending.to })
-    trackWeb3Request({ requestType: 'widget_name', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    const confirmed = await confirm(request)
+    trackWeb3Request({ requestType, blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed)
-      this.declinedWidgetName = true
+      this.declinedWidgetOffers.add(key)
     else if (this.mayAskAboutWidgets())
-      widgets.approveName(scope, pending.to)
-  }
-
-  /** A permission added to the file after install is not granted by the file. This is where a Mini App can ask for it. */
-  private async offerWidgetPermissions(scope: string, file: WidgetFile, id: string) {
-    const widgets = useMiniAppWidgets()
-    const permissions = widgets.missingPermissions(scope, id)
-    const confirm = this.config.requestUserConfirmation
-    if (!permissions.length || this.declinedWidgetPermissions.has(id) || !confirm || !this.mayAskAboutWidgets())
-      return
-    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetPermissions', widgetName: this.widgetName(file, id), permissions })
-    trackWeb3Request({ requestType: 'widget_permissions', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
-    if (!confirmed)
-      this.declinedWidgetPermissions.add(id)
-    else if (this.mayAskAboutWidgets())
-      widgets.grantPermissions(scope, id, permissions)
-  }
-
-  /** Changed images are not shown until approved. This is where a Mini App can ask for that. */
-  private async offerWidgetImages(scope: string, file: WidgetFile, id: string) {
-    const widgets = useMiniAppWidgets()
-    const confirm = this.config.requestUserConfirmation
-    if (!widgets.hasPendingImages(scope, id) || this.declinedWidgetImages.has(id) || !confirm || !this.mayAskAboutWidgets())
-      return
-    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetImages', widgetName: this.widgetName(file, id) })
-    trackWeb3Request({ requestType: 'widget_images', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
-    if (!confirmed)
-      this.declinedWidgetImages.add(id)
-    else if (this.mayAskAboutWidgets())
-      widgets.approveImages(scope, id)
-  }
-
-  private widgetName(file: WidgetFile, id: string): string {
-    const definition = file.widgets.find(d => d.id === id)
-    return definition ? localizeDefinition(definition, useApp().language).name : id
+      apply()
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {
@@ -1781,10 +1735,7 @@ export class MiniAppHost {
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
-    const accounts = [
-      useLocalWallet().localAddress.toUserFriendlyAddress(),
-      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-    ].filter(Boolean)
+    const accounts = nimiqAddresses()
     trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return accounts
   }

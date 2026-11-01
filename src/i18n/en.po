@@ -31,7 +31,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:87
+#: src/components/MiniAppWidgetGallery.vue:93
 msgid "A Mini App can have at most {count} widgets on Home"
 msgstr ""
 
@@ -72,7 +72,7 @@ msgstr ""
 msgid "Add another address"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:101
+#: src/lib/mini-app-confirmation.ts:113
 #: src/types/transactions.ts:148
 msgid "Add Stake"
 msgstr ""
@@ -434,7 +434,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:96
+#: src/lib/mini-app-confirmation.ts:108
 #: src/types/transactions.ts:147
 msgid "Create Staker"
 msgstr ""
@@ -739,7 +739,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:88
+#: src/components/MiniAppWidgetGallery.vue:94
 msgid "Home holds at most {count} widgets"
 msgstr ""
 
@@ -756,7 +756,7 @@ msgid "I have turned it off"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:51
+#: src/components/MiniAppWidgetGallery.vue:53
 msgid "Icon"
 msgstr ""
 
@@ -794,7 +794,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2377
+#: src/composables/useMiniAppHost.ts:2328
 msgid "Insufficient funds"
 msgstr ""
 
@@ -986,7 +986,7 @@ msgid "Language"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:51
+#: src/components/MiniAppWidgetGallery.vue:53
 msgid "Large"
 msgstr ""
 
@@ -1047,7 +1047,7 @@ msgid "Matching submissions: {count}"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:51
+#: src/components/MiniAppWidgetGallery.vue:53
 msgid "Medium"
 msgstr ""
 
@@ -1122,7 +1122,7 @@ msgstr ""
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:113
+#: src/lib/mini-app-confirmation.ts:125
 msgid "No"
 msgstr ""
 
@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:462
+#: src/stores/mini-app-widgets.ts:474
 msgid "No longer available"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:445
+#: src/stores/mini-app-widgets.ts:457
 msgid "Not available"
 msgstr ""
 
@@ -1560,7 +1560,7 @@ msgstr ""
 msgid "Remove from Home"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:123
+#: src/lib/mini-app-confirmation.ts:135
 #: src/types/transactions.ts:152
 msgid "Remove Stake"
 msgstr ""
@@ -1586,7 +1586,7 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:118
+#: src/lib/mini-app-confirmation.ts:130
 #: src/types/transactions.ts:151
 msgid "Retire Stake"
 msgstr ""
@@ -1689,7 +1689,7 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:105
+#: src/lib/mini-app-confirmation.ts:117
 #: src/types/transactions.ts:149
 msgid "Set Active Stake"
 msgstr ""
@@ -1718,7 +1718,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:51
+#: src/components/MiniAppWidgetGallery.vue:53
 msgid "Small"
 msgstr ""
 
@@ -1778,7 +1778,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2378
+#: src/composables/useMiniAppHost.ts:2329
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1853,7 +1853,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:537
+#: src/composables/useMiniAppHost.ts:530
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1965,7 +1965,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:511
+#: src/composables/useMiniAppHost.ts:504
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2091,7 +2091,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:110
+#: src/lib/mini-app-confirmation.ts:122
 #: src/types/transactions.ts:150
 msgid "Update Staker"
 msgstr ""
@@ -2334,7 +2334,7 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:113
+#: src/lib/mini-app-confirmation.ts:125
 msgid "Yes"
 msgstr ""
 

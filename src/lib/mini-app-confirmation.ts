@@ -36,6 +36,18 @@ export async function selectLightningAsset(app: { url: string, name: string, des
  * Request user confirmation for sensitive mini-app operations.
  * Extracted from MiniAppsModal so it can be reused during session reconnection.
  */
+async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string): Promise<boolean> {
+  const result = await ExtendedDialog.sheet({
+    title,
+    headerLogo: resolveMiniAppLogo(url),
+    headerLogoCornerRadius: -1,
+    rows: rows.map(row => ({ title: row })),
+    confirmButtonTitle,
+    cancelButtonTitle: 'Not now',
+  })
+  return result.confirmed
+}
+
 export async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
   switch (request.type) {
     case 'accounts': {
@@ -374,35 +386,17 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return result.confirmed
     }
 
-    case 'widgetPermissions': {
-      const result = await ExtendedDialog.sheet({
-        title: `Let ${request.widgetName} send your addresses to ${new URL(request.url).hostname}?`,
-        headerLogo: resolveMiniAppLogo(request.url),
-        headerLogoCornerRadius: -1,
-        rows: [
-          { title: '• With every refresh of this widget' },
-          { title: '• Stop any time from its menu' },
-        ],
-        confirmButtonTitle: 'Allow',
-        cancelButtonTitle: 'Not now',
-      })
-      return result.confirmed
-    }
+    case 'widgetPermissions':
+      return confirmWidgetChange(request.url, `Let ${request.widgetName} send your addresses to ${new URL(request.url).hostname}?`, [
+        '• With every refresh of this widget',
+        '• Stop any time from its menu',
+      ], 'Allow')
 
-    case 'widgetImages': {
-      const result = await ExtendedDialog.sheet({
-        title: `Let ${request.widgetName} show new images?`,
-        headerLogo: resolveMiniAppLogo(request.url),
-        headerLogoCornerRadius: -1,
-        rows: [
-          { title: `• Downloaded once from ${new URL(request.url).hostname}` },
-          { title: '• Until then it keeps the images you have' },
-        ],
-        confirmButtonTitle: 'Show them',
-        cancelButtonTitle: 'Not now',
-      })
-      return result.confirmed
-    }
+    case 'widgetImages':
+      return confirmWidgetChange(request.url, `Let ${request.widgetName} show new images?`, [
+        `• Downloaded once from ${new URL(request.url).hostname}`,
+        '• Until then it keeps the images you have',
+      ], 'Show them')
 
     case 'widgetName': {
       const result = await ExtendedDialog.sheet({

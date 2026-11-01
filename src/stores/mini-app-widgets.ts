@@ -58,7 +58,7 @@ export interface HomeWidget {
   token?: string
   /** Why refreshes stopped, until the Mini App sends a state or a token. */
   halted?: 'reconnect' | 'gone'
-  /** Counts what the Mini App sent, so that an answer to an older request is ignored. */
+  /** Counts each new state or token, so that an answer to an older request is ignored. */
   revision?: number
   refreshDueAt?: number
   lastAttemptAt?: number
@@ -105,7 +105,7 @@ export interface WidgetView {
   reconnect?: boolean
   sharesAddresses?: boolean
   pendingImages?: boolean
-  background?: { kind: 'image', src: string } | { kind: 'chart', chart: { kind: 'line' | 'bars', points: number[] } }
+  background?: { kind: 'image', src: string } | { kind: 'chart', chart: NonNullable<WidgetView['chart']> }
 }
 
 interface TickOptions { chain?: WidgetChain, at?: number, force?: boolean }
@@ -119,8 +119,16 @@ const PRICE_MAX_AGE_MS = 5 * 60_000
 const DAY_MS = 24 * 60 * 60_000
 const MAX_BACKOFF_MS = 30 * 60_000
 const MIN_FORCED_REFRESH_GAP_MS = 60_000
-const GALLERY_DOWNLOADS = 6
+const DOWNLOADS_AT_ONCE = 6
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
+
+async function inTurns<T>(items: T[], work: (item: T) => Promise<unknown>) {
+  const waiting = [...items]
+  await Promise.all(Array.from({ length: DOWNLOADS_AT_ONCE }, async () => {
+    for (let item = waiting.shift(); item !== undefined; item = waiting.shift())
+      await work(item)
+  }))
+}
 
 export function widgetKey(scope: string, widgetId: string): string {
   return `${scope}#${widgetId}`
@@ -170,9 +178,6 @@ function dueAt(state: WidgetState | undefined, definition: WidgetDefinition, at:
 export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const network: NetworkMode = isTestnet ? 'testnet' : 'mainnet'
   // Home waits for the first read, so the empty state never flashes for someone who has widgets.
-  // By hash, from the encrypted database or, for a gallery preview, only in memory.
-  const images = reactive(new Map<string, string>())
-  const savedImages = new Set<string>()
   const ready = ref(false)
   // kv() so widgets clear on logout with the rest of the account.
   const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, onReady: () => ready.value = true })
@@ -198,6 +203,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const head = ref({ height: useNimiqNetwork().height, at: now.value })
   const live = reactive(new Map<string, { value?: ResolvedLive | number[], checkedAt: number }>())
   const galleryFiles = reactive(new Map<string, WidgetFile | null | 'loading'>())
+  // By hash. Approved images are read from the encrypted database; previews only live while the gallery is open.
+  const images = reactive(new Map<string, string>())
+  const previews = reactive(new Map<string, string>())
+  const savedImages = new Set<string>()
+  const refusedImages = new Set<string>()
+  let previewSession = 0
   const discoveries = new Map<string, Promise<FetchOutcome<{ scope: string, file: WidgetFile }>>>()
   const inFlight = new Set<string>()
   let current: Promise<void> | undefined
@@ -236,7 +247,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function replaceState(scope: string, widgetId: string, state: WidgetState | undefined, at: number) {
-    patch(scope, widgetId, w => ({ state, failures: 0, updatedAt: at, refreshDueAt: dueAt(state, w.definition, at) }))
+    patch(scope, widgetId, w => ({ state, failures: 0, updatedAt: at, refreshDueAt: dueAt(state, w.definition, at), revision: (w.revision ?? 0) + 1 }))
   }
 
   function grantable(definition: WidgetDefinition, permissions: readonly WidgetPermission[] = []): WidgetPermission[] {
@@ -285,7 +296,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     if (!isOnHome(scope, widgetId))
       return false
     replaceState(scope, widgetId, state ?? undefined, Date.now())
-    patch(scope, widgetId, w => ({ halted: undefined, revision: (w.revision ?? 0) + 1 }))
+    patch(scope, widgetId, () => ({ halted: undefined }))
     return true
   }
 
@@ -398,7 +409,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     if (!background)
       return undefined
     if ('image' in background) {
-      const src = images.get(widget.definition.images?.[background.image]?.sha256 ?? '')
+      const hash = widget.definition.images?.[background.image]?.sha256 ?? ''
+      const src = images.get(hash) ?? previews.get(hash)
       return src ? { kind: 'image', src } : undefined
     }
     const chart = chartView(background.chart)
@@ -432,7 +444,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       chart: chartView(content.chart),
       background: backgroundView(widget, content),
       url: content.path ?? (builtin ? undefined : widget.scope),
-      pendingAppName: catalogEntry(widget.scope) ? undefined : widget.pendingAppName,
+      pendingAppName: widget.pendingAppName && !catalogEntry(widget.scope) ? widget.pendingAppName : undefined,
       staleSince: !widget.halted && widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
       reconnect: widget.halted === 'reconnect',
       sharesAddresses: !!widget.grants?.includes('addresses'),
@@ -514,7 +526,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         return
       // A Mini App may have pushed a newer state while the lookup ran.
       if (fired) {
-        if (find(widget.scope, widget.widgetId)?.state === from)
+        if (find(widget.scope, widget.widgetId)?.revision === widget.revision)
           replaceState(widget.scope, widget.widgetId, transition.state ?? undefined, at)
         return
       }
@@ -554,13 +566,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return
     inFlight.add(key)
     noteRefresh(originOf(widget.scope), at)
-    const from = widget.state
     try {
       const accounts = widget.grants?.includes('addresses') ? chain.accounts() : []
       const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at, { token: widget.token, accounts })
       // A Mini App may have pushed a newer state or token while the request ran.
       const latest = find(widget.scope, widget.widgetId)
-      if (latest?.state !== from || latest?.revision !== widget.revision) {
+      if (latest?.revision !== widget.revision) {
         // Still an attempt, so a forced tick right after does not ask the Mini App again.
         patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at }))
         return
@@ -631,68 +642,89 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       : { images: offered, pendingImages: undefined }
   }
 
-  // A string, so that this runs when the set of images changes, not with every state.
-  const pinnedImages = computed(() => [...new Set(stored.value.flatMap(w => Object.values(w.definition.images ?? {}).map(image => image.sha256)))].sort().join())
+  async function downloadImage(image: WidgetImage, scope: string): Promise<string | undefined> {
+    if (refusedImages.has(image.sha256) || isBlocked(scope))
+      return undefined
+    const result = await fetchWidgetImage(image, scope)
+    if (result.ok)
+      return result.value
+    logger.warn(`Could not download a widget image: ${result.error}`)
+    if (!result.transient)
+      refusedImages.add(image.sha256)
+    return undefined
+  }
+
+  const pinnedImages = computed(() => new Map(stored.value.flatMap(w => Object.values(w.definition.images ?? {}).map(image => [image.sha256, { image, scope: w.scope }] as const))))
+
   async function keepImages() {
-    for (const { scope, definition } of stored.value) {
-      for (const image of Object.values(definition.images ?? {})) {
-        if (savedImages.has(image.sha256))
-          continue
-        const key = imageKey(image.sha256)
-        const saved = await kv().getItem(key)
-        if (saved) {
-          images.set(image.sha256, saved)
-          savedImages.add(image.sha256)
-          continue
-        }
-        if (isBlocked(scope))
-          continue
-        if (!images.has(image.sha256)) {
-          const result = await fetchWidgetImage(image, scope)
-          if (!result.ok) {
-            logger.warn(`Could not download a widget image: ${result.error}`)
-            continue
-          }
-          images.set(image.sha256, result.value)
-        }
-        // The widget can be removed during the download.
-        if (pinnedImages.value.includes(image.sha256)) {
-          await kv().setItem(key, images.get(image.sha256)!)
-          savedImages.add(image.sha256)
-        }
-      }
-    }
+    const unread = [...pinnedImages.value.values()].filter(({ image }) => !savedImages.has(image.sha256))
+    const missing: typeof unread = []
+    await Promise.all(unread.map(async (pinned) => {
+      const saved = await kv().getItem(imageKey(pinned.image.sha256))
+      if (!saved)
+        return missing.push(pinned)
+      images.set(pinned.image.sha256, saved)
+      savedImages.add(pinned.image.sha256)
+    }))
+    await inTurns(missing, async ({ image, scope }) => {
+      const src = previews.get(image.sha256) ?? await downloadImage(image, scope)
+      // The widget can be removed during the download.
+      if (!src || !pinnedImages.value.has(image.sha256))
+        return
+      images.set(image.sha256, src)
+      await kv().setItem(imageKey(image.sha256), src)
+      savedImages.add(image.sha256)
+    })
   }
 
   let keepingImages = Promise.resolve()
-  function queueKeepImages(): Promise<void> {
+  function queueKeepImages() {
     keepingImages = keepingImages.then(keepImages).catch(error => logger.warn('Could not keep widget images', error))
-    return keepingImages
   }
 
-  watch(pinnedImages, (now, before) => {
-    for (const hash of before.split(',').filter(hash => hash && !now.includes(hash))) {
+  // Joined, so that this runs when the set of images changes, not with every state.
+  watch(() => [...pinnedImages.value.keys()].sort().join(), (_, before) => {
+    for (const hash of before.split(',').filter(hash => hash && !pinnedImages.value.has(hash))) {
+      images.delete(hash)
       savedImages.delete(hash)
+      refusedImages.delete(hash)
       void kv().removeItem(imageKey(hash))
     }
-    void queueKeepImages()
+    queueKeepImages()
   })
 
   /** Only what the previews draw, and never stored: browsing the gallery leaves nothing behind. */
-  async function previewImages(scope: string, file: WidgetFile) {
-    for (const definition of file.widgets) {
-      const { background } = previewContent(definition)
-      const image = background && 'image' in background ? definition.images?.[background.image] : undefined
-      if (!image || images.has(image.sha256) || isOnHome(scope, definition.id))
-        continue
-      const result = await fetchWidgetImage(image, scope)
-      if (result.ok)
-        images.set(image.sha256, result.value)
-    }
+  async function loadPreviewImages(scopes: string[]) {
+    const session = previewSession
+    const wanted = scopes.flatMap((scope) => {
+      const file = galleryFiles.get(scope)
+      return !file || file === 'loading'
+        ? []
+        : file.widgets.flatMap((definition) => {
+            const { background } = previewContent(definition)
+            const image = background && 'image' in background ? definition.images?.[background.image] : undefined
+            return image && definition.sizes[0] !== 'icon' && !isOnHome(scope, definition.id) ? [{ image, scope }] : []
+          })
+    })
+    await inTurns(wanted, async ({ image, scope }) => {
+      if (session !== previewSession || images.has(image.sha256) || previews.has(image.sha256))
+        return
+      const src = await downloadImage(image, scope)
+      if (src && session === previewSession)
+        previews.set(image.sha256, src)
+    })
   }
 
-  function identityOnAdd(scope: string, definition: WidgetDefinition) {
-    return identity({ scope, definition: approvedDefinition(scope, definition) })
+  function clearPreviewImages() {
+    previewSession++
+    previews.clear()
+  }
+
+  /** What the consent sheet says, the same from a Mini App and the gallery. */
+  function consentFor(scope: string, definition: WidgetDefinition) {
+    const { appAddress, appName } = identity({ scope, definition: approvedDefinition(scope, definition) })
+    const { name, description } = localizeDefinition(definition, useApp().language)
+    return { widgetName: name, description, appName: appAddress ? appName : undefined, permissions: definition.permissions }
   }
 
   async function recheckDefinition(widget: HomeWidget, at: number, files: Map<string, Promise<FetchOutcome<WidgetFile>>>) {
@@ -714,7 +746,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return { definition: { ...definition, appName: w.definition.appName, images: kept }, pendingImages, grants: grantable(definition, w.grants), definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }
     })
     offerName(widget.scope, definition.appName)
-    void queueKeepImages()
   }
 
   async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize, origin?: string }[], chain: WidgetChain, at: number, budget: Budget) {
@@ -773,6 +804,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
+    if (files.size)
+      queueKeepImages()
     await resolveLive(running.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 
@@ -800,23 +833,24 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function catalogScopes(): string[] {
-    return useMiniApps().popularDApps.map(app => `${stripTrailingSlash(app.url)}/`).filter(scope => !isBlocked(scope))
+    return useMiniApps().popularDApps.flatMap(app => widgetScopeCandidates(app.url).slice(0, 1)).filter(scope => !isBlocked(scope))
   }
 
   async function loadGallery(scopes: string[]) {
     const waiting = scopes.filter(scope => !galleryFiles.has(scope))
     waiting.forEach(scope => galleryFiles.set(scope, 'loading'))
-    await Promise.all(Array.from({ length: GALLERY_DOWNLOADS }, async () => {
-      for (let scope = waiting.shift(); scope; scope = waiting.shift()) {
-        const result = await fetchWidgetFile(scope)
-        if (!result.ok && result.transient)
-          galleryFiles.delete(scope)
-        else
-          galleryFiles.set(scope, result.ok ? result.value : null)
-        if (result.ok)
-          await previewImages(scope, result.value)
+    await inTurns(waiting, async (scope) => {
+      // A block can arrive while earlier sites are being asked.
+      if (isBlocked(scope)) {
+        galleryFiles.delete(scope)
+        return
       }
-    }))
+      const result = await fetchWidgetFile(scope)
+      if (!result.ok && result.transient)
+        galleryFiles.delete(scope)
+      else
+        galleryFiles.set(scope, result.ok ? result.value : null)
+    })
   }
 
   function resolvePreviews(definitions: WidgetDefinition[], chain = createWidgetChain()) {
@@ -836,10 +870,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     setToken,
     hasPendingImages,
     approveImages,
+    loadPreviewImages,
+    clearPreviewImages,
     missingPermissions,
     grantPermissions,
     revokePermissions,
-    identityOnAdd,
+    consentFor,
     pendingName,
     approveName,
     isOnHome,

@@ -12,6 +12,9 @@ const { confirm, recents, setToast, store } = await vi.hoisted(async () => {
       canAdd: false,
       canAddTo: vi.fn(() => true),
       catalogScopes: vi.fn((): string[] => []),
+      consentFor: vi.fn(() => ({ widgetName: 'Swap status', permissions: ['addresses'] })),
+      loadPreviewImages: vi.fn(),
+      clearPreviewImages: vi.fn(),
       galleryFiles: reactive(new Map()),
       galleryScopesFor: vi.fn((origins: string[]) => origins.flatMap(origin => origin === 'https://swap.example' ? [`${origin}/`, `${origin}/app/`] : [`${origin}/`])),
       loadGallery: vi.fn(),
@@ -124,6 +127,27 @@ describe('miniAppWidgetGallery', () => {
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
     await flushPromises()
     expect(store.add).toHaveBeenCalledWith('https://swap.example/', expect.anything(), ['addresses'])
+  })
+
+  it('opens one sheet when Add is tapped twice', async () => {
+    store.galleryFiles.set('https://swap.example/', { widgets: [{ ...DEFINITION, permissions: ['addresses'] }] })
+    const wrapper = render()
+    await flushPromises()
+    confirm.mockClear()
+    confirm.mockReturnValue(new Promise(() => {}))
+    await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await flushPromises()
+    expect(confirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads preview images when open and forgets them when closed', async () => {
+    const wrapper = render()
+    await flushPromises()
+    expect(store.loadPreviewImages).toHaveBeenCalled()
+    await wrapper.setProps({ active: false })
+    await flushPromises()
+    expect(store.clearPreviewImages).toHaveBeenCalled()
   })
 
   it('asks the catalog\'s sites only when the user taps to look, and then lists what they offer', async () => {

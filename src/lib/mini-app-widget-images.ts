@@ -55,15 +55,22 @@ function imageFormat(bytes: Uint8Array): ImageFormat | undefined {
 
 /** From the bytes rather than what the server calls them: only these three formats, which cannot run anything, reach the app. */
 export function readWidgetImage(base64: string, sha256: string): { ok: true, value: string } | { ok: false, error: string } {
-  let bytes: Uint8Array
+  const tooLarge = { ok: false, error: `the image is larger than ${WIDGET_LIMITS.imageBytes} bytes` } as const
+  // A rough check first: a native response has no size cap, and decoding a large one would hold up the app.
+  if (base64.length * 3 / 4 > WIDGET_LIMITS.imageBytes * 1.1)
+    return tooLarge
+  let binary: string
   try {
-    bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    binary = atob(base64)
   }
   catch {
     return { ok: false, error: 'the image is not base64' }
   }
-  if (bytes.length > WIDGET_LIMITS.imageBytes)
-    return { ok: false, error: `the image is larger than ${WIDGET_LIMITS.imageBytes} bytes` }
+  if (binary.length > WIDGET_LIMITS.imageBytes)
+    return tooLarge
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++)
+    bytes[i] = binary.charCodeAt(i)
   if (sha256HexOfBytes(bytes) !== sha256)
     return { ok: false, error: `the image does not match its hash ${sha256}` }
   const format = imageFormat(bytes)

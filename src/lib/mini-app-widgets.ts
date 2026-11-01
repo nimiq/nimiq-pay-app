@@ -164,7 +164,7 @@ export interface ParseContext {
 const L = WIDGET_LIMITS
 const AMOUNT_RE = /^\d{1,18}(?:\.\d{1,18})?$/
 const CURRENCY_RE = /^[A-Z0-9]{2,8}$/
-const NIMIQ_HASH_RE = /^[0-9a-f]{64}$/
+const HASH_RE = /^[0-9a-f]{64}$/
 const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/
 const EVM_HASH_RE = /^0x[0-9a-f]{64}$/
 export const WIDGET_ID_RE = /^[a-z0-9][a-z0-9-]{0,31}$/
@@ -414,9 +414,7 @@ function images(raw: unknown, ctx: ParseContext, path: string): Record<string, W
       fail(path, `"${key}" cannot be an image's key`)
     const image = record(entry, `${path}.${key}`)
     const url = sameOrigin(image.url, ctx, `${path}.${key}.url`)
-    if (typeof image.sha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(image.sha256))
-      fail(`${path}.${key}.sha256`, 'expected a SHA-256 in hex')
-    return [key, { url, sha256: image.sha256.toLowerCase() }]
+    return [key, { url, sha256: hex(image.sha256, HASH_RE, 'a SHA-256 in hex', `${path}.${key}.sha256`) }]
   }))
 }
 
@@ -502,7 +500,7 @@ function trigger(raw: unknown, ctx: ParseContext, path: string): WidgetTrigger {
   if (r.nimiqHeight !== undefined)
     return { nimiqHeight: height(r.nimiqHeight, `${path}.nimiqHeight`) }
   if (r.nimiqTx !== undefined)
-    return { nimiqTx: hex(r.nimiqTx, NIMIQ_HASH_RE, 'a Nimiq transaction hash', `${path}.nimiqTx`), status: oneOf(r.status, TX_STATUSES, `${path}.status`) }
+    return { nimiqTx: hex(r.nimiqTx, HASH_RE, 'a Nimiq transaction hash', `${path}.nimiqTx`), status: oneOf(r.status, TX_STATUSES, `${path}.status`) }
   if (r.polygonTx !== undefined)
     return { polygonTx: hex(r.polygonTx, EVM_HASH_RE, 'a Polygon transaction hash', `${path}.polygonTx`), status: oneOf(r.status, TX_STATUSES, `${path}.status`) }
   if (r.nimiqPayment !== undefined) {

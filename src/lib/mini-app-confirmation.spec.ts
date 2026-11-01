@@ -79,7 +79,7 @@ describe('requestUserConfirmation widget', () => {
 
   it('asks on its own for a permission added after install', async () => {
     vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
-    expect(await requestUserConfirmation({ type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status', permissions: ['addresses'] })).toBe(true)
+    expect(await requestUserConfirmation({ type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status' })).toBe(true)
     expect(vi.mocked(ExtendedDialog.sheet)).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Let Swap status send your addresses to swap.example?',
       rows: [{ title: '• With every refresh of this widget' }, { title: '• Stop any time from its menu' }],

@@ -19,11 +19,11 @@ const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted
     canAdd: true,
     canAddTo: vi.fn(() => true),
     setToken: vi.fn(() => true),
+    consentFor: vi.fn((_scope: string, definition: { name: string, description?: string, permissions?: string[] }) => ({ widgetName: definition.name, description: definition.description, appName: undefined, permissions: definition.permissions })),
     missingPermissions: vi.fn((): string[] => []),
     hasPendingImages: vi.fn(() => false),
     approveImages: vi.fn(),
     grantPermissions: vi.fn(),
-    identityOnAdd: vi.fn((): { appName: string, appAddress?: string, launchTitle: string } => ({ appName: 'swap.example', launchTitle: 'swap.example' })),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
     approveName: vi.fn(),
     add: vi.fn(() => true),
@@ -175,11 +175,10 @@ describe('widgets.add', () => {
   it('tells the sheet the name the widget will show under, and none when that is only the address', async () => {
     const { confirm, request } = createHost()
     confirm.mockResolvedValue(true)
-    widgets.identityOnAdd.mockReturnValue({ appName: 'SwapSpace', appAddress: 'swap.example', launchTitle: 'swap.example' })
+    widgets.consentFor.mockReturnValueOnce({ widgetName: 'Swap status', appName: 'SwapSpace' } as never)
     await request('widgets.add', { id: 'swap' })
     expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: 'SwapSpace' }))
 
-    widgets.identityOnAdd.mockReturnValue({ appName: 'swap.example', launchTitle: 'swap.example' })
     const second = createHost()
     second.confirm.mockResolvedValue(true)
     await second.request('widgets.add', { id: 'swap' })
@@ -203,7 +202,7 @@ describe('widgets.add', () => {
     await request('widgets.add', { id: 'swap' })
     await request('widgets.add', { id: 'swap' })
     expect(confirm).toHaveBeenCalledTimes(1)
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions', permissions: ['addresses'] }))
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions' }))
     expect(widgets.grantPermissions).not.toHaveBeenCalled()
     confirm.mockResolvedValue(true)
     const again = createHost()

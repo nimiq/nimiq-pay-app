@@ -10,8 +10,9 @@ const flags = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
   return reactive({ blockedWidgetOrigins: [] as string[], refreshBlockedWidgetOrigins: () => {} })
 })
-const { app, fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork, storedRead } = vi.hoisted(() => ({
+const { app, fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile, memory, miniApps, nimiqNetwork, storedRead } = vi.hoisted(() => ({
   storedRead: { fetches: Promise.resolve() as Promise<unknown> },
+  miniApps: { popularDApps: [{ name: 'Swap', url: 'https://swap.example' }], iconForUrl: (url: string) => `${url}icon.png` },
   app: { language: 'en', selectedFiat: 'EUR' },
   fetchWidgetFile: vi.fn(),
   fetchWidgetRefresh: vi.fn(),
@@ -37,7 +38,7 @@ vi.mock('@/stores/app', () => ({
 }))
 vi.mock('@/stores/mini-apps', () => ({
   stripTrailingSlash: (url: string) => url.replace(/\/$/, ''),
-  useMiniApps: () => ({ popularDApps: [{ name: 'Swap', url: 'https://swap.example' }], iconForUrl: (url: string) => `${url}icon.png` }),
+  useMiniApps: () => miniApps,
 }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => nimiqNetwork }))
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
@@ -1048,7 +1049,7 @@ describe('images', () => {
     const store = await setup()
     fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
     await store.loadGallery([SCOPE])
-    await flushPromises()
+    await store.loadPreviewImages([SCOPE])
     expect(store.previewView(SCOPE, old).background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
     expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
     fetchWidgetImage.mockClear()
@@ -1064,7 +1065,8 @@ describe('images', () => {
     const two = pictured({ hero: { url: url('old'), sha256: OLD }, side: { url: url('new'), sha256: NEW } })
     fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [two] } })
     await store.loadGallery([SCOPE])
-    await flushPromises()
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+    await store.loadPreviewImages([SCOPE])
     expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
   })
 
@@ -1078,6 +1080,79 @@ describe('images', () => {
     await store.tick({ chain: fakeChain({ price }), at: NOW + 30_000 })
     const background = store.views[0]!.background
     expect(background?.kind === 'chart' && background.chart.points).toHaveLength(25)
+  })
+
+  it('forgets previews when the gallery closes, also one still downloading', async () => {
+    const store = await setup()
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
+    await store.loadGallery([SCOPE])
+    await store.loadPreviewImages([SCOPE])
+    store.clearPreviewImages()
+    expect(store.previewView(SCOPE, old).background).toBeUndefined()
+    let answer = (_result: object) => {}
+    fetchWidgetImage.mockReturnValue(new Promise((resolve) => {
+      answer = resolve
+    }))
+    const loading = store.loadPreviewImages([SCOPE])
+    await flushPromises()
+    store.clearPreviewImages()
+    answer({ ok: true, value: 'data:late' })
+    await loading
+    expect(store.previewView(SCOPE, old).background).toBeUndefined()
+  })
+
+  it('downloads no preview for a widget whose first size is an icon', async () => {
+    const store = await setup()
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [{ ...old, sizes: ['icon', 'small'] }] } })
+    await store.loadGallery([SCOPE])
+    await store.loadPreviewImages([SCOPE])
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+  })
+
+  it('forgets an image with the last widget using it, so adding again downloads it again', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    await flushPromises()
+    store.remove(SCOPE, 'swap')
+    await flushPromises()
+    fetchWidgetImage.mockClear()
+    store.add(SCOPE, old)
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not download a refused image again this session, but retries one that could not be reached', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockResolvedValue({ ok: false, error: 'hash', transient: false })
+    store.add(SCOPE, old)
+    await flushPromises()
+    await recheck(store, old)
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+    const other = await setup()
+    fetchWidgetImage.mockClear()
+    fetchWidgetImage.mockResolvedValue({ ok: false, error: 'down', transient: true })
+    other.remove(SCOPE, 'swap')
+    await flushPromises()
+    other.add(SCOPE, old)
+    await flushPromises()
+    await recheck(other, old)
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(2)
+  })
+
+  it('reads what it has stored even while another image cannot be downloaded', async () => {
+    const first = await setup()
+    first.add(SCOPE, old)
+    await flushPromises()
+    await flushPromises()
+    fetchWidgetImage.mockReturnValue(new Promise(() => {}))
+    first.add(SCOPE, { ...next, id: 'other' })
+    await flushPromises()
+    const second = await setup()
+    await flushPromises()
+    await flushPromises()
+    expect(second.views.find(view => view.widgetId === 'swap')!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
   })
 
   it('draws a chart background, with no download', async () => {
@@ -1150,7 +1225,7 @@ describe('approving a new name', () => {
     expect(store.views.map(view => view.appName)).toEqual(['Old', 'Old'])
     expect(store.views.map(view => view.pendingAppName)).toEqual(['New', 'New'])
     expect(store.previewView(NAMED, named('New', { id: 'third' })).appName).toBe('Old')
-    expect(store.identityOnAdd(NAMED, named('New', { id: 'third' })).appName).toBe('Old')
+    expect(store.consentFor(NAMED, named('New', { id: 'third' })).appName).toBe('Old')
   })
 
   it('stops asking when the file goes back to the approved name', async () => {
@@ -1189,9 +1264,9 @@ describe('approving a new name', () => {
 
   it('tells the host the name a widget will show under, before it is added', async () => {
     const store = await setup()
-    expect(store.identityOnAdd(NAMED, named('Declared'))).toMatchObject({ appName: 'Declared', appAddress: 'named.example' })
-    expect(store.identityOnAdd(NAMED, named()).appAddress).toBeUndefined()
-    expect(store.identityOnAdd(SCOPE, named('Declared')).appName).toBe('Swap')
+    expect(store.consentFor(NAMED, named('Declared')).appName).toBe('Declared')
+    expect(store.consentFor(NAMED, named()).appName).toBeUndefined()
+    expect(store.consentFor(SCOPE, named('Declared')).appName).not.toBe('Declared')
   })
 
   it('offers nothing on a blocked card', async () => {
@@ -1402,12 +1477,44 @@ describe('limits per Mini App', () => {
   })
 })
 
+describe('a block arriving while the gallery loads', () => {
+  it('leaves sites still waiting uncontacted', async () => {
+    const store = await setup()
+    const scopes = Array.from({ length: 8 }, (_, i) => `https://site${i}.example/`)
+    fetchWidgetFile.mockImplementationOnce(async () => {
+      flags.blockedWidgetOrigins = ['https://site7.example']
+      return { ok: false, error: 'none', transient: false }
+    })
+    fetchWidgetFile.mockResolvedValue({ ok: false, error: 'none', transient: false })
+    await store.loadGallery(scopes)
+    expect(fetchWidgetFile).not.toHaveBeenCalledWith('https://site7.example/')
+  })
+
+  it('downloads no preview image from a site that has since been blocked', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockReset()
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [definition({ images: { hero: { url: `${SCOPE}a.png`, sha256: 'a'.repeat(64) } }, content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { image: 'hero' } } })] } })
+    await store.loadGallery([SCOPE])
+    flags.blockedWidgetOrigins = ['https://swap.example']
+    await store.loadPreviewImages([SCOPE])
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+  })
+})
+
 describe('catalog Mini Apps in the gallery', () => {
   it('offers the catalog\'s folders, without the blocked ones', async () => {
     const store = await setup()
     expect(store.catalogScopes()).toEqual(['https://swap.example/'])
     flags.blockedWidgetOrigins = ['https://swap.example']
     expect(store.catalogScopes()).toEqual([])
+  })
+
+  it('takes a catalog URL\'s folder, without its query', async () => {
+    const catalog = miniApps.popularDApps
+    miniApps.popularDApps = [{ url: 'https://other.example/app?ref=pay', name: 'Other' }]
+    const store = await setup()
+    expect(store.catalogScopes()).toEqual(['https://other.example/app/'])
+    miniApps.popularDApps = catalog
   })
 
   it('asks a few sites at a time, not the whole catalog at once', async () => {

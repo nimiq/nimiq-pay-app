@@ -21,8 +21,8 @@ function definiteError(error: string): FetchOutcome<never> {
   return { ok: false, error, transient: false }
 }
 
-function statusError(url: string, status: number): FetchOutcome<never> {
-  return { ok: false, error: `${url} ${status === 404 ? 'not found' : `answered ${status}`}`, transient: status >= 500 || status === 429 }
+function statusError(url: string, status: number, retryAfterMs?: number): FetchOutcome<never> {
+  return { ok: false, error: `${url} ${status === 404 ? 'not found' : `answered ${status}`}`, transient: status >= 500 || status === 429, status, retryAfterMs }
 }
 
 function retryAfterMs(value: string | null, now: number): number | undefined {
@@ -114,29 +114,28 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
     }
     if (response.status !== 200)
       return statusError(current, response.status)
-    return read.parse(response, current)
+    // Past the deadline nobody reads the answer, and an image is costly to check.
+    return state.timedOut ? transientError(`${url} timed out`) : read.parse(response, current)
   }
   return definiteError(`too many redirects from ${url}`)
 }
 
-function jsonRead(maxBytes: number): NativeRead<unknown> {
-  return {
-    accept: 'application/json',
-    responseType: 'text',
-    parse(response, url) {
-      const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
-      if (new TextEncoder().encode(body).length > maxBytes)
-        return definiteError(`${url} is larger than ${maxBytes} bytes`)
-      if (typeof response.data !== 'string')
-        return { ok: true, value: response.data }
-      try {
-        return { ok: true, value: JSON.parse(body) }
-      }
-      catch {
-        return definiteError(`${url} is not JSON`)
-      }
-    },
-  }
+const WIDGET_FILE_READ: NativeRead<unknown> = {
+  accept: 'application/json',
+  responseType: 'text',
+  parse(response, url) {
+    const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
+    if (new TextEncoder().encode(body).length > WIDGET_LIMITS.fileBytes)
+      return definiteError(`${url} is larger than ${WIDGET_LIMITS.fileBytes} bytes`)
+    if (typeof response.data !== 'string')
+      return { ok: true, value: response.data }
+    try {
+      return { ok: true, value: JSON.parse(body) }
+    }
+    catch {
+      return definiteError(`${url} is not JSON`)
+    }
+  },
 }
 
 async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<WidgetFile>> {
@@ -149,7 +148,7 @@ async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<
   }
   if (!isAllowedWidgetOrigin(origin, isDev))
     return definiteError(`${origin} cannot serve widgets`)
-  const response = await nativeGet(widgetFileUrl(scope), origin, jsonRead(WIDGET_LIMITS.fileBytes))
+  const response = await nativeGet(widgetFileUrl(scope), origin, WIDGET_FILE_READ)
   if (!response.ok)
     return response
   const parsed = parseWidgetFile(response.value, { origin, base: scope, now, allowInsecure: isDev })
@@ -157,42 +156,44 @@ async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<
 }
 
 /** The native client shares the web views' cookie jar, so without this a site could recognise a device across downloads. All cookies, as clearing one site's misses those with a path or a domain. Not for a search, which runs for a Mini App being opened. */
-export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
+async function withClearedCookies<T>(download: () => Promise<T>): Promise<T> {
   await clearCookies()
   try {
-    return await readWidgetFile(scope, now)
+    return await download()
   }
   finally {
     await clearCookies()
   }
 }
 
-export async function fetchWidgetImage(image: WidgetImage, scope: string): Promise<FetchOutcome<string>> {
-  let origin: string
-  let target: URL
+export function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
+  return withClearedCookies(() => readWidgetFile(scope, now))
+}
+
+/** A URL a widget of this folder may be served from, for a request carrying nothing of the user's beyond what its caller adds. */
+function onWidgetOrigin(url: string, scope: string): { origin: string, target: URL } | undefined {
   try {
-    origin = new URL(scope).origin
-    target = new URL(image.url)
+    const origin = new URL(scope).origin
+    const target = new URL(url)
+    return target.origin === origin && isAllowedProtocol(target) && isAllowedWidgetOrigin(origin, isDev) && !target.username && !target.password ? { origin, target } : undefined
   }
   catch {
-    return definiteError(`${image.url} is not a URL`)
+    return undefined
   }
-  if (target.origin !== origin || !isAllowedProtocol(target) || !isAllowedWidgetOrigin(origin, isDev))
+}
+
+export async function fetchWidgetImage(image: WidgetImage, scope: string): Promise<FetchOutcome<string>> {
+  const place = onWidgetOrigin(image.url, scope)
+  if (!place)
     return definiteError(`${image.url} cannot serve this widget's images`)
-  await clearCookies()
-  try {
-    return await nativeGet(image.url, origin, {
-      accept: 'image/png, image/jpeg, image/webp',
-      responseType: 'arraybuffer',
-      parse(response, url) {
-        const read = readWidgetImage(String(response.data), image.sha256)
-        return read.ok ? read : definiteError(`${url}: ${read.error}`)
-      },
-    })
-  }
-  finally {
-    await clearCookies()
-  }
+  return withClearedCookies(() => nativeGet(image.url, place.origin, {
+    accept: 'image/png, image/jpeg, image/webp',
+    responseType: 'arraybuffer',
+    parse(response, url) {
+      const read = readWidgetImage(String(response.data), image.sha256)
+      return read.ok ? read : definiteError(`${url}: ${read.error}`)
+    },
+  }))
 }
 
 async function clearCookies() {
@@ -229,17 +230,10 @@ export async function fetchWidgetRefresh(
   now = Date.now(),
   identity: { token?: string, accounts?: string[] } = {},
 ): Promise<FetchOutcome<WidgetState | null>> {
-  let origin: string
-  let target: URL
-  try {
-    origin = new URL(scope).origin
-    target = new URL(refresh.url)
-  }
-  catch {
-    return definiteError(`${refresh.url} is not a URL`)
-  }
-  if (target.origin !== origin || !isAllowedProtocol(target) || !isAllowedWidgetOrigin(origin, isDev) || target.username || target.password)
-    return definiteError(`${target.origin} cannot answer refreshes for ${origin}`)
+  const place = onWidgetOrigin(refresh.url, scope)
+  if (!place)
+    return definiteError(`${refresh.url} cannot answer refreshes for ${scope}`)
+  const { origin, target } = place
 
   target.hash = ''
   const [path, rawQuery] = target.href.split(/\?(.*)/s)
@@ -262,7 +256,7 @@ export async function fetchWidgetRefresh(
     if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400))
       return definiteError(`refresh URLs must not redirect (${href})`)
     if (response.status !== 200)
-      return { ...statusError(href, response.status), status: response.status, retryAfterMs: retryAfterMs(response.headers?.get('retry-after') ?? null, now) } as FetchOutcome<never>
+      return statusError(href, response.status, retryAfterMs(response.headers?.get('retry-after') ?? null, now))
 
     let bytes: Uint8Array
     try {
