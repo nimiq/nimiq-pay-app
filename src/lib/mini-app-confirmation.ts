@@ -361,6 +361,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         headerLogoCornerRadius: -1,
         rows: [
           { title: `• Shows what ${host} sends` },
+          { title: `• May contact ${host} regularly to stay up to date` },
           { title: '• Cannot see your balance or move funds' },
           { title: '• Remove it any time from its menu' },
         ],

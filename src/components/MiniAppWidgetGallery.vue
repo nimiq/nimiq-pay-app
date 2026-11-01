@@ -74,9 +74,14 @@ function add(scope: string, definition: WidgetDefinition) {
 
 <template>
   <div class="flex min-h-full w-full flex-col gap-6 px-6 pb-8 text-left" data-testid="mini-app-widget-gallery">
-    <p class="text-2xl font-bold">
-      {{ $t('Widgets') }}
-    </p>
+    <div class="flex flex-col gap-1">
+      <p class="text-2xl font-bold">
+        {{ $t('Widgets') }}
+      </p>
+      <p v-if="appSections.length" data-testid="gallery-contact-notice" class="text-sm text-space/60">
+        {{ $t('Widgets from Mini Apps may contact their site regularly to stay up to date.') }}
+      </p>
+    </div>
 
     <section v-for="section in sections" :key="section.scope" class="flex flex-col gap-3" :data-testid="`gallery-app-${section.scope}`">
       <div class="flex min-w-0 items-center gap-2">

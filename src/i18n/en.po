@@ -59,7 +59,7 @@ msgstr ""
 msgid "Activating scanner"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:40
+#: src/components/MiniAppWidgetGallery.vue:45
 #: src/components/TheHomeWidgets.vue:13
 msgid "Add"
 msgstr ""
@@ -220,7 +220,7 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:59
+#: src/components/MiniAppWidgetGallery.vue:64
 msgid "Browse Mini Apps"
 msgstr ""
 
@@ -786,7 +786,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2265
+#: src/composables/useMiniAppHost.ts:2264
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1055,7 +1055,7 @@ msgstr ""
 msgid "Mini Apps"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:55
+#: src/components/MiniAppWidgetGallery.vue:60
 msgid "Mini Apps appear here once you've opened them."
 msgstr ""
 
@@ -1224,7 +1224,7 @@ msgstr ""
 msgid "Notifications cannot be enabled, skipping this step."
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:40
+#: src/components/MiniAppWidgetGallery.vue:45
 msgid "On Home"
 msgstr ""
 
@@ -1750,7 +1750,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2266
+#: src/composables/useMiniAppHost.ts:2265
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1821,7 +1821,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:507
+#: src/composables/useMiniAppHost.ts:506
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1933,7 +1933,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:481
+#: src/composables/useMiniAppHost.ts:480
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2248,10 +2248,14 @@ msgstr ""
 msgid "Widget size"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:4
+#: src/components/MiniAppWidgetGallery.vue:5
 #: src/components/TheHomeWidgets.vue:5
 #: src/modals/MiniAppsModal.vue:38
 msgid "Widgets"
+msgstr ""
+
+#: src/components/MiniAppWidgetGallery.vue:8
+msgid "Widgets from Mini Apps may contact their site regularly to stay up to date."
 msgstr ""
 
 #: src/components/NimWithdraw.vue:75

@@ -92,6 +92,18 @@ describe('miniAppWidgetGallery', () => {
     expect(wrapper.findAll('[data-testid^="gallery-address-"]')).toHaveLength(1)
   })
 
+  it('says that a Mini App\'s widgets may contact its site, only when it lists any', async () => {
+    store.galleryFiles.set('https://swap.example/', { widgets: [DEFINITION] })
+    const listed = render()
+    await flushPromises()
+    expect(listed.find('[data-testid="gallery-contact-notice"]').text()).toContain('contact their site')
+
+    store.galleryFiles.set('https://swap.example/', null)
+    const empty = render()
+    await flushPromises()
+    expect(empty.find('[data-testid="gallery-contact-notice"]').exists()).toBe(false)
+  })
+
   it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {
     store.galleryFiles.set('https://swap.example/', null)
     const wrapper = render()

@@ -45,6 +45,7 @@ describe('requestUserConfirmation widget', () => {
       subtitle: 'Follows your swap.',
       rows: [
         { title: '• Shows what swap.example sends' },
+        { title: '• May contact swap.example regularly to stay up to date' },
         { title: '• Cannot see your balance or move funds' },
         { title: '• Remove it any time from its menu' },
       ],

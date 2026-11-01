@@ -165,7 +165,7 @@ if (window.nimiqPay?.widgets) {
 | `remove(id)` | Removes the widget from Home. |
 | `list()` | The ids of your Mini App's widgets that are on Home. |
 
-`add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
+The sheet tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
 
 Requests are accepted only from the site the Mini App session belongs to. They are refused while the in-app browser shows another site, while it navigates between sites, while a popup your page opened is open, and after Nimiq Pay reloads behind an open Mini App until the page has loaded again. Refused calls fail quietly: `add` rejects, `update` answers `false`, `remove` does nothing and `list` answers `[]`.
 
