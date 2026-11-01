@@ -5,6 +5,8 @@ import { ValidationUtils } from '@nimiq/utils/validation-utils'
 export const WIDGET_FILE_NAME = 'nimiq-pay-widgets.json'
 
 export const WIDGET_SIZES = ['icon', 'small', 'medium', 'large'] as const
+export const WIDGET_PERMISSIONS = ['addresses'] as const
+export type WidgetPermission = (typeof WIDGET_PERMISSIONS)[number]
 export const WIDGET_GRID_CLASS = 'grid auto-rows-[minmax(4.75rem,auto)] grid-cols-4 gap-3'
 export type WidgetSize = (typeof WIDGET_SIZES)[number]
 
@@ -122,6 +124,8 @@ export interface WidgetDefinition {
   sizes: WidgetSize[]
   content: WidgetContent
   demo?: WidgetDemo
+  /** What the widget asks to send with its refreshes. Only what the user granted goes out. */
+  permissions?: WidgetPermission[]
   refresh?: WidgetRefresh
   translations: Record<string, { name?: string, description?: string, content?: WidgetContent, demo?: WidgetDemo }>
   /** The file's top-level `name`: the Mini App's, not the widget's. */
@@ -561,6 +565,8 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
           definition.description = text(w.description, L.description, `${path}.description`)
         if (appName !== undefined)
           definition.appName = appName
+        if (w.permissions !== undefined)
+          definition.permissions = [...new Set(list(w.permissions, `${path}.permissions`))].filter((p): p is WidgetPermission => WIDGET_PERMISSIONS.includes(p as WidgetPermission))
         if (w.demo !== undefined)
           definition.demo = demo(w.demo, ctx, `${path}.demo`)
         if (w.refresh !== undefined)

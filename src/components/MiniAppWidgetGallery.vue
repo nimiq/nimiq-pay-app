@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WidgetDefinition, WidgetSize } from '@/lib/mini-app-widgets'
+import type { WidgetView } from '@/stores/mini-app-widgets'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { computed, watch } from 'vue'
@@ -7,6 +8,7 @@ import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { applyIconFallback } from '@/lib/mini-app-icons'
 import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { localizeDefinition, WIDGET_GRID_CLASS, WIDGET_LIMITS, WIDGET_SIZES } from '@/lib/mini-app-widgets'
@@ -66,8 +68,15 @@ const appSections = computed(() => scopes.value.flatMap((scope) => {
 }))
 const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
 
-function add(scope: string, definition: WidgetDefinition) {
-  if (!widgets.add(scope, definition)) {
+async function add(scope: string, definition: WidgetDefinition, view: WidgetView) {
+  const permissions = definition.permissions ?? []
+  if (permissions.length && widgets.canAddTo(scope)) {
+    const { name, description } = localizeDefinition(definition, app.language)
+    const confirmed = await requestUserConfirmation({ type: 'widget', url: scope, widgetName: name, description, appName: view.appAddress ? view.appName : undefined, permissions })
+    if (!confirmed)
+      return
+  }
+  if (!widgets.add(scope, definition, permissions)) {
     toast.setToast({
       message: widgets.canAdd
         ? i18n.t('A Mini App can have at most {count} widgets on Home', { count: WIDGET_LIMITS.widgetsPerMiniApp })
@@ -113,6 +122,9 @@ function add(scope: string, definition: WidgetDefinition) {
             <p class="text-xs text-space/50">
               {{ item.sizes }}
             </p>
+            <p v-if="item.definition.permissions?.length" :data-testid="`gallery-permissions-${item.definition.id}`" class="mt-1 text-xs text-space/70">
+              {{ $t('Sends your addresses to its site with every refresh') }}
+            </p>
           </div>
           <button
             type="button"
@@ -120,7 +132,7 @@ function add(scope: string, definition: WidgetDefinition) {
             :disabled="item.onHome"
             class="relative shrink-0 rounded-full px-4 py-1.5 before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
             :class="item.onHome ? 'bg-space/[0.06] text-space/50' : 'bg-sky text-white active:bg-sky/80'"
-            @click="add(section.scope, item.definition)"
+            @click="add(section.scope, item.definition, item.view)"
           >
             {{ item.onHome ? $t('On Home') : $t('Add') }}
           </button>

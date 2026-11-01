@@ -1,6 +1,7 @@
 import type { LiveValue, PriceRange, WidgetAsset, WidgetTrigger } from '@/lib/mini-app-widgets'
 import { useCurrencyPriceApi } from '@/composables/useApi'
 import { promiseWithTimeout } from '@/lib/utils'
+import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { fetchPolygonTransactionState, getPolygonUsdtClient, isSuccessfulOpenGsnReceipt, shouldValidateOpenGsnTransaction } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -19,6 +20,8 @@ export interface WidgetChain {
   polygonTransaction: (hash: string) => Promise<ChainStatus | undefined>
   /** In USDT micro-units (6 decimals). */
   usdtBalance: (address: string) => Promise<number | undefined>
+  /** The addresses a Mini App would get from listAccounts and eth_requestAccounts, read fresh as the cosigner's changes. */
+  accounts: () => string[]
   /** One unit of `asset` in `fiat`, now or at `at` (ms). */
   price: (asset: WidgetAsset, fiat: string, at?: number) => Promise<number | undefined>
 }
@@ -147,6 +150,11 @@ export function createWidgetChain(): WidgetChain {
   const network = useNimiqNetwork()
   const client = () => (network.consensus === 'established' ? network.client : undefined)
   return {
+    accounts: () => [
+      useLocalWallet().localAddress.toUserFriendlyAddress(),
+      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+      useLocalWallet().getEthAddress().data,
+    ].filter((address): address is string => !!address),
     nimiqHeight: () => (network.consensus === 'established' && network.height > 0 ? network.height : undefined),
     async nimiqTransaction(hash) {
       const nimiq = client()

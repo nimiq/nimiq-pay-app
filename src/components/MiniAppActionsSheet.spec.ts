@@ -136,6 +136,15 @@ describe('miniAppActionsSheet', () => {
     expect(wrapper!.emitted('update:open')).toEqual([[false]])
   })
 
+  it('offers to stop sharing addresses when the widget shares them, and emits when chosen', async () => {
+    await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
+    expect(action('mini-app-stop-sharing-action')).toBeNull()
+    wrapper?.unmount()
+    await mountSheet({ app, removable: false, sharesAddresses: true, widget: { size: 'small', sizes: ['small'] } })
+    action('mini-app-stop-sharing-action')!.click()
+    expect(wrapper!.emitted('stopSharing')).toHaveLength(1)
+  })
+
   it('shows no Size row for a single-size widget, but still offers Remove', async () => {
     await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
     expect(document.body.querySelector('[data-testid="mini-app-widget-size"]')).toBeNull()

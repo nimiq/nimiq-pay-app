@@ -10,7 +10,7 @@ const { background, launchMiniApp, showModal, store, visible } = await vi.hoiste
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 
@@ -150,6 +150,16 @@ describe('theHomeWidgets', () => {
     expect(sheet.props('context')).toMatchObject({ newName: 'SwapSpace' })
     sheet.vm.$emit('useNewName')
     expect(store.approveName).toHaveBeenCalledWith('https://swap.example/', 'SwapSpace')
+  })
+
+  it('offers to stop sharing addresses in the menu', async () => {
+    store.views.value = [{ ...view('small', 'swap'), sharesAddresses: true }]
+    const wrapper = render()
+    await wrapper.find('[data-testid="widget-menu"]').trigger('click')
+    const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
+    expect(sheet.props('context')).toMatchObject({ sharesAddresses: true })
+    sheet.vm.$emit('stopSharing')
+    expect(store.revokePermissions).toHaveBeenCalledWith('https://swap.example/', 'swap')
   })
 
   it('opens the gallery from Add', async () => {

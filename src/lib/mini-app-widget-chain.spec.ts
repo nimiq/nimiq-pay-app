@@ -40,6 +40,7 @@ const ADDRESS = 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000'
 
 function fakeChain(overrides: Partial<WidgetChain> = {}): WidgetChain {
   return {
+    accounts: () => [],
     nimiqHeight: () => 1000,
     nimiqTransaction: async () => 'pending',
     nimiqReceived: async () => false,

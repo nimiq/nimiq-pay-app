@@ -5,6 +5,7 @@ import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import type { WidgetFile, WidgetPermission } from '@/lib/mini-app-widgets'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
@@ -206,6 +207,14 @@ export type UserConfirmationRequest
       description?: string
       /** What the widget will show as its Mini App's name, unless that is only the address. */
       appName?: string
+      permissions?: WidgetPermission[]
+    }
+    | {
+      type: 'widgetPermissions'
+      url: string
+      /** From the Mini App's widget file: untrusted text. */
+      widgetName: string
+      permissions: WidgetPermission[]
     }
     | {
       type: 'widgetName'
@@ -287,8 +296,9 @@ export class MiniAppHost {
   /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
   private readonly declinedWidgets = new Set<string>()
   private declinedWidgetName = false
-  /** One sheet, however many widgets a Mini App calls `add` for at once. */
-  private widgetNameOffer: Promise<void> | undefined
+  private readonly declinedWidgetPermissions = new Set<string>()
+  /** One sheet at a time, however many widgets a Mini App calls `add` for at once. */
+  private widgetSheets: Promise<void> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
   private lastPageUrl: string | null = null
   /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
@@ -1528,14 +1538,28 @@ export class MiniAppHost {
   }
 
   private async requestWidgetAdd(id: string): Promise<boolean> {
-    const widgets = useMiniAppWidgets()
     // Keyed by the folder the widget file sits in, so two Mini Apps of one site stay apart.
-    const found = await widgets.discover(this.sessionUrl)
+    const found = await useMiniAppWidgets().discover(this.sessionUrl)
     if (!found.ok)
       throw new InvalidRequestError(found.error)
     const { scope, file } = found.value
+    const sheet = this.widgetSheets.then(() => this.askAboutWidget(scope, file, id))
+    this.widgetSheets = sheet.then(() => {}, () => {})
+    return sheet
+  }
+
+  /** Answers can outlast the session: nothing is asked or applied for a Mini App no longer open. */
+  private mayAskAboutWidgets(): boolean {
+    return !this.destroyed && this.canChangeWidgets()
+  }
+
+  private async askAboutWidget(scope: string, file: WidgetFile, id: string): Promise<boolean> {
+    const widgets = useMiniAppWidgets()
+    if (!this.mayAskAboutWidgets())
+      return false
     if (widgets.isOnHome(scope, id)) {
       await this.offerWidgetName(scope)
+      await this.offerWidgetPermissions(scope, file, id)
       return true
     }
     if (this.declinedWidgets.has(id))
@@ -1555,13 +1579,14 @@ export class MiniAppHost {
       widgetName: name,
       description,
       appName: identity.appAddress ? identity.appName : undefined,
+      permissions: definition.permissions,
     })
     trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed) {
       this.declinedWidgets.add(id)
       return false
     }
-    return widgets.add(scope, definition)
+    return this.mayAskAboutWidgets() && widgets.add(scope, definition, definition.permissions ?? [])
   }
 
   /** A rename the user has not approved waits: this is where a Mini App can ask for it. */
@@ -1569,17 +1594,31 @@ export class MiniAppHost {
     const widgets = useMiniAppWidgets()
     const pending = widgets.pendingName(scope)
     const confirm = this.config.requestUserConfirmation
-    if (!pending || this.declinedWidgetName || !confirm)
+    if (!pending || this.declinedWidgetName || !confirm || !this.mayAskAboutWidgets())
       return
-    this.widgetNameOffer ??= (async () => {
-      const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetName', address: pending.address, to: pending.to })
-      trackWeb3Request({ requestType: 'widget_name', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
-      if (confirmed)
-        widgets.approveName(scope, pending.to)
-      else
-        this.declinedWidgetName = true
-    })().finally(() => this.widgetNameOffer = undefined)
-    await this.widgetNameOffer
+    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetName', address: pending.address, to: pending.to })
+    trackWeb3Request({ requestType: 'widget_name', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    if (!confirmed)
+      this.declinedWidgetName = true
+    else if (this.mayAskAboutWidgets())
+      widgets.approveName(scope, pending.to)
+  }
+
+  /** A permission added to the file after install is not granted by the file. This is where a Mini App can ask for it. */
+  private async offerWidgetPermissions(scope: string, file: WidgetFile, id: string) {
+    const widgets = useMiniAppWidgets()
+    const permissions = widgets.missingPermissions(scope, id)
+    const confirm = this.config.requestUserConfirmation
+    if (!permissions.length || this.declinedWidgetPermissions.has(id) || !confirm || !this.mayAskAboutWidgets())
+      return
+    const definition = file.widgets.find(d => d.id === id)
+    const widgetName = definition ? localizeDefinition(definition, useApp().language).name : id
+    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetPermissions', widgetName, permissions })
+    trackWeb3Request({ requestType: 'widget_permissions', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    if (!confirmed)
+      this.declinedWidgetPermissions.add(id)
+    else if (this.mayAskAboutWidgets())
+      widgets.grantPermissions(scope, id, permissions)
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {

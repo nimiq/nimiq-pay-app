@@ -43,10 +43,20 @@ afterEach(() => {
 describe('what a refresh tells the store', () => {
   it('sends a token as a bearer header, and no such header without one', async () => {
     fetchMock.mockResolvedValue(streamed([STATE]))
-    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW, 'opaque-token')
+    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW, { token: 'opaque-token' })
     expect(fetchMock.mock.calls[0]![1].headers).toEqual({ Authorization: 'Bearer opaque-token' })
     fetchMock.mockResolvedValue(streamed([STATE]))
     await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW)
+    expect(fetchMock.mock.calls[1]![1].headers).toEqual({})
+  })
+
+  it('sends addresses in their own header only when there are any', async () => {
+    fetchMock.mockResolvedValue(streamed([STATE]))
+    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW, { accounts: ['NQ07 AAAA', '0xabc'] })
+    expect(fetchMock.mock.calls[0]![1].headers).toEqual({ 'Nimiq-Pay-Accounts': 'NQ07 AAAA, 0xabc' })
+    expect(fetchMock.mock.calls[0]![0]).not.toContain('AAAA')
+    fetchMock.mockResolvedValue(streamed([STATE]))
+    await fetchWidgetRefresh(REFRESH, PARAMS, SCOPE, NOW, { accounts: [] })
     expect(fetchMock.mock.calls[1]![1].headers).toEqual({})
   })
 

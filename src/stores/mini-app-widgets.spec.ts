@@ -74,6 +74,7 @@ function fakeChain(overrides: Partial<WidgetChain> = {}): WidgetChain {
     polygonTransaction: async () => 'pending',
     usdtBalance: async () => 0,
     price: async () => 1,
+    accounts: () => ['NQ07 MINE', '0xmine'],
     ...overrides,
   }
 }
@@ -414,7 +415,7 @@ describe('tick', () => {
     await store.tick({ chain: fakeChain(), at: NOW + 59_000 })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
     await store.tick({ chain: fakeChain(), at: NOW + 60_000 })
-    expect(fetchWidgetRefresh).toHaveBeenCalledWith({ url: 'https://swap.example/w', every: 60 }, { lang: 'en', network: 'mainnet' }, SCOPE, NOW + 60_000, undefined)
+    expect(fetchWidgetRefresh).toHaveBeenCalledWith({ url: 'https://swap.example/w', every: 60 }, { lang: 'en', network: 'mainnet' }, SCOPE, NOW + 60_000, { token: undefined, accounts: [] })
     expect(store.views[0]!.label).toBe('Exchanging')
     await store.tick({ chain: fakeChain(), at: NOW + 600_000 })
     expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
@@ -764,7 +765,7 @@ describe('what a refresh server answers', () => {
     expect(store.setToken(SCOPE, 'swap', 'fresh')).toBe(true)
     expect(store.views[0]!.reconnect).toBe(false)
     await store.tick({ chain: fakeChain(), at: NEXT + 60_000 })
-    expect(fetchWidgetRefresh.mock.calls[0]![4]).toBe('fresh')
+    expect(fetchWidgetRefresh.mock.calls[0]![4].token).toBe('fresh')
   })
 
   const heldRefresh = async (act: (store: Awaited<ReturnType<typeof setup>>) => void) => {
@@ -799,10 +800,10 @@ describe('what a refresh server answers', () => {
     store.setToken(SCOPE, 'swap', 'secret')
     fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
     await store.tick({ chain: fakeChain(), at: NOW })
-    expect(fetchWidgetRefresh.mock.calls[0]![4]).toBe('secret')
+    expect(fetchWidgetRefresh.mock.calls[0]![4].token).toBe('secret')
     store.setToken(SCOPE, 'swap', null)
     await store.tick({ chain: fakeChain(), at: NOW + 120_000 })
-    expect(fetchWidgetRefresh.mock.calls[1]![4]).toBeUndefined()
+    expect(fetchWidgetRefresh.mock.calls[1]![4].token).toBeUndefined()
   })
 
   it('answers false for a token on a widget not on Home', async () => {
@@ -833,6 +834,76 @@ describe('what a refresh server answers', () => {
     nimiqBalance.mockClear()
     await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 120_000 })
     expect(nimiqBalance).not.toHaveBeenCalled()
+  })
+})
+
+describe('permissions', () => {
+  const sharing = definition({ permissions: ['addresses'], refresh: { url: `${SCOPE}w`, every: 60 } })
+  const refreshOnce = async (store: Awaited<ReturnType<typeof setup>>, at = NOW) => {
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at })
+    return fetchWidgetRefresh.mock.calls.at(-1)![4].accounts
+  }
+
+  it('sends addresses only when the user granted them at install, whatever the file asks', async () => {
+    const store = await setup()
+    store.add(SCOPE, sharing)
+    expect(await refreshOnce(store)).toEqual([])
+    expect(store.views[0]!.sharesAddresses).toBe(false)
+    expect(store.missingPermissions(SCOPE, 'swap')).toEqual(['addresses'])
+  })
+
+  it('reads the addresses at each refresh, once granted', async () => {
+    const store = await setup()
+    store.add(SCOPE, sharing, ['addresses'])
+    expect(await refreshOnce(store)).toEqual(['NQ07 MINE', '0xmine'])
+    expect(store.views[0]!.sharesAddresses).toBe(true)
+    expect(store.missingPermissions(SCOPE, 'swap')).toEqual([])
+  })
+
+  it('stops at once when revoked, and removing the widget takes the grant with it', async () => {
+    const store = await setup()
+    store.add(SCOPE, sharing, ['addresses'])
+    store.revokePermissions(SCOPE, 'swap')
+    expect(await refreshOnce(store)).toEqual([])
+    store.remove(SCOPE, 'swap')
+    store.add(SCOPE, sharing)
+    expect(store.views[0]!.sharesAddresses).toBe(false)
+  })
+
+  it('grants what the Mini App asks for after install', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }))
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [sharing] } })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
+    expect(store.missingPermissions(SCOPE, 'swap')).toEqual(['addresses'])
+    expect(fetchWidgetRefresh.mock.calls.at(-1)![4].accounts).toEqual([])
+    store.grantPermissions(SCOPE, 'swap', ['addresses'])
+    expect(store.missingPermissions(SCOPE, 'swap')).toEqual([])
+    expect(store.views[0]!.sharesAddresses).toBe(true)
+  })
+
+  it('drops a grant the file no longer asks for', async () => {
+    const store = await setup()
+    store.add(SCOPE, sharing, ['addresses'])
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [definition({ refresh: { url: `${SCOPE}w`, every: 60 } })] } })
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
+    expect(store.views[0]!.sharesAddresses).toBe(false)
+  })
+
+  it('grants only what the file asks for', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition(), ['addresses'])
+    expect(store.views[0]!.sharesAddresses).toBe(false)
+  })
+
+  it('does not offer revoking on a blocked card', async () => {
+    const store = await setup()
+    store.add(SCOPE, sharing, ['addresses'])
+    flags.blockedWidgetOrigins = ['https://swap.example']
+    expect(store.views[0]!.sharesAddresses).toBe(false)
   })
 })
 

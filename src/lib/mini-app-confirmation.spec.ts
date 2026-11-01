@@ -59,6 +59,24 @@ describe('requestUserConfirmation widget', () => {
     expect(vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].rows![0]).toEqual({ title: '• Appears as SwapSpace on Home' })
   })
 
+  it('says at install when a widget sends the user\'s addresses', async () => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+    await requestUserConfirmation({ type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status', permissions: ['addresses'] })
+    expect(vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].rows).toContainEqual({ title: '• Sends your addresses to swap.example with every refresh' })
+    const rows = vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].rows!.map(row => row.title)
+    expect(rows).not.toContain('• Cannot see your balance or move funds')
+    expect(rows).toContain('• Cannot move funds')
+  })
+
+  it('asks on its own for a permission added after install', async () => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+    expect(await requestUserConfirmation({ type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status', permissions: ['addresses'] })).toBe(true)
+    expect(vi.mocked(ExtendedDialog.sheet)).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Let Swap status send your addresses to swap.example?',
+      rows: [{ title: '• With every refresh of this widget' }, { title: '• Stop any time from its menu' }],
+    }))
+  })
+
   it('asks to add the widget, naming the site and what the widget cannot do', async () => {
     vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: false })
 

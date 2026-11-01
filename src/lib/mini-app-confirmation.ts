@@ -363,10 +363,27 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
           ...(request.appName ? [{ title: `• Appears as ${request.appName} on Home` }] : []),
           { title: `• Shows what ${host} sends` },
           { title: `• May contact ${host} regularly to stay up to date` },
-          { title: '• Cannot see your balance or move funds' },
+          ...(request.permissions?.includes('addresses')
+            ? [{ title: `• Sends your addresses to ${host} with every refresh` }, { title: '• Cannot move funds' }]
+            : [{ title: '• Cannot see your balance or move funds' }]),
           { title: '• Remove it any time from its menu' },
         ],
         confirmButtonTitle: 'Add to Home',
+        cancelButtonTitle: 'Not now',
+      })
+      return result.confirmed
+    }
+
+    case 'widgetPermissions': {
+      const result = await ExtendedDialog.sheet({
+        title: `Let ${request.widgetName} send your addresses to ${new URL(request.url).hostname}?`,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: '• With every refresh of this widget' },
+          { title: '• Stop any time from its menu' },
+        ],
+        confirmButtonTitle: 'Allow',
         cancelButtonTitle: 'Not now',
       })
       return result.confirmed

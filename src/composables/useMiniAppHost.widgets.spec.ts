@@ -19,6 +19,8 @@ const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted
     canAdd: true,
     canAddTo: vi.fn(() => true),
     setToken: vi.fn(() => true),
+    missingPermissions: vi.fn((): string[] => []),
+    grantPermissions: vi.fn(),
     identityOnAdd: vi.fn((): { appName: string, appAddress?: string, launchTitle: string } => ({ appName: 'swap.example', launchTitle: 'swap.example' })),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
     approveName: vi.fn(),
@@ -91,6 +93,7 @@ beforeEach(() => {
   widgets.canAdd = true
   widgets.canAddTo.mockReturnValue(true)
   widgets.pendingName.mockReturnValue(undefined)
+  widgets.missingPermissions.mockReturnValue([])
   widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } })
   vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
@@ -101,7 +104,7 @@ describe('widgets.add', () => {
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
     expect(widgets.discover).toHaveBeenCalledWith('https://Swap.Example/app')
     expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', widgetName: 'Swap status', description: 'Follows your swap.', url: 'https://Swap.Example/app' }))
-    expect(widgets.add).toHaveBeenCalledWith(SCOPE, DEFINITION)
+    expect(widgets.add).toHaveBeenCalledWith(SCOPE, DEFINITION, [])
     expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_add', approved: true }))
   })
 
@@ -178,6 +181,81 @@ describe('widgets.add', () => {
     second.confirm.mockResolvedValue(true)
     await second.request('widgets.add', { id: 'swap' })
     expect(second.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: undefined }))
+  })
+
+  it('asks for the widget\'s permissions in the sheet and grants them on yes', async () => {
+    widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [{ ...DEFINITION, permissions: ['addresses'] }] } } })
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(true)
+    await request('widgets.add', { id: 'swap' })
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', permissions: ['addresses'] }))
+    expect(widgets.add).toHaveBeenCalledWith(SCOPE, expect.anything(), ['addresses'])
+  })
+
+  it('asks about a permission added after install when the Mini App calls add, once if declined', async () => {
+    widgets.isOnHome.mockReturnValue(true)
+    widgets.missingPermissions.mockReturnValue(['addresses'])
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(false)
+    await request('widgets.add', { id: 'swap' })
+    await request('widgets.add', { id: 'swap' })
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions', permissions: ['addresses'] }))
+    expect(widgets.grantPermissions).not.toHaveBeenCalled()
+    confirm.mockResolvedValue(true)
+    const again = createHost()
+    again.confirm.mockResolvedValue(true)
+    await again.request('widgets.add', { id: 'swap' })
+    expect(widgets.grantPermissions).toHaveBeenCalledWith(SCOPE, 'swap', ['addresses'])
+  })
+
+  const held = () => {
+    let answer = (_value: boolean) => {}
+    return { answer: (value: boolean) => answer(value), promise: new Promise<boolean>((resolve) => {
+      answer = resolve
+    }) }
+  }
+
+  it('shows consent sheets one at a time, for new widgets too', async () => {
+    widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION, { ...DEFINITION, id: 'other' }] } } })
+    const first = held()
+    const { confirm, request } = createHost()
+    confirm.mockReturnValueOnce(first.promise).mockResolvedValue(true)
+    const calls = [request('widgets.add', { id: 'swap' }), request('widgets.add', { id: 'other' })]
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    await Promise.resolve()
+    expect(confirm).toHaveBeenCalledTimes(1)
+    first.answer(true)
+    await Promise.all(calls)
+    expect(confirm).toHaveBeenCalledTimes(2)
+  })
+
+  it('applies nothing, and asks nothing more, once the Mini App has closed', async () => {
+    widgets.isOnHome.mockReturnValue(true)
+    widgets.missingPermissions.mockReturnValue(['addresses'])
+    const first = held()
+    const { confirm, host, request } = createHost()
+    confirm.mockReturnValueOnce(first.promise).mockResolvedValue(true)
+    const one = request('widgets.add', { id: 'a' })
+    const two = request('widgets.add', { id: 'b' })
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    await host.destroy()
+    first.answer(true)
+    await Promise.allSettled([one, two])
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(widgets.grantPermissions).not.toHaveBeenCalled()
+  })
+
+  it('does not add a new widget confirmed after the Mini App closed', async () => {
+    const first = held()
+    const { confirm, host, request } = createHost()
+    confirm.mockReturnValueOnce(first.promise)
+    const call = request('widgets.add', { id: 'swap' })
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    await host.destroy()
+    first.answer(true)
+    await call.catch(() => {})
+    expect(widgets.add).not.toHaveBeenCalled()
   })
 
   it('fails when the Mini App has all the widgets it may have on Home', async () => {
@@ -320,7 +398,7 @@ describe('one site per session', () => {
     await load()
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
     expect(widgets.discover).toHaveBeenCalledWith('https://www.swap.example/app/')
-    expect(widgets.add).toHaveBeenCalledWith('https://www.swap.example/app/', DEFINITION)
+    expect(widgets.add).toHaveBeenCalledWith('https://www.swap.example/app/', DEFINITION, [])
     const [sheet] = confirm.mock.calls[0]!
     expect(sheet.url).toBe('https://www.swap.example/app/')
     await request('widgets.update', { id: 'swap', state: null })

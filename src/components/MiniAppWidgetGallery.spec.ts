@@ -2,13 +2,15 @@ import type { WidgetDefinition } from '@/lib/mini-app-widgets'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { recents, setToast, store } = await vi.hoisted(async () => {
+const { confirm, recents, setToast, store } = await vi.hoisted(async () => {
   const { reactive, ref } = await import('vue')
   return {
     recents: ref<Array<{ url: string, name: string, icon: string }>>([]),
+    confirm: vi.fn(),
     setToast: vi.fn(),
     store: {
       canAdd: false,
+      canAddTo: vi.fn(() => true),
       galleryFiles: reactive(new Map()),
       galleryScopesFor: vi.fn((origins: string[]) => origins.flatMap(origin => origin === 'https://swap.example' ? [`${origin}/`, `${origin}/app/`] : [`${origin}/`])),
       loadGallery: vi.fn(),
@@ -24,6 +26,7 @@ vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => store }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ recentlyViewedDApps: recents }) }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en' }) }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast }) }))
+vi.mock('@/lib/mini-app-confirmation', () => ({ requestUserConfirmation: confirm }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (m: string) => ({ Small: 'Klein', Large: 'Groß' } as Record<string, string>)[m] ?? m } }))
 
 const { default: MiniAppWidgetGallery } = await import('./MiniAppWidgetGallery.vue')
@@ -83,7 +86,7 @@ describe('miniAppWidgetGallery', () => {
     const wrapper = render()
     await flushPromises()
     await wrapper.find('[data-testid="gallery-add-nim-price"]').trigger('click')
-    expect(store.add).toHaveBeenCalledWith(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0])
+    expect(store.add).toHaveBeenCalledWith(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0], [])
   })
 
   it('shows a Mini App\'s address under its name', async () => {
@@ -104,6 +107,22 @@ describe('miniAppWidgetGallery', () => {
     const empty = render()
     await flushPromises()
     expect(empty.find('[data-testid="gallery-contact-notice"]').exists()).toBe(false)
+  })
+
+  it('asks before adding a widget that wants permissions, says so on its row, and adds nothing on no', async () => {
+    store.galleryFiles.set('https://swap.example/', { widgets: [{ ...DEFINITION, permissions: ['addresses'] }] })
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-permissions-swap"]').text()).toContain('your addresses')
+    confirm.mockResolvedValue(false)
+    await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await flushPromises()
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', permissions: ['addresses'] }))
+    expect(store.add).not.toHaveBeenCalled()
+    confirm.mockResolvedValue(true)
+    await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await flushPromises()
+    expect(store.add).toHaveBeenCalledWith('https://swap.example/', expect.anything(), ['addresses'])
   })
 
   it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {
@@ -162,12 +181,14 @@ describe('miniAppWidgetGallery', () => {
     const wrapper = render()
     await flushPromises()
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
-    expect(store.add).toHaveBeenCalledWith('https://swap.example/', DEFINITION)
+    expect(store.add).toHaveBeenCalledWith('https://swap.example/', DEFINITION, [])
     store.add.mockReturnValue(false)
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await flushPromises()
     expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('Home holds') }))
     store.canAdd = true
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    await flushPromises()
     expect(setToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('A Mini App can have') }))
   })
 

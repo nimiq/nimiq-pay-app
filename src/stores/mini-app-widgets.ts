@@ -8,6 +8,7 @@ import type {
   WidgetDefinition,
   WidgetDemo,
   WidgetFile,
+  WidgetPermission,
   WidgetRefresh,
   WidgetSize,
   WidgetState,
@@ -47,6 +48,8 @@ export interface HomeWidget {
   pendingAppName?: string
   /** undefined means the resting state. */
   state?: WidgetState
+  /** What the user allowed it to send, kept from install: a file cannot widen it. */
+  grants?: WidgetPermission[]
   /** Sent to its refresh URL: set by the Mini App, never shown or read back. */
   token?: string
   /** Why refreshes stopped, until the Mini App sends a state or a token. */
@@ -96,6 +99,7 @@ export interface WidgetView {
   /** After repeated refresh failures: when the content last updated. */
   staleSince?: number
   reconnect?: boolean
+  sharesAddresses?: boolean
 }
 
 interface TickOptions { chain?: WidgetChain, at?: number, force?: boolean }
@@ -222,7 +226,24 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     patch(scope, widgetId, w => ({ state, failures: 0, updatedAt: at, refreshDueAt: dueAt(state, w.definition, at) }))
   }
 
-  function add(scope: string, definition: WidgetDefinition): boolean {
+  function grantable(definition: WidgetDefinition, permissions: readonly WidgetPermission[] = []): WidgetPermission[] {
+    return permissions.filter(permission => definition.permissions?.includes(permission))
+  }
+
+  function missingPermissions(scope: string, widgetId: string): WidgetPermission[] {
+    const widget = find(scope, widgetId)
+    return widget ? (widget.definition.permissions ?? []).filter(permission => !widget.grants?.includes(permission)) : []
+  }
+
+  function grantPermissions(scope: string, widgetId: string, permissions: WidgetPermission[]) {
+    patch(scope, widgetId, w => ({ grants: grantable(w.definition, [...new Set([...(w.grants ?? []), ...permissions])]) }))
+  }
+
+  function revokePermissions(scope: string, widgetId: string) {
+    patch(scope, widgetId, () => ({ grants: [] }))
+  }
+
+  function add(scope: string, definition: WidgetDefinition, grants: WidgetPermission[] = []): boolean {
     if (isOnHome(scope, definition.id))
       return true
     if (!canAddTo(scope))
@@ -235,6 +256,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       network,
       size: definition.sizes[0]!,
       definition: approvedDefinition(scope, definition),
+      grants: grantable(definition, grants),
       definitionCheckedAt: at,
       // A resting state with a refresh fetches its first content right away.
       refreshDueAt: definition.refresh ? at : undefined,
@@ -380,6 +402,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       pendingAppName: catalogEntry(widget.scope) ? undefined : widget.pendingAppName,
       staleSince: !widget.halted && widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
       reconnect: widget.halted === 'reconnect',
+      sharesAddresses: !!widget.grants?.includes('addresses'),
     }
   }
 
@@ -396,6 +419,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       url: undefined,
       staleSince: undefined,
       pendingAppName: undefined,
+      sharesAddresses: false,
     }
   }
 
@@ -489,7 +513,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return widget.lastAttemptAt === undefined || withinRefreshBudget(originOf(widget.scope), at) ? refresh : undefined
   }
 
-  async function runRefresh(widget: HomeWidget, refresh: WidgetRefresh, at: number) {
+  async function runRefresh(widget: HomeWidget, refresh: WidgetRefresh, at: number, chain: WidgetChain) {
     const key = widgetKey(widget.scope, widget.widgetId)
     if (inFlight.has(key))
       return
@@ -497,10 +521,11 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     noteRefresh(originOf(widget.scope), at)
     const from = widget.state
     try {
-      const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at, widget.token)
+      const accounts = widget.grants?.includes('addresses') ? chain.accounts() : []
+      const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at, { token: widget.token, accounts })
       // A Mini App may have pushed a newer state or token while the request ran.
-      const now = find(widget.scope, widget.widgetId)
-      if (now?.state !== from || now?.revision !== widget.revision) {
+      const latest = find(widget.scope, widget.widgetId)
+      if (latest?.state !== from || latest?.revision !== widget.revision) {
         // Still an attempt, so a forced tick right after does not ask the Mini App again.
         patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at }))
         return
@@ -573,7 +598,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       remove(widget.scope, widget.widgetId)
       return
     }
-    patch(widget.scope, widget.widgetId, w => ({ definition: { ...definition, appName: w.definition.appName }, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
+    patch(widget.scope, widget.widgetId, w => ({ definition: { ...definition, appName: w.definition.appName }, grants: grantable(definition, w.grants), definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
     offerName(widget.scope, definition.appName)
   }
 
@@ -629,7 +654,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     await Promise.all(byLongestWaiting(running.value).map(async (widget) => {
       const refresh = dueRefresh(widget, at, force)
       if (refresh)
-        await runRefresh(widget, refresh, at)
+        await runRefresh(widget, refresh, at, chain)
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
@@ -684,6 +709,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     canAddTo,
     isBlocked,
     setToken,
+    missingPermissions,
+    grantPermissions,
+    revokePermissions,
     identityOnAdd,
     pendingName,
     approveName,

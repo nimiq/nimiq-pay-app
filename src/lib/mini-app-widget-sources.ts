@@ -31,6 +31,13 @@ function retryAfterMs(value: string | null, now: number): number | undefined {
   return ms > 0 ? ms : undefined
 }
 
+function identityHeaders({ token, accounts }: { token?: string, accounts?: string[] }): Record<string, string> {
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(accounts?.length ? { 'Nimiq-Pay-Accounts': accounts.join(', ') } : {}),
+  }
+}
+
 function isAllowedProtocol(url: URL): boolean {
   return url.protocol === 'https:' || (isDev && url.protocol === 'http:')
 }
@@ -179,7 +186,7 @@ export async function fetchWidgetRefresh(
   params: { lang: string, network: NetworkMode },
   scope: string,
   now = Date.now(),
-  token?: string,
+  identity: { token?: string, accounts?: string[] } = {},
 ): Promise<FetchOutcome<WidgetState | null>> {
   let origin: string
   let target: URL
@@ -206,7 +213,7 @@ export async function fetchWidgetRefresh(
     // Refreshes skip the native client because it sends and stores the site's cookies.
     let response: Response
     try {
-      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: controller.signal })
+      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', headers: identityHeaders(identity), signal: controller.signal })
     }
     catch {
       return transientError(`could not reach ${href}`)

@@ -91,6 +91,22 @@ describe('parseWidgetFile', () => {
   })
 })
 
+describe('a widget\'s permissions', () => {
+  it('reads the ones Nimiq Pay knows, once each, and drops the rest', () => {
+    const result = parseWidgetFile(file({ permissions: ['addresses', 'microphone', 'addresses'] }), ctx)
+    expect(result.ok && result.value.widgets[0]!.permissions).toEqual(['addresses'])
+  })
+
+  it('has none by default', () => {
+    const result = parseWidgetFile(file(), ctx)
+    expect(result.ok && result.value.widgets[0]!.permissions).toBeUndefined()
+  })
+
+  it('refuses a list of anything else', () => {
+    expectError(parseWidgetFile(file({ permissions: 'addresses' }), ctx), 'file.widgets[0].permissions')
+  })
+})
+
 describe('a widget\'s demo', () => {
   const demo = { label: 'Waiting for your deposit', value: { amount: '0.05', currency: 'ETH' }, tone: 'attention', countdown: { label: 'Deposit window', in: 1740 } }
   const parsed = (widget: Record<string, unknown>) => {
