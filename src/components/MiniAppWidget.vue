@@ -71,8 +71,7 @@ const timeLeft = computed(() => {
   return new Intl.NumberFormat(app.language, { style: 'unit', unit, unitDisplay: 'short' }).format(amount)
 })
 
-const chartShape = computed(() => {
-  const chart = view.chart
+function shapeOf(chart: WidgetView['chart']) {
   if (!chart || chart.points.length < 2)
     return undefined
   const min = chart.kind === 'bars' ? Math.min(0, ...chart.points) : Math.min(...chart.points)
@@ -82,7 +81,10 @@ const chartShape = computed(() => {
     return { kind: 'line' as const, points: chart.points.map((p, i) => `${(i / (chart.points.length - 1)) * 100},${y(p)}`).join(' ') }
   const width = 100 / chart.points.length
   return { kind: 'bars' as const, bars: chart.points.map((p, i) => ({ x: i * width + width * 0.15, width: width * 0.7, y: y(p), height: 32 - y(p) })) }
-})
+}
+
+const chartShape = computed(() => shapeOf(view.chart))
+const backgroundShape = computed(() => view.background?.kind === 'chart' ? shapeOf(view.background.chart) : undefined)
 
 const staleTime = computed(() => {
   if (view.staleSince === undefined)
@@ -115,13 +117,27 @@ function onClickCapture(event: MouseEvent) {
   <div
     ref="card"
     class="relative text-space"
-    :class="[SPAN[view.size], isCard ? 'flex flex-col gap-1 overflow-hidden rounded-md bg-white px-4 pt-3 pb-4 shadow-card' : 'flex flex-col items-center justify-center gap-1.5 px-1', { 'justify-between': isSmall }]"
+    :class="[SPAN[view.size], isCard ? 'isolate flex flex-col gap-1 overflow-hidden rounded-md bg-white px-4 pt-3 pb-4 shadow-card' : 'flex flex-col items-center justify-center gap-1.5 px-1', { 'justify-between': isSmall }]"
     :data-testid="`mini-app-widget-${view.size}`"
     :role="view.url ? undefined : 'group'"
     :aria-label="view.url ? undefined : ariaLabel"
     @click.capture="onClickCapture"
     @contextmenu.prevent="!preview && emit('menu')"
   >
+    <div v-if="isCard && view.background" data-testid="widget-background" aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+      <template v-if="view.background.kind === 'image'">
+        <img :src="view.background.src" alt="" class="size-full object-cover">
+        <div data-testid="widget-background-scrim" class="absolute inset-0 bg-white/70" />
+        <div class="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/90 to-transparent" />
+      </template>
+      <svg v-else-if="backgroundShape" viewBox="0 0 100 32" preserveAspectRatio="none" class="size-full text-space/10">
+        <polygon v-if="backgroundShape.kind === 'line'" :points="`${backgroundShape.points} 100,32 0,32`" fill="currentColor" />
+        <template v-else>
+          <rect v-for="(bar, i) in backgroundShape.bars" :key="i" :x="bar.x" :y="bar.y" :width="bar.width" :height="bar.height" fill="currentColor" />
+        </template>
+      </svg>
+    </div>
+
     <!-- The button is the whole card's tap target; everything painted above it is pointer-events-none except row links and a card's menu. -->
     <button
       v-if="view.url"

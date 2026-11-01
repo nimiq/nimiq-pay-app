@@ -1,9 +1,10 @@
 import type { HttpResponse } from '@capacitor/core'
-import type { WidgetFile, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
+import type { WidgetFile, WidgetImage, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
 import { CapacitorCookies, CapacitorHttp } from '@capacitor/core'
 import { isDev } from '@/lib'
 import { isMiniAppActive } from '@/lib/mini-app-active'
+import { readWidgetImage } from '@/lib/mini-app-widget-images'
 import { isAllowedWidgetOrigin, parseWidgetFile, parseWidgetState, WIDGET_FILE_NAME, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { headerValue } from '@/lib/site-metadata'
 
@@ -59,8 +60,10 @@ function queryKey(part: string): string {
   }
 }
 
+interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', parse: (response: HttpResponse, url: string) => FetchOutcome<T> }
+
 /** Native client, so discovery needs no CORS; redirects by hand, so none leaves the origin. */
-async function getJson(url: string, origin: string, maxBytes: number): Promise<FetchOutcome<unknown>> {
+async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): Promise<FetchOutcome<T>> {
   let timer: ReturnType<typeof setTimeout> | undefined
   const state = { timedOut: false }
   const deadline = new Promise<FetchOutcome<never>>((resolve) => {
@@ -70,14 +73,14 @@ async function getJson(url: string, origin: string, maxBytes: number): Promise<F
     }, DEADLINE_MS)
   })
   try {
-    return await Promise.race([getJsonHops(url, origin, maxBytes, state), deadline])
+    return await Promise.race([nativeGetHops(url, origin, read, state), deadline])
   }
   finally {
     clearTimeout(timer)
   }
 }
 
-async function getJsonHops(url: string, origin: string, maxBytes: number, state: { timedOut: boolean }): Promise<FetchOutcome<unknown>> {
+async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>, state: { timedOut: boolean }): Promise<FetchOutcome<T>> {
   let current = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (state.timedOut)
@@ -86,8 +89,8 @@ async function getJsonHops(url: string, origin: string, maxBytes: number, state:
     try {
       response = await CapacitorHttp.get({
         url: current,
-        headers: { Accept: 'application/json' },
-        responseType: 'text',
+        headers: { Accept: read.accept },
+        responseType: read.responseType,
         disableRedirects: true,
         webFetchExtra: { credentials: 'omit' },
         connectTimeout: 5_000,
@@ -111,19 +114,29 @@ async function getJsonHops(url: string, origin: string, maxBytes: number, state:
     }
     if (response.status !== 200)
       return statusError(current, response.status)
-    const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
-    if (new TextEncoder().encode(body).length > maxBytes)
-      return definiteError(`${current} is larger than ${maxBytes} bytes`)
-    if (typeof response.data !== 'string')
-      return { ok: true, value: response.data }
-    try {
-      return { ok: true, value: JSON.parse(body) }
-    }
-    catch {
-      return definiteError(`${current} is not JSON`)
-    }
+    return read.parse(response, current)
   }
   return definiteError(`too many redirects from ${url}`)
+}
+
+function jsonRead(maxBytes: number): NativeRead<unknown> {
+  return {
+    accept: 'application/json',
+    responseType: 'text',
+    parse(response, url) {
+      const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
+      if (new TextEncoder().encode(body).length > maxBytes)
+        return definiteError(`${url} is larger than ${maxBytes} bytes`)
+      if (typeof response.data !== 'string')
+        return { ok: true, value: response.data }
+      try {
+        return { ok: true, value: JSON.parse(body) }
+      }
+      catch {
+        return definiteError(`${url} is not JSON`)
+      }
+    },
+  }
 }
 
 async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<WidgetFile>> {
@@ -136,7 +149,7 @@ async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<
   }
   if (!isAllowedWidgetOrigin(origin, isDev))
     return definiteError(`${origin} cannot serve widgets`)
-  const response = await getJson(widgetFileUrl(scope), origin, WIDGET_LIMITS.fileBytes)
+  const response = await nativeGet(widgetFileUrl(scope), origin, jsonRead(WIDGET_LIMITS.fileBytes))
   if (!response.ok)
     return response
   const parsed = parseWidgetFile(response.value, { origin, base: scope, now, allowInsecure: isDev })
@@ -148,6 +161,34 @@ export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<
   await clearCookies()
   try {
     return await readWidgetFile(scope, now)
+  }
+  finally {
+    await clearCookies()
+  }
+}
+
+export async function fetchWidgetImage(image: WidgetImage, scope: string): Promise<FetchOutcome<string>> {
+  let origin: string
+  let target: URL
+  try {
+    origin = new URL(scope).origin
+    target = new URL(image.url)
+  }
+  catch {
+    return definiteError(`${image.url} is not a URL`)
+  }
+  if (target.origin !== origin || !isAllowedProtocol(target) || !isAllowedWidgetOrigin(origin, isDev))
+    return definiteError(`${image.url} cannot serve this widget's images`)
+  await clearCookies()
+  try {
+    return await nativeGet(image.url, origin, {
+      accept: 'image/png, image/jpeg, image/webp',
+      responseType: 'arraybuffer',
+      parse(response, url) {
+        const read = readWidgetImage(String(response.data), image.sha256)
+        return read.ok ? read : definiteError(`${url}: ${read.error}`)
+      },
+    })
   }
   finally {
     await clearCookies()

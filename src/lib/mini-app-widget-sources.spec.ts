@@ -7,7 +7,7 @@ vi.mock('@/lib', () => ({ isDev: false }))
 const fetchMock = vi.fn()
 vi.stubGlobal('fetch', fetchMock)
 
-const { fetchWidgetFile, fetchWidgetRefresh, findWidgetFile } = await import('./mini-app-widget-sources')
+const { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } = await import('./mini-app-widget-sources')
 const { isMiniAppActive } = await import('./mini-app-active')
 
 const NOW = Date.UTC(2026, 9, 19, 12)
@@ -219,6 +219,37 @@ describe('fetchWidgetFile', () => {
   it('never requests an origin that cannot serve widgets', async () => {
     expect(await fetchWidgetFile('http://swap.example/', NOW)).toMatchObject({ ok: false, transient: false })
     expect(get).not.toHaveBeenCalled()
+  })
+})
+
+describe('fetchWidgetImage', () => {
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAUCAYAAAAAAAA='
+  const IMAGE = { url: 'https://swap.example/hero.png', sha256: 'a'.repeat(64) }
+
+  it('reads it with the native client, around cleared cookies, and checks it', async () => {
+    get.mockResolvedValue(respond(200, PNG))
+    const result = await fetchWidgetImage(IMAGE, SCOPE)
+    expect(get).toHaveBeenCalledWith(expect.objectContaining({ url: IMAGE.url, responseType: 'arraybuffer', disableRedirects: true }))
+    expect(clearAllCookies).toHaveBeenCalledTimes(2)
+    // The hash in IMAGE is made up, so this reached the check.
+    expect(result).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('hash') })
+  })
+
+  it('refuses an image on another site without contacting it', async () => {
+    const result = await fetchWidgetImage({ ...IMAGE, url: 'https://cdn.example/hero.png' }, SCOPE)
+    expect(result.ok).toBe(false)
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('refuses a redirect to another site', async () => {
+    get.mockResolvedValue(respond(302, '', { location: 'https://cdn.example/hero.png' }))
+    expect((await fetchWidgetImage(IMAGE, SCOPE)).ok).toBe(false)
+    expect(get).toHaveBeenCalledTimes(1)
+  })
+
+  it('says when trying again later might help', async () => {
+    get.mockResolvedValue(respond(503, ''))
+    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: true })
   })
 })
 

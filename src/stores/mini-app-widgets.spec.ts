@@ -10,18 +10,19 @@ const flags = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
   return reactive({ blockedWidgetOrigins: [] as string[], refreshBlockedWidgetOrigins: () => {} })
 })
-const { app, fetchWidgetFile, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork, storedRead } = vi.hoisted(() => ({
+const { app, fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork, storedRead } = vi.hoisted(() => ({
   storedRead: { fetches: Promise.resolve() as Promise<unknown> },
   app: { language: 'en', selectedFiat: 'EUR' },
   fetchWidgetFile: vi.fn(),
   fetchWidgetRefresh: vi.fn(),
+  fetchWidgetImage: vi.fn(),
   findWidgetFile: vi.fn(),
   memory: new Map<string, string>(),
   nimiqNetwork: { height: 1000 },
 }))
 
 vi.mock('@/lib', () => ({ isTestnet: false, isDev: false }))
-vi.mock('@/lib/mini-app-widget-sources', () => ({ fetchWidgetFile, fetchWidgetRefresh, findWidgetFile }))
+vi.mock('@/lib/mini-app-widget-sources', () => ({ fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile }))
 vi.mock('@/stores/app', () => ({
   kv: () => ({
     getItem: async (key: string) => {
@@ -904,6 +905,187 @@ describe('permissions', () => {
     store.add(SCOPE, sharing, ['addresses'])
     flags.blockedWidgetOrigins = ['https://swap.example']
     expect(store.views[0]!.sharesAddresses).toBe(false)
+  })
+})
+
+describe('images', () => {
+  const OLD = 'a'.repeat(64)
+  const NEW = 'b'.repeat(64)
+  const url = (name: string) => `${SCOPE}${name}.png`
+  const pictured = (images: Record<string, { url: string, sha256: string }>) => definition({ images, content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { image: 'hero' } } })
+  const old = pictured({ hero: { url: url('old'), sha256: OLD } })
+  const next = pictured({ hero: { url: url('new'), sha256: NEW } })
+  const IMAGE_KEY = (hash: string) => `miniAppWidgetImage:${hash}`
+
+  beforeEach(() => {
+    fetchWidgetImage.mockReset()
+    fetchWidgetImage.mockImplementation(async (image: { sha256: string }) => ({ ok: true, value: `data:image/png;base64,${image.sha256}` }))
+    memory.clear()
+  })
+
+  const recheck = async (store: Awaited<ReturnType<typeof setup>>, file: WidgetDefinition) => {
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [file] } })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
+    await flushPromises()
+  }
+
+  it('downloads a widget\'s images when added, stores them, and draws the one its state picks', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledWith({ url: url('old'), sha256: OLD }, SCOPE)
+    expect(memory.get(IMAGE_KEY(OLD))).toBe(`data:image/png;base64,${OLD}`)
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  it('keeps the card plain for a key it did not declare or an image that failed', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockResolvedValue({ ok: false, error: 'hash', transient: false })
+    store.add(SCOPE, old)
+    await flushPromises()
+    expect(store.views[0]!.background).toBeUndefined()
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
+    store.update(SCOPE, 'swap', { content: { value: { text: 'y' }, tone: 'neutral', rows: [], background: { image: 'other' } } } as never)
+    expect(store.views[0]!.background).toBeUndefined()
+  })
+
+  it('reads stored images on the next start, without contacting the site', async () => {
+    const first = await setup()
+    first.add(SCOPE, old)
+    await flushPromises()
+    await flushPromises()
+    fetchWidgetImage.mockClear()
+    const second = await setup()
+    await flushPromises()
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+    expect(second.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  it('tries a failed image again at the next re-check', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockResolvedValueOnce({ ok: false, error: 'down', transient: true })
+    store.add(SCOPE, old)
+    await flushPromises()
+    await recheck(store, old)
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  it('keeps drawing the approved image when the file changes it, and downloads nothing until approved', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    fetchWidgetImage.mockClear()
+    await recheck(store, next)
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+    expect(store.views[0]!.pendingImages).toBe(true)
+    expect(store.hasPendingImages(SCOPE, 'swap')).toBe(true)
+  })
+
+  it('swaps to the new image once approved, and frees the old one', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    await recheck(store, next)
+    store.approveImages(SCOPE, 'swap')
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledWith({ url: url('new'), sha256: NEW }, SCOPE)
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${NEW}` })
+    expect(store.views[0]!.pendingImages).toBe(false)
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
+    expect(memory.has(IMAGE_KEY(NEW))).toBe(true)
+  })
+
+  it('needs no approval when the file only drops an image', async () => {
+    const store = await setup()
+    const two = pictured({ hero: { url: url('old'), sha256: OLD }, side: { url: url('new'), sha256: NEW } })
+    store.add(SCOPE, two)
+    await flushPromises()
+    await recheck(store, old)
+    expect(store.views[0]!.pendingImages).toBe(false)
+    expect(store.widgets[0]!.definition.images).toEqual(old.images)
+    expect(memory.has(IMAGE_KEY(NEW))).toBe(false)
+  })
+
+  it('withdraws a pending change when the file goes back', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    await recheck(store, next)
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
+    await store.tick({ chain: fakeChain(), at: NOW + 50 * 3600_000 })
+    expect(store.views[0]!.pendingImages).toBe(false)
+  })
+
+  it('frees an image with the last widget using it', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    store.add(SCOPE, { ...old, id: 'other' })
+    await flushPromises()
+    await flushPromises()
+    store.remove(SCOPE, 'swap')
+    await flushPromises()
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(true)
+    store.remove(SCOPE, 'other')
+    await flushPromises()
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
+  })
+
+  it('contacts no blocked site, and a blocked card draws no image', async () => {
+    const store = await setup()
+    store.add(SCOPE, old)
+    await flushPromises()
+    fetchWidgetImage.mockClear()
+    flags.blockedWidgetOrigins = ['https://swap.example']
+    expect(store.views[0]!.background).toBeUndefined()
+    store.add(SCOPE, { ...next, id: 'other' })
+    await flushPromises()
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+  })
+
+  it('shows a gallery preview without storing it', async () => {
+    const store = await setup()
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
+    await store.loadGallery([SCOPE])
+    await flushPromises()
+    expect(store.previewView(SCOPE, old).background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
+    fetchWidgetImage.mockClear()
+    store.add(SCOPE, old)
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(true)
+  })
+
+  it('downloads for a preview only the image it shows', async () => {
+    const store = await setup()
+    const two = pictured({ hero: { url: url('old'), sha256: OLD }, side: { url: url('new'), sha256: NEW } })
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [two] } })
+    await store.loadGallery([SCOPE])
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('looks up the price history of a chart background on a small card, not on an icon', async () => {
+    const price = vi.fn(async () => 0.0004)
+    const store = await setup()
+    store.add(SCOPE, definition({ sizes: ['icon', 'small'], content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { chart: { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } } } } }))
+    await store.tick({ chain: fakeChain({ price }), at: NOW })
+    expect(price).not.toHaveBeenCalled()
+    store.setSize(SCOPE, 'swap', 'small')
+    await store.tick({ chain: fakeChain({ price }), at: NOW + 30_000 })
+    const background = store.views[0]!.background
+    expect(background?.kind === 'chart' && background.chart.points).toHaveLength(25)
+  })
+
+  it('draws a chart background, with no download', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { chart: { kind: 'bars', points: [1, 2] } } } }))
+    await flushPromises()
+    expect(store.views[0]!.background).toEqual({ kind: 'chart', chart: { kind: 'bars', points: [1, 2] } })
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
   })
 })
 

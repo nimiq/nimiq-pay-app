@@ -389,6 +389,21 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return result.confirmed
     }
 
+    case 'widgetImages': {
+      const result = await ExtendedDialog.sheet({
+        title: `Let ${request.widgetName} show new images?`,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: `• Downloaded once from ${new URL(request.url).hostname}` },
+          { title: '• Until then it keeps the images you have' },
+        ],
+        confirmButtonTitle: 'Show them',
+        cancelButtonTitle: 'Not now',
+      })
+      return result.confirmed
+    }
+
     case 'widgetName': {
       const result = await ExtendedDialog.sheet({
         title: `Show ${request.address} as ${request.to}?`,

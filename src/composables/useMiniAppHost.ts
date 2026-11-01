@@ -210,6 +210,12 @@ export type UserConfirmationRequest
       permissions?: WidgetPermission[]
     }
     | {
+      type: 'widgetImages'
+      url: string
+      /** From the Mini App's widget file: untrusted text. */
+      widgetName: string
+    }
+    | {
       type: 'widgetPermissions'
       url: string
       /** From the Mini App's widget file: untrusted text. */
@@ -297,6 +303,7 @@ export class MiniAppHost {
   private readonly declinedWidgets = new Set<string>()
   private declinedWidgetName = false
   private readonly declinedWidgetPermissions = new Set<string>()
+  private readonly declinedWidgetImages = new Set<string>()
   /** One sheet at a time, however many widgets a Mini App calls `add` for at once. */
   private widgetSheets: Promise<void> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
@@ -1560,6 +1567,7 @@ export class MiniAppHost {
     if (widgets.isOnHome(scope, id)) {
       await this.offerWidgetName(scope)
       await this.offerWidgetPermissions(scope, file, id)
+      await this.offerWidgetImages(scope, file, id)
       return true
     }
     if (this.declinedWidgets.has(id))
@@ -1611,14 +1619,31 @@ export class MiniAppHost {
     const confirm = this.config.requestUserConfirmation
     if (!permissions.length || this.declinedWidgetPermissions.has(id) || !confirm || !this.mayAskAboutWidgets())
       return
-    const definition = file.widgets.find(d => d.id === id)
-    const widgetName = definition ? localizeDefinition(definition, useApp().language).name : id
-    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetPermissions', widgetName, permissions })
+    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetPermissions', widgetName: this.widgetName(file, id), permissions })
     trackWeb3Request({ requestType: 'widget_permissions', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed)
       this.declinedWidgetPermissions.add(id)
     else if (this.mayAskAboutWidgets())
       widgets.grantPermissions(scope, id, permissions)
+  }
+
+  /** Changed images are not shown until approved. This is where a Mini App can ask for that. */
+  private async offerWidgetImages(scope: string, file: WidgetFile, id: string) {
+    const widgets = useMiniAppWidgets()
+    const confirm = this.config.requestUserConfirmation
+    if (!widgets.hasPendingImages(scope, id) || this.declinedWidgetImages.has(id) || !confirm || !this.mayAskAboutWidgets())
+      return
+    const confirmed = await confirm({ url: this.sessionUrl, type: 'widgetImages', widgetName: this.widgetName(file, id) })
+    trackWeb3Request({ requestType: 'widget_images', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    if (!confirmed)
+      this.declinedWidgetImages.add(id)
+    else if (this.mayAskAboutWidgets())
+      widgets.approveImages(scope, id)
+  }
+
+  private widgetName(file: WidgetFile, id: string): string {
+    const definition = file.widgets.find(d => d.id === id)
+    return definition ? localizeDefinition(definition, useApp().language).name : id
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {

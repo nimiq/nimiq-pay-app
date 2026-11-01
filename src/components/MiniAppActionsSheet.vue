@@ -27,6 +27,7 @@ const emit = defineEmits<{
   (e: 'removeWidget'): void
   (e: 'useNewName'): void
   (e: 'stopSharing'): void
+  (e: 'useNewImages'): void
 }>()
 
 const widgetSizes = computed(() => WIDGET_SIZES.filter(size => props.context?.widget?.sizes.includes(size)))
@@ -70,6 +71,11 @@ function onUseNewName() {
   close()
 }
 
+function onUseNewImages() {
+  emit('useNewImages')
+  close()
+}
+
 function onStopSharing() {
   emit('stopSharing')
   close()
@@ -94,6 +100,9 @@ const actions = computed(() => {
       : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
+      : []),
+    ...(context.newImages
+      ? [{ testid: 'mini-app-new-images-action', label: i18n.t('Show its new images'), icon: PenIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUseNewImages }]
       : []),
     ...(context.sharesAddresses
       ? [{ testid: 'mini-app-stop-sharing-action', label: i18n.t('Stop sharing your addresses'), icon: RemoveIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onStopSharing }]

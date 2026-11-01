@@ -145,6 +145,12 @@ describe('miniAppActionsSheet', () => {
     expect(wrapper!.emitted('stopSharing')).toHaveLength(1)
   })
 
+  it('offers new images when the widget has some waiting, and emits when chosen', async () => {
+    await mountSheet({ app, removable: false, newImages: true, widget: { size: 'small', sizes: ['small'] } })
+    action('mini-app-new-images-action')!.click()
+    expect(wrapper!.emitted('useNewImages')).toHaveLength(1)
+  })
+
   it('shows no Size row for a single-size widget, but still offers Remove', async () => {
     await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
     expect(document.body.querySelector('[data-testid="mini-app-widget-size"]')).toBeNull()

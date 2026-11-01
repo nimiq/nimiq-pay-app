@@ -267,6 +267,7 @@ export type Web3RequestType
     | 'widget_add'
     | 'widget_name'
     | 'widget_permissions'
+    | 'widget_images'
 
 export function trackDAppOpened(url: string, name: string, source: DAppOpenSource): void {
   capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })

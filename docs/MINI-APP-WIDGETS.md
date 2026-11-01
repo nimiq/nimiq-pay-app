@@ -33,6 +33,7 @@ Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 wi
 | `widgets[].sizes` | Non-empty subset of `icon`, `small`, `medium`, `large`. The first is the default. |
 | `widgets[].content` | The widget's *resting state*: what it shows when nothing else was sent, and its preview in the gallery (section 3). |
 | `widgets[].demo` | Optional. What the gallery shows instead of the resting state, so people see the widget at its best before adding it. Never shown on Home. See below. |
+| `widgets[].images` | Optional images a background can use (see below). |
 | `widgets[].permissions` | Optional list of what the widget asks to send with its refreshes. Today only `"addresses"`; others are dropped. See below. |
 | `widgets[].refresh` | Optional `{ "url", "every" }` so the resting state updates from your server (section 5). |
 | `widgets[].translations` | Optional, keyed by two-letter language (`"es"`). Each entry may repeat `name`, `description`, `content` and `demo`. Nimiq Pay picks the user's language and falls back to the top-level fields. |
@@ -51,6 +52,14 @@ Live states you send are not translated by this field: send them in your current
   "countdown": { "label": "Deposit window", "in": 1740 }
 }
 ```
+
+**Backgrounds.** `content.background`, also in states and demos, is `{ "image": "<key>" }` or `{ "chart": … }` (a chart as in `content.chart`). Icon-sized cards draw none. Screen readers skip it, so it must not carry anything the text doesn't say. Images sit under a white scrim of 70%, charts are drawn faintly in the text colour. Declare images in the widget:
+
+```json
+"images": { "hero": { "url": "art/hero.webp", "sha256": "<64 hex characters>" } }
+```
+
+At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB and 1024 × 1024 pixels, on your own origin. Nimiq Pay downloads an image once, checks it against the hash and keeps it in its encrypted database; it never loads one from your site to draw it. A state picks an image by key, so a key the widget doesn't have, or an image that failed the check, shows a plain card. To change an image, change its file and hash: the card keeps the approved image until the user accepts the change from the widget's menu, or when your Mini App calls `add` for that widget. Nothing new is downloaded before that. Dropping an image needs no approval. The gallery downloads what its previews draw, without storing it.
 
 **Permissions.** With `"permissions": ["addresses"]`, the user's addresses (what `listAccounts` and `eth_requestAccounts` would give you, read at each request) go out with each refresh in a `Nimiq-Pay-Accounts` header, comma-separated, once the user has granted it. Nimiq Pay asks when the widget is added, from your Mini App or the gallery; saying no adds nothing. Adding the permission to a file later grants nothing: Nimiq Pay asks when your Mini App calls `add` for that widget, and sends nothing until then. The user can stop sharing from the widget's menu, and removing the widget ends it. Your endpoint must answer the CORS preflight with `Access-Control-Allow-Headers: Nimiq-Pay-Accounts`. Without a grant, the widget works as usual without the header.
 

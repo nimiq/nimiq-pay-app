@@ -45,6 +45,7 @@ export interface MiniAppMenuContext {
   /** A name the widget file now declares, waiting for the user's approval. */
   newName?: string
   sharesAddresses?: boolean
+  newImages?: boolean
 }
 
 interface BaseDApp {

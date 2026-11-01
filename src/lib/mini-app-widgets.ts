@@ -42,6 +42,9 @@ export const WIDGET_LIMITS = {
   refreshMaxS: 24 * 60 * 60,
   refreshJitterS: 30,
   tokenLength: 2048,
+  images: 8,
+  imageBytes: 256 * 1024,
+  imagePixels: 1024,
   refreshBudgets: [
     { windowMs: 60 * 60_000, max: 30 },
     { windowMs: 3 * 60 * 60_000, max: 60 },
@@ -69,7 +72,15 @@ export type WidgetChart
   = | { kind: 'line' | 'bars', points: number[] }
     | { kind: 'line', priceHistory: { asset: WidgetAsset, range: PriceRange } }
 
+export type WidgetBackground = { image: string } | { chart: WidgetChart }
+
 export type WidgetCountdown = { label: string, until: number } | { label: string, untilNimiqHeight: number }
+
+export interface WidgetImage {
+  url: string
+  /** Lower-case hex: the bytes this widget was approved with. */
+  sha256: string
+}
 
 export interface WidgetContent {
   label?: string
@@ -80,6 +91,7 @@ export interface WidgetContent {
   countdown?: WidgetCountdown
   rows: WidgetRow[]
   chart?: WidgetChart
+  background?: WidgetBackground
   /** Absolute URL on the Mini App's origin. */
   path?: string
 }
@@ -124,6 +136,7 @@ export interface WidgetDefinition {
   sizes: WidgetSize[]
   content: WidgetContent
   demo?: WidgetDemo
+  images?: Record<string, WidgetImage>
   /** What the widget asks to send with its refreshes. Only what the user granted goes out. */
   permissions?: WidgetPermission[]
   refresh?: WidgetRefresh
@@ -382,6 +395,31 @@ function chart(raw: unknown, path: string): WidgetChart {
   return { kind, points: points as number[] }
 }
 
+function background(raw: unknown, path: string): WidgetBackground {
+  const r = record(raw, path)
+  atMostOne(r, ['image', 'chart'], path)
+  if (r.chart !== undefined)
+    return { chart: chart(r.chart, `${path}.chart`) }
+  if (typeof r.image !== 'string' || !WIDGET_ID_RE.test(r.image))
+    fail(path, 'expected an image\'s key or a chart')
+  return { image: r.image }
+}
+
+function images(raw: unknown, ctx: ParseContext, path: string): Record<string, WidgetImage> {
+  const entries = Object.entries(record(raw, path))
+  if (entries.length > L.images)
+    fail(path, `expected at most ${L.images} images`)
+  return Object.fromEntries(entries.map(([key, entry]) => {
+    if (!WIDGET_ID_RE.test(key))
+      fail(path, `"${key}" cannot be an image's key`)
+    const image = record(entry, `${path}.${key}`)
+    const url = sameOrigin(image.url, ctx, `${path}.${key}.url`)
+    if (typeof image.sha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(image.sha256))
+      fail(`${path}.${key}.sha256`, 'expected a SHA-256 in hex')
+    return [key, { url, sha256: image.sha256.toLowerCase() }]
+  }))
+}
+
 function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
   const r = record(raw, path)
   const result: WidgetContent = {
@@ -426,6 +464,8 @@ function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
   }
   if (r.chart !== undefined)
     result.chart = chart(r.chart, `${path}.chart`)
+  if (r.background !== undefined)
+    result.background = background(r.background, `${path}.background`)
   const link = r.path !== undefined ? linkOnOrigin(r.path, ctx, `${path}.path`) : undefined
   if (link)
     result.path = link
@@ -565,6 +605,8 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
           definition.description = text(w.description, L.description, `${path}.description`)
         if (appName !== undefined)
           definition.appName = appName
+        if (w.images !== undefined)
+          definition.images = images(w.images, ctx, `${path}.images`)
         if (w.permissions !== undefined)
           definition.permissions = [...new Set(list(w.permissions, `${path}.permissions`))].filter((p): p is WidgetPermission => WIDGET_PERMISSIONS.includes(p as WidgetPermission))
         if (w.demo !== undefined)

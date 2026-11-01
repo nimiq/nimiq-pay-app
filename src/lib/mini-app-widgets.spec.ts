@@ -91,6 +91,42 @@ describe('parseWidgetFile', () => {
   })
 })
 
+describe('a widget\'s images and backgrounds', () => {
+  const HASH = 'A'.repeat(64)
+  const image = { url: 'art/hero.png', sha256: HASH }
+
+  it('reads images on the origin, with their hashes in lower case', () => {
+    const result = parseWidgetFile(file({ images: { hero: image } }), ctx)
+    expect(result.ok && result.value.widgets[0]!.images).toEqual({ hero: { url: 'https://swap.example/art/hero.png', sha256: 'a'.repeat(64) } })
+  })
+
+  it.each([
+    ['another site', { hero: { ...image, url: 'https://cdn.example/hero.png' } }, 'file.widgets[0].images.hero.url'],
+    ['no hash', { hero: { url: 'hero.png' } }, 'file.widgets[0].images.hero.sha256'],
+    ['a short hash', { hero: { ...image, sha256: 'abc' } }, 'file.widgets[0].images.hero.sha256'],
+    ['a bad key', { 'Bad Key': image }, 'file.widgets[0].images'],
+  ])('refuses %s', (_name, images, path) => {
+    expectError(parseWidgetFile(file({ images }), ctx), path)
+  })
+
+  it('refuses more images than a widget may have', () => {
+    const images = Object.fromEntries(Array.from({ length: WIDGET_LIMITS.images + 1 }, (_, i) => [`a${i}`, image]))
+    expectError(parseWidgetFile(file({ images }), ctx), 'file.widgets[0].images')
+  })
+
+  it('reads a background of an image or a chart in content and states', () => {
+    const withImage = parseWidgetState({ content: { value: { text: 'x' }, background: { image: 'hero' } } }, ctx)
+    expect(withImage.ok && withImage.value?.content.background).toEqual({ image: 'hero' })
+    const withChart = parseWidgetFile(file({ content: { value: { text: 'x' }, background: { chart: { kind: 'bars', points: [1, 2] } } } }), ctx)
+    expect(withChart.ok && withChart.value.widgets[0]!.content.background).toEqual({ chart: { kind: 'bars', points: [1, 2] } })
+  })
+
+  it('refuses a background that is both, or neither', () => {
+    expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: { image: 'hero', chart: { kind: 'bars', points: [1, 2] } } } }), ctx), 'file.widgets[0].content.background')
+    expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: {} } }), ctx), 'file.widgets[0].content.background')
+  })
+})
+
 describe('a widget\'s permissions', () => {
   it('reads the ones Nimiq Pay knows, once each, and drops the rest', () => {
     const result = parseWidgetFile(file({ permissions: ['addresses', 'microphone', 'addresses'] }), ctx)

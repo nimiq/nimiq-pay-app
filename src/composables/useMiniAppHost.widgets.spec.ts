@@ -20,6 +20,8 @@ const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted
     canAddTo: vi.fn(() => true),
     setToken: vi.fn(() => true),
     missingPermissions: vi.fn((): string[] => []),
+    hasPendingImages: vi.fn(() => false),
+    approveImages: vi.fn(),
     grantPermissions: vi.fn(),
     identityOnAdd: vi.fn((): { appName: string, appAddress?: string, launchTitle: string } => ({ appName: 'swap.example', launchTitle: 'swap.example' })),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
@@ -94,6 +96,7 @@ beforeEach(() => {
   widgets.canAddTo.mockReturnValue(true)
   widgets.pendingName.mockReturnValue(undefined)
   widgets.missingPermissions.mockReturnValue([])
+  widgets.hasPendingImages.mockReturnValue(false)
   widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } })
   vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
@@ -256,6 +259,22 @@ describe('widgets.add', () => {
     first.answer(true)
     await call.catch(() => {})
     expect(widgets.add).not.toHaveBeenCalled()
+  })
+
+  it('asks about new images when the Mini App calls add, once if declined', async () => {
+    widgets.isOnHome.mockReturnValue(true)
+    widgets.hasPendingImages.mockReturnValue(true)
+    const { confirm, request } = createHost()
+    confirm.mockResolvedValue(false)
+    await request('widgets.add', { id: 'swap' })
+    await request('widgets.add', { id: 'swap' })
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetImages', widgetName: 'Swap status' }))
+    expect(widgets.approveImages).not.toHaveBeenCalled()
+    const again = createHost()
+    again.confirm.mockResolvedValue(true)
+    await again.request('widgets.add', { id: 'swap' })
+    expect(widgets.approveImages).toHaveBeenCalledWith(SCOPE, 'swap')
   })
 
   it('fails when the Mini App has all the widgets it may have on Home', async () => {

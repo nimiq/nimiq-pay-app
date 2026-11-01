@@ -41,6 +41,30 @@ function click(element: Element, detail: number) {
   element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail }))
 }
 
+describe('a card\'s background', () => {
+  it('draws an image under a scrim, hidden from screen readers', () => {
+    const wrapper = render({ view: view({ size: 'medium', background: { kind: 'image', src: 'data:image/png;base64,AAAA' } }) })
+    const background = wrapper.find('[data-testid="widget-background"]')
+    expect(background.attributes('aria-hidden')).toBe('true')
+    expect(background.find('img').attributes('src')).toBe('data:image/png;base64,AAAA')
+    expect(background.find('img').classes()).toContain('object-cover')
+    expect(wrapper.find('[data-testid="widget-background-scrim"]').classes()).toContain('bg-white/70')
+  })
+
+  it('draws a chart faintly, with no scrim', () => {
+    const wrapper = render({ view: view({ size: 'medium', background: { kind: 'chart', chart: { kind: 'line', points: [1, 2, 3] } } }) })
+    const background = wrapper.find('[data-testid="widget-background"]')
+    expect(background.attributes('aria-hidden')).toBe('true')
+    expect(background.find('svg').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="widget-background-scrim"]').exists()).toBe(false)
+  })
+
+  it('draws none on an icon', () => {
+    const wrapper = render({ view: view({ size: 'icon', background: { kind: 'image', src: 'data:image/png;base64,AAAA' } }) })
+    expect(wrapper.find('[data-testid="widget-background"]').exists()).toBe(false)
+  })
+})
+
 describe('miniAppWidget', () => {
   it('shows label, value and info on small, without the medium and large extras', () => {
     const text = render({ view: view() }).text()
