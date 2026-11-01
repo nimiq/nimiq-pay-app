@@ -112,7 +112,7 @@ interface WidgetContent {
 
 type WidgetValue
   = | { text: string } // at most 28 characters
-    | { amount: string, currency: string } // "0.05" + "ETH"; ISO 4217 codes (EUR, USD) format as money
+    | { amount: string, currency: string } // "0.05" + "ETH", shown in the user's language ("0,05 ETH"); ISO 4217 codes (EUR, USD) format as money
     | { live: LiveValue } // filled in by Nimiq Pay
 
 type LiveValue

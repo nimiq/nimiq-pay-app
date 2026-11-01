@@ -41,7 +41,9 @@ function formatValue(value: DisplayValue): string {
     return new Intl.NumberFormat(app.language, { style: 'currency', currency: value.currency, currencyDisplay: 'narrowSymbol', ...digits }).format(amount)
   }
   const maxDecimals = Math.abs(amount) >= 1000 ? 2 : Math.abs(amount) >= 1 ? 4 : amount !== 0 && Math.abs(amount) < 1e-8 ? 18 : 8
-  return `${new FormattableNumber(value.amount).toString({ maxDecimals, useGrouping: true })} ${value.currency}`
+  // FormattableNumber keeps every digit, which Intl may not, but it only writes a dot.
+  const decimal = new Intl.NumberFormat(app.language).formatToParts(0.5).find(part => part.type === 'decimal')?.value ?? '.'
+  return `${new FormattableNumber(value.amount).toString({ maxDecimals, useGrouping: true }).replace('.', decimal)} ${value.currency}`
 }
 
 function isFlat(percent: number): boolean {

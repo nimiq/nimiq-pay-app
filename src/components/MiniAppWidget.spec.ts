@@ -3,7 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import MiniAppWidget from './MiniAppWidget.vue'
 
-vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en' }) }))
+const app = vi.hoisted(() => ({ language: 'en' }))
+vi.mock('@/stores/app', () => ({ useApp: () => app }))
 
 function view(extra: Partial<WidgetView> = {}): WidgetView {
   return {
@@ -128,6 +129,21 @@ describe('miniAppWidget', () => {
     expect(flat.text()).not.toContain('−0.0')
     expect(flat.find('.text-cherry').exists()).toBe(false)
     expect(flat.find('.text-mint').exists()).toBe(false)
+  })
+
+  it('writes a crypto amount\'s decimals the way the user\'s language does, keeping Nimiq Pay\'s grouping and every digit', () => {
+    const text = (amount: string, currency: string) => render({ view: view({ value: { kind: 'amount', amount, currency } }) }).text()
+    app.language = 'de'
+    try {
+      expect(text('0.05', 'ETH')).toContain('0,05 ETH')
+      expect(text('12500.5', 'NIM')).toContain('12\u202F500,5 NIM')
+      expect(text('0.000000001', 'ETH')).toContain('0,000000001 ETH')
+      expect(text('1234.5', 'EUR')).toContain('1.234,50')
+    }
+    finally {
+      app.language = 'en'
+    }
+    expect(text('0.05', 'ETH')).toContain('0.05 ETH')
   })
 
   it('keeps every digit of a tiny crypto amount', () => {
