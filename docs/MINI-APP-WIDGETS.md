@@ -159,7 +159,7 @@ if (window.nimiqPay?.widgets) {
 
 | Call | Does |
 | --- | --- |
-| `add(id)` | Asks the user (a native sheet: "Add Swap status to Home?"). Resolves `true` if the widget is on Home afterwards, `false` if the user said no. Rejects when the file cannot be read or declares no such widget, or when Home already holds 10 widgets. |
+| `add(id)` | Asks the user (a native sheet: "Add Swap status to Home?"). Resolves `true` if the widget is on Home afterwards, `false` if the user said no. Rejects when the file cannot be read or declares no such widget, when your Mini App already has 6 widgets on Home, or when Home already holds 10. |
 | `update(id, state)` | Replaces the widget's state. No prompt, and only for a widget already on Home. Resolves `true` when applied, `false` when it was not (not on Home, the request was refused, or the widget file could not be found). Rejects with `Invalid widget state: <field>: <problem>` when the state is invalid; the widget keeps its last good state. |
 | `update(id, null)` | Back to the resting state from the widget file. |
 | `remove(id)` | Removes the widget from Home. |
@@ -215,7 +215,7 @@ export default {
 }
 ```
 
-A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets right away, but never more than once a minute per widget.
+All widgets of your Mini App share one refresh budget (section 6), so more widgets do not buy more requests. A refresh over budget waits until the budget allows it. Each is due up to 30 seconds after its interval, at random, so that devices do not all ask at once. Your first refresh after an add and pull to refresh do not wait, though they count. A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets right away, but never more than once a minute per widget.
 
 **Rules.**
 
@@ -231,6 +231,7 @@ A failing refresh keeps the last state; the interval doubles per failure up to 3
 | --- | --- |
 | Widgets in one file | 6 |
 | Widgets on Home, all Mini Apps | 10 |
+| Widgets on Home, one Mini App (all its folders) | 6 |
 | Label, value text, info, row label (longer text is cut, not refused) | 24, 28, 40, 20 characters |
 | Countdown label | 24 characters |
 | Widget name, description | 32, 120 characters |
@@ -240,6 +241,8 @@ A failing refresh keeps the last state; the interval doubles per failure up to 3
 | Price history ranges | 24h, 7d, 30d |
 | Triggers per state, depth of `next` | 8, 3 levels |
 | Chain lookups per check, all widgets | 10 |
+| Chain lookups per check, one Mini App | 8 |
+| Refreshes, one Mini App (all its widgets) | 30 per hour, 60 per 3 hours, 180 per 24 hours |
 | Refresh interval | 60 s to 24 h |
 | Times | within 30 days of now |
 | Network timeouts | Widget file: 15 s in all (5 s connect, 10 s read per request). Refresh: 15 s in all |

@@ -16,6 +16,7 @@ const { createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted(() => (
     discover: vi.fn(),
     isOnHome: vi.fn(() => false),
     canAdd: true,
+    canAddTo: vi.fn(() => true),
     add: vi.fn(() => true),
     update: vi.fn(() => true),
     remove: vi.fn(),
@@ -83,6 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   widgets.isOnHome.mockReturnValue(false)
   widgets.canAdd = true
+  widgets.canAddTo.mockReturnValue(true)
   widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } })
   vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
@@ -125,8 +127,15 @@ describe('widgets.add', () => {
     await expect(request('widgets.add', { id: 'nope' })).rejects.toMatchObject({ message: 'https://swap.example/app/nimiq-pay-widgets.json declares no widget "nope"' })
   })
 
+  it('fails when the Mini App has all the widgets it may have on Home', async () => {
+    widgets.canAddTo.mockReturnValue(false)
+    const { request } = createHost()
+    await expect(request('widgets.add', { id: 'swap' })).rejects.toMatchObject({ message: expect.stringContaining('This Mini App already has 6 widgets') })
+  })
+
   it('fails when Home is full', async () => {
     widgets.canAdd = false
+    widgets.canAddTo.mockReturnValue(false)
     const { request } = createHost()
     await expect(request('widgets.add', { id: 'swap' })).rejects.toMatchObject({ message: expect.stringContaining('10 widgets') })
   })

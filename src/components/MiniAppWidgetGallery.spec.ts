@@ -8,6 +8,7 @@ const { recents, setToast, store } = await vi.hoisted(async () => {
     recents: ref<Array<{ url: string, name: string, icon: string }>>([]),
     setToast: vi.fn(),
     store: {
+      canAdd: false,
       galleryFiles: reactive(new Map()),
       galleryScopesFor: vi.fn((origins: string[]) => origins.flatMap(origin => origin === 'https://swap.example' ? [`${origin}/`, `${origin}/app/`] : [`${origin}/`])),
       loadGallery: vi.fn(),
@@ -35,6 +36,7 @@ function render(active = true) {
 }
 
 beforeEach(() => {
+  store.canAdd = false
   vi.clearAllMocks()
   recents.value = [{ url: 'https://swap.example', name: 'Swap', icon: '' }, { url: 'https://none.example', name: 'None', icon: '' }]
   store.galleryFiles.clear()
@@ -163,7 +165,10 @@ describe('miniAppWidgetGallery', () => {
     expect(store.add).toHaveBeenCalledWith('https://swap.example/', DEFINITION)
     store.add.mockReturnValue(false)
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
-    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
+    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('Home holds') }))
+    store.canAdd = true
+    await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
+    expect(setToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('A Mini App can have') }))
   })
 
   it('marks widgets already on Home', async () => {

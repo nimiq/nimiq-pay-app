@@ -20,6 +20,7 @@ export type WidgetTone = (typeof TONES)[number]
 export const WIDGET_LIMITS = {
   widgetsPerFile: 6,
   widgetsOnHome: 10,
+  widgetsPerMiniApp: 6,
   label: 24,
   valueText: 28,
   info: 40,
@@ -32,10 +33,17 @@ export const WIDGET_LIMITS = {
   triggersPerState: 8,
   nextDepth: 3,
   chainLookups: 10,
+  chainLookupsPerMiniApp: 8,
   stateBytes: 8 * 1024,
   fileBytes: 32 * 1024,
   refreshMinS: 60,
   refreshMaxS: 24 * 60 * 60,
+  refreshJitterS: 30,
+  refreshBudgets: [
+    { windowMs: 60 * 60_000, max: 30 },
+    { windowMs: 3 * 60 * 60_000, max: 60 },
+    { windowMs: 24 * 60 * 60_000, max: 180 },
+  ],
   horizonMs: 30 * 24 * 60 * 60 * 1000,
 } as const
 

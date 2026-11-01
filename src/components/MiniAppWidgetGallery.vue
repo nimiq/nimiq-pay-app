@@ -67,8 +67,14 @@ const appSections = computed(() => scopes.value.flatMap((scope) => {
 const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
 
 function add(scope: string, definition: WidgetDefinition) {
-  if (!widgets.add(scope, definition))
-    toast.setToast({ message: i18n.t('Home holds at most {count} widgets', { count: WIDGET_LIMITS.widgetsOnHome }), type: 'error' })
+  if (!widgets.add(scope, definition)) {
+    toast.setToast({
+      message: widgets.canAdd
+        ? i18n.t('A Mini App can have at most {count} widgets on Home', { count: WIDGET_LIMITS.widgetsPerMiniApp })
+        : i18n.t('Home holds at most {count} widgets', { count: WIDGET_LIMITS.widgetsOnHome }),
+      type: 'error',
+    })
+  }
 }
 </script>
 

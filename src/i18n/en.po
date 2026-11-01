@@ -31,6 +31,10 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
+#: src/components/MiniAppWidgetGallery.vue:73
+msgid "A Mini App can have at most {count} widgets on Home"
+msgstr ""
+
 #: src/stores/polygon-usdt.ts:2175
 msgid "A previous transaction was confirmed. No new payment was sent."
 msgstr ""
@@ -731,7 +735,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:71
+#: src/components/MiniAppWidgetGallery.vue:74
 msgid "Home holds at most {count} widgets"
 msgstr ""
 

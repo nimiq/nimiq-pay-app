@@ -124,9 +124,14 @@ function refreshOf(state: WidgetState | undefined, definition: WidgetDefinition)
   return state ? state.refresh : definition.refresh
 }
 
+function byLongestWaiting(list: HomeWidget[]): HomeWidget[] {
+  return [...list].sort((a, b) => (a.refreshDueAt ?? 0) - (b.refreshDueAt ?? 0))
+}
+
 function dueAt(state: WidgetState | undefined, definition: WidgetDefinition, at: number): number | undefined {
   const refresh = refreshOf(state, definition)
-  return refresh ? at + refresh.every * 1000 : undefined
+  // Random, so devices do not all ask a server at the same moment.
+  return refresh ? at + refresh.every * 1000 + Math.random() * WIDGET_LIMITS.refreshJitterS * 1000 : undefined
 }
 
 export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
@@ -137,8 +142,15 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, onReady: () => ready.value = true })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
+  // No refresh before the read: it would go past the budget, and its record would be overwritten by the read.
+  const fetchesRead = ref(false)
+  // Stored, so a restart does not reset a Mini App's refresh budget.
+  const fetches = useStorageAsync<Record<string, number[]>>('miniAppWidgetFetches', {}, kv(), { writeDefaults: false, onReady: () => fetchesRead.value = true })
   const widgets = computed(() => stored.value.filter(w => w.network === network))
   const canAdd = computed(() => widgets.value.length < WIDGET_LIMITS.widgetsOnHome)
+  function canAddTo(scope: string): boolean {
+    return canAdd.value && listForOrigin(originOf(scope)).length < WIDGET_LIMITS.widgetsPerMiniApp
+  }
   const now = ref(Date.now())
   // Block-height countdowns count from the head seen at the last tick, so they do not jump when the head moves between ticks.
   const head = ref({ height: useNimiqNetwork().height, at: now.value })
@@ -188,7 +200,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function add(scope: string, definition: WidgetDefinition): boolean {
     if (isOnHome(scope, definition.id))
       return true
-    if (!canAdd.value)
+    if (!canAddTo(scope))
       return false
     const at = Date.now()
     stored.value = [...stored.value, {
@@ -341,11 +353,15 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   function lookupBudget(enabled: boolean) {
     let left = enabled ? WIDGET_LIMITS.chainLookups : 0
+    const leftPerOrigin = new Map<string, number>()
     return {
-      take(count = 1): boolean {
-        if (count > left)
+      take(count: number, origin?: string): boolean {
+        const leftForOrigin = origin === undefined ? left : leftPerOrigin.get(origin) ?? WIDGET_LIMITS.chainLookupsPerMiniApp
+        if (count > left || count > leftForOrigin)
           return false
         left -= count
+        if (origin !== undefined)
+          leftPerOrigin.set(origin, leftForOrigin - count)
         return true
       },
     }
@@ -363,7 +379,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return
     }
     const lookups = from.next.filter(transition => needsLookup(transition.on)).length
-    if (lookups > 0 && (!checkChain || !budget.take(lookups)))
+    if (lookups > 0 && (!checkChain || !budget.take(lookups, originOf(widget.scope))))
       return
     // An unanswered trigger stops the check, so a later trigger never wins over one that could not be checked.
     for (const transition of from.next) {
@@ -379,16 +395,31 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
   }
 
+  function withinRefreshBudget(origin: string, at: number): boolean {
+    const log = fetches.value[origin] ?? []
+    return WIDGET_LIMITS.refreshBudgets.every(({ windowMs, max }) => log.filter(time => at - time < windowMs).length < max)
+  }
+
+  function noteRefresh(origin: string, at: number) {
+    const recent = Object.entries(fetches.value).map(([key, log]) => [key, log.filter(time => at - time < DAY_MS)] as const)
+    const kept = Object.fromEntries(recent.filter(([, log]) => log.length))
+    fetches.value = { ...kept, [origin]: [...(kept[origin] ?? []), at] }
+  }
+
   function dueRefresh(widget: HomeWidget, at: number, force: boolean): WidgetRefresh | undefined {
     const refresh = refreshOf(shownState(widget, at), widget.definition)
-    if (!refresh)
+    if (!refresh || !fetchesRead.value)
       return undefined
     const countdown = shownContent(widget, at).countdown
     const sinceLastAttempt = at - (widget.lastAttemptAt ?? Number.NEGATIVE_INFINITY)
     // One early refresh when a countdown runs out, still behind the floor so answers whose countdowns end at once are not fetched every tick.
     const countdownEnded = !!countdown && 'until' in countdown && at >= countdown.until && (widget.lastAttemptAt ?? 0) < countdown.until && sinceLastAttempt >= MIN_FORCED_REFRESH_GAP_MS
-    const forced = force && sinceLastAttempt >= MIN_FORCED_REFRESH_GAP_MS
-    return forced || countdownEnded || (widget.refreshDueAt ?? 0) <= at ? refresh : undefined
+    if (force && sinceLastAttempt >= MIN_FORCED_REFRESH_GAP_MS)
+      return refresh
+    if (!countdownEnded && (widget.refreshDueAt ?? 0) > at)
+      return undefined
+    // The first fetch only ever comes once, so it does not wait for the budget.
+    return widget.lastAttemptAt === undefined || withinRefreshBudget(originOf(widget.scope), at) ? refresh : undefined
   }
 
   async function runRefresh(widget: HomeWidget, refresh: WidgetRefresh, at: number) {
@@ -396,6 +427,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     if (inFlight.has(key))
       return
     inFlight.add(key)
+    noteRefresh(originOf(widget.scope), at)
     const from = widget.state
     try {
       const result = await fetchWidgetRefresh(refresh, { lang: useApp().language, network }, widget.scope, at)
@@ -438,25 +470,27 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     patch(widget.scope, widget.widgetId, w => ({ definition, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
   }
 
-  async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize }[], chain: WidgetChain, at: number, budget: Budget) {
+  async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize, origin?: string }[], chain: WidgetChain, at: number, budget: Budget) {
     const seen = new Set<string>()
-    for (const spec of shown.flatMap(item => liveSpecs(item.content, item.size))) {
-      const key = liveKey(spec)
-      if (seen.has(key))
-        continue
-      seen.add(key)
-      const entry = live.get(key)
-      const balance = 'live' in spec && isBalanceLive(spec.live)
-      // A price that has never answered is retried at the chain check pace.
-      if (entry && at - entry.checkedAt < (balance || entry.value === undefined ? CHAIN_CHECK_MS : PRICE_MAX_AGE_MS))
-        continue
-      if (balance && !budget.take())
-        continue
-      const fiat = useApp().selectedFiat
-      const value = await ('priceHistory' in spec
-        ? resolvePriceHistory(spec.priceHistory.asset, spec.priceHistory.range, chain, fiat, at)
-        : resolveLiveValue(spec.live, chain, fiat, at)).catch(() => undefined)
-      live.set(key, { value: value ?? entry?.value, checkedAt: at })
+    for (const { content, size, origin } of shown) {
+      for (const spec of liveSpecs(content, size)) {
+        const key = liveKey(spec)
+        if (seen.has(key))
+          continue
+        seen.add(key)
+        const entry = live.get(key)
+        const balance = 'live' in spec && isBalanceLive(spec.live)
+        // A price that has never answered is retried at the chain check pace.
+        if (entry && at - entry.checkedAt < (balance || entry.value === undefined ? CHAIN_CHECK_MS : PRICE_MAX_AGE_MS))
+          continue
+        if (balance && !budget.take(1, origin))
+          continue
+        const fiat = useApp().selectedFiat
+        const value = await ('priceHistory' in spec
+          ? resolvePriceHistory(spec.priceHistory.asset, spec.priceHistory.range, chain, fiat, at)
+          : resolveLiveValue(spec.live, chain, fiat, at)).catch(() => undefined)
+        live.set(key, { value: value ?? entry?.value, checkedAt: at })
+      }
     }
   }
 
@@ -479,17 +513,18 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         continue
       await applyExpiryAndTriggers(widget, at, chain, checkChain, budget)
       const current = find(widget.scope, widget.widgetId) ?? widget
-      await resolveLive([{ content: shownContent(current, at), size: current.size }], chain, at, budget)
+      await resolveLive([{ content: shownContent(current, at), size: current.size, origin: originOf(current.scope) }], chain, at, budget)
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
-    await Promise.all(widgets.value.map(async (widget) => {
+    // The longest waiting first, so a Mini App's fast widget cannot keep taking the budget from its slow one.
+    await Promise.all(byLongestWaiting(widgets.value).map(async (widget) => {
       const refresh = dueRefresh(widget, at, force)
       if (refresh)
         await runRefresh(widget, refresh, at)
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
-    await resolveLive(widgets.value.map(w => ({ content: shownContent(w, at), size: w.size })), chain, at, budget)
+    await resolveLive(widgets.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
@@ -537,6 +572,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     widgets,
     views,
     canAdd,
+    canAddTo,
     isOnHome,
     listForScope,
     listForOrigin,

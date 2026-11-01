@@ -3,8 +3,10 @@ import type { WidgetDefinition, WidgetState } from '@/lib/mini-app-widgets'
 import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { WIDGET_LIMITS } from '@/lib/mini-app-widgets'
 
-const { app, fetchWidgetFile, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork } = vi.hoisted(() => ({
+const { app, fetchWidgetFile, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork, storedRead } = vi.hoisted(() => ({
+  storedRead: { fetches: Promise.resolve() as Promise<unknown> },
   app: { language: 'en', selectedFiat: 'EUR' },
   fetchWidgetFile: vi.fn(),
   fetchWidgetRefresh: vi.fn(),
@@ -17,7 +19,11 @@ vi.mock('@/lib', () => ({ isTestnet: false, isDev: false }))
 vi.mock('@/lib/mini-app-widget-sources', () => ({ fetchWidgetFile, fetchWidgetRefresh, findWidgetFile }))
 vi.mock('@/stores/app', () => ({
   kv: () => ({
-    getItem: async (key: string) => memory.get(key) ?? null,
+    getItem: async (key: string) => {
+      if (key === 'miniAppWidgetFetches')
+        await storedRead.fetches
+      return memory.get(key) ?? null
+    },
     setItem: async (key: string, value: string) => { memory.set(key, value) },
     removeItem: async (key: string) => { memory.delete(key) },
   }),
@@ -87,6 +93,7 @@ async function setup() {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
+  vi.spyOn(Math, 'random').mockReturnValue(0)
   vi.setSystemTime(NOW)
   memory.clear()
   app.selectedFiat = 'EUR'
@@ -709,6 +716,116 @@ describe('a widget\'s demo', () => {
     const price = vi.fn<WidgetChain['price']>(async () => 0.0004)
     await store.resolvePreviews([definition({ content: { value: { live: { price: 'BTC' } }, tone: 'neutral', rows: [] }, demo: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } })], fakeChain({ price }))
     expect(price.mock.calls.map(([asset]) => asset)).toEqual(['NIM'])
+  })
+})
+
+describe('where widgets are stored', () => {
+  it('keeps states in the database, which logout deletes', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition())
+    store.update(SCOPE, 'swap', live('Invoice 4821'))
+    await flushPromises()
+    expect(memory.get('miniAppWidgets')).toContain('Invoice 4821')
+  })
+})
+
+describe('limits per Mini App', () => {
+  const refreshing = (id: string) => definition({ id, refresh: { url: `${SCOPE}w?id=${id}`, every: 60 } })
+
+  it('lets one Mini App fill only part of Home, across its folders', async () => {
+    const store = await setup()
+    for (let i = 0; i < WIDGET_LIMITS.widgetsPerMiniApp; i++)
+      expect(store.add(i % 2 ? `${SCOPE}a/` : SCOPE, definition({ id: `w${i}` }))).toBe(true)
+    expect(store.canAddTo(SCOPE)).toBe(false)
+    expect(store.add(SCOPE, definition({ id: 'one-more' }))).toBe(false)
+    expect(store.canAdd).toBe(true)
+    expect(store.canAddTo('https://other.example/')).toBe(true)
+    expect(store.add('https://other.example/', definition({ id: 'other' }))).toBe(true)
+  })
+
+  it('keeps some chain lookups for other Mini Apps, while any valid state still fits', async () => {
+    expect(WIDGET_LIMITS.chainLookupsPerMiniApp).toBeGreaterThanOrEqual(WIDGET_LIMITS.triggersPerState)
+    expect(WIDGET_LIMITS.chainLookupsPerMiniApp).toBeLessThan(WIDGET_LIMITS.chainLookups)
+    const store = await setup()
+    const nimiqBalance = vi.fn(async () => 1e5)
+    const rows = Array.from({ length: 10 }, (_, i) => ({ label: `r${i}`, value: { live: { nimiqBalance: `${ADDRESS}${i}` } } }))
+    store.add(SCOPE, definition({ sizes: ['large'], content: { value: { text: 'x' }, tone: 'neutral', rows } }))
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
+    expect(nimiqBalance).toHaveBeenCalledTimes(WIDGET_LIMITS.chainLookupsPerMiniApp)
+  })
+
+  it('holds a Mini App\'s refreshes at its hourly budget, across its widgets, and catches up later', async () => {
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    for (const id of ['a', 'b', 'c'])
+      store.add(SCOPE, refreshing(id))
+    for (let minute = 0; minute < 40; minute++)
+      await store.tick({ chain: fakeChain(), at: NOW + minute * 61_000 })
+    expect(fetchWidgetRefresh).toHaveBeenCalledTimes(WIDGET_LIMITS.refreshBudgets[0]!.max)
+    fetchWidgetRefresh.mockClear()
+    await store.tick({ chain: fakeChain(), at: NOW + 3_700_000 })
+    expect(fetchWidgetRefresh).toHaveBeenCalled()
+  })
+
+  it('does not hold back the first fetch or pull to refresh, though the rest waits', async () => {
+    memory.set('miniAppWidgetFetches', JSON.stringify({ [new URL(SCOPE).origin]: Array.from({ length: 30 }, (_, i) => NOW - i * 1000) }))
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    store.add(SCOPE, refreshing('a'))
+    await store.tick({ chain: fakeChain(), at: NOW + 1000 })
+    expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+    await store.tick({ chain: fakeChain(), at: NOW + 70_000 })
+    expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+    await store.tick({ chain: fakeChain(), at: NOW + 140_000, force: true })
+    expect(fetchWidgetRefresh).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives a freed slot to the widget that has waited longest, not the first listed', async () => {
+    const stored = (id: string, refreshDueAt: number) => ({ ...storedWidget('mainnet', id), definition: refreshing(id), lastAttemptAt: refreshDueAt - 60_000, refreshDueAt })
+    memory.set('miniAppWidgets', JSON.stringify([stored('fast', NOW - 1000), stored('slow', NOW - 3600_000)]))
+    memory.set('miniAppWidgetFetches', JSON.stringify({ [new URL(SCOPE).origin]: Array.from({ length: 29 }, (_, i) => NOW - i * 1000) }))
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+    expect(fetchWidgetRefresh.mock.calls[0]![0].url).toContain('id=slow')
+  })
+
+  it('waits for the stored count before refreshing, so a restart cannot slip past the budget', async () => {
+    let read = () => {}
+    storedRead.fetches = new Promise<void>((resolve) => {
+      read = resolve
+    })
+    memory.set('miniAppWidgets', JSON.stringify([{ ...storedWidget('mainnet', 'a'), definition: refreshing('a'), lastAttemptAt: NOW - 120_000, refreshDueAt: NOW - 60_000 }]))
+    memory.set('miniAppWidgetFetches', JSON.stringify({ [new URL(SCOPE).origin]: Array.from({ length: 30 }, (_, i) => NOW - i * 1000) }))
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    read()
+    storedRead.fetches = Promise.resolve()
+    await flushPromises()
+    await store.tick({ chain: fakeChain(), at: NOW + 60_000 })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    expect(JSON.parse(memory.get('miniAppWidgetFetches')!)[new URL(SCOPE).origin]).toHaveLength(30)
+  })
+
+  it('stores what it counted, so a restart does not reset the budget', async () => {
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    store.add(SCOPE, refreshing('a'))
+    await store.tick({ chain: fakeChain(), at: NOW })
+    await flushPromises()
+    expect(JSON.parse(memory.get('miniAppWidgetFetches')!)[new URL(SCOPE).origin]).toEqual([NOW])
+  })
+
+  it('spreads refreshes with up to 30 s of random delay, so servers are not all hit at once', async () => {
+    const store = await setup()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    vi.mocked(Math.random).mockReturnValue(0.5)
+    store.add(SCOPE, refreshing('a'))
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(store.widgets[0]!.refreshDueAt).toBe(NOW + 60_000 + 15_000)
   })
 })
 
