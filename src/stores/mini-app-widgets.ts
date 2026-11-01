@@ -113,6 +113,7 @@ const PRICE_MAX_AGE_MS = 5 * 60_000
 const DAY_MS = 24 * 60 * 60_000
 const MAX_BACKOFF_MS = 30 * 60_000
 const MIN_FORCED_REFRESH_GAP_MS = 60_000
+const GALLERY_DOWNLOADS = 6
 
 export function widgetKey(scope: string, widgetId: string): string {
   return `${scope}#${widgetId}`
@@ -684,14 +685,21 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return slot.promise
   }
 
+  function catalogScopes(): string[] {
+    return useMiniApps().popularDApps.map(app => `${stripTrailingSlash(app.url)}/`).filter(scope => !isBlocked(scope))
+  }
+
   async function loadGallery(scopes: string[]) {
-    await Promise.all(scopes.filter(scope => !galleryFiles.has(scope)).map(async (scope) => {
-      galleryFiles.set(scope, 'loading')
-      const result = await fetchWidgetFile(scope)
-      if (!result.ok && result.transient)
-        galleryFiles.delete(scope)
-      else
-        galleryFiles.set(scope, result.ok ? result.value : null)
+    const waiting = scopes.filter(scope => !galleryFiles.has(scope))
+    waiting.forEach(scope => galleryFiles.set(scope, 'loading'))
+    await Promise.all(Array.from({ length: GALLERY_DOWNLOADS }, async () => {
+      for (let scope = waiting.shift(); scope; scope = waiting.shift()) {
+        const result = await fetchWidgetFile(scope)
+        if (!result.ok && result.transient)
+          galleryFiles.delete(scope)
+        else
+          galleryFiles.set(scope, result.ok ? result.value : null)
+      }
     }))
   }
 
@@ -708,6 +716,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     canAdd,
     canAddTo,
     isBlocked,
+    catalogScopes,
     setToken,
     missingPermissions,
     grantPermissions,

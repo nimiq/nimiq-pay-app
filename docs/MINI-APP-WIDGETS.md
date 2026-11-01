@@ -62,7 +62,7 @@ Live states you send are not translated by this field: send them in your current
 - A widget is removed from Home only when a valid file no longer declares it. An empty list, `{ "v": 1, "widgets": [] }`, withdraws every widget of that folder; `add` then fails with "declares no widget".
 - A missing or broken file (404, invalid, a network or server error) keeps the widgets on Home as they are.
 - **Do not move the file to another folder** once users have added widgets: those widgets stay tied to the old folder, so your Mini App can no longer update or remove them (the user still can, from the "⋯" menu). Adding the widget again picks up the new folder.
-- A Mini App hosted in a subfolder shows up in the gallery once the user has opened it.
+- The gallery lists the Mini Apps the user has opened. A button there, "Find widgets from more Mini Apps", also asks the Nimiq Pay catalog's sites, a few at a time, so a catalog Mini App's widgets can be added without opening it. For a catalog Mini App, the file must be in the folder of its catalog URL. A Mini App outside the catalog shows up once the user has opened it.
 
 A widget file for a swap Mini App served at the site root:
 

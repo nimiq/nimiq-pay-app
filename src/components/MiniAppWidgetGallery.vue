@@ -3,7 +3,7 @@ import type { WidgetDefinition, WidgetSize } from '@/lib/mini-app-widgets'
 import type { WidgetView } from '@/stores/mini-app-widgets'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { useToast } from '@/composables/useToast'
@@ -25,7 +25,12 @@ const { recentlyViewedDApps } = storeToRefs(useMiniApps())
 const toast = useToast()
 const app = useApp()
 
-const scopes = computed(() => widgets.galleryScopesFor([...new Set(recentlyViewedDApps.value.map(dapp => safeOrigin(dapp.url, '')).filter(Boolean))]))
+// Only on request: listing the catalog by itself would contact all its sites whenever the gallery opens.
+const lookedInCatalog = ref(false)
+const catalog = computed(() => widgets.catalogScopes())
+const recentScopes = computed(() => widgets.galleryScopesFor([...new Set(recentlyViewedDApps.value.map(dapp => safeOrigin(dapp.url, '')).filter(Boolean))]))
+const scopes = computed(() => lookedInCatalog.value ? [...new Set([...recentScopes.value, ...catalog.value])] : recentScopes.value)
+const canLookInCatalog = computed(() => !lookedInCatalog.value && catalog.value.some(scope => !recentScopes.value.includes(scope)))
 
 watch([() => active, scopes], async ([isActive, list]) => {
   if (!isActive)
@@ -148,9 +153,13 @@ async function add(scope: string, definition: WidgetDefinition, view: WidgetView
       <IonSkeletonText :animated="true" class="h-24 w-full rounded-md" />
     </div>
 
-    <p class="text-center text-sm text-space/60">
+    <p v-if="!lookedInCatalog" class="text-center text-sm text-space/60">
       {{ $t('Mini Apps appear here once you\'ve opened them.') }}
     </p>
+
+    <AddWidgetsPill v-if="canLookInCatalog" data-testid="gallery-find-more" @click="lookedInCatalog = true">
+      {{ $t('Find widgets from more Mini Apps') }}
+    </AddWidgetsPill>
 
     <AddWidgetsPill v-if="!isLoading && !appSections.length" data-testid="gallery-browse" @click="emit('browse')">
       {{ $t('Browse Mini Apps') }}

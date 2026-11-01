@@ -31,7 +31,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:82
+#: src/components/MiniAppWidgetGallery.vue:87
 msgid "A Mini App can have at most {count} widgets on Home"
 msgstr ""
 
@@ -224,7 +224,7 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:67
+#: src/components/MiniAppWidgetGallery.vue:71
 msgid "Browse Mini Apps"
 msgstr ""
 
@@ -669,6 +669,10 @@ msgstr ""
 msgid "Filter submissions by category"
 msgstr ""
 
+#: src/components/MiniAppWidgetGallery.vue:67
+msgid "Find widgets from more Mini Apps"
+msgstr ""
+
 #: src/components/TestnetFaucet.vue:18
 msgid "Free NIM is on its way"
 msgstr ""
@@ -735,7 +739,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:83
+#: src/components/MiniAppWidgetGallery.vue:88
 msgid "Home holds at most {count} widgets"
 msgstr ""
 
@@ -752,7 +756,7 @@ msgid "I have turned it off"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:34
-#: src/components/MiniAppWidgetGallery.vue:46
+#: src/components/MiniAppWidgetGallery.vue:51
 msgid "Icon"
 msgstr ""
 
@@ -982,7 +986,7 @@ msgid "Language"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:34
-#: src/components/MiniAppWidgetGallery.vue:46
+#: src/components/MiniAppWidgetGallery.vue:51
 msgid "Large"
 msgstr ""
 
@@ -1043,7 +1047,7 @@ msgid "Matching submissions: {count}"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:34
-#: src/components/MiniAppWidgetGallery.vue:46
+#: src/components/MiniAppWidgetGallery.vue:51
 msgid "Medium"
 msgstr ""
 
@@ -1158,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:427
+#: src/stores/mini-app-widgets.ts:428
 msgid "No longer available"
 msgstr ""
 
@@ -1216,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:411
+#: src/stores/mini-app-widgets.ts:412
 msgid "Not available"
 msgstr ""
 
@@ -1710,7 +1714,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:34
-#: src/components/MiniAppWidgetGallery.vue:46
+#: src/components/MiniAppWidgetGallery.vue:51
 msgid "Small"
 msgstr ""
 

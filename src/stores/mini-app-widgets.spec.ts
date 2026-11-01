@@ -1220,6 +1220,30 @@ describe('limits per Mini App', () => {
   })
 })
 
+describe('catalog Mini Apps in the gallery', () => {
+  it('offers the catalog\'s folders, without the blocked ones', async () => {
+    const store = await setup()
+    expect(store.catalogScopes()).toEqual(['https://swap.example/'])
+    flags.blockedWidgetOrigins = ['https://swap.example']
+    expect(store.catalogScopes()).toEqual([])
+  })
+
+  it('asks a few sites at a time, not the whole catalog at once', async () => {
+    const store = await setup()
+    let running = 0
+    let most = 0
+    fetchWidgetFile.mockImplementation(async () => {
+      most = Math.max(most, ++running)
+      await flushPromises()
+      running--
+      return { ok: false, error: 'none', transient: false }
+    })
+    await store.loadGallery(Array.from({ length: 20 }, (_, i) => `https://site${i}.example/`))
+    expect(fetchWidgetFile).toHaveBeenCalledTimes(20)
+    expect(most).toBeLessThanOrEqual(6)
+  })
+})
+
 describe('discovery and gallery', () => {
   it('discovers a Mini App\'s scope once per session and offers it to the gallery', async () => {
     const store = await setup()

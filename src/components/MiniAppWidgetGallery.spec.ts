@@ -11,6 +11,7 @@ const { confirm, recents, setToast, store } = await vi.hoisted(async () => {
     store: {
       canAdd: false,
       canAddTo: vi.fn(() => true),
+      catalogScopes: vi.fn((): string[] => []),
       galleryFiles: reactive(new Map()),
       galleryScopesFor: vi.fn((origins: string[]) => origins.flatMap(origin => origin === 'https://swap.example' ? [`${origin}/`, `${origin}/app/`] : [`${origin}/`])),
       loadGallery: vi.fn(),
@@ -123,6 +124,27 @@ describe('miniAppWidgetGallery', () => {
     await wrapper.find('[data-testid="gallery-add-swap"]').trigger('click')
     await flushPromises()
     expect(store.add).toHaveBeenCalledWith('https://swap.example/', expect.anything(), ['addresses'])
+  })
+
+  it('asks the catalog\'s sites only when the user taps to look, and then lists what they offer', async () => {
+    store.catalogScopes.mockReturnValue(['https://catalog.example/'])
+    const wrapper = render()
+    await flushPromises()
+    expect(store.loadGallery).not.toHaveBeenCalledWith(expect.arrayContaining(['https://catalog.example/']))
+    await wrapper.find('[data-testid="gallery-find-more"]').trigger('click')
+    await flushPromises()
+    expect(store.loadGallery).toHaveBeenLastCalledWith(expect.arrayContaining(['https://catalog.example/']))
+    expect(wrapper.find('[data-testid="gallery-find-more"]').exists()).toBe(false)
+    store.galleryFiles.set('https://catalog.example/', { widgets: [DEFINITION] })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-app-https://catalog.example/"]').exists()).toBe(true)
+  })
+
+  it('offers no search when the catalog has nothing more', async () => {
+    store.catalogScopes.mockReturnValue([])
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-find-more"]').exists()).toBe(false)
   })
 
   it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {
