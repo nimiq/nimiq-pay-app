@@ -129,3 +129,63 @@ describe('cryptocity points flag', () => {
     expect(flags.isCryptocityPointsEnabled).toBe(false)
   })
 })
+
+describe('blocked widget origins', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    posthog.getFeatureFlag.mockResolvedValue({ value: null })
+    posthog.getFeatureFlagPayload.mockResolvedValue({ value: null })
+    posthog.isFeatureEnabled.mockResolvedValue({ enabled: false })
+  })
+
+  afterEach(() => {
+    useFeatureFlags().$dispose()
+  })
+
+  function payload(value: unknown) {
+    posthog.getFeatureFlagPayload.mockImplementation(async ({ key }: { key: string }) => ({ value: key === 'mini-app-widgets' ? value : null }))
+  }
+
+  it('blocks nothing when the flag is missing', async () => {
+    const flags = useFeatureFlags()
+    await flushPromises()
+    expect(flags.blockedWidgetOrigins).toEqual([])
+  })
+
+  it.each([
+    ['an object', { blockedOrigins: ['https://bad.example'] }],
+    ['a JSON string', '{"blockedOrigins":["https://bad.example"]}'],
+  ])('reads them from %s', async (_name, value) => {
+    payload(value)
+    const flags = useFeatureFlags()
+    await flushPromises()
+    expect(flags.blockedWidgetOrigins).toEqual(['https://bad.example'])
+  })
+
+  it('normalises them, keeping *', async () => {
+    payload({ blockedOrigins: ['https://Bad.Example/app/', '*'] })
+    const flags = useFeatureFlags()
+    await flushPromises()
+    expect(flags.blockedWidgetOrigins).toEqual(['https://bad.example', '*'])
+  })
+
+  it.each([['not JSON'], [42], [{ blockedOrigins: 'https://bad.example' }]])('blocks nothing for the malformed payload %j', async (value) => {
+    payload(value)
+    const flags = useFeatureFlags()
+    await flushPromises()
+    expect(flags.blockedWidgetOrigins).toEqual([])
+  })
+
+  it('keeps what it knows when PostHog cannot answer, and clears it when the block is lifted', async () => {
+    payload({ blockedOrigins: ['https://bad.example'] })
+    const flags = useFeatureFlags()
+    await flushPromises()
+    posthog.getFeatureFlagPayload.mockRejectedValue(new Error('offline'))
+    await flags.refreshBlockedWidgetOrigins()
+    expect(flags.blockedWidgetOrigins).toEqual(['https://bad.example'])
+    payload(null)
+    await flags.refreshBlockedWidgetOrigins()
+    expect(flags.blockedWidgetOrigins).toEqual([])
+  })
+})

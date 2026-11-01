@@ -20,12 +20,16 @@ import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
 import nimiqPayIcon from '@/assets/graphics/nimiq-pay.png'
 import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
+import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { createWidgetChain, evaluateTrigger, isBalanceLive, needsLookup, resolveLiveValue, resolvePriceHistory } from '@/lib/mini-app-widget-chain'
 import { fetchWidgetFile, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
 import { localizeDefinition, WIDGET_LIMITS, widgetScopeCandidates } from '@/lib/mini-app-widgets'
+import { safeOrigin } from '@/lib/url-safety'
 import { kv, useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { stripTrailingSlash, useMiniApps } from '@/stores/mini-apps'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
@@ -148,8 +152,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const fetches = useStorageAsync<Record<string, number[]>>('miniAppWidgetFetches', {}, kv(), { writeDefaults: false, onReady: () => fetchesRead.value = true })
   const widgets = computed(() => stored.value.filter(w => w.network === network))
   const canAdd = computed(() => widgets.value.length < WIDGET_LIMITS.widgetsOnHome)
+  function isBlocked(scope: string): boolean {
+    const blocked = useFeatureFlags().blockedWidgetOrigins
+    return scope !== BUILTIN_WIDGET_SCOPE && (blocked.includes('*') || blocked.includes(safeOrigin(scope)))
+  }
+  const unblocked = computed(() => widgets.value.filter(w => !isBlocked(w.scope)))
+
   function canAddTo(scope: string): boolean {
-    return canAdd.value && listForOrigin(originOf(scope)).length < WIDGET_LIMITS.widgetsPerMiniApp
+    return !isBlocked(scope) && canAdd.value && listForOrigin(originOf(scope)).length < WIDGET_LIMITS.widgetsPerMiniApp
   }
   const now = ref(Date.now())
   // Block-height countdowns count from the head seen at the last tick, so they do not jump when the head moves between ticks.
@@ -239,6 +249,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function discover(url: string): Promise<FetchOutcome<{ scope: string, file: WidgetFile }>> {
+    if (isBlocked(url))
+      return Promise.resolve({ ok: false, error: 'Widgets of this Mini App are not available', transient: false })
     const key = url.split(/[?#]/)[0]!
     const cached = discoveries.get(key)
     if (cached)
@@ -275,7 +287,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return [...new Set(origins.flatMap(origin => [
       ...found.filter(scope => originOf(scope) === origin && scope !== `${origin}/`),
       `${origin}/`,
-    ]))]
+    ]))].filter(scope => !isBlocked(scope))
   }
 
   function liveKey(spec: LiveSpec): string {
@@ -340,7 +352,22 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
   }
 
-  const views = computed(() => widgets.value.map(w => toView(w, now.value)))
+  // Nothing from the site: no declared name, and no icon, whose download would contact it. An icon-sized card only draws its name.
+  function blockedView(widget: HomeWidget, at: number): WidgetView {
+    const notAvailable = i18n.t('Not available')
+    const { appAddress, launchTitle } = identity(widget)
+    const icon = widget.size === 'icon'
+    return {
+      ...toView(widget, at, { value: { text: icon ? launchTitle : notAvailable }, tone: 'neutral', rows: [] }),
+      appName: icon ? notAvailable : launchTitle,
+      appAddress: !icon && appAddress === launchTitle ? undefined : appAddress,
+      appIcon: MINI_APP_FALLBACK_ICON,
+      url: undefined,
+      staleSince: undefined,
+    }
+  }
+
+  const views = computed(() => widgets.value.map(w => isBlocked(w.scope) ? blockedView(w, now.value) : toView(w, now.value)))
 
   function previewContent(definition: WidgetDefinition): WidgetContent | WidgetDemo {
     const { content, demo } = localizeDefinition(definition, useApp().language)
@@ -502,7 +529,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       lastChainCheckAt = at
     const budget = lookupBudget(checkChain)
     // Each chain check starts one widget after the previous one, so no widget always loses the budget.
-    const all = widgets.value
+    if (checkChain)
+      void useFeatureFlags().refreshBlockedWidgetOrigins()
+    const all = unblocked.value
     const start = checkChain && all.length ? chainStart % all.length : 0
     if (checkChain)
       chainStart = start + 1
@@ -517,14 +546,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
     // The longest waiting first, so a Mini App's fast widget cannot keep taking the budget from its slow one.
-    await Promise.all(byLongestWaiting(widgets.value).map(async (widget) => {
+    await Promise.all(byLongestWaiting(unblocked.value).map(async (widget) => {
       const refresh = dueRefresh(widget, at, force)
       if (refresh)
         await runRefresh(widget, refresh, at)
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
-    await resolveLive(widgets.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
+    await resolveLive(unblocked.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
@@ -573,6 +602,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     views,
     canAdd,
     canAddTo,
+    isBlocked,
     isOnHome,
     listForScope,
     listForOrigin,

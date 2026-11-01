@@ -790,7 +790,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2264
+#: src/composables/useMiniAppHost.ts:2260
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1210,6 +1210,10 @@ msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:103
 msgid "Not a pending payment request"
+msgstr ""
+
+#: src/stores/mini-app-widgets.ts:358
+msgid "Not available"
 msgstr ""
 
 #: src/components/MiniAppWidget.vue:87
@@ -1754,7 +1758,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2265
+#: src/composables/useMiniAppHost.ts:2261
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1825,7 +1829,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:506
+#: src/composables/useMiniAppHost.ts:502
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1937,7 +1941,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:480
+#: src/composables/useMiniAppHost.ts:476
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2076,7 +2080,7 @@ msgstr ""
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
-#: src/stores/feature-flags.ts:16
+#: src/stores/feature-flags.ts:31
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 

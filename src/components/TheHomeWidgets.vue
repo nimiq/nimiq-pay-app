@@ -9,7 +9,6 @@ import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { launchMiniApp } from '@/lib/mini-app-launcher'
-import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
 import { WIDGET_GRID_CLASS } from '@/lib/mini-app-widgets'
 import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
@@ -41,7 +40,7 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
   return {
     app: { name: view.appName, url: view.scope, icon: view.appIcon },
     address: view.appAddress,
-    shareable: view.scope !== BUILTIN_WIDGET_SCOPE,
+    shareable: view.url !== undefined,
     reportUrl: useMiniApps().getMiniAppReportUrl(view.scope),
     removable: false,
     widget: { size: view.size, sizes: view.sizes },

@@ -7,8 +7,23 @@ import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { polygonRpcOverride } from '@/lib/polygon/rpc-override'
+import { safeOrigin } from '@/lib/url-safety'
 
 const logger = useLogger('FeatureFlagsStore')
+
+function parseBlockedOrigins(raw: unknown): string[] {
+  let payload = raw
+  try {
+    payload = typeof raw === 'string' ? JSON.parse(raw) : raw
+  }
+  catch {
+    logger.error('The blocked widget origins are not JSON')
+    return []
+  }
+  const origins = (payload as { blockedOrigins?: unknown } | null | undefined)?.blockedOrigins
+  // Normalised, so that "https://Bad.Example/" still blocks the site during an incident.
+  return Array.isArray(origins) ? origins.filter(origin => typeof origin === 'string').map(origin => safeOrigin(origin)) : []
+}
 
 export const useFeatureFlags = defineStore('featureFlags', () => {
   const isUsdtMaintenanceActive = ref(false)
@@ -57,6 +72,19 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   }
   void refreshCryptocityPoints()
 
+  // Fails open: with no answer from PostHog, widgets keep working as last known.
+  const blockedWidgetOrigins = ref<string[]>([])
+  async function refreshBlockedWidgetOrigins() {
+    try {
+      const { value } = await Posthog.getFeatureFlagPayload({ key: 'mini-app-widgets' })
+      blockedWidgetOrigins.value = parseBlockedOrigins(value)
+    }
+    catch (error) {
+      logger.error('Error fetching blocked widget origins:', error)
+    }
+  }
+  void refreshBlockedWidgetOrigins()
+
   const polygonRpcUrl = computedAsync(async () => {
     // Dev override (set via DevModal) wins over everything else.
     if (polygonRpcOverride) {
@@ -90,6 +118,8 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
     refreshUsdtMaintenance,
     isCryptocityPointsEnabled,
     refreshCryptocityPoints,
+    blockedWidgetOrigins,
+    refreshBlockedWidgetOrigins,
     polygonRpcUrl,
   }
 })

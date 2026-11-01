@@ -224,6 +224,7 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 - A passed `expiresAt` returns the widget to its resting state and ends that state's triggers and refreshes.
 - Nimiq Pay checks triggers and refreshes only while Home is on screen and Nimiq Pay is in the foreground; chain lookups at most every 30 seconds, at most 10 per check across all widgets (live balance values count as lookups too). Checks rotate across widgets so each gets a turn, and a state with lookup triggers is checked only when all of its lookups fit in what is left.
 - A lookup that fails never fires a trigger.
+- Nimiq can block a Mini App's widgets remotely, if one misbehaves. They then show only "Not available" under a generic icon, open nothing and make no requests, and SDK calls fail as refused calls do (section 4), until the block is lifted. The user can still remove them.
 
 ## 6. Limits and what is refused
 

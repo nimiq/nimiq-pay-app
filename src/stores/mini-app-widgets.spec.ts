@@ -3,8 +3,13 @@ import type { WidgetDefinition, WidgetState } from '@/lib/mini-app-widgets'
 import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { WIDGET_LIMITS } from '@/lib/mini-app-widgets'
 
+const flags = await vi.hoisted(async () => {
+  const { reactive } = await import('vue')
+  return reactive({ blockedWidgetOrigins: [] as string[], refreshBlockedWidgetOrigins: () => {} })
+})
 const { app, fetchWidgetFile, fetchWidgetRefresh, findWidgetFile, memory, nimiqNetwork, storedRead } = vi.hoisted(() => ({
   storedRead: { fetches: Promise.resolve() as Promise<unknown> },
   app: { language: 'en', selectedFiat: 'EUR' },
@@ -34,6 +39,8 @@ vi.mock('@/stores/mini-apps', () => ({
   useMiniApps: () => ({ popularDApps: [{ name: 'Swap', url: 'https://swap.example' }], iconForUrl: (url: string) => `${url}icon.png` }),
 }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => nimiqNetwork }))
+vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
+vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 vi.mock('@/stores/polygon-usdt', () => ({}))
 vi.mock('@/stores/remote-signer', () => ({}))
 vi.mock('@/composables/useApi', () => ({}))
@@ -96,6 +103,7 @@ beforeEach(() => {
   vi.spyOn(Math, 'random').mockReturnValue(0)
   vi.setSystemTime(NOW)
   memory.clear()
+  flags.blockedWidgetOrigins = []
   app.selectedFiat = 'EUR'
   nimiqNetwork.height = 1000
   fetchWidgetFile.mockReset()
@@ -716,6 +724,95 @@ describe('a widget\'s demo', () => {
     const price = vi.fn<WidgetChain['price']>(async () => 0.0004)
     await store.resolvePreviews([definition({ content: { value: { live: { price: 'BTC' } }, tone: 'neutral', rows: [] }, demo: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } })], fakeChain({ price }))
     expect(price.mock.calls.map(([asset]) => asset)).toEqual(['NIM'])
+  })
+})
+
+describe('the remote kill switch', () => {
+  const blockSwap = () => {
+    flags.blockedWidgetOrigins = ['https://swap.example']
+  }
+
+  it('shows only that it is not available, opening nothing, and comes back when lifted', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ content: { label: 'Secret', value: { text: 'Start a swap' }, tone: 'attention', rows: [], path: `${SCOPE}x` } }))
+    blockSwap()
+    expect(store.isBlocked(SCOPE)).toBe(true)
+    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Not available' }, tone: 'neutral' })
+    expect(store.views[0]!.label).toBeUndefined()
+    expect(store.views[0]!.url).toBeUndefined()
+    expect(store.views[0]!.appIcon).toBe(MINI_APP_FALLBACK_ICON)
+    flags.blockedWidgetOrigins = []
+    expect(store.views[0]).toMatchObject({ label: 'Secret', url: `${SCOPE}x` })
+  })
+
+  it('asks nothing for a blocked widget: no refresh, no file, no chain', async () => {
+    const store = await setup()
+    const nimiqBalance = vi.fn(async () => 1e5)
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 }, content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
+    blockSwap()
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 25 * 3600_000 })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    expect(fetchWidgetFile).not.toHaveBeenCalled()
+    expect(nimiqBalance).not.toHaveBeenCalled()
+    expect(store.widgets).toHaveLength(1)
+  })
+
+  it('keeps it out of the gallery, and refuses adding it', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition())
+    blockSwap()
+    expect(store.galleryScopesFor(['https://swap.example', 'https://other.example'])).toEqual(['https://other.example/'])
+    expect(store.add(SCOPE, definition({ id: 'other' }))).toBe(false)
+  })
+
+  it('searches nothing for a Mini App\'s calls or launch, even after a search that found its file', async () => {
+    const store = await setup()
+    findWidgetFile.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [definition()] } } })
+    await store.discover(`${SCOPE}app`)
+    findWidgetFile.mockClear()
+    blockSwap()
+    expect(await store.discover(`${SCOPE}app`)).toMatchObject({ ok: false, error: expect.stringContaining('not available') })
+    store.noteLaunch(`${SCOPE}other`)
+    expect(findWidgetFile).not.toHaveBeenCalled()
+  })
+
+  it('shows neither a declared name nor a stale note, and says it on an icon too', async () => {
+    const store = await setup()
+    store.add('https://named.example/', definition({ appName: 'Bad name', sizes: ['medium', 'icon'] }))
+    flags.blockedWidgetOrigins = ['https://named.example']
+    expect(store.views[0]).toMatchObject({ appName: 'named.example', value: { kind: 'text', text: 'Not available' } })
+    expect(store.views[0]!.appAddress).toBeUndefined()
+    expect(store.views[0]!.staleSince).toBeUndefined()
+    store.setSize('https://named.example/', 'swap', 'icon')
+    expect(store.views[0]).toMatchObject({ appName: 'Not available', appAddress: 'named.example', value: { kind: 'text', text: 'named.example' } })
+  })
+
+  it('reads the block on each chain check, so it lands without a restart', async () => {
+    const store = await setup()
+    const refresh = vi.spyOn(flags, 'refreshBlockedWidgetOrigins')
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(refresh).toHaveBeenCalledTimes(1)
+    await store.tick({ chain: fakeChain(), at: NOW + 1000 })
+    expect(refresh).toHaveBeenCalledTimes(1)
+    await store.tick({ chain: fakeChain(), at: NOW + 31_000 })
+    expect(refresh).toHaveBeenCalledTimes(2)
+    refresh.mockRestore()
+  })
+
+  it('lets the user still remove it', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition())
+    blockSwap()
+    store.remove(SCOPE, 'swap')
+    expect(store.widgets).toHaveLength(0)
+  })
+
+  it('blocks every Mini App with *, but not Nimiq Pay\'s own widgets', async () => {
+    const { BUILTIN_WIDGET_SCOPE } = await import('@/lib/mini-app-widget-builtins')
+    const store = await setup()
+    flags.blockedWidgetOrigins = ['*']
+    expect(store.isBlocked(SCOPE)).toBe(true)
+    expect(store.isBlocked(BUILTIN_WIDGET_SCOPE)).toBe(false)
   })
 })
 
