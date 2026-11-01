@@ -684,6 +684,34 @@ describe('removing and previewing', () => {
   })
 })
 
+describe('a widget\'s demo', () => {
+  const demo: WidgetDefinition['demo'] = { label: 'Waiting', value: { amount: '0.05', currency: 'ETH' }, tone: 'attention', rows: [], countdown: { label: 'Deposit window', in: 1740 } }
+
+  it('is what the gallery shows, its countdown frozen', async () => {
+    const store = await setup()
+    expect(store.previewView(SCOPE, definition({ demo }))).toMatchObject({
+      label: 'Waiting',
+      tone: 'attention',
+      value: { kind: 'amount', amount: '0.05', currency: 'ETH' },
+      countdown: { label: 'Deposit window', left: 1_740_000 },
+    })
+  })
+
+  it('never reaches Home: an added widget starts on its resting state', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ demo }))
+    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral' })
+    expect(store.views[0]!.countdown).toBeUndefined()
+  })
+
+  it('has its live values looked up for the gallery, in place of the resting state\'s', async () => {
+    const store = await setup()
+    const price = vi.fn<WidgetChain['price']>(async () => 0.0004)
+    await store.resolvePreviews([definition({ content: { value: { live: { price: 'BTC' } }, tone: 'neutral', rows: [] }, demo: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } })], fakeChain({ price }))
+    expect(price.mock.calls.map(([asset]) => asset)).toEqual(['NIM'])
+  })
+})
+
 describe('discovery and gallery', () => {
   it('discovers a Mini App\'s scope once per session and offers it to the gallery', async () => {
     const store = await setup()

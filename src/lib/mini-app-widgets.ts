@@ -100,6 +100,11 @@ export interface WidgetState {
   refresh?: WidgetRefresh
 }
 
+/** What the gallery shows instead of the resting state. A duration, as a time written in a file would go stale. */
+export interface WidgetDemo extends Omit<WidgetContent, 'countdown'> {
+  countdown?: { label: string, in: number }
+}
+
 export interface WidgetDefinition {
   id: string
   name: string
@@ -107,8 +112,9 @@ export interface WidgetDefinition {
   /** Non-empty; the first is the default size. */
   sizes: WidgetSize[]
   content: WidgetContent
+  demo?: WidgetDemo
   refresh?: WidgetRefresh
-  translations: Record<string, { name?: string, description?: string, content?: WidgetContent }>
+  translations: Record<string, { name?: string, description?: string, content?: WidgetContent, demo?: WidgetDemo }>
   /** The file's top-level `name`: the Mini App's, not the widget's. */
   appName?: string
 }
@@ -413,6 +419,20 @@ function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
   return result
 }
 
+function demo(raw: unknown, ctx: ParseContext, path: string): WidgetDemo {
+  const { countdown, ...rest } = record(raw, path)
+  const result = content(rest, ctx, path) as WidgetDemo
+  if (countdown === undefined)
+    return result
+  const c = record(countdown, `${path}.countdown`)
+  if (c.until !== undefined || c.untilNimiqHeight !== undefined)
+    fail(`${path}.countdown`, 'a demo counts down from "in", in seconds, not to a fixed time')
+  if (typeof c.in !== 'number' || !Number.isFinite(c.in) || c.in <= 0 || c.in * 1000 > L.horizonMs)
+    fail(`${path}.countdown.in`, 'expected a number of seconds, at most 30 days')
+  result.countdown = { label: text(c.label, L.label, `${path}.countdown.label`), in: c.in }
+  return result
+}
+
 function refresh(raw: unknown, ctx: ParseContext, path: string): WidgetRefresh {
   const r = record(raw, path)
   const url = sameOrigin(r.url, ctx, `${path}.url`)
@@ -532,6 +552,8 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
           definition.description = text(w.description, L.description, `${path}.description`)
         if (appName !== undefined)
           definition.appName = appName
+        if (w.demo !== undefined)
+          definition.demo = demo(w.demo, ctx, `${path}.demo`)
         if (w.refresh !== undefined)
           definition.refresh = refresh(w.refresh, ctx, `${path}.refresh`)
         if (w.translations !== undefined) {
@@ -544,6 +566,7 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
               ...(entry.name !== undefined ? { name: text(entry.name, L.name, `${entryPath}.name`) } : {}),
               ...(entry.description !== undefined ? { description: text(entry.description, L.description, `${entryPath}.description`) } : {}),
               ...(entry.content !== undefined ? { content: content(entry.content, ctx, `${entryPath}.content`) } : {}),
+              ...(entry.demo !== undefined ? { demo: demo(entry.demo, ctx, `${entryPath}.demo`) } : {}),
             }
           }
         }
@@ -553,11 +576,12 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
   })
 }
 
-export function localizeDefinition(def: WidgetDefinition, language: string): { name: string, description?: string, content: WidgetContent } {
+export function localizeDefinition(def: WidgetDefinition, language: string): { name: string, description?: string, content: WidgetContent, demo?: WidgetDemo } {
   const translation = def.translations[language.slice(0, 2).toLowerCase()]
   return {
     name: translation?.name ?? def.name,
     description: translation?.description ?? def.description,
     content: translation?.content ?? def.content,
+    demo: translation?.demo ?? def.demo,
   }
 }

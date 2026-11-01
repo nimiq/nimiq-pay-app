@@ -91,6 +91,44 @@ describe('parseWidgetFile', () => {
   })
 })
 
+describe('a widget\'s demo', () => {
+  const demo = { label: 'Waiting for your deposit', value: { amount: '0.05', currency: 'ETH' }, tone: 'attention', countdown: { label: 'Deposit window', in: 1740 } }
+  const parsed = (widget: Record<string, unknown>) => {
+    const result = parseWidgetFile(file(widget), ctx)
+    if (!result.ok)
+      throw new Error(result.error)
+    return result.value.widgets[0]!
+  }
+
+  it('is optional, and leaves the resting state alone', () => {
+    expect(parsed({}).demo).toBeUndefined()
+    const definition = parsed({ demo })
+    expect(definition.content.value).toEqual({ text: 'Start a swap' })
+    expect(definition.demo).toMatchObject({ label: 'Waiting for your deposit', tone: 'attention', countdown: { label: 'Deposit window', in: 1740 } })
+  })
+
+  it('refuses a countdown to a fixed time, which a file would leave stale', () => {
+    expectError(parseWidgetFile(file({ demo: { ...demo, countdown: { label: 'x', until: NOW + 1000 } } }), ctx), 'file.widgets[0].demo.countdown')
+    expectError(parseWidgetFile(file({ demo: { ...demo, countdown: { label: 'x', in: 60, untilNimiqHeight: 5 } } }), ctx), 'file.widgets[0].demo.countdown')
+  })
+
+  it.each([[0], [-1], ['60'], [Number.NaN], [30 * 24 * 3600 + 1]])('refuses a countdown of %s seconds', (seconds) => {
+    expectError(parseWidgetFile(file({ demo: { ...demo, countdown: { label: 'x', in: seconds } } }), ctx), 'file.widgets[0].demo.countdown.in')
+  })
+
+  it('refuses the whole file when it breaks a rule of content', () => {
+    expectError(parseWidgetFile(file({ demo: { label: 'No value' } }), ctx), 'file.widgets[0].demo.value')
+  })
+
+  it('takes the user\'s language, falling back to the top-level demo', () => {
+    const translated = { ...demo, label: 'Warten auf Einzahlung' }
+    const definition = parsed({ demo, translations: { de: { demo: translated }, fr: { name: 'Statut' } } })
+    expect(localizeDefinition(definition, 'de').demo?.label).toBe('Warten auf Einzahlung')
+    expect(localizeDefinition(definition, 'fr').demo?.label).toBe('Waiting for your deposit')
+    expect(localizeDefinition(parsed({}), 'de').demo).toBeUndefined()
+  })
+})
+
 describe('parseWidgetState', () => {
   it('accepts null as the resting state', () => {
     expect(parseWidgetState(null, ctx)).toEqual({ ok: true, value: null })

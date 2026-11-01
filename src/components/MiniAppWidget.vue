@@ -58,8 +58,8 @@ const showExtras = computed(() => view.size === 'medium' || view.size === 'large
 const isSmall = computed(() => view.size === 'small')
 
 const timeLeft = computed(() => {
-  const until = view.countdown?.until
-  const left = until === undefined ? 0 : until - now.value.getTime()
+  const countdown = view.countdown
+  const left = !countdown ? 0 : 'left' in countdown ? countdown.left : countdown.until - now.value.getTime()
   if (left <= 0)
     return undefined
   const minutes = left / 60_000

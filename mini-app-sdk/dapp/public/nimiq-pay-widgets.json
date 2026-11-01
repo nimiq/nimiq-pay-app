@@ -18,7 +18,8 @@
       "name": "Widget lab",
       "description": "Every size, a scheduled state and a chain trigger.",
       "sizes": ["large", "medium", "small", "icon"],
-      "content": { "label": "Widget lab", "value": { "text": "Ready" }, "info": "Push a state from the demo" }
+      "content": { "label": "Widget lab", "value": { "text": "Ready" }, "info": "Push a state from the demo" },
+      "demo": { "label": "Widget lab", "value": { "text": "Round 3 of 5" }, "info": "You are 4th of 128", "tone": "positive", "progress": 0.6, "countdown": { "label": "Round ends", "in": 5400 } }
     }
   ]
 }

@@ -219,6 +219,10 @@ describe('miniAppWidget', () => {
     expect(render({ view: view({ size: 'small' }) }).classes()).toContain('bg-white')
   })
 
+  it('holds a demo\'s countdown still', () => {
+    expect(render({ view: view({ size: 'medium', countdown: { label: 'Deposit window', left: 1_740_000 } }), preview: true }).text()).toContain('29 min')
+  })
+
   it('hides the progress bar on small and an expired countdown on medium', () => {
     expect(render({ view: view() }).find('[data-testid="widget-progress"]').exists()).toBe(false)
     const expired = render({ view: view({ size: 'medium', countdown: { label: 'Deposit window', until: Date.now() - 1000 } }) })

@@ -6,6 +6,7 @@ import type {
   WidgetAsset,
   WidgetContent,
   WidgetDefinition,
+  WidgetDemo,
   WidgetFile,
   WidgetRefresh,
   WidgetSize,
@@ -74,7 +75,8 @@ export interface WidgetView {
   info?: DisplayValue
   tone: WidgetTone
   progress?: number
-  countdown?: { label: string, until: number }
+  /** `left` is a demo's, which holds still. */
+  countdown?: { label: string, until: number } | { label: string, left: number }
   rows: { label: string, value: DisplayValue, url?: string }[]
   chart?: { kind: 'line' | 'bars', points: number[] }
   url?: string
@@ -107,7 +109,7 @@ function originOf(scope: string): string {
   return new URL(scope).origin
 }
 
-function liveSpecs(content: WidgetContent, size: WidgetSize): LiveSpec[] {
+function liveSpecs(content: WidgetContent | WidgetDemo, size: WidgetSize): LiveSpec[] {
   // Only the large size draws rows and a chart, so smaller sizes skip their lookups and leave the budget to what is shown.
   const values: unknown[] = [content.value, content.info, ...(size === 'large' ? content.rows.map(row => row.value) : [])]
   const specs: LiveSpec[] = values
@@ -295,8 +297,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return { appName: declared ?? address, appAddress: declared && declared !== address ? address : undefined, launchTitle: address }
   }
 
-  function toView(widget: HomeWidget, at: number): WidgetView {
-    const content = shownContent(widget, at)
+  function toView(widget: HomeWidget, at: number, content: WidgetContent | WidgetDemo = shownContent(widget, at)): WidgetView {
     const { countdown, chart } = content
     const builtin = widget.scope === BUILTIN_WIDGET_SCOPE
     const history = chart && 'priceHistory' in chart ? live.get(liveKey({ priceHistory: chart.priceHistory }))?.value : undefined
@@ -315,9 +316,11 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       progress: content.progress,
       countdown: !countdown
         ? undefined
-        : 'until' in countdown
-          ? { label: countdown.label, until: countdown.until }
-          : head.value.height > 0 ? { label: countdown.label, until: head.value.at + (countdown.untilNimiqHeight - head.value.height) * 1000 } : undefined,
+        : 'in' in countdown
+          ? { label: countdown.label, left: countdown.in * 1000 }
+          : 'until' in countdown
+            ? { label: countdown.label, until: countdown.until }
+            : head.value.height > 0 ? { label: countdown.label, until: head.value.at + (countdown.untilNimiqHeight - head.value.height) * 1000 } : undefined,
       rows: content.rows.map(row => ({ label: row.label, value: display(row.value), url: row.path })),
       chart: !chart ? undefined : 'points' in chart ? { kind: chart.kind, points: chart.points } : Array.isArray(history) ? { kind: 'line', points: history } : undefined,
       url: content.path ?? (builtin ? undefined : widget.scope),
@@ -327,8 +330,13 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   const views = computed(() => widgets.value.map(w => toView(w, now.value)))
 
+  function previewContent(definition: WidgetDefinition): WidgetContent | WidgetDemo {
+    const { content, demo } = localizeDefinition(definition, useApp().language)
+    return demo ?? content
+  }
+
   function previewView(scope: string, definition: WidgetDefinition): WidgetView {
-    return toView({ scope, widgetId: definition.id, network, size: definition.sizes[0]!, definition, definitionCheckedAt: 0, failures: 0, updatedAt: 0 }, now.value)
+    return toView({ scope, widgetId: definition.id, network, size: definition.sizes[0]!, definition, definitionCheckedAt: 0, failures: 0, updatedAt: 0 }, now.value, previewContent(definition))
   }
 
   function lookupBudget(enabled: boolean) {
@@ -430,7 +438,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     patch(widget.scope, widget.widgetId, w => ({ definition, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
   }
 
-  async function resolveLive(shown: { content: WidgetContent, size: WidgetSize }[], chain: WidgetChain, at: number, budget: Budget) {
+  async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize }[], chain: WidgetChain, at: number, budget: Budget) {
     const seen = new Set<string>()
     for (const spec of shown.flatMap(item => liveSpecs(item.content, item.size))) {
       const key = liveKey(spec)
@@ -518,10 +526,10 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }))
   }
 
-  function resolvePreviews(definitions: WidgetDefinition[]) {
+  function resolvePreviews(definitions: WidgetDefinition[], chain = createWidgetChain()) {
     const at = Date.now()
     observe(at)
-    return resolveLive(definitions.map(d => ({ content: localizeDefinition(d, useApp().language).content, size: d.sizes[0]! })), createWidgetChain(), at, lookupBudget(true))
+    return resolveLive(definitions.map(d => ({ content: previewContent(d), size: d.sizes[0]! })), chain, at, lookupBudget(true))
   }
 
   return {

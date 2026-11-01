@@ -32,10 +32,24 @@ Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 wi
 | `widgets[].description` | Optional, at most 120 characters. |
 | `widgets[].sizes` | Non-empty subset of `icon`, `small`, `medium`, `large`. The first is the default. |
 | `widgets[].content` | The widget's *resting state*: what it shows when nothing else was sent, and its preview in the gallery (section 3). |
+| `widgets[].demo` | Optional. What the gallery shows instead of the resting state, so people see the widget at its best before adding it. Never shown on Home. See below. |
 | `widgets[].refresh` | Optional `{ "url", "every" }` so the resting state updates from your server (section 5). |
-| `widgets[].translations` | Optional, keyed by two-letter language (`"es"`). Each entry may repeat `name`, `description` and `content`. Nimiq Pay picks the user's language and falls back to the top-level fields. |
+| `widgets[].translations` | Optional, keyed by two-letter language (`"es"`). Each entry may repeat `name`, `description`, `content` and `demo`. Nimiq Pay picks the user's language and falls back to the top-level fields. |
 
 Live states you send are not translated by this field: send them in your current language. Refresh URLs get the user's language as `lang`.
+
+**The demo.** A resting state often says little ("No swap in progress"). A `demo` shows the widget in use. It has the same fields and rules as `content`, and an invalid one makes the file invalid. It is only a picture of the widget: a widget that is added starts on its resting state, and triggers, an expiry or a refresh in a demo are dropped. The gallery shows it in the widget's default size, so make sure that size shows what you want to show off. A countdown is written as seconds, because a time in a file would go stale, and it holds still in the gallery; `until` and `untilNimiqHeight` are refused here:
+
+```json
+"demo": {
+  "label": "Waiting for your deposit",
+  "value": { "amount": "0.05", "currency": "ETH" },
+  "info": "for about 1,234 NIM",
+  "tone": "attention",
+  "progress": 0.1,
+  "countdown": { "label": "Deposit window", "in": 1740 }
+}
+```
 
 **Re-reading and withdrawal.**
 
