@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { get } = vi.hoisted(() => ({ get: vi.fn() }))
-vi.mock('@capacitor/core', () => ({ CapacitorHttp: { get } }))
+const { clearAllCookies, get } = vi.hoisted(() => ({ clearAllCookies: vi.fn(), get: vi.fn() }))
+vi.mock('@capacitor/core', () => ({ CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get } }))
 vi.mock('@/lib', () => ({ isDev: false }))
 
 const fetchMock = vi.fn()
 vi.stubGlobal('fetch', fetchMock)
 
 const { fetchWidgetFile, fetchWidgetRefresh, findWidgetFile } = await import('./mini-app-widget-sources')
+const { isMiniAppActive } = await import('./mini-app-active')
 
 const NOW = Date.UTC(2026, 9, 19, 12)
 const SCOPE = 'https://swap.example/'
@@ -30,12 +31,56 @@ const REFRESH = { url: 'https://swap.example/w', every: 60 }
 const STATE = JSON.stringify({ content: { value: { text: 'Done' } } })
 
 beforeEach(() => {
+  clearAllCookies.mockReset()
   get.mockReset()
   fetchMock.mockReset()
 })
 
 afterEach(() => {
   vi.useRealTimers()
+})
+
+describe('cookies around a widget file download', () => {
+  it('clears them before and after, so one a site sets never comes back', async () => {
+    const order: string[] = []
+    clearAllCookies.mockImplementation(async () => {
+      order.push('clear')
+    })
+    get.mockImplementation(async () => {
+      order.push('get')
+      return respond(200, FILE)
+    })
+    await fetchWidgetFile(SCOPE, NOW)
+    expect(order).toEqual(['clear', 'get', 'clear'])
+  })
+
+  it('clears them after a failed download too', async () => {
+    get.mockRejectedValue(new Error('offline'))
+    await fetchWidgetFile(SCOPE, NOW)
+    expect(clearAllCookies).toHaveBeenCalledTimes(2)
+  })
+
+  it('still answers when clearing fails', async () => {
+    clearAllCookies.mockRejectedValue(new Error('no plugin'))
+    get.mockResolvedValue(respond(200, FILE))
+    expect((await fetchWidgetFile(SCOPE, NOW)).ok).toBe(true)
+  })
+
+  it('leaves them alone while searching for a Mini App being opened', async () => {
+    get.mockResolvedValue(respond(200, FILE))
+    await findWidgetFile('https://swap.example/', NOW)
+    expect(clearAllCookies).not.toHaveBeenCalled()
+  })
+
+  it('does not log out a Mini App opened during the download', async () => {
+    get.mockImplementation(async () => {
+      isMiniAppActive.value = true
+      return respond(200, FILE)
+    })
+    await fetchWidgetFile(SCOPE, NOW)
+    isMiniAppActive.value = false
+    expect(clearAllCookies).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('fetchWidgetFile', () => {

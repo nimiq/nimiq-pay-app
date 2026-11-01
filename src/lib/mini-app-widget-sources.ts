@@ -1,8 +1,9 @@
 import type { HttpResponse } from '@capacitor/core'
 import type { WidgetFile, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
-import { CapacitorHttp } from '@capacitor/core'
+import { CapacitorCookies, CapacitorHttp } from '@capacitor/core'
 import { isDev } from '@/lib'
+import { isMiniAppActive } from '@/lib/mini-app-active'
 import { isAllowedWidgetOrigin, parseWidgetFile, parseWidgetState, WIDGET_FILE_NAME, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { headerValue } from '@/lib/site-metadata'
 
@@ -111,7 +112,7 @@ async function getJsonHops(url: string, origin: string, maxBytes: number, state:
   return definiteError(`too many redirects from ${url}`)
 }
 
-export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
+async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<WidgetFile>> {
   let origin: string
   try {
     origin = new URL(scope).origin
@@ -128,6 +129,27 @@ export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<
   return parsed.ok ? parsed : { ...parsed, transient: false }
 }
 
+/** The native client shares the web views' cookie jar, so without this a site could recognise a device across downloads. All cookies, as clearing one site's misses those with a path or a domain. Not for a search, which runs for a Mini App being opened. */
+export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
+  await clearCookies()
+  try {
+    return await readWidgetFile(scope, now)
+  }
+  finally {
+    await clearCookies()
+  }
+}
+
+async function clearCookies() {
+  // A download can outlast the launch of a Mini App, whose session these cookies then are; closing it clears them.
+  if (isMiniAppActive.value)
+    return
+  try {
+    await CapacitorCookies.clearAllCookies()
+  }
+  catch {}
+}
+
 /** Only a definite miss moves up a folder: after a network error the search stops, so a parent folder's file is never taken for this Mini App's. */
 export async function findWidgetFile(url: string, now = Date.now()): Promise<FetchOutcome<{ scope: string, file: WidgetFile }>> {
   const scopes = widgetScopeCandidates(url)
@@ -135,7 +157,7 @@ export async function findWidgetFile(url: string, now = Date.now()): Promise<Fet
     return definiteError(`${url} cannot serve widgets`)
   const misses: string[] = []
   for (const scope of scopes) {
-    const result = await fetchWidgetFile(scope, now)
+    const result = await readWidgetFile(scope, now)
     if (result.ok)
       return { ok: true, value: { scope, file: result.value } }
     if (result.transient)

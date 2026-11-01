@@ -9,7 +9,7 @@ import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, Stakin
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, isTestnet } from '@/lib'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
@@ -17,6 +17,7 @@ import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
+import { isMiniAppActive } from '@/lib/mini-app-active'
 import { localizeDefinition, parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -67,12 +68,7 @@ export interface MiniAppSessionState {
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
 let _activeMiniAppSession: MiniAppSessionState | null = null
 
-/**
- * Reactive flag mirroring whether a MiniAppHost session is currently active.
- * Updated in lock-step with `_activeMiniAppSession`. Used to gate UI signals
- * such as the local-notification visibility check in `useLocks().isHomeVisible`.
- */
-export const isMiniAppActive = ref(false)
+export { isMiniAppActive }
 
 /**
  * Returns a snapshot of the active MiniAppHost session, or null if none is active.
