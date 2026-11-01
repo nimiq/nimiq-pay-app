@@ -38,7 +38,8 @@ watch([() => active, scopes], async ([isActive, list]) => {
   }
   void widgets.resolvePreviews(builtinWidgetFile().widgets)
   await widgets.loadGallery(list)
-  void widgets.loadPreviewImages(list)
+  if (active)
+    void widgets.loadPreviewImages(list)
   const definitions = list.flatMap((scope) => {
     const file = widgets.galleryFiles.get(scope)
     return file && file !== 'loading' ? file.widgets : []

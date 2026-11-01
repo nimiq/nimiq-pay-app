@@ -21,6 +21,11 @@ function jpegFormat(bytes: Uint8Array, view: DataView): ImageFormat | undefined 
   let i = 2
   while (i + 9 <= bytes.length && bytes[i] === 0xFF) {
     const marker = bytes[i + 1]!
+    // Padding, which a marker may have any amount of.
+    if (marker === 0xFF) {
+      i++
+      continue
+    }
     if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC)
       return { type: 'image/jpeg', width: view.getUint16(i + 7), height: view.getUint16(i + 5) }
     i += 2 + view.getUint16(i + 2)

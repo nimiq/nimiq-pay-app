@@ -7,6 +7,7 @@ declare module '@nimiq/mini-app-sdk' {
       update: (id: string, state: Record<string, unknown> | null) => Promise<boolean>
       remove: (id: string) => Promise<void>
       list: () => Promise<string[]>
+      setToken: (id: string, token: string | null) => Promise<boolean>
     }
   }
 }

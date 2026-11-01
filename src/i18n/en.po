@@ -31,7 +31,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:93
+#: src/components/MiniAppWidgetGallery.vue:94
 msgid "A Mini App can have at most {count} widgets on Home"
 msgstr ""
 
@@ -739,7 +739,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:94
+#: src/components/MiniAppWidgetGallery.vue:95
 msgid "Home holds at most {count} widgets"
 msgstr ""
 
@@ -756,7 +756,7 @@ msgid "I have turned it off"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:53
+#: src/components/MiniAppWidgetGallery.vue:54
 msgid "Icon"
 msgstr ""
 
@@ -986,7 +986,7 @@ msgid "Language"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:53
+#: src/components/MiniAppWidgetGallery.vue:54
 msgid "Large"
 msgstr ""
 
@@ -1047,7 +1047,7 @@ msgid "Matching submissions: {count}"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:53
+#: src/components/MiniAppWidgetGallery.vue:54
 msgid "Medium"
 msgstr ""
 
@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:474
+#: src/stores/mini-app-widgets.ts:482
 msgid "No longer available"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:457
+#: src/stores/mini-app-widgets.ts:464
 msgid "Not available"
 msgstr ""
 
@@ -1718,7 +1718,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:35
-#: src/components/MiniAppWidgetGallery.vue:53
+#: src/components/MiniAppWidgetGallery.vue:54
 msgid "Small"
 msgstr ""
 

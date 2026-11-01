@@ -66,6 +66,12 @@ describe('readWidgetImage', () => {
     expect(read(make(10, WIDGET_LIMITS.imagePixels + 1)).ok).toBe(false)
   })
 
+  it('accepts a JPEG with fill bytes before a marker', () => {
+    const plain = jpeg(10, 20)
+    const padded = Uint8Array.from([...plain.slice(0, 8), 0xFF, 0xFF, ...plain.slice(8)])
+    expect(read(padded).ok).toBe(true)
+  })
+
   it('refuses bytes that are not what the file pinned', () => {
     expect(read(png(10, 20), 'a'.repeat(64))).toMatchObject({ ok: false, error: expect.stringContaining('hash') })
   })

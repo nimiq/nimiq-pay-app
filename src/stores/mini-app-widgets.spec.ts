@@ -736,6 +736,7 @@ describe('what a refresh server answers', () => {
   const answered = async (result: object) => {
     const store = await setup()
     store.add(SCOPE, refreshing())
+    store.setToken(SCOPE, 'swap', 'token')
     fetchWidgetRefresh.mockResolvedValue({ ok: false, error: 'no', transient: false, ...result })
     await store.tick({ chain: fakeChain(), at: NOW })
     fetchWidgetRefresh.mockClear()
@@ -773,6 +774,7 @@ describe('what a refresh server answers', () => {
   const heldRefresh = async (act: (store: Awaited<ReturnType<typeof setup>>) => void) => {
     const store = await setup()
     store.add(SCOPE, refreshing())
+    store.setToken(SCOPE, 'swap', 'old')
     let answer = (_result: object) => {}
     fetchWidgetRefresh.mockReturnValue(new Promise((resolve) => {
       answer = resolve
@@ -784,6 +786,28 @@ describe('what a refresh server answers', () => {
     await tick
     return store
   }
+
+  it('ignores an old request\'s answer after the widget was removed, added again and updated', async () => {
+    const polling = { content: { value: { text: 'Polling' }, tone: 'neutral', rows: [] }, next: [], refresh: { url: `${SCOPE}w`, every: 60 } } as never
+    const store = await setup()
+    store.add(SCOPE, refreshing())
+    store.setToken(SCOPE, 'swap', 'old')
+    store.update(SCOPE, 'swap', polling)
+    let answer = (_result: object) => {}
+    fetchWidgetRefresh.mockReturnValue(new Promise((resolve) => {
+      answer = resolve
+    }))
+    const tick = store.tick({ chain: fakeChain(), at: NOW + 120_000 })
+    await flushPromises()
+    expect(fetchWidgetRefresh).toHaveBeenCalled()
+    store.remove(SCOPE, 'swap')
+    store.add(SCOPE, refreshing())
+    store.setToken(SCOPE, 'swap', 'new')
+    store.update(SCOPE, 'swap', { content: { value: { text: 'Fresh' }, tone: 'neutral', rows: [] }, next: [] } as never)
+    answer({ ok: false, error: 'expired', transient: false, status: 401 })
+    await tick
+    expect(store.views[0]!.reconnect).toBe(false)
+  })
 
   it('ignores an old request\'s 401 once a new token is in', async () => {
     const store = await heldRefresh(s => s.setToken(SCOPE, 'swap', 'fresh'))
@@ -810,6 +834,41 @@ describe('what a refresh server answers', () => {
 
   it('answers false for a token on a widget not on Home', async () => {
     expect((await setup()).setToken(SCOPE, 'swap', 'x')).toBe(false)
+  })
+
+  it('treats a 401 without a token as an ordinary failure, since there is nothing to reconnect', async () => {
+    const store = await setup()
+    store.add(SCOPE, refreshing())
+    fetchWidgetRefresh.mockResolvedValue({ ok: false, error: 'no', transient: false, status: 403 })
+    await store.tick({ chain: fakeChain(), at: NOW })
+    expect(store.views[0]!.reconnect).toBe(false)
+    expect(store.widgets[0]!.failures).toBe(1)
+    fetchWidgetRefresh.mockClear()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW + 3_600_000 })
+    expect(fetchWidgetRefresh).toHaveBeenCalled()
+  })
+
+  it('holds to Retry-After for a pull to refresh too', async () => {
+    const store = await answered({ status: 429, retryAfterMs: 3_600_000 })
+    await store.tick({ chain: fakeChain(), at: NOW + 120_000, force: true })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW + 3_600_000, force: true })
+    expect(fetchWidgetRefresh).toHaveBeenCalled()
+  })
+
+  it('still re-reads the file of a widget gone with 410, so the site can withdraw it', async () => {
+    const store = await answered({ status: 410 })
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [] } })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3_600_000 })
+    expect(store.widgets).toHaveLength(0)
+  })
+
+  it('does not say "open to reconnect" on a blocked card, which opens nothing', async () => {
+    const store = await answered({ status: 401 })
+    flags.blockedWidgetOrigins = ['https://swap.example']
+    expect(store.views[0]!.reconnect).toBe(false)
   })
 
   it('429: waits at least Retry-After, even past the usual back-off', async () => {
@@ -1107,6 +1166,36 @@ describe('images', () => {
     await store.loadGallery([SCOPE])
     await store.loadPreviewImages([SCOPE])
     expect(fetchWidgetImage).not.toHaveBeenCalled()
+  })
+
+  it('tries a failed image again every few minutes, without waiting for the daily re-check', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockResolvedValueOnce({ ok: false, error: 'down', transient: true }).mockResolvedValueOnce({ ok: false, error: 'down', transient: true })
+    store.add(SCOPE, old)
+    await flushPromises()
+    await store.tick({ chain: fakeChain(), at: NOW + 60_000 })
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(2)
+    await store.tick({ chain: fakeChain(), at: NOW + 120_000 })
+    await flushPromises()
+    expect(fetchWidgetImage).toHaveBeenCalledTimes(2)
+    await store.tick({ chain: fakeChain(), at: NOW + 6 * 60_000 })
+    await flushPromises()
+    await flushPromises()
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  it('does not let another site\'s bad URL for the same hash keep an image away', async () => {
+    const store = await setup()
+    const other = 'https://other.example/'
+    fetchWidgetImage.mockImplementation(async (image: { sha256: string }, scope: string) => scope === other
+      ? { ok: false, error: 'hash', transient: false }
+      : { ok: true, value: `data:image/png;base64,${image.sha256}` })
+    store.add(SCOPE, old)
+    store.add(other, old)
+    await flushPromises()
+    await flushPromises()
+    expect(store.views.find(view => view.scope === SCOPE)!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
   })
 
   it('forgets an image with the last widget using it, so adding again downloads it again', async () => {

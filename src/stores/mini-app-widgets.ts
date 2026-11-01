@@ -58,7 +58,9 @@ export interface HomeWidget {
   token?: string
   /** Why refreshes stopped, until the Mini App sends a state or a token. */
   halted?: 'reconnect' | 'gone'
-  /** Counts each new state or token, so that an answer to an older request is ignored. */
+  /** Until when the server asked not to be contacted. */
+  retryNotBefore?: number
+  /** New with each state, token or install, so that an answer to an older request is ignored. */
   revision?: number
   refreshDueAt?: number
   lastAttemptAt?: number
@@ -120,6 +122,7 @@ const DAY_MS = 24 * 60 * 60_000
 const MAX_BACKOFF_MS = 30 * 60_000
 const MIN_FORCED_REFRESH_GAP_MS = 60_000
 const DOWNLOADS_AT_ONCE = 6
+const IMAGE_RETRY_MS = 5 * 60_000
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
 
 async function inTurns<T>(items: T[], work: (item: T) => Promise<unknown>) {
@@ -209,6 +212,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const savedImages = new Set<string>()
   const refusedImages = new Set<string>()
   let previewSession = 0
+  let lastImageRetryAt = 0
+  // From the clock, so that it stays above any stored revision after a restart.
+  let lastRevision = Date.now()
   const discoveries = new Map<string, Promise<FetchOutcome<{ scope: string, file: WidgetFile }>>>()
   const inFlight = new Set<string>()
   let current: Promise<void> | undefined
@@ -247,7 +253,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function replaceState(scope: string, widgetId: string, state: WidgetState | undefined, at: number) {
-    patch(scope, widgetId, w => ({ state, failures: 0, updatedAt: at, refreshDueAt: dueAt(state, w.definition, at), revision: (w.revision ?? 0) + 1 }))
+    patch(scope, widgetId, w => ({ state, failures: 0, updatedAt: at, refreshDueAt: dueAt(state, w.definition, at), revision: ++lastRevision }))
   }
 
   function grantable(definition: WidgetDefinition, permissions: readonly WidgetPermission[] = []): WidgetPermission[] {
@@ -281,6 +287,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       size: definition.sizes[0]!,
       definition: approvedDefinition(scope, definition),
       grants: grantable(definition, grants),
+      revision: ++lastRevision,
       definitionCheckedAt: at,
       // A resting state with a refresh fetches its first content right away.
       refreshDueAt: definition.refresh ? at : undefined,
@@ -303,7 +310,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function setToken(scope: string, widgetId: string, token: string | null): boolean {
     if (!isOnHome(scope, widgetId))
       return false
-    patch(scope, widgetId, w => ({ token: token ?? undefined, halted: undefined, refreshDueAt: w.halted ? Date.now() : w.refreshDueAt, revision: (w.revision ?? 0) + 1 }))
+    patch(scope, widgetId, w => ({ token: token ?? undefined, halted: undefined, refreshDueAt: w.halted ? Date.now() : w.refreshDueAt, revision: ++lastRevision }))
     return true
   }
 
@@ -465,6 +472,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       url: undefined,
       staleSince: undefined,
       pendingAppName: undefined,
+      reconnect: false,
       sharesAddresses: false,
       pendingImages: false,
     }
@@ -546,7 +554,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   function dueRefresh(widget: HomeWidget, at: number, force: boolean): WidgetRefresh | undefined {
     const refresh = refreshOf(shownState(widget, at), widget.definition)
-    if (!refresh || !fetchesRead.value || widget.halted)
+    if (!refresh || !fetchesRead.value || widget.halted || at < (widget.retryNotBefore ?? 0))
       return undefined
     const countdown = shownContent(widget, at).countdown
     const sinceLastAttempt = at - (widget.lastAttemptAt ?? Number.NEGATIVE_INFINITY)
@@ -582,14 +590,17 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         return
       }
       logger.warn('Widget refresh failed', key, result.error)
-      if (result.status === 410 || result.status === 401 || result.status === 403) {
-        patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at, halted: result.status === 410 ? 'gone' : 'reconnect' }))
+      // Without a token there is nothing to reconnect: it may be a firewall's passing 403, and nothing would ever resume it.
+      const halted = result.status === 410 ? 'gone' : widget.token && (result.status === 401 || result.status === 403) ? 'reconnect' : undefined
+      if (halted) {
+        patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at, halted }))
         return
       }
       patch(widget.scope, widget.widgetId, (w) => {
         const failures = w.failures + 1
         const backoff = Math.min(MAX_BACKOFF_MS, refresh.every * 1000 * 2 ** failures)
-        return { failures, lastAttemptAt: at, refreshDueAt: at + Math.max(backoff, Math.min(result.retryAfterMs ?? 0, DAY_MS)) }
+        const retryAfter = Math.min(result.retryAfterMs ?? 0, DAY_MS)
+        return { failures, lastAttemptAt: at, refreshDueAt: at + Math.max(backoff, retryAfter), retryNotBefore: retryAfter ? at + retryAfter : undefined }
       })
     }
     finally {
@@ -643,21 +654,24 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   async function downloadImage(image: WidgetImage, scope: string): Promise<string | undefined> {
-    if (refusedImages.has(image.sha256) || isBlocked(scope))
+    const refusal = `${scope} ${image.sha256}`
+    if (refusedImages.has(refusal) || isBlocked(scope))
       return undefined
     const result = await fetchWidgetImage(image, scope)
     if (result.ok)
       return result.value
     logger.warn(`Could not download a widget image: ${result.error}`)
-    if (!result.transient)
-      refusedImages.add(image.sha256)
+    // Only what the file itself failed on. By site, as anyone can copy a hash and point it at a bad URL.
+    if (!result.transient && result.status === undefined)
+      refusedImages.add(refusal)
     return undefined
   }
 
-  const pinnedImages = computed(() => new Map(stored.value.flatMap(w => Object.values(w.definition.images ?? {}).map(image => [image.sha256, { image, scope: w.scope }] as const))))
+  const pinnedImages = computed(() => stored.value.flatMap(w => Object.values(w.definition.images ?? {}).map(image => ({ image, scope: w.scope }))))
+  const pinnedHashes = computed(() => new Set(pinnedImages.value.map(({ image }) => image.sha256)))
 
   async function keepImages() {
-    const unread = [...pinnedImages.value.values()].filter(({ image }) => !savedImages.has(image.sha256))
+    const unread = pinnedImages.value.filter(({ image }) => !savedImages.has(image.sha256))
     const missing: typeof unread = []
     await Promise.all(unread.map(async (pinned) => {
       const saved = await kv().getItem(imageKey(pinned.image.sha256))
@@ -667,9 +681,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       savedImages.add(pinned.image.sha256)
     }))
     await inTurns(missing, async ({ image, scope }) => {
+      // Another widget may just have brought it.
+      if (savedImages.has(image.sha256))
+        return
       const src = previews.get(image.sha256) ?? await downloadImage(image, scope)
       // The widget can be removed during the download.
-      if (!src || !pinnedImages.value.has(image.sha256))
+      if (!src || !pinnedHashes.value.has(image.sha256))
         return
       images.set(image.sha256, src)
       await kv().setItem(imageKey(image.sha256), src)
@@ -683,13 +700,13 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   // Joined, so that this runs when the set of images changes, not with every state.
-  watch(() => [...pinnedImages.value.keys()].sort().join(), (_, before) => {
-    for (const hash of before.split(',').filter(hash => hash && !pinnedImages.value.has(hash))) {
+  watch(() => [...pinnedHashes.value].sort().join(), (_, before) => {
+    for (const hash of before.split(',').filter(hash => hash && !pinnedHashes.value.has(hash))) {
       images.delete(hash)
       savedImages.delete(hash)
-      refusedImages.delete(hash)
       void kv().removeItem(imageKey(hash))
     }
+    refusedImages.clear()
     queueKeepImages()
   })
 
@@ -797,15 +814,18 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
     // The longest waiting first, so a Mini App's fast widget cannot keep taking the budget from its slow one.
-    await Promise.all(byLongestWaiting(running.value).map(async (widget) => {
+    // A widget gone with a 410 is re-read too: its site may have withdrawn it.
+    await Promise.all(byLongestWaiting(widgets.value.filter(w => !isBlocked(w.scope))).map(async (widget) => {
       const refresh = dueRefresh(widget, at, force)
       if (refresh)
         await runRefresh(widget, refresh, at, chain)
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
-    if (files.size)
+    if (files.size || at - lastImageRetryAt >= IMAGE_RETRY_MS) {
+      lastImageRetryAt = at
       queueKeepImages()
+    }
     await resolveLive(running.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 

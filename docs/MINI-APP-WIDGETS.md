@@ -219,7 +219,7 @@ What an error answer does:
 
 | Answer | What Nimiq Pay does |
 | --- | --- |
-| 401, 403 | Keeps the content, adds "Open to reconnect", and pauses refreshes until your Mini App calls `setToken` or `update` |
+| 401, 403 | For a widget with a token: keeps the content, adds "Open to reconnect" (except on icons), and pauses refreshes until your Mini App calls `setToken` or `update`. Without a token: an ordinary failure, with the back-off below |
 | 410 | Shows "No longer available", stops refreshing and lookups until your Mini App calls `setToken` or `update`. The user can remove it from the menu |
 | 429, 503 and others | A failure, with the back-off below. With `Retry-After` (seconds or a date, at most a day counts, and `Access-Control-Expose-Headers: Retry-After` so that it can be read), the next try waits at least that long |
 
