@@ -972,7 +972,7 @@ describe('images', () => {
   const OLD = 'a'.repeat(64)
   const NEW = 'b'.repeat(64)
   const url = (name: string) => `${SCOPE}${name}.png`
-  const pictured = (images: Record<string, { url: string, sha256: string }>) => definition({ images, content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { image: 'hero' } } })
+  const pictured = (images: Record<string, { url: string, sha256: string }>, id = 'swap') => definition({ id, images, content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { image: 'hero' } } })
   const old = pictured({ hero: { url: url('old'), sha256: OLD } })
   const next = pictured({ hero: { url: url('new'), sha256: NEW } })
   const IMAGE_KEY = (hash: string) => `miniAppWidgetImage:${hash}`
@@ -1188,11 +1188,11 @@ describe('images', () => {
   it('does not let another site\'s bad URL for the same hash keep an image away', async () => {
     const store = await setup()
     const other = 'https://other.example/'
-    fetchWidgetImage.mockImplementation(async (image: { sha256: string }, scope: string) => scope === other
+    fetchWidgetImage.mockImplementation(async (image: { url: string, sha256: string }) => image.url.startsWith(other)
       ? { ok: false, error: 'hash', transient: false }
       : { ok: true, value: `data:image/png;base64,${image.sha256}` })
     store.add(SCOPE, old)
-    store.add(other, old)
+    store.add(other, pictured({ hero: { url: `${other}copy.png`, sha256: OLD } }))
     await flushPromises()
     await flushPromises()
     expect(store.views.find(view => view.scope === SCOPE)!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
@@ -1270,6 +1270,33 @@ describe('images', () => {
     await flushPromises()
     await flushPromises()
     expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('tries each URL a file gives for one hash, so a broken one cannot keep the image away', async () => {
+    const store = await setup()
+    fetchWidgetImage.mockImplementation(async (image: { url: string, sha256: string }) => image.url === url('broken')
+      ? { ok: false, error: 'hash', transient: false }
+      : { ok: true, value: `data:image/png;base64,${image.sha256}` })
+    store.add(SCOPE, old)
+    store.add(SCOPE, pictured({ hero: { url: url('broken'), sha256: OLD } }, 'other'))
+    await flushPromises()
+    await flushPromises()
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  it('keeps a preview the user just added, even if the gallery closes before it is stored', async () => {
+    const store = await setup()
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
+    await store.loadGallery([SCOPE])
+    await store.loadPreviewImages([SCOPE])
+    fetchWidgetImage.mockClear()
+    store.add(SCOPE, old)
+    store.clearPreviewImages()
+    await flushPromises()
+    await flushPromises()
+    expect(fetchWidgetImage).not.toHaveBeenCalled()
+    expect(memory.has(IMAGE_KEY(OLD))).toBe(true)
+    expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
   })
 
   it('draws a chart background, with no download', async () => {

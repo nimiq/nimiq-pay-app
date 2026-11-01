@@ -125,9 +125,9 @@ const DOWNLOADS_AT_ONCE = 6
 const IMAGE_RETRY_MS = 5 * 60_000
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
 
-/** One download per site: another site can name the same hash with a URL that fails. */
-function uniqueImages<T extends { image: WidgetImage, scope: string }>(pinned: T[]): T[] {
-  return [...new Map(pinned.map(entry => [`${entry.scope} ${entry.image.sha256}`, entry])).values()]
+/** One download per URL: anyone can name the same hash with a URL that fails. */
+function uniqueImages<T extends { image: WidgetImage }>(pinned: T[]): T[] {
+  return [...new Map(pinned.map(entry => [`${entry.image.url} ${entry.image.sha256}`, entry])).values()]
 }
 
 async function inTurns<T>(items: T[], work: (item: T) => Promise<unknown>) {
@@ -285,6 +285,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return false
     const at = Date.now()
     const hasSiblings = listForScope(scope).length > 0
+    // The user has seen it, and the gallery may close before it is stored.
+    for (const { sha256 } of Object.values(definition.images ?? {})) {
+      const preview = previews.get(sha256)
+      if (preview)
+        images.set(sha256, preview)
+    }
     stored.value = [...stored.value, {
       scope,
       widgetId: definition.id,
@@ -659,14 +665,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   async function downloadImage(image: WidgetImage, scope: string): Promise<string | undefined> {
-    const refusal = `${scope} ${image.sha256}`
+    const refusal = `${image.url} ${image.sha256}`
     if (refusedImages.has(refusal) || isBlocked(scope))
       return undefined
     const result = await fetchWidgetImage(image, scope)
     if (result.ok)
       return result.value
     logger.warn(`Could not download a widget image: ${result.error}`)
-    // Only what the file itself failed on. By site, as anyone can copy a hash and point it at a bad URL.
+    // Only what the file itself failed on. By URL, as anyone can copy a hash and point it at a bad one.
     if (!result.transient && result.status === undefined)
       refusedImages.add(refusal)
     return undefined
@@ -689,7 +695,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       // Another widget may just have brought it.
       if (savedImages.has(image.sha256))
         return
-      const src = previews.get(image.sha256) ?? await downloadImage(image, scope)
+      const src = images.get(image.sha256) ?? await downloadImage(image, scope)
       // The widget can be removed during the download.
       if (!src || !pinnedHashes.value.has(image.sha256))
         return
