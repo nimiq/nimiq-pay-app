@@ -7,7 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { reportCriticalError, trackConsensusEstablished } from '@/lib/analytics'
+import { reportCriticalError, trackConsensusEstablished, trackConsensusSlow } from '@/lib/analytics'
 import { promiseWithTimeout, sleep, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
 
@@ -17,6 +17,7 @@ const timestamp = useTimestamp({ interval: 1e3 })
 const { setToast, clearToast } = useToast()
 const NIMIQ_SYNC_MODE = 'pico'
 const ACCOUNT_LOOKUP_TIMEOUT_MS = 30_000
+const CONSENSUS_SLOW_MS = 60_000
 
 export const CashlinkExtraData = {
   FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
@@ -84,6 +85,14 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     logger.log('Creating Nimiq client with config', clientConfig)
     const consensusStartedAt = Date.now()
     let consensusTracked = false
+    // consensus_established only fires on success, so an outage shows up as silence without this.
+    const consensusSlowTimer = setTimeout(() => trackConsensusSlow({
+      duration_ms: Date.now() - consensusStartedAt,
+      network: networkName.value,
+      sync_mode: NIMIQ_SYNC_MODE,
+      peer_count: peerCount.value,
+      has_client: !!client.value,
+    }), CONSENSUS_SLOW_MS)
     for (let attempt = 0; !client.value; attempt++) {
       const creation = Nimiq.Client.create(clientConfig)
       try {
@@ -114,6 +123,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       if (newConsensus === 'established') {
         if (!consensusTracked) {
           consensusTracked = true
+          clearTimeout(consensusSlowTimer)
           const durationMs = Date.now() - consensusStartedAt
           logger.log(`Consensus established in ${durationMs}ms`)
           trackConsensusEstablished({ duration_ms: durationMs, network: networkName.value, sync_mode: NIMIQ_SYNC_MODE })

@@ -783,6 +783,24 @@ describe('useRemoteSigner', () => {
     expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: creation.transactionHash, status: 'confirmed', timestamp: creation.timestamp })
   })
 
+  it('names the failed check when activation rejects an HTLC transaction', async () => {
+    const creation = createHtlcCreation({ state: 'included' })
+    state.client.getTransaction.mockResolvedValue(creation)
+    state.client.getAccount.mockResolvedValue({ type: 'htlc', balance: 1 })
+    state.getRemoteSigner.mockResolvedValueOnce({ data: createRemoteSignerApiData(creation.recipient), error: undefined, hasError: false, status: 200 })
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await expect(store.activateRemoteSignerFromTransaction({ ...creation, validityStartHeight: 1 } as any))
+      .rejects
+      .toThrow('invalid HTLC transaction: mismatch validityStartHeight')
+
+    state.getRemoteSigner.mockResolvedValueOnce({ data: undefined, error: { message: 'cosigner down', statusCode: 503 }, hasError: true, status: 503 })
+    await expect(store.activateRemoteSignerFromTransaction(creation as any))
+      .rejects
+      .toThrow('invalid HTLC transaction: metadata unavailable: cosigner down')
+  })
+
   it('does not let delayed activation overwrite newer same-context signer state', async () => {
     const creation = createHtlcCreation({ state: 'included' })
     let finishMetadata!: (result: any) => void

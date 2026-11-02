@@ -704,26 +704,27 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     expectedSignerRevision = getSignerWriteRevision(),
   ) {
     const context = expectedContext ?? getWalletContext()
+    // Each check names its reason: the shared message alone can't tell them apart in PostHog (APP-336).
     if (!context || !isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context before metadata')
 
     let address: Address
     try {
       address = Nimiq.Address.fromString(transaction.recipient)
     }
     catch {
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: invalid recipient')
     }
     const result = await resolveAddressSpecificSignerMetadata(address, context)
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after metadata')
 
     const account = await promiseWithTimeout(
       context.client.getAccount(transaction.recipient),
       DISCOVER_TIMEOUT_MS,
     )
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after account')
     // Drained creations need no activation metadata, which may already be unavailable in the cosigner.
     if (transaction.state === 'confirmed' && transaction.executionResult !== false && account.balance === 0) {
       if (remoteAddress.value?.toUserFriendlyAddress() === transaction.recipient
@@ -733,17 +734,19 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
     }
     if (result.status !== 'valid')
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error(`Cannot activate remote signer from invalid HTLC transaction: metadata ${result.status}: ${result.reason}`)
     const { metadata } = result
     const data = transaction.data
-    if (transaction.transactionHash !== metadata.creationTransactionHash
-      || data.type !== 'htlc'
-      || data.sender !== context.owner
-      || data.recipient !== metadata.cosignerRecipient
-      || data.timeout !== metadata.end
-      || transaction.validityStartHeight !== metadata.validityStartHeight) {
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
-    }
+    const mismatches = [
+      transaction.transactionHash !== metadata.creationTransactionHash && 'hash',
+      data.type !== 'htlc' && 'type',
+      data.type === 'htlc' && data.sender !== context.owner && 'sender',
+      data.type === 'htlc' && data.recipient !== metadata.cosignerRecipient && 'recipient',
+      data.type === 'htlc' && data.timeout !== metadata.end && 'timeout',
+      transaction.validityStartHeight !== metadata.validityStartHeight && 'validityStartHeight',
+    ].filter(Boolean)
+    if (mismatches.length)
+      throw new Error(`Cannot activate remote signer from invalid HTLC transaction: mismatch ${mismatches.join(',')}`)
     if (account.type !== 'htlc' || account.balance <= 0
       || !Number.isSafeInteger(account.balance) || account.timeout !== metadata.end
       || account.sender !== context.owner || account.recipient !== metadata.cosignerRecipient) {
@@ -759,7 +762,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       proofSize: metadata.proofSize,
     }, context, expectedSignerRevision)
     if (!stored && isWalletContextCurrent(context))
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: signer not stored')
   }
 
   async function updateActiveWallet() {

@@ -121,9 +121,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // but no consensus/sync is started.
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
-  identifyUser() // Identify user as early as possible to capture all analytics events, including those during app initialization
-  if (!isAlertRoute)
-    trackCurrentAppOpen('cold_start')
+  // Identify user as early as possible to capture all analytics events, including those during app initialization.
+  // app_opened waits so the first launch after an OTA reports the new bundle_version, not the previous one.
+  void identifyUser().then(() => {
+    if (!isAlertRoute)
+      trackCurrentAppOpen('cold_start')
+  })
   if (!isAlertRoute) {
     useMiniApps() // computedAsync triggers description fetching on store creation
   }

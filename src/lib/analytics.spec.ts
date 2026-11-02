@@ -4,6 +4,7 @@ import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
   getAmountRange,
+  identifyUser,
   reportCriticalError,
   startPaymentAnalytics,
   trackAppOpened,
@@ -22,6 +23,7 @@ import {
 const state = vi.hoisted(() => ({
   capture: vi.fn(),
   identify: vi.fn(),
+  register: vi.fn(),
   captureException: vi.fn(),
   isDev: false,
 }))
@@ -30,8 +32,17 @@ vi.mock('@capawesome/capacitor-posthog', () => ({
   Posthog: {
     capture: state.capture,
     identify: state.identify,
+    register: state.register,
     captureException: state.captureException,
   },
+}))
+
+vi.mock('@capgo/capacitor-updater', () => ({
+  CapacitorUpdater: { current: vi.fn(async () => ({ bundle: { version: '2.22.1' } })) },
+}))
+
+vi.mock('@capacitor/device', () => ({
+  Device: { getId: vi.fn(async () => ({ identifier: 'device-id' })) },
 }))
 
 vi.mock('@/lib', async (importOriginal) => {
@@ -479,5 +490,14 @@ describe('failure error reasons', () => {
     })
 
     expect(state.capture.mock.calls[0][0]).toMatchObject({ event: 'payment_failed', properties: { error_reason: 'Rejected for NQ…' } })
+  })
+})
+
+describe('identifyUser', () => {
+  it('registers the OTA bundle version on every event', async () => {
+    await identifyUser()
+
+    expect(state.identify).toHaveBeenCalledWith({ distinctId: 'device-id', userProperties: { isDev: false } })
+    expect(state.register).toHaveBeenCalledWith({ key: 'bundle_version', value: '2.22.1' })
   })
 })
