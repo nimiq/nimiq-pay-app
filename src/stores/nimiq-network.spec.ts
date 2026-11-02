@@ -174,6 +174,16 @@ describe('useNimiqNetwork', () => {
     expect(getAccount).toHaveBeenCalledWith(address)
   })
 
+  it('counts an account of another type as zero', async () => {
+    const getAccount = vi.fn().mockResolvedValue({ type: 'basic', balance: 100_000 })
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = { getAccount } as any
+
+    await expect(store.getBalance({} as any, 'htlc')).resolves.toEqual({ data: 0, error: undefined })
+    await expect(store.getBalance({} as any)).resolves.toEqual({ data: 100_000, error: undefined })
+  })
+
   it('returns a zero fallback with an error when the account lookup fails', async () => {
     const { useNimiqNetwork } = await import('./nimiq-network')
     const store = useNimiqNetwork()

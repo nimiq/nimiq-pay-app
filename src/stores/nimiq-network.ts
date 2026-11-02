@@ -311,7 +311,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
-  async function getBalance(address: Address | string | Uint8Array) {
+  /**
+   * @param address Account to read.
+   * @param type Count accounts of another type as 0. A drained HTLC that later receives NIM becomes a
+   * basic account nobody can spend from, so HTLC reads must pass 'htlc'.
+   */
+  async function getBalance(address: Address | string | Uint8Array, type?: PlainAccount['type']) {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
     try {
@@ -320,7 +325,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         : undefined
       if (!account)
         return { data: 0, error: NO_ACCOUNT_ERROR } // No user facing
-      return { data: account.balance, error: undefined }
+      return { data: !type || account.type === type ? account.balance : 0, error: undefined }
     }
     catch (error) {
       logger.error('Error getting balance', error)

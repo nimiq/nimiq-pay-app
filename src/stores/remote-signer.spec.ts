@@ -734,6 +734,18 @@ describe('useRemoteSigner', () => {
       expect(state.runSet).not.toHaveBeenCalled()
   })
 
+  it('resolves a drained confirmed creation whose address received NIM afterwards', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    // The pruned HTLC address is now a basic account: its balance can't be reclaimed.
+    state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 100_000 })
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await expect(store.activateRemoteSignerFromTransaction(creation as any)).resolves.toBeUndefined()
+    expect(store.remoteBalance).toBe(0)
+  })
+
   it.each([
     { type: 'basic', balance: 0 },
     createLiveHtlcAccount({ balance: 0 }),
