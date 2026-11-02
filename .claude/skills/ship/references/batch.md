@@ -2,7 +2,7 @@
 
 ## Several issues (`ship <ISSUE>, <ISSUE>` or "do all triage issues")
 
-For "do all triage issues", first list Nimiq Pay team Triage/Todo issues in Linear, use their IDs.
+For "do all triage issues", first list Appsolut team (key `APP`) Triage/Todo issues in Linear, use their IDs.
 
 ### Claude Code: the `ship-batch` workflow
 

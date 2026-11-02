@@ -14,7 +14,7 @@ Invoking skill = user's explicit request to create branch + worktree, commit, pu
 
 - `<ISSUE>` (a Linear ID such as `APP-` + number): one issue. Below, `<ISSUE>` is that ID and `<issue>` its lowercase form.
 - several IDs (`<ISSUE>, <ISSUE>, …`) or "all triage": batch. Read `references/batch.md` (Claude Code runs `workflows/ship-batch.js`).
-- `next`: list Linear issues in Triage/Todo for Nimiq Pay team, pick most important one still happening on main, say which + why in one line, ship it.
+- `next`: list Linear issues in Triage/Todo for Appsolut team (key `APP`), pick most important one still happening on main, say which + why in one line, ship it.
 - `sweep`: review open PRs one by one instead of issues. See `references/batch.md`.
 - `land <PR>` (or `land` for all your open PRs): take open PR to merge-ready, clean up after merge. See `references/land.md`.
 
