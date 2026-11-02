@@ -5,12 +5,13 @@ import { computed } from 'vue'
 const state = vi.hoisted(() => ({
   isNetworkReconnecting: false,
   logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  trackConsensusSlow: vi.fn(),
 }))
 
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast: vi.fn(), clearToast: vi.fn() }) }))
 vi.mock('@/lib', () => ({ isTestnet: true }))
-vi.mock('@/lib/analytics', () => ({ reportCriticalError: vi.fn(), trackConsensusEstablished: vi.fn() }))
+vi.mock('@/lib/analytics', () => ({ reportCriticalError: vi.fn(), trackConsensusEstablished: vi.fn(), trackConsensusSlow: state.trackConsensusSlow }))
 vi.mock('@/stores/locks', () => {
   const useLocks = defineStore('locks', () => ({
     isNetworkReconnecting: computed({
@@ -44,6 +45,41 @@ describe('useNimiqNetwork', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  async function initWithConsensusListener() {
+    let onConsensusChanged!: (consensus: string) => Promise<void>
+    vi.mocked(Nimiq.Client.create).mockResolvedValue({
+      getHeadBlock: vi.fn().mockResolvedValue({ hash: 'h0', height: 100, type: 'micro' }),
+      getNetworkId: vi.fn().mockResolvedValue(5),
+      addConsensusChangedListener: vi.fn((listener: typeof onConsensusChanged) => onConsensusChanged = listener),
+      addHeadChangedListener: vi.fn(),
+      addPeerChangedListener: vi.fn(),
+    } as any)
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    await useNimiqNetwork().init()
+    return { onConsensusChanged }
+  }
+
+  it('reports consensus_slow when consensus is not reached in time', async () => {
+    vi.useFakeTimers()
+    state.trackConsensusSlow.mockReset()
+    await initWithConsensusListener()
+
+    await vi.advanceTimersByTimeAsync(60 * 1e3)
+
+    expect(state.trackConsensusSlow).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ duration_ms: expect.any(Number), peer_count: 0, has_client: true }))
+  })
+
+  it('does not report consensus_slow once consensus is established', async () => {
+    vi.useFakeTimers()
+    state.trackConsensusSlow.mockReset()
+    const { onConsensusChanged } = await initWithConsensusListener()
+
+    await onConsensusChanged('established')
+    await vi.advanceTimersByTimeAsync(60 * 1e3)
+
+    expect(state.trackConsensusSlow).not.toHaveBeenCalled()
   })
 
   async function initWithPendingHeadBlocks() {
