@@ -46,7 +46,7 @@ Rules:
 - No evidence, no finding: every finding needs file:line from code you read and a concrete failure.
 - Drop style, naming, formatting, refactors, "consider", speculative perf. No praise, no diff summary.
 - Never repeat PRIOR FINDINGS unless the attempted fix is itself wrong.
-- ROUND >= 4: start with `ROUND CAP: <R> rounds - reconsider the approach` and the pattern you see.
+- ROUND >= 4: past the 3-round budget. Start with `ROUND CAP: <R> rounds - stop patching, reconsider the approach` and the pattern you see.
 - Diffs over 1000 lines: say which files got deep review and which were only skimmed.
 - Read-only: git/gh read commands, grep and file reads only. No builds, tests or state changes.
 """

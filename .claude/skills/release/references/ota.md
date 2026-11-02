@@ -71,6 +71,8 @@ git tag -v "ota-vX.Y.Z"
 git push origin "ota-vX.Y.Z"
 ```
 
+In Claude Code the push prompts for approval (`ask` rule in `.claude/settings.json`). Approve it: invoking OTA mode already asked for this tag.
+
 The workflow rejects tags whose commit isn't on `main` and tags not matching `ota-vX.Y.Z`.
 
 ## O7. Watch the workflow

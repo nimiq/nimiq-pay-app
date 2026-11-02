@@ -71,7 +71,7 @@ Rules:
 - Drop style, naming, formatting, refactors, "consider", speculative perf.
 - No praise, no summary of what the diff does, no fix suggestions beyond what "Show it" implies.
 - Never repeat a finding from PRIOR FINDINGS.
-- ROUND ≥ 4: before findings, add `ROUND CAP: <R> rounds so far — reconsider the approach before another fix round.` and state the pattern you see.
+- ROUND ≥ 4: past the 3-round budget. Before findings, add `ROUND CAP: <R> rounds so far — stop patching, reconsider the approach.` and state the pattern you see.
 - If a subagent fails or returns garbage, say so in the header line; do not silently drop its share of the work. If a verifier is missing, require 2 of the remaining votes.
 - Large diffs (>1000 lines): say which files got deep review and which only skimmed.
 - Read-only: only git/gh read commands, grep, file reads. Do not run builds, tests, or anything that mutates state.

@@ -35,12 +35,11 @@ gh pr list --state open --search 'head:release-' --json number,title,headRefName
 node --version                                # must satisfy package.json engines
 gh auth status
 git config --get commit.gpgsign; git config --get user.signingkey
-grep -oE '^(GITHUB_TOKEN|BROWSERSTACK_USERNAME|BROWSERSTACK_ACCESS_KEY|APP_IDENTIFIER|GOOGLE_PLAY_JSON_KEY_FILE)=' .env   # native mode
 ```
 
 - `$PREV` not an ancestor of `origin/main`: the previous release PR isn't merged, or was squashed. `scripts/generate-changelog.mjs` diffs from the last reachable `🚀 Release v` commit, so the new changelog would repeat or miss changes. Name the open release PR and stop; it must be merged with a merge commit first.
 - Open release PR exists (native mode): stop, name it.
-- `.env` check prints names only. Never print secret values.
+- Don't read `.env` (deny rule in `.claude/settings.json`). release-it's `before:init` hook checks the required variables and names any missing, before the version bump. Never print secret values.
 
 ### `main` pulled
 
