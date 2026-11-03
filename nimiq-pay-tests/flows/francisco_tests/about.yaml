@@ -13,8 +13,12 @@ tags:
 - extendedWaitUntil:
     visible: ${output.navigation.aboutBtn}
     timeout: 5000
-- assertVisible: ${output.navigation.aboutBtn}
-- tapOn: ${output.navigation.aboutBtn}
+# The About page opens in Chrome, which keeps the screen changing while it
+# loads; without a cap tapOn waited ~70 s for it to settle. The
+# extendedWaitUntil below still proves the page loaded.
+- tapOn:
+    text: ${output.navigation.aboutBtn}
+    waitToSettleTimeoutMs: 3000
 
 - runFlow:
     when:
@@ -26,6 +30,5 @@ tags:
 - extendedWaitUntil:
     visible: ${output.about.pageUrl}
     timeout: 10000
-- assertVisible: ${output.about.pageUrl}
 
 - stopApp
