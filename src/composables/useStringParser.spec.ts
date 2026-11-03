@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Asset } from '@/lib/assets'
+import { Rail } from '@/types/transactions'
 
 const state = vi.hoisted(() => ({
   query: vi.fn(),
@@ -7,6 +8,7 @@ const state = vi.hoisted(() => ({
   createSwap: vi.fn(),
   getSwap: vi.fn(),
   parseBitcoinLightningInvoice: vi.fn(),
+  getOrderById: vi.fn(),
   activeAsset: 'NIM' as string,
   logger: {
     log: vi.fn(),
@@ -27,7 +29,7 @@ vi.mock('@/composables/useLogger', () => ({
 
 vi.mock('./useApi', () => ({
   useCplApi: () => ({
-    getOrderById: vi.fn(),
+    getOrderById: state.getOrderById,
   }),
 }))
 
@@ -65,6 +67,7 @@ describe('useStringParser', () => {
     state.createSwap.mockReset()
     state.getSwap.mockReset()
     state.parseBitcoinLightningInvoice.mockReset()
+    state.getOrderById.mockReset()
     state.logger.log.mockReset()
     state.logger.error.mockReset()
 
@@ -151,7 +154,7 @@ describe('useStringParser', () => {
 
   it('keeps Nimiq wallet requests on the NIM/Nimiq asset pair', async () => {
     const { useStringParser } = await import('./useStringParser')
-    const { data, error } = await useStringParser().getPaymentRequestData('nimiq:NQ48JPHQ7DL8QF5U7RNVYTN5T8XX36QH7A7L?amount=1.25')
+    const { data, error } = await useStringParser().getPaymentRequestData('nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.25')
 
     expect(error).toBeUndefined()
     expect(data).toMatchObject({
@@ -159,6 +162,66 @@ describe('useStringParser', () => {
       asset: 'NIM',
       chain: 'Nimiq',
     })
+  })
+
+  it('keeps an amount-less Nimiq wallet request at amount 0 so the user enters it', async () => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6')
+
+    expect(error).toBeUndefined()
+    expect(data).toMatchObject({ recipient: 'NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6', amount: 0 })
+  })
+
+  it.each([
+    ['a bad checksum', 'nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP7?amount=1'],
+    ['a non-address path', 'nimiq:hello?amount=1'],
+  ])('rejects a Nimiq wallet request with %s recipient', async (_, link) => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData(link)
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Invalid Nimiq address')
+  })
+
+  it.each(['abc', '-5', 'Infinity', '1e12'])('rejects a Nimiq wallet request with amount=%s', async (amount) => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData(`nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=${amount}`)
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Invalid amount')
+  })
+
+  it('parses a CPLink with a valid recipient and amount', async () => {
+    state.getOrderById.mockResolvedValue({ data: { fiatCurrency: 'EUR', fiatAmount: 1.5, itemDescription: 'Shoes' }, error: undefined })
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&label=Maxi%20Shoes&cpl_id=PZEdCP62')
+
+    expect(error).toBeUndefined()
+    expect(data).toMatchObject({ recipient: 'NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6', amount: 183000, paymentRef: 'PZEdCP62', rail: Rail.CryptoPaymentLink })
+  })
+
+  it('rejects a CPLink with a bad recipient checksum before fetching the order', async () => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP7?amount=1&cpl_id=PZEdCP62')
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Invalid Nimiq address')
+    expect(state.getOrderById).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a negative amount', '-5'],
+    ['an infinite amount', 'Infinity'],
+    ['a sub-luna amount', '0.000001'],
+    ['an amount beyond safe integer luna', '1e12'],
+    ['no amount', ''],
+  ])('rejects a CPLink with %s before fetching the order', async (_, amount) => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData(`nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=${amount}&cpl_id=PZEdCP62`)
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Invalid CPLink. Missing amount or recipient.')
+    expect(state.getOrderById).not.toHaveBeenCalled()
   })
 
   it('normalizes supported Lightning swap fee tickers into app crypto values', async () => {

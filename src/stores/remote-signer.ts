@@ -704,28 +704,31 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     expectedSignerRevision = getSignerWriteRevision(),
   ) {
     const context = expectedContext ?? getWalletContext()
+    // Each check names its reason: the shared message alone can't tell them apart in PostHog (APP-336).
     if (!context || !isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context before metadata')
 
     let address: Address
     try {
       address = Nimiq.Address.fromString(transaction.recipient)
     }
     catch {
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: invalid recipient')
     }
     const result = await resolveAddressSpecificSignerMetadata(address, context)
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after metadata')
 
     const account = await promiseWithTimeout(
       context.client.getAccount(transaction.recipient),
       DISCOVER_TIMEOUT_MS,
     )
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after account')
     // Drained creations need no activation metadata, which may already be unavailable in the cosigner.
-    if (transaction.state === 'confirmed' && transaction.executionResult !== false && account.balance === 0) {
+    // A drained HTLC that later receives NIM is a basic account nobody can spend from.
+    if (transaction.state === 'confirmed' && transaction.executionResult !== false
+      && (account.type !== 'htlc' || account.balance === 0)) {
       if (remoteAddress.value?.toUserFriendlyAddress() === transaction.recipient
         && !await deactivateRemoteSigner(address, context, true)) {
         throw new Error('Cannot resolve drained HTLC transaction')
@@ -733,17 +736,19 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
     }
     if (result.status !== 'valid')
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error(`Cannot activate remote signer from invalid HTLC transaction: metadata ${result.status}: ${result.reason}`)
     const { metadata } = result
     const data = transaction.data
-    if (transaction.transactionHash !== metadata.creationTransactionHash
-      || data.type !== 'htlc'
-      || data.sender !== context.owner
-      || data.recipient !== metadata.cosignerRecipient
-      || data.timeout !== metadata.end
-      || transaction.validityStartHeight !== metadata.validityStartHeight) {
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
-    }
+    const mismatches = [
+      transaction.transactionHash !== metadata.creationTransactionHash && 'hash',
+      data.type !== 'htlc' && 'type',
+      data.type === 'htlc' && data.sender !== context.owner && 'sender',
+      data.type === 'htlc' && data.recipient !== metadata.cosignerRecipient && 'recipient',
+      data.type === 'htlc' && data.timeout !== metadata.end && 'timeout',
+      transaction.validityStartHeight !== metadata.validityStartHeight && 'validityStartHeight',
+    ].filter(Boolean)
+    if (mismatches.length)
+      throw new Error(`Cannot activate remote signer from invalid HTLC transaction: mismatch ${mismatches.join(',')}`)
     if (account.type !== 'htlc' || account.balance <= 0
       || !Number.isSafeInteger(account.balance) || account.timeout !== metadata.end
       || account.sender !== context.owner || account.recipient !== metadata.cosignerRecipient) {
@@ -759,7 +764,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       proofSize: metadata.proofSize,
     }, context, expectedSignerRevision)
     if (!stored && isWalletContextCurrent(context))
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction: signer not stored')
   }
 
   async function updateActiveWallet() {
@@ -796,7 +801,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (areEqual)
       return
 
-    const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address), client.value?.getAccount(newRemoteSigner.address)])
+    const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), client.value?.getAccount(newRemoteSigner.address)])
     // Don't replace remote signer if old balance is higher than 0 and new balance is 0
     if (oldRemoteBalance.status === 'fulfilled' && newRemoteAccount.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteAccount.value && newRemoteAccount.value.balance === 0)
       return
@@ -874,7 +879,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       logger.warn(`⚠️ remote signer publicKey mismatch — stored=${remoteSigner.value.publicKey} api=${newRemoteSigner.publicKey}. Likely stale cross-network state.`)
     }
     if (remoteSigner.value) {
-      const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
+      const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), getBalance(newRemoteSigner.address, 'htlc')])
       if (!isWalletContextCurrent(context))
         return
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0

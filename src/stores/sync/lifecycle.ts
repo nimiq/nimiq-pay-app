@@ -31,7 +31,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, isHtlcActive, homeBalanceState } = storeToRefs(useRemoteSigner())
   const { getWalletContext, isWalletContextCurrent } = useRemoteSigner()
-  const { isProcessingRemote, isSyncingWallets, headChangePendingDrainLock, headChangeUpdatesLock } = storeToRefs(useLocks())
+  const { isProcessingRemote, isSendingTx, isSyncingWallets, headChangePendingDrainLock, headChangeUpdatesLock } = storeToRefs(useLocks())
   const { updateBalances } = useSyncBalances()
   const { handleFunds, checkRemoteValidity, extendValidity, checkHtlcState, checkExpiredSwapHtlcs, maybeCheckHtlcState } = useSyncHtlc()
   const { verifyRemoteSignersDb } = useSyncRemoteSigners()
@@ -469,7 +469,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       if (!isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent())
         return
       logger.log(`📬 New transaction from remote received`, tx)
-      pendingPaymentTransactions.value.push(tx)
+      // Only the in-flight sendTx reads this, to skip rebroadcasting a tx already included; it clears the list when done.
+      if (isSendingTx.value)
+        pendingPaymentTransactions.value.push(tx)
       try {
         await updateSingleTransaction(tx.transactionHash, tx)
       }

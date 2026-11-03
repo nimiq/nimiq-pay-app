@@ -9,11 +9,9 @@ describe('useSyncState', () => {
     resetSyncState()
   })
 
-  it('exposes BLOCKS_PER_BATCH-derived auto-extend lookahead constant', async () => {
+  it('expresses the auto-extend lookahead as 120 one-second-block batches in ms', async () => {
     const mod = await import('./state')
-    expect(mod.HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS).toBe(120 * Nimiq.Policy.BLOCKS_PER_BATCH)
-    expect(mod.MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA)
-      .toBe(mod.HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS)
+    expect(mod.MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA).toBe(120 * Nimiq.Policy.BLOCKS_PER_BATCH * 1000)
   })
 
   it('marks nodesAreSynced false initially and true once heights match within a batch', async () => {
@@ -46,20 +44,32 @@ describe('useSyncState', () => {
     expect(useSyncState().htlcCanBeExtended).toBe(false)
   })
 
-  it('htlcCanBeExtended is false when head + lookahead is below HTLC mid-point', async () => {
-    state.htlcStart = 100_000
-    state.htlcEnd = 300_000
-    state.headTimestamp = 100_000 // mid = 200_000, lookahead = 120 * 32 = 3840 → false
-    const { useSyncState } = await import('./state')
-    expect(useSyncState().htlcCanBeExtended).toBe(false)
-  })
+  describe('htlcCanBeExtended with a 14-day HTLC in ms', () => {
+    const start = 1_700_000_000_000
+    const mid = start + 7 * 24 * 60 * 60 * 1000
 
-  it('htlcCanBeExtended is true once head + lookahead crosses HTLC mid-point', async () => {
-    state.htlcStart = 100_000
-    state.htlcEnd = 300_000
-    state.headTimestamp = 199_000 // 199_000 + 3840 > 200_000 → true
-    const { useSyncState } = await import('./state')
-    expect(useSyncState().htlcCanBeExtended).toBe(true)
+    beforeEach(() => {
+      state.htlcStart = start
+      state.htlcEnd = start + 14 * 24 * 60 * 60 * 1000
+    })
+
+    it('is false while head + lookahead has not passed the mid-point', async () => {
+      const { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSyncState } = await import('./state')
+      state.headTimestamp = mid - MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA
+      expect(useSyncState().htlcCanBeExtended).toBe(false)
+    })
+
+    it('is true once head + lookahead passes the mid-point', async () => {
+      const { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSyncState } = await import('./state')
+      state.headTimestamp = mid - MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA + 1
+      expect(useSyncState().htlcCanBeExtended).toBe(true)
+    })
+
+    it('is true a minute before the mid-point, not only seconds before it', async () => {
+      state.headTimestamp = mid - 60_000
+      const { useSyncState } = await import('./state')
+      expect(useSyncState().htlcCanBeExtended).toBe(true)
+    })
   })
 
   it('blocksUntilNextMacroBlock returns 0 when lastMacroBlockHeight is 0', async () => {

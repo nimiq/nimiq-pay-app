@@ -26,6 +26,9 @@ const errorMsg = ref('')
 // instead of a silently stuck PIN screen. Generous so slow devices / DB migrations don't trip it.
 const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
 
+// Biometric and manual entry can both emit done, so a second submit must not start while one runs.
+let isSubmitting = false
+
 // Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
 // title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
 // stealing the pointermove — can't cancel it (the old 3s + default threshold was unreliable).
@@ -33,8 +36,11 @@ const titleRef = ref<HTMLElement | null>(null)
 onLongPress(titleRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
 async function handleSubmit(pin: string) {
-  if (pin.length < 4)
+  if (pin.length < 4 || isSubmitting)
     return false
+  isSubmitting = true
+  // Reset so a repeated identical error still reaches PinInput's watcher and clears its spinner.
+  errorMsg.value = ''
 
   logger.log('🔓 handleSubmit: PIN submitted', { length: pin.length })
   // Anything that throws OR hangs here (decrypt, mini-app reconnect, navigation) must surface as a
@@ -82,7 +88,10 @@ async function handleSubmit(pin: string) {
     }
 
     logger.log('🔓 handleSubmit: router.replace(/app) start')
-    await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    const navigationFailure = await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    // A failed navigation resolves instead of throwing; surface it, or PinInput's spinner never clears.
+    if (navigationFailure)
+      throw navigationFailure
     logger.log('🔓 handleSubmit: router.replace(/app) done')
   }
   catch (err) {
@@ -91,6 +100,9 @@ async function handleSubmit(pin: string) {
     window.setTimeout(() => {
       errorMsg.value = ''
     }, 4000)
+  }
+  finally {
+    isSubmitting = false
   }
 }
 
@@ -144,7 +156,7 @@ onMounted(async () => {
         <h1 ref="titleRef" class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>
-        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" @done="handleSubmit" />
+        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" show-loading @done="handleSubmit" />
       </IonGrid>
     </IonContent>
   </IonPage>

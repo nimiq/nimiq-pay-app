@@ -2,6 +2,23 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.23.0 — 2026-10-30
+
+### Better support chat
+When our support team closes a chat, you can still read their last reply, even after restarting the app. To ask something else, just type a new message and a new chat starts.
+
+### Correct USDT balances
+Some USDT amounts were shown 10 times higher than they really were. They now show the right value.
+
+### Faster for busy wallets
+Wallets with a long transaction history load and sync much faster. The home screen also stays smooth right after you unlock the app.
+
+### Safer payments and funds
+You're never charged a higher fee than the one you approved. Funds that got stuck or split after a reinstall or restore are now recovered automatically. We also fixed several issues with swaps, refunds and payment requests.
+
+### Smoother everyday use
+Unlocking with your PIN, scanning QR codes and moving between screens are more reliable. Mini Apps also get stronger security protections.
+
 ## 2.22.0 — 2026-10-06
 
 ### Safer swap fees and refunds

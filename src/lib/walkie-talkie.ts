@@ -2,10 +2,16 @@ import { nativeFetch } from './nativeFetch'
 
 export interface WtMessage {
   id: string
-  sender: string // "user" | "agent:<name>"
+  sender: string // "user" | "agent:<name>" | "system"
+  event?: string // Only on "system" entries, e.g. "session_closed"
   content: string
   timestamp: string
   failed?: boolean // Client-side only: true if the message failed to send
+}
+
+/** Whether the history contains the entry the backend adds when support closes the session */
+export function isSessionClosed(messages: WtMessage[]) {
+  return messages.some(m => m.sender === 'system' && m.event === 'session_closed')
 }
 
 export interface UserStatus {

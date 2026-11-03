@@ -318,6 +318,7 @@ describe('useRemoteSigner', () => {
       },
       Policy: {
         BLOCKS_PER_BATCH: 32,
+        BLOCK_SEPARATION_TIME: 1000n,
       },
     })
 
@@ -733,6 +734,18 @@ describe('useRemoteSigner', () => {
       expect(state.runSet).not.toHaveBeenCalled()
   })
 
+  it('resolves a drained confirmed creation whose address received NIM afterwards', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    // The pruned HTLC address is now a basic account: its balance can't be reclaimed.
+    state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 100_000 })
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await expect(store.activateRemoteSignerFromTransaction(creation as any)).resolves.toBeUndefined()
+    expect(store.remoteBalance).toBe(0)
+  })
+
   it.each([
     { type: 'basic', balance: 0 },
     createLiveHtlcAccount({ balance: 0 }),
@@ -780,6 +793,24 @@ describe('useRemoteSigner', () => {
     expect(sync.pendingHtlcCreationTransactions).toEqual([])
     expect(state.runSet).not.toHaveBeenCalled()
     expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: creation.transactionHash, status: 'confirmed', timestamp: creation.timestamp })
+  })
+
+  it('names the failed check when activation rejects an HTLC transaction', async () => {
+    const creation = createHtlcCreation({ state: 'included' })
+    state.client.getTransaction.mockResolvedValue(creation)
+    state.client.getAccount.mockResolvedValue({ type: 'htlc', balance: 1 })
+    state.getRemoteSigner.mockResolvedValueOnce({ data: createRemoteSignerApiData(creation.recipient), error: undefined, hasError: false, status: 200 })
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await expect(store.activateRemoteSignerFromTransaction({ ...creation, validityStartHeight: 1 } as any))
+      .rejects
+      .toThrow('invalid HTLC transaction: mismatch validityStartHeight')
+
+    state.getRemoteSigner.mockResolvedValueOnce({ data: undefined, error: { message: 'cosigner down', statusCode: 503 }, hasError: true, status: 503 })
+    await expect(store.activateRemoteSignerFromTransaction(creation as any))
+      .rejects
+      .toThrow('invalid HTLC transaction: metadata unavailable: cosigner down')
   })
 
   it('does not let delayed activation overwrite newer same-context signer state', async () => {

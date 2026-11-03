@@ -636,6 +636,40 @@ describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test
   })
 })
 
+describe('MiniAppHost Nimiq transaction message', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['array', ['NQ22 RECIPIENT', 10, 0, 'a'.repeat(65)]],
+    ['object', { recipient: 'NQ22 RECIPIENT', value: 10, data: '\u00E9'.repeat(33) }],
+  ])('rejects a message over 64 bytes from %s params before confirmation', async (_, params) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransactionWithData',
+      params,
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: -32602,
+      message: 'Transaction message exceeds 64 bytes',
+      type: 'INVALID_TRANSACTION',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('sends a message of exactly 64 bytes', async () => {
+    const message = '\u00E9'.repeat(32)
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransactionWithData',
+      params: ['NQ22 RECIPIENT', 10, 0, message],
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ message }) }))
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ message }))
+  })
+})
+
 describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/prefer-lowercase-title
   const request = { network: 'nimiq', name: 'payLightningInvoice', params: { invoice: 'lnbc1test' } }
   function selectUsdt() {

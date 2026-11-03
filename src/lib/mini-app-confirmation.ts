@@ -359,7 +359,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: 'Reason', value: request.reason },
+          { title: 'Reason', value: request.reason.length > 200 ? `${request.reason.slice(0, 197)}...` : request.reason },
         ],
         confirmButtonTitle: 'Share',
         cancelButtonTitle: 'Deny',

@@ -64,6 +64,9 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
   // },
 ])
 
+// Module scope: each useNotifications() call is a new instance, so the guard must be shared.
+let tapHandle: { remove: () => Promise<void> } | null = null
+
 export function useNotifications() {
   const status: Ref<PermissionState | undefined> = ref()
   const { isAndroid, isWeb } = useDevice()
@@ -111,6 +114,8 @@ export function useNotifications() {
   }
 
   async function addListeners() {
+    // Setup flow and MainView register from separate instances; one push tap must run performAction once.
+    await PushNotifications.removeAllListeners()
     await PushNotifications.addListener('registration', (token) => {
       logger.log('🔔 Registration token:', token.value)
     })
@@ -374,7 +379,6 @@ export function useNotifications() {
     }
   }
 
-  let tapHandle: { remove: () => Promise<void> } | null = null
   async function installLocalNotificationsTapHandler() {
     if (isWeb || tapHandle)
       return
