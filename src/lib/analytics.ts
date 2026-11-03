@@ -1,6 +1,7 @@
 import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { redact, reportException, useLogger } from '@/composables/useLogger'
@@ -258,6 +259,10 @@ export function trackConsensusEstablished(props: { duration_ms: number, network:
   capture('consensus_established', props)
 }
 
+export function trackConsensusSlow(props: { duration_ms: number, network: string, sync_mode: string, peer_count: number, has_client: boolean }): void {
+  capture('consensus_slow', props)
+}
+
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
   capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
@@ -349,6 +354,9 @@ export async function identifyUser() {
   try {
     const { identifier } = await Device.getId()
     Posthog.identify({ distinctId: identifier, userProperties: { isDev } })
+    // $app_version is the native version; OTA bundles only show up here.
+    const { bundle } = await CapacitorUpdater.current()
+    await Posthog.register({ key: 'bundle_version', value: bundle.version })
   }
   catch (error) {
     logger.error('Failed to identify user in Posthog', error)

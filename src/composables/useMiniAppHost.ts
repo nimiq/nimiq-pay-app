@@ -213,7 +213,7 @@ export type UserConfirmationRequest
     })
     | (MiniAppBase & {
       type: 'deviceIdentifier'
-      /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
+      /** Mini App supplied human-readable explanation. Truncated to 200 characters in the prompt. */
       reason: string
     })
 
@@ -1664,6 +1664,9 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
+    // Protocol limit; reject before the prompt instead of signing a transaction the network refuses
+    if (new TextEncoder().encode(message).length > 64)
+      throw new InvalidTransactionError('Transaction message exceeds 64 bytes')
 
     return this.sendPayment({
       recipient,

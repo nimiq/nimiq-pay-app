@@ -46,6 +46,8 @@ function handleContinue() {
 
 <template>
   <div class="flex flex-col items-center w-full h-full p-4 mt-8 gap-y-4">
+    <!-- Not self-closing: the i18n extractor would skip the rest of the template (see AGENTS.md) -->
+    <!-- eslint-disable vue/html-self-closing -->
     <textarea
       ref="textarea"
       v-model="invoice"
@@ -54,7 +56,8 @@ function handleContinue() {
       @focus="isFocused = true"
       @blur="isFocused = false"
       @keypress.enter="textarea?.blur"
-    />
+    ></textarea>
+    <!-- eslint-enable vue/html-self-closing -->
     <Transition name="slide-fade">
       <p v-if="payment && amounts" class="text-lg font-semibold text-space/60">
         {{ payment.merchantName || payment.message || $t('Payment Request') }} - {{ amounts.formattedFiat }}

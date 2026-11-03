@@ -83,7 +83,8 @@ function parseCompetitionApp(value: unknown): CompetitionMiniApp | undefined {
   const description = stringValue(item.description)
   const url = httpUrl(item.url)
 
-  if (!cycle || !CYCLE_RE.test(cycle) || !name || !category || !tagline || !description || !url)
+  // Launched as a Mini App with the bridge injected, so cleartext is never allowed.
+  if (!cycle || !CYCLE_RE.test(cycle) || !name || !category || !tagline || !description || !url?.startsWith('https:'))
     return undefined
 
   const pricing = stringValue(item.pricing)

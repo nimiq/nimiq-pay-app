@@ -55,7 +55,7 @@ export declare global {
       /**
        * Request a pseudonymous, per-origin device identifier (64-char hex SHA-256).
        * Prompts the user on first call per origin; subsequent calls auto-resolve.
-       * @param options.reason - shown verbatim to the user
+       * @param options.reason - shown to the user, truncated past 200 characters
        * @throws if the user denies the prompt
        */
       requestDeviceIdentifier: (options: { reason: string }) => Promise<string>

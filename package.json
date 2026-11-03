@@ -1,7 +1,7 @@
 {
   "name": "nimiq-pay",
   "type": "module",
-  "version": "2.22.0",
+  "version": "2.23.0",
   "private": true,
   "license": "GPL-3.0-only",
   "description": "Self-custody mobile wallet for paying with NIM and USDT",

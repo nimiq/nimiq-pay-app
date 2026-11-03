@@ -67,3 +67,6 @@ nimiq-pay-tests/**/.mutants/
 
 # Netlify CLI local state
 .netlify/
+
+# Agent worktrees created by the ship skill
+.claude/worktrees/

@@ -93,7 +93,7 @@ export const useSyncBalances = defineStore('sync-balances', () => {
     let newBalance = oldBalance
     let canCheckHtlcExtensions = true
     if (consensus.value === 'established') {
-      const { data, error } = await getBalance(checkedRemoteAddress)
+      const { data, error } = await getBalance(checkedRemoteAddress, 'htlc')
       if (!remoteSignerStore.isWalletContextCurrent(context)
         || remoteAddress.value?.toUserFriendlyAddress() !== checkedRemoteAddress.toUserFriendlyAddress()) {
         return

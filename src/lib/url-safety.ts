@@ -160,7 +160,7 @@ function ipv4Octets(host: string): number[] | null {
   return parts
 }
 
-function isPrivateOrReservedIPv4(host: string): boolean {
+export function isPrivateOrReservedIPv4(host: string): boolean {
   const o = ipv4Octets(host)
   if (!o)
     return false
