@@ -1,0 +1,46 @@
+appId: ${APP_ID}
+name: Security wrong PIN
+
+tags:
+  - franciscoTest
+
+env:
+  # Any 4-digit PIN other than ${PIN}.
+  WRONG_PIN: "9876"
+
+---
+# Scope: after a relaunch the PIN screen rejects a wrong PIN (error shown, wallet stays
+# locked) and the correct PIN still unlocks it.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- stopApp
+- launchApp:
+    clearState: false
+# Same cold-start budget as create_account.yaml; shorter waits flaked on a loaded emulator.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.home.payTitle}
+
+- inputText: ${WRONG_PIN}
+- extendedWaitUntil:
+    visible: ${output.unlock.invalidPinError}
+    timeout: 15000
+- assertVisible: ${output.onboarding.enterPinTitle}
+- assertNotVisible: ${output.home.payTitle}
+
+# Let the error wiggle and the PIN reset finish so no digit of the next PIN is dropped,
+# then check the wallet is still locked.
+- waitForAnimationToEnd
+- assertVisible: ${output.onboarding.enterPinTitle}
+- assertNotVisible: ${output.home.payTitle}
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+
+- stopApp

@@ -1,0 +1,109 @@
+appId: ${APP_ID}
+name: Mini Apps recently viewed
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Not in the curated list, so it can only appear through the typed-URL row. Search opens it
+  # without the anti-scam warning that deep links show.
+  APP_HOST: example.org
+  NO_MATCH: zzqqxx
+
+---
+# Scope: Discover search reports "No apps found." for text that matches nothing, and offers a
+# typed URL as its own row that opens it in the Mini App browser. The visited URL then shows
+# under Recently Viewed, also after a relaunch, opens from there, and a swipe removes it.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.miniAppsBtn}
+# The list comes from the network on a new install.
+- extendedWaitUntil:
+    visible: ${output.miniApps.nimtrisEntry}
+    timeout: 20000
+- assertNotVisible: ${output.miniApps.recentlyViewedTitle}
+
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
+- inputText: ${NO_MATCH}
+- extendedWaitUntil:
+    visible: ${output.miniApps.noResultsMessage}
+    timeout: 10000
+- assertNotVisible: ${output.miniApps.nimtrisEntry}
+
+# Replace the text with a URL: its row reads "<host> <host> <page title>".
+# Bare eraseText deletes up to 50 characters (it takes no expression).
+- eraseText
+- inputText: ${APP_HOST}
+- extendedWaitUntil:
+    visible: ${APP_HOST + ' ' + APP_HOST + '.*'}
+    timeout: 15000
+# Blur the search box first: with the keyboard up, the first tap on a row only closes it.
+- tapOn: ${output.miniApps.discoverTitle}
+- tapOn: ${APP_HOST + ' ' + APP_HOST + '.*'}
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 30000
+- assertNotVisible: ${output.miniApps.warningTitle}
+- tapOn: ${output.miniApps.browserCloseBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.discoverTitle}
+    timeout: 10000
+
+# Closing Discover clears the search; the visit is kept across a relaunch.
+- tapOn: ${output.miniApps.closeBtn}
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.discoverTitle}
+    timeout: 10000
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- tapOn: ${output.navigation.miniAppsBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.recentlyViewedTitle}
+    timeout: 20000
+- assertVisible:
+    text: ${APP_HOST}
+    below: ${output.miniApps.recentlyViewedTitle}
+
+# It opens from Recently Viewed.
+- tapOn:
+    text: ${APP_HOST}
+    below: ${output.miniApps.recentlyViewedTitle}
+- extendedWaitUntil:
+    visible: ${output.miniApps.browserCloseBtn}
+    timeout: 30000
+- tapOn: ${output.miniApps.browserCloseBtn}
+- extendedWaitUntil:
+    visible: ${output.miniApps.recentlyViewedTitle}
+    timeout: 10000
+
+# A slow swipe to the left removes it, and the section goes with its only row. The swipe runs
+# from the element's center to the edge: start on the title, not on the icon at the left edge
+# (labelled with the host too), whose short swipe snaps back.
+- swipe:
+    from:
+      text: ${APP_HOST}
+      below: ${output.miniApps.recentlyViewedTitle}
+      rightOf:
+        text: ${APP_HOST}
+        below: ${output.miniApps.recentlyViewedTitle}
+    direction: LEFT
+    duration: 1000
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.recentlyViewedTitle}
+    timeout: 10000
+- assertVisible: ${output.miniApps.nimtrisEntry}
+
+- stopApp

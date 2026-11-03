@@ -1,0 +1,68 @@
+appId: ${APP_ID}
+name: Settings language
+
+tags:
+  - franciscoTest
+
+---
+# Scope: choosing German, Spanish, French and Portuguese in Settings translates the Settings
+# labels right away, and the last choice survives a relaunch.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Menu items keep English aria-labels in every language, so navigation needs no translation.
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.language}
+    timeout: 5000
+
+- evalScript: ${output.languageOrder = ['de', 'es', 'fr', 'pt']; output.languageIndex = 0; output.previousLanguageLabel = output.settings.language; output.previousCurrencyLabel = output.settings.currency}
+- repeat:
+    while:
+      true: ${output.languageIndex < output.languageOrder.length}
+    commands:
+      - evalScript: ${output.language = output.languages[output.languageOrder[output.languageIndex]]}
+      # The visible label sits inside the select, so tapping it opens the alert.
+      - tapOn: ${output.previousLanguageLabel}
+      - extendedWaitUntil:
+          visible: ${output.language.option}
+          timeout: 5000
+      - tapOn: ${output.language.option}
+      - tapOn: ${output.languageAlert.okBtn}
+      - extendedWaitUntil:
+          visible: ${output.language.languageLabel}
+          timeout: 10000
+      - assertVisible: ${output.language.currencyLabel}
+      - assertNotVisible: ${output.previousLanguageLabel}
+      - assertNotVisible: ${output.previousCurrencyLabel}
+      - evalScript: ${output.previousLanguageLabel = output.language.languageLabel; output.previousCurrencyLabel = output.language.currencyLabel; output.languageIndex++}
+
+# The language is persisted: Portuguese is back after a relaunch and unlock.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.languages.pt.languageLabel}
+    timeout: 10000
+- assertVisible: ${output.languages.pt.currencyLabel}
+- assertVisible: ${output.languages.pt.selected}
+- assertNotVisible: ${output.settings.language}
+
+- stopApp

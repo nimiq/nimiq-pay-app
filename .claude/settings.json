@@ -1,6 +1,16 @@
 {
   "permissions": {
     "allow": [
+      "Bash(node scripts/browserstack-maestro-run.js:*)",
+      "Bash(node scripts/browserstack-maestro-aggregate-report.js:*)",
+      "Bash(maestro test:*)",
+      "Bash(scripts/maestro-local.sh:*)",
+      "Bash(gh run download:*)",
+      "mcp__maestro__list_devices",
+      "mcp__maestro__inspect_screen",
+      "mcp__maestro__take_screenshot",
+      "mcp__maestro__cheat_sheet",
+      "mcp__maestro__run",
       "Bash(adb exec-out screencap -p)",
       "Bash(pnpm vitest run)",
       "Bash(pnpm vitest run *)",
@@ -25,6 +35,10 @@
       "mcp__claude-in-chrome__tabs_context_mcp",
       "mcp__t3-code__device_screenshot",
       "mcp__t3-code__device_list"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
     ]
   }
 }

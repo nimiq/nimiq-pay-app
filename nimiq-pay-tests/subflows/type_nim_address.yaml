@@ -1,0 +1,27 @@
+appId: ${APP_ID}
+---
+# Types output.typeAddress (a NIM address without spaces) into the empty inputs of the withdraw
+# "Send to this address" step, one group of 4 per input: typed in one go, the 36 characters lost
+# one on a slow emulator. Android exposes the inputs only by their HTML ids "0".."8", iOS only by
+# their aria-labels. Don't use it to retype: a backspace on an emptied input jumps to the previous
+# one (AddressInput.vue handleKeydown).
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- evalScript: ${output.addressGroups = output.typeAddress.match(/.{4}/g); output.typedGroups = 0}
+- repeat:
+    while:
+      true: ${output.typedGroups < output.addressGroups.length}
+    commands:
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - tapOn:
+                id: ${String(output.typedGroups)}
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - tapOn: ${output.withdraw.addressSegmentLabel + output.typedGroups}
+      - inputText: ${output.addressGroups[output.typedGroups]}
+      - evalScript: ${output.typedGroups++}

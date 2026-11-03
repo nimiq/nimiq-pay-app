@@ -1,0 +1,25 @@
+appId: ${APP_ID}
+---
+# On the Top Up screen, stores the address without spaces in output.topUpAddress: a NIM address
+# (36 characters) or, with USDT active, a Polygon address (42 characters). Android shows the
+# address as one text node, iOS as nine 4-character (NIM) or three 14-character (USDT) nodes, so
+# the parts are copied in reading order (index sorts by top, then left) until it is complete.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- evalScript: ${output.topUpAddress = ''; output.topUpAddressParts = 0}
+- repeat:
+    while:
+      true: ${output.topUpAddress.length < (output.topUpAddress.indexOf('0x') == 0 ? 42 :36) && output.topUpAddressParts < 9}
+    commands:
+      # Maestro matches text case-insensitively, so the regex also fits any 4-letter label; the
+      # address sits between the title and Copy address.
+      - copyTextFrom:
+          text: ${output.topUp.addressPart}
+          below: ${output.topUp.title}
+          above: ${output.topUp.copyAddress}
+          index: ${output.topUpAddressParts}
+      # The address is grouped with (non-breaking) spaces.
+      - evalScript: ${output.topUpAddress += maestro.copiedText.replace(/\s/g, ''); output.topUpAddressParts++}
+- assertTrue:
+    condition: ${(output.topUpAddress.length == 36 && output.topUpAddress.indexOf('NQ') == 0) || (output.topUpAddress.length == 42 && output.topUpAddress.indexOf('0x') == 0)}
+    label: Captured a whole NIM or Polygon address

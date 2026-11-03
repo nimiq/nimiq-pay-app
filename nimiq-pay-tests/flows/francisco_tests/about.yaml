@@ -1,0 +1,34 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.aboutBtn}
+    timeout: 5000
+# The About page opens in Chrome, which keeps the screen changing while it
+# loads; without a cap tapOn waited ~70 s for it to settle. The
+# extendedWaitUntil below still proves the page loaded.
+- tapOn:
+    text: ${output.navigation.aboutBtn}
+    waitToSettleTimeoutMs: 3000
+
+- runFlow:
+    when:
+      visible: ${output.about.staySignedOutBtn}
+    commands:
+      - tapOn: ${output.about.staySignedOutBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.about.pageUrl}
+    timeout: 10000
+
+- stopApp

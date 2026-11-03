@@ -1,0 +1,194 @@
+appId: ${APP_ID}
+name: Returning to app Flows and settings
+
+tags:
+  - franciscoTest
+
+---
+# Scope: existing user returns to the app, then walks through Settings, Backup account,
+# What's New, About, and the main home flows (Top Up, Withdraw, Earn Points when shown),
+# verifying state survives an app restart (stopApp + relaunch with clearState: false).
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/returning_to_dashboard.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.title}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.title}
+    timeout: 5000
+
+- assertVisible: ${output.settings.language}
+- assertVisible: ${output.settings.currency}
+- assertVisible: ${output.settings.minimumNimDecimals}
+- assertVisible:
+    text: ${output.settings.autoDepositThreshold}
+- assertVisible: ${output.settings.pushNotifications}
+- assertVisible: ${output.settings.reduceAnimations}
+- assertVisible: ${output.settings.changePin}
+
+- tapOn: ${output.navigation.backBtn}
+- waitForAnimationToEnd
+# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
+- assertNotVisible: ${output.settings.changePin}
+- assertVisible: ${output.navigation.backupAccountBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.backupAccountBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.backupAccountBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.backup.introTitle}
+- assertVisible: ${output.backup.introDescription}
+- assertVisible: ${output.backup.noOneCanSeeBtn}
+- tapOn: ${output.backup.noOneCanSeeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.backup.showWordsTitle}
+- assertVisible: ${output.backup.continueBtn}
+- tapOn: ${output.backup.continueBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.backup.validateTitle}
+- assertVisible: ${output.backup.question}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.backup.question}
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.whatsNewBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.whatsNewBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.whatsNew.title}
+    timeout: 5000
+- assertVisible: ${output.whatsNew.versionHeader}
+- assertNotVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
+# A long latest entry can push the button below the fold, where Maestro still finds it with
+# zero-height bounds but the tap misses; scrollUntilVisible rejects zero-height bounds.
+# 60 s: on BrowserStack iOS each swipe and settle takes ~4.4 s, so the default 20 s fits only 4-5.
+- scrollUntilVisible:
+    element: ${output.whatsNew.previousVersions}
+    timeout: 60000
+- tapOn: ${output.whatsNew.previousVersions}
+- waitForAnimationToEnd
+# Only the expansion renders a second header; unlike assertVisible, this rejects one below the fold.
+- scrollUntilVisible:
+    element:
+      text: ${output.whatsNew.versionHeader}
+      index: 1
+    timeout: 60000
+- tapOn: ${output.whatsNew.closeBtn}
+- waitForAnimationToEnd
+# The menu stays in the hierarchy under What's New, so check the changelog itself is gone by
+# its headers ("Previous versions" is already reported not visible once scrolled past).
+- assertNotVisible: ${output.whatsNew.versionHeader}
+# Log Out, not What's New: home also shows a "What's New" card.
+- assertVisible: ${output.navigation.logoutBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.logoutBtn}
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.aboutBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.aboutBtn}
+- runFlow:
+    when:
+      visible: ${output.about.staySignedOutBtn}
+    commands:
+      - tapOn: ${output.about.staySignedOutBtn}
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.about.pageUrl}
+    timeout: 10000
+- assertVisible: ${output.about.pageUrl}
+
+- stopApp
+- launchApp:
+    clearState: false
+# Same cold-start budget as create_account.yaml; shorter waits flaked on a loaded emulator.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.home.payTitle}
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.navigation.openMenuBtn}
+
+- tapOn: ${output.navigation.topUpBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.topUp.title}
+- assertVisible:
+    text: ${output.topUp.addressPrefix}
+- assertVisible: ${output.topUp.copyAddress}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.topUp.copyAddress}
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.withdrawBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.withdraw.title}
+- assertVisible: ${output.withdraw.usd}
+- assertVisible:
+    text: ${output.withdraw.nim}
+- assertVisible:
+    text: ${output.withdraw.selectAddress}
+- assertVisible: ${output.withdraw.amount25}
+- assertVisible: ${output.withdraw.amount50}
+- assertVisible: ${output.withdraw.amount100}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.withdraw.amount25}
+- assertVisible: ${output.home.payTitle}
+
+- runFlow:
+    when:
+      visible: ${output.navigation.closeNotificationCardBtn}
+    commands:
+      - tapOn: ${output.navigation.closeNotificationCardBtn}
+      - waitForAnimationToEnd
+# Since 2.22.1 the button only shows while the PostHog flag `cryptocity-points` is on. Named
+# exception to the when-visible rule (the user's call, 2026-10-20): the Points steps run only
+# when it is shown, so with the flag off this part passes without testing anything. The flag
+# loads after start, so a late answer also skips it. The steps assume no Points campaign: with
+# one, the button opens Points or phone verification instead (HomeView.vue
+# openPointsFromHomeHeader).
+- runFlow:
+    when:
+      visible: ${output.navigation.earnPointsBtn}
+    commands:
+      - tapOn: ${output.navigation.earnPointsBtn}
+      - waitForAnimationToEnd
+      - assertVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - tapOn: ${output.navigation.closeFlowModalBtn}
+      - waitForAnimationToEnd
+      - assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
+      - assertVisible: ${output.home.payTitle}
+
+- stopApp

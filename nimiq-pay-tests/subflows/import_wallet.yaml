@@ -1,0 +1,56 @@
+appId: ${APP_ID}
+---
+# From the setup screen (Login visible), logs in with the space-separated words of
+# ${RECOVERY_PHRASE} and sets ${PIN}. Leaves the app on home.
+- runFlow: require_pin.yaml
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+# An unset variable arrives as "undefined"; fail here with a clear message instead of at Login.
+- assertTrue:
+    condition: ${RECOVERY_PHRASE.trim().split(/\s+/).length == 12}
+    label: RECOVERY_PHRASE (e.g. MAESTRO_TESTNET_WALLET_WORDS) has 12 words
+
+- tapOn: ${output.launchScreen.loginBtn}
+- extendedWaitUntil:
+    visible: ${output.login.title}
+    timeout: 10000
+- runFlow:
+    file: enter_recovery_words.yaml
+    env:
+      RECOVERY_PHRASE: ${RECOVERY_PHRASE}
+# Confirm only enables once all 12 inputs hold wordlist words.
+- extendedWaitUntil:
+    visible:
+      text: ${output.login.confirmBtn}
+      enabled: true
+    timeout: 10000
+- tapOn: ${output.login.confirmBtn}
+
+# The checksum error ("Invalid recovery words") clears after 10 s, so a rejection shows up here.
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+    label: Login accepted the recovery words
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.biometricTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.enableNotificationsTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 45000

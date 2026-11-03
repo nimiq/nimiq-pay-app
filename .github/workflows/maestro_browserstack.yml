@@ -1,0 +1,117 @@
+name: Nimiq Pay - Maestro Suite Android - BrowserStack Uploads All
+
+#This workflow builds and uploads the Android APK to BrowserStack, uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
+
+on:
+  #push:
+    #branches:
+      #- feature/maestro-improvements
+  workflow_dispatch:
+
+# Shares the francisco_tests suite id and the BrowserStack parallels with the suite-only workflow.
+concurrency:
+  group: maestro-browserstack-suite
+  cancel-in-progress: false
+
+jobs:
+  build_android_apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Android APK
+        run: |
+          pnpm i18n:extract
+          pnpm build:web
+          pnpm ionic cap sync android
+          cd android
+          ./gradlew assembleRelease
+          ls -l app/build/outputs/apk/release
+
+      - name: Verify Android package ID
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const metadataPath = 'android/app/build/outputs/apk/release/output-metadata.json'
+          const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
+          const appId = metadata.applicationId
+          if (appId !== 'com.nimiq.pay') {
+            throw new Error(`Expected applicationId com.nimiq.pay, got ${appId}`)
+          }
+          console.log(`Verified Android package ID: ${appId}`)
+          NODE
+
+      - name: Upload APK to BrowserStack
+        run: node scripts/browserstack-apk-upload.js
+
+  upload_maestro_suite:
+    needs: build_android_apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload Maestro suite to BrowserStack
+        run: node scripts/browserstack-maestro-upload.js --custom-id francisco_tests
+
+  run_browserstack_maestro:
+    needs: upload_maestro_suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      BROWSERSTACK_DEVICE: "Samsung Galaxy S26-16.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Maestro suite on BrowserStack
+        run: >
+          node scripts/browserstack-maestro-run.js
+          --app NimiqPayAndroidApk
+          --suite francisco_tests
+          --device "Samsung Galaxy S26-16.0"
+          --flow flows/francisco_tests/create_new_account_with_pageObject.yaml
+          --env APP_ID=com.nimiq.pay
+          --env PIN=1111
+          --max-attempts 1
+          --maestro-version 2.6.1
+          --output nimiq-pay-tests/tests_output/maestro_report.html
+
+
+

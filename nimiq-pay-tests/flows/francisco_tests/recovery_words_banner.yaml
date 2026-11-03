@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- assertVisible: ${output.navigation.recoveryWordsBtn}
+- tapOn: ${output.navigation.recoveryWordsBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.backup.introTitle}
+- assertVisible: ${output.backup.introDescription}
+- assertVisible: ${output.backup.noOneCanSeeBtn}
+- tapOn: ${output.backup.noOneCanSeeBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.backup.showWordsTitle}
+- assertVisible: ${output.backup.continueBtn}
+- tapOn: ${output.backup.continueBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.backup.validateTitle}
+- assertVisible: ${output.backup.question}
+
+- stopApp

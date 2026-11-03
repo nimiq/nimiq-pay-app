@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+
+name: Mini Apps Search
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Mini Apps button lives in the Home footer, bottom right.
+- assertVisible: ${output.navigation.miniAppsBtn}
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.miniApps.discoverTitle}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
+- inputText: Nimtris
+- waitForAnimationToEnd
+
+# The remote Mini App list is fetched on a fresh install, so allow it to arrive.
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
+- assertVisible: ${output.miniApps.nimtrisEntry}
+
+- stopApp

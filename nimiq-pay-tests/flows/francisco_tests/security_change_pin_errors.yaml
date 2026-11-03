@@ -1,0 +1,89 @@
+appId: ${APP_ID}
+name: Security change PIN errors
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Two different 4-digit PINs, both other than ${PIN}.
+  NEW_PIN: "2580"
+  WRONG_PIN: "9876"
+
+---
+# Scope: Settings > Change PIN rejects a wrong current PIN and a confirmation that differs from
+# the new PIN, and closing the flow after those errors keeps ${PIN}: after a relaunch the
+# attempted new PIN is rejected and ${PIN} still unlocks.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.changePin}
+    timeout: 5000
+- tapOn: ${output.settings.changePin}
+
+# A wrong current PIN keeps the first step up with the error.
+- extendedWaitUntil:
+    visible: ${output.changePin.currentPinTitle}
+    timeout: 10000
+- inputText: ${WRONG_PIN}
+- extendedWaitUntil:
+    visible: ${output.changePin.invalidPinError}
+    timeout: 10000
+- assertVisible: ${output.changePin.currentPinTitle}
+- assertNotVisible: ${output.onboarding.choosePinTitle}
+
+# Let the error wiggle and the PIN reset finish so no digit of the next PIN is dropped.
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- inputText: ${NEW_PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+
+# A confirmation that differs from the new PIN keeps the Confirm step up with the error.
+- inputText: ${WRONG_PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.pinMismatchError}
+    timeout: 10000
+- assertVisible: ${output.onboarding.confirmPinTitle}
+
+# Give up: the PIN only changes when the flow completes (flows/index.ts changePinFlow onDone).
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    notVisible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+
+- stopApp
+- launchApp:
+    clearState: false
+# Same cold-start budget as create_account.yaml; shorter waits flaked on a loaded emulator.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+
+- inputText: ${NEW_PIN}
+- extendedWaitUntil:
+    visible: ${output.unlock.invalidPinError}
+    timeout: 15000
+- assertNotVisible: ${output.home.payTitle}
+
+- waitForAnimationToEnd
+- assertNotVisible: ${output.home.payTitle}
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+
+- stopApp
