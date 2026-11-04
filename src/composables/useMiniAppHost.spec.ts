@@ -251,6 +251,30 @@ describe('remote address watcher', () => {
     await host.destroy()
   })
 
+  it('sends nothing during a repeat prompt and replies with the list read after it', async () => {
+    const signer = mockReactiveSigner()
+    const { host, handleRequest, requestUserConfirmation } = await createPermissionHost()
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    await handleRequest({ network: 'nimiq', name: 'listAccounts' })
+    let answer!: (confirmed: boolean) => void
+    requestUserConfirmation.mockReturnValue(new Promise((resolve) => {
+      answer = resolve
+    }))
+    const repeat = handleRequest({ network: 'nimiq', name: 'listAccounts' })
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    answer(true)
+    await expect(repeat).resolves.toEqual(['NQ11 LOCAL', 'NQ22 REMOTE'])
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    await host.destroy()
+  })
+
   it('does not treat a rejected request as approval', async () => {
     const signer = mockReactiveSigner()
     const { host, handleRequest } = await createPermissionHost({ confirmed: false })

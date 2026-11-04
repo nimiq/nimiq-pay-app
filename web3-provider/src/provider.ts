@@ -87,11 +87,11 @@ const provider = new Web3Provider({
   handler: (params) => {
     log('Dapp requested:', params)
 
-    const forwardToNative = (onResult?: (result: unknown) => void): Promise<unknown> => {
+    const forwardToNative = (resolveResult: (reply: unknown) => unknown = reply => reply): Promise<unknown> => {
       const { id, ...requestParams } = params
       return birpc.handleRequest(requestParams)
-        .then((result) => {
-          onResult?.(result)
+        .then((reply) => {
+          const result = resolveResult(reply)
           provider.sendResponse(id!, result)
           return result
         })
@@ -126,9 +126,16 @@ const provider = new Web3Provider({
           }))
         return
       }
-      const nativePromise = forwardToNative((result) => {
-        if (Array.isArray(result))
-          setCachedAccounts(network, result as string[])
+      const nativePromise = forwardToNative((reply) => {
+        if (!Array.isArray(reply))
+          return reply
+        // The cache was empty when this call started, so an entry now came from a host push.
+        // The host counts it as delivered and will not resend it, so the reply must not replace it.
+        const pushed = getCachedAccounts(network)
+        if (pushed)
+          return pushed
+        setCachedAccounts(network, reply as string[])
+        return reply
       })
       inFlightAccountRequests.set(network, nativePromise)
       nativePromise

@@ -1537,6 +1537,9 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // No pushes during the prompt: the page would cache an address the user may still
+    // reject. Approval replies with the list read after the prompt.
+    this.sharedNimiqAccounts = undefined
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1544,7 +1547,6 @@ export class MiniAppHost {
       network: 'nimiq',
     })
     if (!confirmed) {
-      this.sharedNimiqAccounts = undefined
       trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }

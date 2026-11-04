@@ -115,6 +115,26 @@ describe('Nimiq account updates', () => {
     expect(window.nimiq!.connected).toBe(true)
     expect(disconnectListener).not.toHaveBeenCalled()
   })
+
+  it('keeps accounts pushed while a listAccounts reply is pending', async () => {
+    let reply!: (accounts: string[]) => void
+    handleRequest.mockReturnValue(new Promise((resolve) => {
+      reply = resolve
+    }))
+    const listener = vi.fn()
+    window.nimiq!.on('accountsChanged', listener)
+    const pending = Promise.all([window.nimiq!.listAccounts(), window.nimiq!.listAccounts()])
+    await vi.waitFor(() => expect(handleRequest).toHaveBeenCalledOnce())
+
+    emitNimiqAccountsChanged(['NQ11 WALLET', 'NQ22 HTLC'])
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledWith(['NQ11 WALLET', 'NQ22 HTLC']))
+    reply(['NQ11 WALLET', 'NQ11 HTLC'])
+
+    await expect(pending).resolves.toEqual([['NQ11 WALLET', 'NQ22 HTLC'], ['NQ11 WALLET', 'NQ22 HTLC']])
+    await expect(window.nimiq!.listAccounts()).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(handleRequest).toHaveBeenCalledOnce()
+  })
 })
 
 describe('injected provider errors', () => {
