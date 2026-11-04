@@ -172,6 +172,16 @@ describe('mini-app-launcher', () => {
     expect(firstArg.url).toBe('https://example.com/')
   })
 
+  it('limits the native bridge to the Mini App origin', async () => {
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://example.com:8443/app?x=1', source: 'deeplink' })
+
+    expect(openWebView).toHaveBeenCalledWith(expect.objectContaining({
+      javascriptBridgeOrigins: ['https://example.com:8443'],
+    }))
+  })
+
   it('short-circuits concurrent launches', async () => {
     const { launchMiniApp } = await importLauncher()
     const deferred = createDeferred<void>()

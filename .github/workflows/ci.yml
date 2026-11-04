@@ -50,7 +50,6 @@ jobs:
       - run: pnpm exec vitest run
 
   build-web:
-    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
