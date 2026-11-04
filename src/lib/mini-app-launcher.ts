@@ -268,6 +268,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       isPresentAfterPageLoad: true,
       preShowScript: scriptContent,
       preShowScriptInjectionTime: 'documentStart',
+      // Native check: drops messages from sub-frames, which the host can't identify.
+      javascriptBridgeOrigins: [new URL(targetUrl).origin],
     })
     // Watchdog/pageLoadError may have failed this launch (and closed the webview)
     // while openWebView was in flight; skip the success bookkeeping then.
