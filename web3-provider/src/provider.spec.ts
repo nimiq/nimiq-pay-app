@@ -116,6 +116,23 @@ describe('Nimiq account updates', () => {
     expect(disconnectListener).not.toHaveBeenCalled()
   })
 
+  it('updates a connected provider from a repeat prompt reply', async () => {
+    handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ11 HTLC'])
+    const listener = vi.fn()
+    window.nimiq!.on('accountsChanged', listener)
+    await window.nimiq!.listAccounts()
+    expect(listener).not.toHaveBeenCalled()
+
+    // The page wiped its storage, so this call prompts again while #accounts still holds the old list.
+    sessionStorage.clear()
+    handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ22 HTLC'])
+    await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+
+    await expect(window.nimiq!.listAccounts()).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(listener).toHaveBeenCalledExactlyOnceWith(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(handleRequest).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps accounts pushed while a listAccounts reply is pending', async () => {
     let reply!: (accounts: string[]) => void
     handleRequest.mockReturnValue(new Promise((resolve) => {

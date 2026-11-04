@@ -135,6 +135,9 @@ const provider = new Web3Provider({
         if (pushed)
           return pushed
         setCachedAccounts(network, reply as string[])
+        // request() doesn't write #accounts, and the host counts this reply as delivered.
+        if (network === 'nimiq' && Nimiq.connected)
+          Nimiq.updateAccounts(reply as string[])
         return reply
       })
       inFlightAccountRequests.set(network, nativePromise)
