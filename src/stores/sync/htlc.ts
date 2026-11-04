@@ -100,7 +100,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
     let remoteBalanceOnChain = 0
     if (remoteAddress.value) {
-      const { data, error } = await getBalance(remoteAddress.value)
+      const { data, error } = await getBalance(remoteAddress.value, 'htlc')
       if (error && error !== NO_ACCOUNT_ERROR) {
         logger.error('Error while getting remote balance before handling funds', error)
         reportFundsBlocked('remote_balance_error')
@@ -355,7 +355,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       if (predecessor) {
         const address = typeof predecessor.address === 'string' ? Nimiq.Address.fromString(predecessor.address) : predecessor.address
         const { data: balance, error } = await promiseWithTimeout(
-          getBalance(address),
+          getBalance(address, 'htlc'),
           HTLC_CALL_TIMEOUT_MS,
         )
         if (!isWalletContextCurrent(context))

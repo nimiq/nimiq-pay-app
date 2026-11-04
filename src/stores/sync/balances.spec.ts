@@ -115,6 +115,19 @@ describe('useSyncBalances', () => {
     expect(state.logger.error).toHaveBeenCalledWith('Error while getting remote balance', expect.any(Error))
   })
 
+  it('reads the remote balance as an HTLC only', async () => {
+    // A drained HTLC that later receives NIM is a basic account: its balance can't be reclaimed.
+    state.remoteSigner = { ...{ active: true, balance: 0, address: state.remoteAddress, publicKey: 'k', start: 0, end: 0, proofSize: 98 } }
+    state.getBalance.mockImplementation((address: any, type?: string) => {
+      if (address?.toUserFriendlyAddress?.() === 'NQ11 TEST REMOTE ADDRESS')
+        return Promise.resolve({ data: type === 'htlc' ? 0 : 100_000, error: undefined })
+      return Promise.resolve({ data: 0, error: undefined })
+    })
+    const { useSyncBalances } = await import('./balances')
+    await useSyncBalances().updateBalances()
+    expect(state.remoteBalance).toBe(0)
+  })
+
   it('falls back to remoteSigner.balance when consensus is not established', async () => {
     state.consensus = 'syncing'
     state.remoteBalance = 0
