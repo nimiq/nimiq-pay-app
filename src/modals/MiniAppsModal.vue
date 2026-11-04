@@ -54,12 +54,18 @@ const flowOffset = computed(() => ({
 const isOpeningSelectedCompetitionApp = computed(() => !!selectedCompetitionApp.value
   && isOpeningUrl(selectedCompetitionApp.value.url))
 
-// Keep native webview and nested competition navigation ahead of Ionic's modal dismissal.
-const { unregister: unregisterHardwareBack } = useBackButton(101, () => {
+const menuOpen = ref(false)
+
+// Keep native webview, action sheet and nested competition navigation ahead of Ionic's modal dismissal.
+const { unregister: unregisterHardwareBack } = useBackButton(101, (processNextHandler) => {
   if (isMiniAppActive.value)
     return
-  if (flowStep.value !== 'apps')
+  if (menuOpen.value)
+    menuOpen.value = false
+  else if (flowStep.value !== 'apps')
     backInMiniAppsFlow()
+  else
+    processNextHandler()
 })
 onBeforeUnmount(unregisterHardwareBack)
 
@@ -136,7 +142,6 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
   })
 }
 
-const menuOpen = ref(false)
 const menuContext = ref<MiniAppMenuContext | null>(null)
 
 function openMenu(context: MiniAppMenuContext) {
