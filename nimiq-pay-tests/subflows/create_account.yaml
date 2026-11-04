@@ -37,3 +37,11 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
     timeout: 45000
+# Pay shows before home takes taps: on the iOS 26 simulator a menu tap ~0.5 s
+# later was ignored (about.yaml, 2 of 4 runs). Wait for the onboarding sheet to
+# leave (a covered screen stays in the iOS hierarchy) and home to settle.
+- extendedWaitUntil:
+    notVisible: ${output.onboarding.enableNotificationsTitle}
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 5000
