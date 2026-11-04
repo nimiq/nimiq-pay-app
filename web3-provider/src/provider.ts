@@ -6,7 +6,7 @@ import { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { createBirpc } from 'birpc'
-import { clearCachedAccounts, getCachedAccounts, getCacheGeneration, setCachedAccounts } from './account-cache'
+import { getCachedAccounts, setCachedAccounts } from './account-cache'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 import { handleAddEthereumChain, handleSwitchEthereumChain } from './chain-request-handler'
 import { generateUUID } from './utils'
@@ -62,9 +62,10 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
     Ethereum.setRPCUrl(rpcUrl)
     log(`Updated RPC URL to ${rpcUrl}`)
   },
-  clearAccountCache: (network: 'nimiq' | 'ethereum') => {
-    clearCachedAccounts(network)
-    log(`Cleared account cache for ${network}`)
+  nimiqAccountsChanged: (accounts: string[]) => {
+    setCachedAccounts('nimiq', accounts)
+    Nimiq.updateAccounts(accounts)
+    log('Updated Nimiq accounts')
   },
   fullscreenChanged: (enabled: boolean) => {
     window.dispatchEvent(new CustomEvent('nimiqPay:fullscreenChange', { detail: { enabled } }))
@@ -125,11 +126,8 @@ const provider = new Web3Provider({
           }))
         return
       }
-      // Capture the generation before launching: if clearCachedAccounts fires
-      // mid-flight, the generation will advance and we drop the stale write.
-      const gen = getCacheGeneration(network)
       const nativePromise = forwardToNative((result) => {
-        if (Array.isArray(result) && getCacheGeneration(network) === gen)
+        if (Array.isArray(result))
           setCachedAccounts(network, result as string[])
       })
       inFlightAccountRequests.set(network, nativePromise)

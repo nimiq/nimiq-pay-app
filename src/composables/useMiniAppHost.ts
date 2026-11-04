@@ -270,6 +270,8 @@ export class MiniAppHost {
    * webview, while on `origin`, may talk to the host.
    */
   private bridgeGate: BridgeGate = { urlOk: true, open: true }
+  /** Last Nimiq accounts the page received; unset until the user approves sharing them. */
+  private sharedNimiqAccounts?: string
   private readonly pendingLightningInvoices = new Set<string>()
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
@@ -298,16 +300,13 @@ export class MiniAppHost {
     isMiniAppActive.value = true
 
     // When the remote signer address changes (added/refreshed mid-session), the
-    // previously-cached Nimiq accounts list is stale. Clear the webview cache so
-    // the dApp re-prompts and receives the up-to-date account set.
+    // previously-cached Nimiq accounts list is stale. An approved session gets the
+    // new list without a prompt.
     // Watch the address string: signer reloads create new Address objects for
     // the same address, which would clear the cache without a real change.
     this.stopRemoteAddressWatcher = watch(
       () => useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-      () => {
-        logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
-        this.birpc?.clearAccountCache('nimiq')
-      },
+      () => this.pushNimiqAccounts(),
     )
   }
 
@@ -493,7 +492,7 @@ export class MiniAppHost {
       // Fire-and-forget host→webview methods. Without this birpc treats them as
       // request/response and the discarded promises would reject with a 120s
       // timeout if the webview disappears mid-flight (unhandledrejection).
-      eventNames: ['updateRpcUrl', 'clearAccountCache', 'fullscreenChanged'],
+      eventNames: ['updateRpcUrl', 'nimiqAccountsChanged', 'fullscreenChanged'],
       timeout: 120_000,
     })
 
@@ -529,8 +528,11 @@ export class MiniAppHost {
     }).catch(error => logger.error('Could not observe Mini App navigation', error))
 
     void browser.addListener('browserPageLoaded', ({ id }: { id?: string }) => {
-      if (this.isMainWebview(id ?? ''))
+      if (this.isMainWebview(id ?? '')) {
         this.bridgeGate.open = this.bridgeGate.urlOk
+        // A change during a closed gate never reached the page.
+        this.pushNimiqAccounts()
+      }
     }).then((handle) => {
       if (this.destroyed)
         void handle.remove()
@@ -1511,6 +1513,25 @@ export class MiniAppHost {
     return data
   }
 
+  private getNimiqAccounts() {
+    return [
+      useLocalWallet().localAddress.toUserFriendlyAddress(),
+      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+    ].filter((address): address is string => Boolean(address))
+  }
+
+  private pushNimiqAccounts() {
+    // No HTLC address during a replacement: keep the old list until the new one is known.
+    if (this.sharedNimiqAccounts === undefined || !this.bridgeGate.open || !useRemoteSigner().remoteAddress)
+      return
+    const accounts = this.getNimiqAccounts()
+    const shared = JSON.stringify(accounts)
+    if (shared === this.sharedNimiqAccounts)
+      return
+    this.sharedNimiqAccounts = shared
+    this.birpc?.nimiqAccountsChanged(accounts)
+  }
+
   private async listAccounts() {
     // Ask user for permission to list accounts
     if (!this.config.requestUserConfirmation) {
@@ -1523,14 +1544,13 @@ export class MiniAppHost {
       network: 'nimiq',
     })
     if (!confirmed) {
+      this.sharedNimiqAccounts = undefined
       trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
-    const accounts = [
-      useLocalWallet().localAddress.toUserFriendlyAddress(),
-      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-    ].filter(Boolean)
+    const accounts = this.getNimiqAccounts()
+    this.sharedNimiqAccounts = JSON.stringify(accounts)
     trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return accounts
   }
