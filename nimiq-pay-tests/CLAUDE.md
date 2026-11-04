@@ -4,7 +4,7 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 
 ## Layout
 
-- `flows/francisco_tests/`: the suite CI runs on BrowserStack, one build per flow (`.github/workflows/maestro_browserstack_suite_only.yml`), on Android and iOS in parallel. Every flow starts from a fresh wallet. The iOS job doesn't fail the workflow until it has 2 green runs in a row, and runs its `needsTestnetWallet` flows last, once the Android job is done, so the shared wallet is never logged in twice at once.
+- `flows/francisco_tests/`: the suite CI runs on BrowserStack, one build per flow (`.github/workflows/maestro_browserstack_suite_only.yml`), on Android, then on iOS (`max-parallel: 1`), one flow at a time, so a run uses a single BrowserStack session and the shared wallet is never logged in twice at once. Every flow starts from a fresh wallet. The iOS job doesn't fail the workflow until it has 2 green runs in a row.
 - `flows/*.yaml` (top level): older flows that assume an already set-up wallet with history (`subflows/launch_app.yaml`). Not run in CI.
 - `subflows/`: shared steps. `create_account.yaml` wipes app data and creates a wallet with `${PIN}`.
 - `pageObjects/android/mainFlowsAndroid.page.js`: every selector, loaded with `runScript` and used as `${output.<screen>.<element>}`. Its comments explain past fixes (shadow DOM search box, anchored regexes).

@@ -1,6 +1,6 @@
 name: Nimiq Pay - Maestro Suite (Suite Only)
 
-# This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack, on Android and iOS in parallel.
+# This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack, on Android and then on iOS, one flow at a time.
 # Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
 # The APK under test is the one recorded in the BROWSERSTACK_ANDROID_DEBUG_APP repo variable ("<bs:// url> <commit>"): build it with
 # `node scripts/build-test-apk.mjs` and upload it with `node scripts/browserstack-apk-upload.js --apk <apk> --set-repo-variables`.
@@ -51,10 +51,12 @@ jobs:
     continue-on-error: ${{ matrix.platform == 'ios' }}
     permissions:
       contents: read
-      # The iOS job reads the Android job's status before its wallet flows.
-      actions: read
     strategy:
       fail-fast: false
+      # One platform at a time, in the order listed (Android, then iOS), and each job runs one flow
+      # at a time: a single BrowserStack session for the whole run, so devices aren't overloaded
+      # and the shared testnet wallet is never logged in twice at once.
+      max-parallel: 1
       matrix:
         include:
           - platform: android
@@ -76,9 +78,8 @@ jobs:
             app: alberto_O8FErZ/NimiqPayiOS
             app_id: com.nimiq.pay
             results_repo: franciscodiaz4/Maestro-Results-Nimiq-Pay-iOS
-            # An hour more than Android: its wallet flows can only start once the Android job is done.
-            timeout_minutes: 240
-            budget_minutes: 210
+            timeout_minutes: 180
+            budget_minutes: 150
     outputs:
       summary_android: ${{ steps.summary.outputs.summary_android }}
       summary_ios: ${{ steps.summary.outputs.summary_ios }}
@@ -105,7 +106,6 @@ jobs:
           # Recovery words of the shared funded testnet wallet, only passed to flows tagged
           # needsTestnetWallet. Those flows are skipped while the secret is unset.
           MAESTRO_TESTNET_WALLET_WORDS: ${{ secrets.MAESTRO_TESTNET_WALLET_WORDS }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
           read -r app app_commit <<< "$BROWSERSTACK_APP"
@@ -115,21 +115,6 @@ jobs:
             exit 1
           fi
           wallet_tag='^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$'
-          # Both jobs use the same testnet wallet, which must not be logged in twice at once (a login
-          # can extend its HTLC), so iOS runs its wallet flows last, once the Android job is done.
-          if [[ "$PLATFORM" == ios ]]; then
-            other_flows=()
-            wallet_flows=()
-            for flow_file in "${flow_files[@]}"; do
-              if grep -qE "$wallet_tag" "$flow_file"; then
-                wallet_flows+=("$flow_file")
-              else
-                other_flows+=("$flow_file")
-              fi
-            done
-            flow_files=(${other_flows[@]+"${other_flows[@]}"} ${wallet_flows[@]+"${wallet_flows[@]}"})
-          fi
-          android_done=false
 
           # One attempt may spend up to 15 minutes in BrowserStack's queue before a ~4-minute run.
           attempt_timeout=1500
@@ -165,35 +150,6 @@ jobs:
             if [[ -z "$skip_signal" ]] && grep -qE "$wallet_tag" "$flow_file" \
               && [[ -z "$MAESTRO_TESTNET_WALLET_WORDS" ]]; then
               skip_signal="Skipped: the MAESTRO_TESTNET_WALLET_WORDS secret is not set"
-            fi
-            if [[ -z "$skip_signal" && "$PLATFORM" == ios && "$android_done" == false ]] && grep -qE "$wallet_tag" "$flow_file"; then
-              echo "Waiting for the Android job to finish with the shared testnet wallet"
-              wait_signal="Skipped: the Android job still used the shared testnet wallet"
-              api_errors=0
-              # Leaves room for this flow's attempt before the deadline.
-              while (( $(date +%s) + attempt_timeout <= deadline )); do
-                # The latest attempt of each job, so a re-run of only this job doesn't wait. Empty
-                # output (no such job, e.g. after a rename) counts as an error too.
-                android_status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" \
-                  --jq '.jobs[] | select(.name == "Maestro android") | .status' || true)"
-                if [[ "$android_status" == completed ]]; then
-                  android_done=true
-                  break
-                fi
-                if [[ -z "$android_status" ]]; then
-                  api_errors=$(( api_errors + 1 ))
-                  if (( api_errors >= 5 )); then
-                    wait_signal="Skipped: could not read the status of the job \"Maestro android\""
-                    break
-                  fi
-                else
-                  api_errors=0
-                fi
-                sleep 60
-              done
-              if [[ "$android_done" == false ]]; then
-                skip_signal="$wait_signal"
-              fi
             fi
             if [[ -n "$skip_signal" ]]; then
               jq -n --arg flow "$flow" --arg platform "$PLATFORM" --arg signal "$skip_signal" --argjson quarantine "$quarantined" \
