@@ -9,6 +9,7 @@ Run `scripts/device-preflight.sh` first. Lists devices, LAN IP, :8100 owner, che
 - If baseline built by symlinking `node_modules` instead of `pnpm install`, also copy gitignored `public/nimiq/{launcher,lib,web}`, `public/web3-provider.js` and `web3-provider/dist/provider.js`, else app throws "Nimiq is not defined".
 - Only one server may own :8100 (`lsof -iTCP:8100 -sTCP:LISTEN`). Kill own server between runs. When done, leave baseline server running in background as found.
 - Reload app after switching servers. Wait for home transaction list to load before testing: blank sheets during sync not regressions.
+- Before each screenshot set: `scripts/verify-build.sh <that worktree> android|ios [device]`. Passes only when device runs that worktree's source, uncommitted changes included. Editing bundled files after server start = mismatch until server restart. iOS reads flushed `logs.txt`: wait ~30s after reload. Doesn't cover gitignored `.env` or a stale `web3-provider` build: run `pnpm build:web3-provider` after provider changes.
 
 ## Capgo OTA trap
 
@@ -22,7 +23,7 @@ Reinstalled debug build with same build number keeps running last downloaded pro
 - Wake and unlock: `adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard`. If `dumpsys window | grep isKeyguardShowing` still true, phone's own PIN needed: ask user once.
 - App PIN: tap PIN field, `adb shell input text "$NIMPAY_TEST_PIN"`.
 - Screenshot: `adb exec-out screencap -p > /tmp/ship/<ISSUE>/<scenario>-<before|after>.png`.
-- Logs: `adb shell run-as com.nimiq.pay.debug cat cache/logs.txt` (flushed ~30s) and `adb logcat -d --pid=$(adb shell pidof com.nimiq.pay.debug) | grep Capacitor/Console`. Use grep table in repo CLAUDE.md.
+- Logs: `adb shell run-as com.nimiq.pay.debug cat cache/logs.txt` (flushed ~30s) and `adb logcat -d --pid=$(adb shell pidof com.nimiq.pay.debug) | grep Capacitor/Console`. Use grep table in `docs/device-debugging.md`.
 - Live state: `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>`, then CDP `Runtime.evaluate` on `document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('<store>')`.
 - HTLC scenarios: htlc-lab at `http://127.0.0.1:5190` needs visible browser tab or block height freezes. Buttons need full pointer/mouse event dispatch; set inputs via form_input. Inventory can label basic account at old HTLC address as "Expired · funded". Split-HTLC repro: "Two funded HTLCs", then cleanup "Return B funds" only (older A funded, newer B empty, cosigner reports B).
 - Fresh DB: `adb shell pm clear com.nimiq.pay.debug` (logout requires backup quiz). Import words: tap field 01, then per word `adb shell input text <word>` + `adb shell input keyevent 62` (space), ~0.8s apart. Tapping next field hits suggestion dropdown.

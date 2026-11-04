@@ -25,6 +25,29 @@
       "mcp__claude-in-chrome__tabs_context_mcp",
       "mcp__t3-code__device_screenshot",
       "mcp__t3-code__device_list"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.capgo_key_v2)",
+      "Read(**/google-service-account.json)"
+    ],
+    "ask": [
+      "Bash(gh pr merge*)",
+      "Bash(git push --force*)",
+      "Bash(git push *--force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push * +*)",
+      "Bash(git -C * push *--force*)",
+      "Bash(git -C * push -f*)",
+      "Bash(git -C * push * -f*)",
+      "Bash(git -C * push * +*)",
+      "Bash(git push *ota-v*)",
+      "Bash(git -C * push *ota-v*)",
+      "Bash(git push *--tags*)",
+      "Bash(git -C * push *--tags*)",
+      "Bash(git push *--follow-tags*)",
+      "Bash(git -C * push *--follow-tags*)"
     ]
   }
 }
