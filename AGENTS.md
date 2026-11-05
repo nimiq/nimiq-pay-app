@@ -101,6 +101,12 @@ When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same v
 
 Release uses `proguard-android-optimize.txt`. With optimization on, R8 folds reads of annotation types that no rule keeps to `null`. Capacitor's `PluginHandle.getPluginAnnotation()` then returns null and `checkPermissions` crashes with an NPE. `android/app/proguard-rules.pro` keeps the Capacitor annotation interfaces; don't remove them. After R8 rule or plugin changes, install a release build and exercise permission flows (push toggle, biometrics, camera). Debug builds are not minified and won't show this.
 
+## OTA updates
+
+- Our update server's "no update" reply has no `kind`, so `CapacitorUpdater.getLatest()` rejects with `no_new_version_available` instead of resolving (APP-353). Treat that rejection as a normal result.
+- `set()` keeps any bundle the auto-update staged, and that bundle replaces the manual install on next background. Call `next()` with the same id first.
+- Auto-update downloads and stages a bundle soon after launch, even in `atBackground` mode. To test a manual download on a device, `reset()` to builtin and `delete()` the bundle first.
+
 ## CSS — teleported/portaled elements
 
 Anything teleported/portaled to `document.body` (Vue `<Teleport>`, Reka UI `DialogPortal`, etc.) renders invisible by default: `src/theme/variables.css` has `body>div:not(#app) { z-index: -100 }` (keeps the camera-preview web video behind the app), and the `:not(#app)` gives it id-level specificity that beats any utility class like `z-[99999]`. Set the z-index via inline `style` on the portaled element instead (inline wins; the rule has no `!important`) — see `MiniAppActionsSheet.vue`. Don't widen or delete the camera rule.

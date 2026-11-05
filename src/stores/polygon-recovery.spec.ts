@@ -519,6 +519,17 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.relayTransaction).not.toHaveBeenCalled()
   })
 
+  it.each(['sendPayment', 'sendSwapPayment'] as const)('reports %s as in progress until it settles', async (send) => {
+    mocks.isUsdtMaintenanceActive = true
+    const store = recreateStore()
+
+    const payment = store[send]({ recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment')
+    expect(store.isSendingPayment).toBe(true)
+
+    await payment
+    expect(store.isSendingPayment).toBe(false)
+  })
+
   it('persists intent before relay contact and blocks sequential retries after a lost response', async () => {
     mocks.relayTransaction.mockImplementationOnce(async () => {
       expect(persistedPaymentAttempt).toMatchObject({

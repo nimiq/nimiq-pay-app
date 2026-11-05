@@ -8,12 +8,22 @@ const state = vi.hoisted(() => ({
   clearTxHistory: vi.fn(),
   discoverRemoteSignersFromBlockchain: vi.fn(),
   getTransactionsByAddress: vi.fn(),
+  isNativePlatform: vi.fn(),
   purgeRemoteSigners: vi.fn(),
   query: vi.fn(),
   recoverRemoteSigner: vi.fn(),
   run: vi.fn(),
   setNetworkOverride: vi.fn(),
   validateRemoteSignerAddress: vi.fn(),
+  updater: {
+    addListener: vi.fn(),
+    current: vi.fn(),
+    download: vi.fn(),
+    getLatest: vi.fn(),
+    list: vi.fn(),
+    next: vi.fn(),
+    set: vi.fn(),
+  },
   verifyRemoteSignersDb: vi.fn(),
 }))
 
@@ -47,6 +57,7 @@ const stores = {
     networkName: 'MainAlbatross',
     headTimestamp: 456,
   }),
+  polygonUsdt: reactive({ isSendingPayment: false }),
   syncState: reactive({ walletContextGeneration: 0 }),
   remoteSigner: reactive({
     remoteAddress: address,
@@ -62,6 +73,14 @@ const stores = {
 
 vi.mock('@capacitor/clipboard', () => ({
   Clipboard: { write: vi.fn() },
+}))
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: state.isNativePlatform },
+}))
+
+vi.mock('@capgo/capacitor-updater', () => ({
+  CapacitorUpdater: state.updater,
 }))
 
 vi.mock('pinia', async () => {
@@ -191,6 +210,7 @@ vi.mock('@/stores/locks', () => ({ useLocks: () => stores.locks }))
 vi.mock('@/stores/nimiq-network', () => ({
   useNimiqNetwork: () => ({ ...stores.network, reconnect: vi.fn() }),
 }))
+vi.mock('@/stores/polygon-usdt', () => ({ usePolygonUsdt: () => stores.polygonUsdt }))
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
     ...stores.remoteSigner,
@@ -482,5 +502,182 @@ describe('dev modal HTLC recovery', () => {
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('History scan was incomplete')
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Local history lookup timed out')
     expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-scan"]').element.disabled).toBe(false)
+  })
+})
+
+describe('dev modal OTA update', () => {
+  const latest = {
+    version: '2.23.1',
+    url: 'https://updates.example/bundles/2.23.1.zip',
+    sessionKey: 'session-key',
+    checksum: 'checksum',
+  }
+  const bundle = { id: 'bundle-id', version: '2.23.1', status: 'pending' }
+  const removeListener = vi.fn()
+  let onDownloadProgress: (event: { percent: number, bundle: { version: string } }) => void
+
+  async function check(wrapper: Awaited<ReturnType<typeof mountModal>>) {
+    await wrapper.get('[data-testid="ota-check"]').trigger('click')
+    await flushPromises()
+  }
+
+  beforeEach(() => {
+    stores.locks.isSendingTx = false
+    stores.locks.isProcessingRemote = false
+    stores.locks.htlcCheckLock = false
+    stores.polygonUsdt.isSendingPayment = false
+    state.query.mockReset().mockResolvedValue([])
+    state.isNativePlatform.mockReset().mockReturnValue(true)
+    removeListener.mockReset().mockResolvedValue(undefined)
+    state.updater.addListener.mockReset().mockImplementation(async (_event, listener) => {
+      onDownloadProgress = listener
+      return { remove: removeListener }
+    })
+    state.updater.current.mockReset().mockResolvedValue({ bundle: { version: 'builtin' }, native: '2.23.0' })
+    state.updater.download.mockReset().mockResolvedValue(bundle)
+    state.updater.getLatest.mockReset().mockResolvedValue(latest)
+    state.updater.list.mockReset().mockResolvedValue({ bundles: [] })
+    state.updater.next.mockReset().mockResolvedValue(bundle)
+    state.updater.set.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('hides the card on web, where OTA does not exist', async () => {
+    state.isNativePlatform.mockReturnValue(false)
+    const wrapper = await mountModal()
+
+    expect(wrapper.find('[data-testid="ota-check"]').exists()).toBe(false)
+  })
+
+  it('shows the running bundle and does not contact the server on open', async () => {
+    const wrapper = await mountModal()
+
+    expect(wrapper.get('[data-testid="ota-current"]').text()).toBe('Running: builtin on native 2.23.0')
+    expect(state.updater.getLatest).not.toHaveBeenCalled()
+  })
+
+  // Rejection is what the production server produces: it sends `error` without `kind`.
+  it('treats the no-update rejection as a normal result, not an error', async () => {
+    state.updater.getLatest.mockRejectedValueOnce(new Error('no_new_version_available'))
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('No update available for this build.')
+    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ota-install"]').exists()).toBe(false)
+  })
+
+  it('shows a resolved response without a url as no update', async () => {
+    state.updater.getLatest.mockResolvedValueOnce({ version: 'builtin', kind: 'up_to_date' })
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('No update available for this build.')
+    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(false)
+  })
+
+  it('shows a failed check and allows retrying', async () => {
+    state.updater.getLatest.mockRejectedValueOnce(new Error('Network down'))
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('Network down')
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="ota-check"]').element.disabled).toBe(false)
+  })
+
+  it('downloads with the encrypted bundle details and waits for the restart tap', async () => {
+    const wrapper = await mountModal()
+    await check(wrapper)
+    await wrapper.get('[data-testid="ota-download"]').trigger('click')
+    await flushPromises()
+
+    expect(state.updater.download).toHaveBeenCalledWith(latest)
+    expect(removeListener).toHaveBeenCalledOnce()
+    expect(state.updater.set).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="ota-install"]').trigger('click')
+    await flushPromises()
+
+    expect(state.updater.next).toHaveBeenCalledWith({ id: 'bundle-id' })
+    expect(state.updater.set).toHaveBeenCalledWith({ id: 'bundle-id' })
+    expect(state.updater.next.mock.invocationCallOrder[0]).toBeLessThan(state.updater.set.mock.invocationCallOrder[0]!)
+  })
+
+  it('reports progress for this version only and removes the listener on failure', async () => {
+    let failDownload!: (error: Error) => void
+    state.updater.download.mockReturnValueOnce(new Promise((_, reject) => {
+      failDownload = reject
+    }))
+    const wrapper = await mountModal()
+    await check(wrapper)
+    await wrapper.get('[data-testid="ota-download"]').trigger('click')
+    await flushPromises()
+
+    onDownloadProgress({ percent: 40, bundle: { version: '2.23.1' } })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('Downloading 2.23.1: 40%')
+
+    onDownloadProgress({ percent: 90, bundle: { version: '9.9.9' } })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('Downloading 2.23.1: 40%')
+
+    failDownload(new Error('Checksum mismatch'))
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('Checksum mismatch')
+    expect(removeListener).toHaveBeenCalledOnce()
+    expect(wrapper.find('[data-testid="ota-install"]').exists()).toBe(false)
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="ota-download"]').element.disabled).toBe(false)
+  })
+
+  it.each(['pending', 'success'])('reuses a %s bundle of the same version without downloading', async (status) => {
+    state.updater.list.mockResolvedValueOnce({ bundles: [{ ...bundle, status }] })
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ota-install"]').exists()).toBe(true)
+    expect(state.updater.download).not.toHaveBeenCalled()
+  })
+
+  it.each(['error', 'downloading'])('does not install a bundle with status %s', async (status) => {
+    state.updater.list.mockResolvedValueOnce({ bundles: [{ ...bundle, status }] })
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ota-install"]').exists()).toBe(false)
+  })
+
+  it.each(['isSendingTx', 'isProcessingRemote', 'htlcCheckLock'] as const)('blocks the restart while %s', async (lock) => {
+    state.updater.list.mockResolvedValueOnce({ bundles: [bundle] })
+    stores.locks[lock] = true
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="ota-install"]').element.disabled).toBe(true)
+    expect(wrapper.find('[data-testid="ota-wait"]').exists()).toBe(true)
+  })
+
+  it('blocks the restart while a USDT payment is sending', async () => {
+    state.updater.list.mockResolvedValueOnce({ bundles: [bundle] })
+    stores.polygonUsdt.isSendingPayment = true
+    const wrapper = await mountModal()
+    await check(wrapper)
+
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="ota-install"]').element.disabled).toBe(true)
+    expect(wrapper.find('[data-testid="ota-wait"]').exists()).toBe(true)
+  })
+
+  it('shows a failed install and allows retrying', async () => {
+    state.updater.list.mockResolvedValueOnce({ bundles: [bundle] })
+    state.updater.set.mockRejectedValueOnce(new Error('No index.html'))
+    const wrapper = await mountModal()
+    await check(wrapper)
+    await wrapper.get('[data-testid="ota-install"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('No index.html')
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="ota-install"]').element.disabled).toBe(false)
   })
 })
