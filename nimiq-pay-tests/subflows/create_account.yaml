@@ -9,7 +9,11 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: ${output.launchScreen.getStartedBtn}
     timeout: 45000
-- tapOn: ${output.launchScreen.getStartedBtn}
+# Capped: the next wait proves the tap worked, and the launch screen keeps animating, so the
+# default settle wait took ~6 s.
+- tapOn:
+    text: ${output.launchScreen.getStartedBtn}
+    waitToSettleTimeoutMs: 1000
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000

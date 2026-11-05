@@ -14,18 +14,15 @@ tags:
     visible: ${output.navigation.backupAccountBtn}
     timeout: 5000
 - tapOn: ${output.navigation.backupAccountBtn}
-- waitForAnimationToEnd
 
 - assertVisible: ${output.backup.introTitle}
 - assertVisible: ${output.backup.introDescription}
 - assertVisible: ${output.backup.noOneCanSeeBtn}
 - tapOn: ${output.backup.noOneCanSeeBtn}
-- waitForAnimationToEnd
 
 - assertVisible: ${output.backup.showWordsTitle}
 - assertVisible: ${output.backup.continueBtn}
 - tapOn: ${output.backup.continueBtn}
-- waitForAnimationToEnd
 
 - assertVisible: ${output.backup.validateTitle}
 - assertVisible: ${output.backup.question}

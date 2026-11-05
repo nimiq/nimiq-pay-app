@@ -8,20 +8,22 @@ appId: ${APP_ID}
 - runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
 - evalScript: ${output.addressGroups = output.typeAddress.match(/.{4}/g); output.typedGroups = 0}
+# The first input needs a tap; a full group then moves focus to the next one (AddressInput.vue),
+# which saves a tap per group.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          id: "0"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: ${output.withdraw.addressSegmentLabel + '0'}
 - repeat:
     while:
       true: ${output.typedGroups < output.addressGroups.length}
     commands:
-      - runFlow:
-          when:
-            platform: Android
-          commands:
-            - tapOn:
-                id: ${String(output.typedGroups)}
-      - runFlow:
-          when:
-            platform: iOS
-          commands:
-            - tapOn: ${output.withdraw.addressSegmentLabel + output.typedGroups}
       - inputText: ${output.addressGroups[output.typedGroups]}
       - evalScript: ${output.typedGroups++}

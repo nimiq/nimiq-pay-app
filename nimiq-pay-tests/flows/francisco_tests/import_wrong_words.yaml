@@ -47,9 +47,10 @@ env:
 # Typing into the last word turns it into a word outside the wordlist ("zzzz" lands wherever
 # the tap leaves the cursor, in or after "abandon"). Confirm was enabled above, so disabling
 # it now is caused by that word. The inputs expose their words as text (iOS has no HTML ids),
-# and all 12 read "abandon": index 11 is the last one (index sorts by top, then left).
+# and all 12 read "abandon": index 11 is the last one (index sorts by top, then left). On Android
+# the first 11 keep the trailing space that moved focus, so the space is optional here.
 - tapOn:
-    text: abandon
+    text: "abandon ?"
     index: 11
 - inputText: ${NOT_A_WORD}
 - tapOn: ${output.login.title}

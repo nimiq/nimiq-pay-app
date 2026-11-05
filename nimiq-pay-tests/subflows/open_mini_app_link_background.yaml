@@ -29,14 +29,15 @@ appId: ${APP_ID}
     notVisible: ${output.miniApps.browserCloseBtn}
     timeout: 5000
 - evalScript: ${output.backgroundSince = Date.now()}
-# Named exception to the no-optional rule: this is a sleep, not an assertion.
+# Named exception to the no-optional rule: this is a sleep, not an assertion. The app re-locks
+# after 120 s (RELOAD_AFTER_BACKGROUND_TIMEOUT_MS), counted from before this sleep starts.
 - extendedWaitUntil:
     visible: ${NEVER_VISIBLE}
-    timeout: 140000
+    timeout: 123000
     optional: true
     label: Stay in the background for over 2 minutes
 - assertTrue:
-    condition: ${Date.now() - output.backgroundSince > 130000}
+    condition: ${Date.now() - output.backgroundSince > 121000}
     label: The app stayed in the background for over 2 minutes
 - openLink: ${RESUME_LINK}
 - extendedWaitUntil:

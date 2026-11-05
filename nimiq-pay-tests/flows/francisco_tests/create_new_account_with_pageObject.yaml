@@ -14,7 +14,9 @@ tags:
 - extendedWaitUntil:
     visible: ${output.launchScreen.getStartedBtn}
     timeout: 45000
-- tapOn: ${output.launchScreen.getStartedBtn}
+- tapOn:
+    text: ${output.launchScreen.getStartedBtn}
+    waitToSettleTimeoutMs: 1000
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000

@@ -29,15 +29,18 @@ tags:
 - scrollUntilVisible:
     element: ${output.whatsNew.previousVersions}
     timeout: 60000
+    speed: 90
 
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
 # Only the expansion renders a second header; unlike assertVisible, this rejects one below the fold.
+# speed 90: at the default 40 this long scroll took ~25 s on the iOS simulator, at 90 ~9 s.
 - scrollUntilVisible:
     element:
       text: ${output.whatsNew.versionHeader}
       index: 1
     timeout: 60000
+    speed: 90
 
 - tapOn: ${output.whatsNew.closeBtn}
 - waitForAnimationToEnd

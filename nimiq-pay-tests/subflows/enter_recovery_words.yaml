@@ -1,27 +1,21 @@
 appId: ${APP_ID}
 ---
 # Types the space-separated words of ${RECOVERY_PHRASE} into the Login recovery words inputs,
-# one input per word, then blurs them. Typing the whole phrase into the first input relies on
+# one inputText per word, then blurs them. Typing the whole phrase into the first input relies on
 # the space moving focus, and Maestro types fast enough to drop the next character.
 - runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
 - evalScript: ${output.wordsToEnter = RECOVERY_PHRASE.trim().split(/\s+/); output.enteredWords = 0}
+# A typed space moves focus to the next input (MnemonicInput.vue), so each word is typed with a
+# trailing space, one inputText per word. That saves a tap per word (about 30 s per import).
 - runFlow:
     when:
       platform: Android
     commands:
-      - repeat:
-          while:
-            true: ${output.enteredWords < output.wordsToEnter.length}
-          commands:
-            # MnemonicInput ids are "01".."12".
-            - tapOn:
-                id: ${String(output.enteredWords + 1).padStart(2, '0')}
-            - inputText: ${output.wordsToEnter[output.enteredWords]}
-            - evalScript: ${output.enteredWords++}
-# iOS exposes no HTML ids and the inputs have no label. Input 01 has focus when the step opens,
-# and a typed space moves focus to the next input (MnemonicInput.vue), so each word is typed
-# with a trailing space, one inputText per word.
+      # MnemonicInput ids are "01".."12". iOS exposes no HTML ids, but input 01 has focus there
+      # when the step opens.
+      - tapOn:
+          id: "01"
 - runFlow:
     when:
       platform: iOS
@@ -32,12 +26,12 @@ appId: ${APP_ID}
             visible: ${output.iosKeyboard.quickPathIntro}
           commands:
             - tapOn: ${output.iosKeyboard.continueBtn}
-      - repeat:
-          while:
-            true: ${output.enteredWords < output.wordsToEnter.length}
-          commands:
-            - inputText: "${output.wordsToEnter[output.enteredWords] + (output.enteredWords < output.wordsToEnter.length - 1 ? ' ' : '')}"
-            - evalScript: ${output.enteredWords++}
+- repeat:
+    while:
+      true: ${output.enteredWords < output.wordsToEnter.length}
+    commands:
+      - inputText: "${output.wordsToEnter[output.enteredWords] + (output.enteredWords < output.wordsToEnter.length - 1 ? ' ' : '')}"
+      - evalScript: ${output.enteredWords++}
 
 # Tapping the title blurs the input and closes the keyboard, which covers Confirm.
 # (hideKeyboard presses Back, which closes the flow when no keyboard is open.)

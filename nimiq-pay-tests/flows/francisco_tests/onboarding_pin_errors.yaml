@@ -44,6 +44,7 @@ env:
 - tapOn:
     text: ${output.navigation.backBtn}
     above: ${output.onboarding.confirmPinTitle}
+    waitToSettleTimeoutMs: 1000
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000

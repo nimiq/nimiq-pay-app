@@ -65,8 +65,9 @@ env:
     timeout: 10000
 
 # Replace it with a request without amount. Erase right after typing: the cursor is still at the
-# end (after a tap it can sit mid-text, and eraseText only deletes to its left).
-- eraseText
+# end (after a tap it can sit mid-text, and eraseText only deletes to its left). NOT_A_REQUEST is
+# 6 characters; a bare eraseText deletes up to 50, one by one (~9 s).
+- eraseText: 6
 - inputText: ${'nimiq:' + FAUCET_ADDRESS}
 - extendedWaitUntil:
     visible: ${output.pay.requestSummary}
@@ -84,7 +85,8 @@ env:
 - extendedWaitUntil:
     visible: ${output.withdraw.insufficientFunds}
     timeout: 10000
-- eraseText
+# 8 digits, plus any thousands separators.
+- eraseText: 12
 - inputText: "1"
 - extendedWaitUntil:
     notVisible: ${output.withdraw.insufficientFunds}

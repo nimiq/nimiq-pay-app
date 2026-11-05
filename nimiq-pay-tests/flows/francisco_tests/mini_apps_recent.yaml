@@ -34,8 +34,8 @@ env:
 - assertNotVisible: ${output.miniApps.nimtrisEntry}
 
 # Replace the text with a URL: its row reads "<host> <host> <page title>".
-# Bare eraseText deletes up to 50 characters (it takes no expression).
-- eraseText
+# NO_MATCH is 6 characters. A bare eraseText deletes up to 50, one by one (~9 s).
+- eraseText: 6
 - inputText: ${APP_HOST}
 - extendedWaitUntil:
     visible: ${APP_HOST + ' ' + APP_HOST + '.*'}
