@@ -1,5 +1,6 @@
 import type { DAppOpenSource } from '@/lib/analytics'
 import { Capacitor } from '@capacitor/core'
+import { Device } from '@capacitor/device'
 import { Keyboard } from '@capacitor/keyboard'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
@@ -246,6 +247,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     // Keyboard must be hidden before present so the webview isn't sized to the
     // above-keyboard area (the loading spinner already shows via openingMiniAppUrl).
     await dismissKeyboardBeforeOpen()
+    const { androidSDKVersion = 0 } = await Device.getInfo()
 
     // The watchdog may have fired while the awaits above were pending; opening now
     // would pop an unexpected webview over whatever the user is doing by then.
@@ -270,6 +272,9 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       preShowScriptInjectionTime: 'documentStart',
       // Native check: drops messages from sub-frames, which the host can't identify.
       javascriptBridgeOrigins: [new URL(targetUrl).origin],
+      // Only Android 15+ draws edge-to-edge, covering bottom-anchored content with the navigation
+      // bar. Older windows already sit above it, so this would add a second gap there.
+      enabledSafeBottomMargin: androidSDKVersion >= 35,
     })
     // Watchdog/pageLoadError may have failed this launch (and closed the webview)
     // while openWebView was in flight; skip the success bookkeeping then.
