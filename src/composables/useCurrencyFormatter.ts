@@ -33,6 +33,11 @@ export interface FormatCryptoOptions {
    */
   currency?: MaybeRef<Crypto>
 
+  /**
+   * @default 2
+   */
+  maxDecimals?: number
+
   locale?: MaybeRef<string>
 }
 
@@ -56,7 +61,7 @@ export function useCurrencyFormatter() {
     const currency = toValue(options?.currency)
     // FormattableNumber throws on NaN; render missing amounts as 0
     const amount = (amountInUnits || 0) / 10 ** DECIMALS[currency ?? Crypto.NIM]
-    return `${new FormattableNumber(amount).toString({ maxDecimals: 2, useGrouping: true })}${currency ? ` ${currency}` : ''}`
+    return `${new FormattableNumber(amount).toString({ maxDecimals: options?.maxDecimals ?? 2, useGrouping: true })}${currency ? ` ${currency}` : ''}`
   }
 
   return {

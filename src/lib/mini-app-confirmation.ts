@@ -80,7 +80,8 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
 
       const { formatCrypto } = useCurrencyFormatter()
       const amountNim = formatCrypto(amount, { currency: Crypto.NIM })
-      const feeNim = formatCrypto(fee, { currency: Crypto.NIM })
+      // Fees are often below 0.01 NIM, so show what gets signed instead of rounding to 0
+      const feeNim = formatCrypto(fee, { currency: Crypto.NIM, maxDecimals: DECIMALS[Crypto.NIM] })
 
       const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
         ? 'Staking Contract'

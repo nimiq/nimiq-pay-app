@@ -1704,14 +1704,17 @@ export class MiniAppHost {
     // Parse params
     let delegation: string
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       delegation = String(params[0])
       value = Number(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       delegation = String((params as any).delegation)
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createNewStakerTransaction method')
@@ -1722,6 +1725,7 @@ export class MiniAppHost {
       stakingData: { type: 'create-staker', delegation },
       stakingTitle: 'Create Staker',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_create_staker',
     })
   }
@@ -1729,12 +1733,15 @@ export class MiniAppHost {
   private sendAddStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createStakeTransaction method')
@@ -1745,6 +1752,7 @@ export class MiniAppHost {
       stakingData: { type: 'add-stake' },
       stakingTitle: 'Add Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_add_stake',
     })
   }
@@ -1752,12 +1760,15 @@ export class MiniAppHost {
   private async sendSetActiveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let newActiveBalance: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       newActiveBalance = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newActiveBalance = Number((params as any).newActiveBalance)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendSetActiveStakeTransaction method')
@@ -1768,6 +1779,7 @@ export class MiniAppHost {
       stakingData: { type: 'set-active-stake', newActiveBalance },
       stakingTitle: 'Set Active Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_set_active',
     })
   }
@@ -1776,14 +1788,17 @@ export class MiniAppHost {
     // Parse params
     let newDelegation: string
     let reactivateAllStake: boolean
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       newDelegation = String(params[0])
       reactivateAllStake = Boolean(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newDelegation = String((params as any).newDelegation)
       reactivateAllStake = Boolean((params as any).reactivateAllStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendUpdateStakerTransaction method')
@@ -1794,6 +1809,7 @@ export class MiniAppHost {
       stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
       stakingTitle: 'Update Staker',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_update',
     })
   }
@@ -1801,12 +1817,15 @@ export class MiniAppHost {
   private async sendRetireStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let retireStake: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       retireStake = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       retireStake = Number((params as any).retireStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
@@ -1817,6 +1836,7 @@ export class MiniAppHost {
       stakingData: { type: 'retire-stake', retireStake },
       stakingTitle: 'Retire Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_retire',
     })
   }
@@ -1824,12 +1844,15 @@ export class MiniAppHost {
   private async sendRemoveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRemoveStakeTransaction method')
@@ -1839,6 +1862,7 @@ export class MiniAppHost {
       stakingData: { type: 'remove-stake' },
       stakingTitle: 'Remove Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_remove',
     })
   }
@@ -2126,7 +2150,7 @@ export class MiniAppHost {
 
   private async sendPayment(txData: {
     value: number
-    fee?: number
+    fee: number
     message?: string
     analyticsRequestType: Web3RequestType
   } & ({
@@ -2140,6 +2164,9 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // BigInt() throws on fractions and NaN, and the wasm u64 wraps out-of-range values, so the signed fee could differ from the prompt
+    if (!Number.isSafeInteger(txData.fee) || txData.fee < 0)
+      throw new InvalidTransactionError('Transaction fee must be a non-negative integer')
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
     const remoteSigner = useRemoteSigner()
@@ -2169,7 +2196,7 @@ export class MiniAppHost {
             : Nimiq.AccountType.Staking
           : Nimiq.AccountType.Basic,
         amount: txData.value,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2190,7 +2217,7 @@ export class MiniAppHost {
         amount: txData.value,
         title: 'Payment',
         transfer: txData.transfer,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2200,6 +2227,7 @@ export class MiniAppHost {
     else if (txData.transfer === Transfer.Staking) {
       partialTx = {
         amount: txData.value,
+        fee: txData.fee,
         title: txData.stakingTitle,
         transfer: txData.transfer,
         rail: Rail.MiniApp,

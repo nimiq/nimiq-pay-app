@@ -801,10 +801,12 @@ export const useTransactions = defineStore('transactions', () => {
         }
         else if (
           remoteSigner.isWalletContextCurrent(sendContext)
+          // Remove-stake is paid from the stake, not the HTLC
+          && staged.tx.sender === remoteSigner.remoteAddress?.toUserFriendlyAddress()
           && staged.tx.transfer !== Transfer.LocalToRemote
           && staged.tx.transfer !== Transfer.ExtendRemote
         ) {
-          await updateActiveRemoteBalance(remoteBalance.value - staged.tx.amount)
+          await updateActiveRemoteBalance(remoteBalance.value - staged.tx.amount - staged.tx.fee)
         }
       }
       catch (error) {
