@@ -31,3 +31,6 @@
 {"buildId": "f2ab635b5413c9add561517352bd7d36c2841902", "flow": "settings_threshold_currency", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-27"}
 {"buildId": "4d3853cdf753a1d143d2e66b7da0c927b6cd43db", "flow": "withdraw_nim_validation", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "high", "triagedAt": "2026-10-27"}
 {"buildId": "d0028b622534f4935210c9c885516a4987b231c8", "flow": "withdraw_nim_validation", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "medium", "triagedAt": "2026-10-27"}
+{"buildId": "229503f89cd3093dc7c1c294743cc1d99160de97", "flow": "settings_threshold_currency", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "de418f0e1d87542baa4c3e727b8063d56b1c6074", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "e3af0141b2046c33e274406e6c5fa2b6bbd7eafe", "flow": "security_change_pin_errors", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}

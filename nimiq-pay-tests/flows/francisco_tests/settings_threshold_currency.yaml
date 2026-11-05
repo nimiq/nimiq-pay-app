@@ -79,6 +79,11 @@ env:
     below: ${output.autoDepositSheet.description}
 - eraseText: 3
 - inputText: ${DISCARDED_THRESHOLD}
+# The keyboard pushes the sheet up over sheetBackdrop (Galaxy S26): a tap there lands on the sheet
+# and only closes the keyboard. Blur the field first, so the sheet settles back down. Blur saves
+# nothing: only the Save button stores the value.
+- tapOn: ${output.autoDepositSheet.description}
+- waitForAnimationToEnd
 - tapOn:
     point: ${output.navigation.sheetBackdrop}
 - extendedWaitUntil:
