@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import type { BundleInfo, LatestVersion } from '@capgo/capacitor-updater'
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { RemoteSignerValidationResult, ValidatedRemoteSigner } from '@/stores/remote-signer'
 import { Clipboard } from '@capacitor/clipboard'
+import { Capacitor } from '@capacitor/core'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonSegment, IonSegmentButton, IonSelect, IonSelectOption, IonToggle, toastController } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
@@ -18,6 +22,7 @@ import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_MS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
 import { useSyncState } from '@/stores/sync/state'
@@ -39,6 +44,7 @@ const { recoverRemoteSigner, verifyRemoteSignersDb } = useSync()
 const { showHiddenTransactions } = storeToRefs(useApp())
 const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
+const { isSendingPayment: isSendingUsdt } = storeToRefs(usePolygonUsdt())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query, run } = useConn()
 const txInMemPool = shallowRef<PlainTransactionDetails>()
@@ -47,6 +53,16 @@ const htlcAddress = shallowRef('')
 const htlcValidation = shallowRef<RemoteSignerValidationResult>()
 const htlcStatus = shallowRef('Enter an HTLC address or scan local transaction history.')
 const isHtlcRecoveryBusy = shallowRef(false)
+
+const isOtaSupported = Capacitor.isNativePlatform()
+const NO_OTA_UPDATE_MESSAGE = 'No update available for this build.'
+const otaCurrent = computedAsync(() => isOtaSupported ? CapacitorUpdater.current() : undefined)
+const otaLatest = shallowRef<LatestVersion>()
+const otaDownloaded = shallowRef<BundleInfo>()
+const otaStatus = shallowRef('Check for a newer OTA bundle.')
+const isOtaBusy = shallowRef(false)
+// CapacitorUpdater.set() destroys the JS context at once, so it must not cut off a money move.
+const isMoneyMoving = computed(() => isSendingTx.value || isSendingUsdt.value || isProcessingRemote.value || htlcCheckLock.value || isHtlcRecoveryBusy.value)
 
 const NETWORK_CHOICES = ['default', 'mainnet', 'testnet'] as const
 type NetworkChoice = typeof NETWORK_CHOICES[number]
@@ -120,6 +136,80 @@ async function handleClearTx() {
   // Clear tx table
   await clearTxHistory()
   router.go(0)
+}
+
+function setOtaError(error: unknown) {
+  otaStatus.value = error instanceof Error ? error.message : String(error)
+}
+
+async function checkForOtaUpdate() {
+  isOtaBusy.value = true
+  otaLatest.value = undefined
+  otaDownloaded.value = undefined
+  otaStatus.value = 'Checking for an update…'
+  try {
+    const latest = await CapacitorUpdater.getLatest()
+    if (!latest.url) {
+      otaStatus.value = latest.message || NO_OTA_UPDATE_MESSAGE
+      return
+    }
+    // The background auto-update may already hold this version; don't download it twice.
+    const { bundles } = await CapacitorUpdater.list()
+    otaDownloaded.value = bundles.find(({ version, status }) => version === latest.version && (status === 'pending' || status === 'success'))
+    otaLatest.value = latest
+    otaStatus.value = otaDownloaded.value
+      ? `Version ${latest.version} is already downloaded.`
+      : `Version ${latest.version} is available.`
+  }
+  catch (error) {
+    // Our update server omits `kind`, so the plugin rejects "no update" instead of resolving it.
+    // Drop this branch once the server sends `kind: 'up_to_date'`.
+    if (error instanceof Error && error.message === 'no_new_version_available')
+      otaStatus.value = NO_OTA_UPDATE_MESSAGE
+    else
+      setOtaError(error)
+  }
+  finally {
+    isOtaBusy.value = false
+  }
+}
+
+async function downloadOtaUpdate() {
+  const latest = otaLatest.value
+  if (!latest?.url)
+    return
+
+  isOtaBusy.value = true
+  otaStatus.value = `Downloading ${latest.version}…`
+  const progress = await CapacitorUpdater.addListener('download', ({ percent, bundle }) => {
+    if (bundle.version === latest.version)
+      otaStatus.value = `Downloading ${latest.version}: ${percent}%`
+  })
+  try {
+    otaDownloaded.value = await CapacitorUpdater.download({ ...latest, url: latest.url })
+    otaStatus.value = `Version ${latest.version} is downloaded.`
+  }
+  catch (error) {
+    setOtaError(error)
+  }
+  finally {
+    await progress.remove()
+    isOtaBusy.value = false
+  }
+}
+
+async function installOtaUpdate(bundle: BundleInfo) {
+  isOtaBusy.value = true
+  otaStatus.value = `Restarting into ${bundle.version}…`
+  try {
+    // set() keeps any bundle the auto-update staged, which would replace this one on next background.
+    await CapacitorUpdater.next({ id: bundle.id })
+    await CapacitorUpdater.set({ id: bundle.id })
+  }
+  catch (error) {
+    setOtaError(error)
+    isOtaBusy.value = false
+  }
 }
 
 function onHtlcAddressInput(value: string | null | undefined) {
@@ -251,6 +341,45 @@ onMounted(async () => {
     <IonButton class="w-full" @click="() => useNimiqNetwork().reconnect()">
       Reconnect to Network
     </IonButton>
+    <IonCard v-if="isOtaSupported" class="w-full">
+      <IonCardHeader>
+        <IonCardTitle>OTA Update</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent class="flex flex-col gap-2">
+        <p data-testid="ota-current">
+          Running: <code>{{ otaCurrent?.bundle.version }}</code> on native <code>{{ otaCurrent?.native }}</code>
+        </p>
+        <p data-testid="ota-status" class="text-sm" aria-live="polite">
+          {{ otaStatus }}
+        </p>
+        <IonButton
+          data-testid="ota-check"
+          :disabled="isOtaBusy"
+          @click="checkForOtaUpdate"
+        >
+          Check for update
+        </IonButton>
+        <IonButton
+          v-if="otaLatest && !otaDownloaded"
+          data-testid="ota-download"
+          :disabled="isOtaBusy"
+          @click="downloadOtaUpdate"
+        >
+          Download {{ otaLatest.version }}
+        </IonButton>
+        <IonButton
+          v-if="otaDownloaded"
+          data-testid="ota-install"
+          :disabled="isOtaBusy || isMoneyMoving"
+          @click="installOtaUpdate(otaDownloaded)"
+        >
+          Restart to install {{ otaDownloaded.version }}
+        </IonButton>
+        <p v-if="otaDownloaded && isMoneyMoving" data-testid="ota-wait" class="text-xs opacity-60">
+          Restart stays disabled until the transaction in progress finishes.
+        </p>
+      </IonCardContent>
+    </IonCard>
     <IonCard>
       <IonCardHeader>
         <IonCardTitle>Network</IonCardTitle>
