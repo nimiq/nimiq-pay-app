@@ -9,11 +9,9 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: ${output.launchScreen.getStartedBtn}
     timeout: 45000
-# Capped: the next wait proves the tap worked, and the launch screen keeps animating, so the
-# default settle wait took ~6 s.
-- tapOn:
-    text: ${output.launchScreen.getStartedBtn}
-    waitToSettleTimeoutMs: 1000
+# Not capped: with a 1 s settle cap the tap was lost on the Galaxy S26 (run 42054675994) and on
+# the iOS simulator, and the app stayed on this screen.
+- tapOn: ${output.launchScreen.getStartedBtn}
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000

@@ -17,7 +17,7 @@ tags:
     timeout: 90000
 - assertNotVisible: ${output.home.eurSymbol}
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 5000
@@ -30,10 +30,17 @@ tags:
     visible: ${output.currencyAlert.eurOption}
     timeout: 5000
 - tapOn: ${output.currencyAlert.eurOption}
-- tapOn: ${output.currencyAlert.okBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.currencyEurSelected}
-    timeout: 5000
+# iOS can drop this tap (see open_menu.yaml). A late close hides OK, so the tap is optional
+# and the wait is the real check.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.currencyAlert.okBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.settings.currencyEurSelected}
+          timeout: 5000
 # Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 

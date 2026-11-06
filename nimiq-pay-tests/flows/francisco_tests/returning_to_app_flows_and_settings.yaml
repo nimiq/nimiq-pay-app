@@ -12,7 +12,7 @@ tags:
 
 - runFlow: ../../subflows/returning_to_dashboard.yaml
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.settings.title}
     timeout: 5000
@@ -41,8 +41,7 @@ tags:
 - assertNotVisible: ${output.navigation.backupAccountBtn}
 - assertVisible: ${output.home.payTitle}
 
-- tapOn: ${output.navigation.openMenuBtn}
-- waitForAnimationToEnd
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.backupAccountBtn}
     timeout: 5000
@@ -65,8 +64,7 @@ tags:
 - assertNotVisible: ${output.backup.question}
 - assertVisible: ${output.home.payTitle}
 
-- tapOn: ${output.navigation.openMenuBtn}
-- waitForAnimationToEnd
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.whatsNewBtn}
     timeout: 5000
@@ -109,8 +107,7 @@ tags:
 - assertNotVisible: ${output.navigation.logoutBtn}
 - assertVisible: ${output.home.payTitle}
 
-- tapOn: ${output.navigation.openMenuBtn}
-- waitForAnimationToEnd
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.aboutBtn}
     timeout: 5000

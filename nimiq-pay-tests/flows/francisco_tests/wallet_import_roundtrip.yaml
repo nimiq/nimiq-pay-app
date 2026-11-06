@@ -33,7 +33,7 @@ tags:
     timeout: 10000
 
 # An empty wallet logs out without the backup warning.
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.logoutBtn}
     timeout: 5000

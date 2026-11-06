@@ -7,7 +7,7 @@ appId: ${APP_ID}
 # On testnet already, "TESTNET" also matches the badge and the switch would fail confusingly.
 - assertNotVisible: ${output.home.testnetBadge}
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 5000

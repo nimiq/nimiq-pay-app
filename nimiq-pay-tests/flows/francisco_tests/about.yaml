@@ -8,10 +8,7 @@ tags:
 
 - runFlow: ../../subflows/create_account.yaml
 
-- tapOn:
-    text: ${output.navigation.openMenuBtn}
-    waitToSettleTimeoutMs: 1000
-- waitForAnimationToEnd
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.aboutBtn}
     timeout: 5000

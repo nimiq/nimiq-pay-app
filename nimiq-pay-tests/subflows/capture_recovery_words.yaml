@@ -4,7 +4,7 @@ appId: ${APP_ID}
 # output.recoveryWords. Leaves the app on the "Write down these words" screen.
 - runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.backupAccountBtn}
     timeout: 5000

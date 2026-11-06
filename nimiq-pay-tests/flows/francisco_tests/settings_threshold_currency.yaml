@@ -19,7 +19,7 @@ env:
 
 - runFlow: ../../subflows/create_account.yaml
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 10000
@@ -98,10 +98,17 @@ env:
     visible: ${output.currencyAlert.crcOption}
     timeout: 5000
 - tapOn: ${output.currencyAlert.crcOption}
-- tapOn: ${output.currencyAlert.okBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.currencyCrcSelected}
-    timeout: 5000
+# iOS can drop this tap (see open_menu.yaml). A late close hides OK, so the tap is optional
+# and the wait is the real check.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.currencyAlert.okBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.settings.currencyCrcSelected}
+          timeout: 5000
 # Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 
@@ -134,7 +141,7 @@ env:
     visible: ${output.home.crcZeroReduced}
     timeout: 90000
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 10000
@@ -149,7 +156,17 @@ env:
     visible: ${output.currencyAlert.gmdOption}
     timeout: 5000
 - tapOn: ${output.currencyAlert.gmdOption}
-- tapOn: ${output.currencyAlert.okBtn}
+# iOS can drop this tap (see open_menu.yaml). The row behind an open alert is not in the
+# hierarchy, so only OK going away proves the alert closed.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.currencyAlert.okBtn}
+          optional: true
+      - extendedWaitUntil:
+          notVisible: ${output.currencyAlert.okBtn}
+          timeout: 5000
 - extendedWaitUntil:
     notVisible: ${output.settings.currencyCrcSelected}
     timeout: 5000

@@ -37,7 +37,7 @@ env:
     timeout: 10000
 
 # Setting off: the PIN leads to home and the Mini App stays closed.
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 10000

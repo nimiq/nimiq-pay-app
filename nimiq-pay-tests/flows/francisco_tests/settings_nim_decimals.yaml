@@ -37,7 +37,7 @@ tags:
 - assertVisible: ${output.home.nimBalanceNoDecimals}
 - assertNotVisible: ${output.home.nimBalanceFiveDecimals}
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 5000
@@ -50,10 +50,17 @@ tags:
     visible: ${output.nimDecimalsAlert.fiveOption}
     timeout: 5000
 - tapOn: ${output.nimDecimalsAlert.fiveOption}
-- tapOn: ${output.nimDecimalsAlert.okBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.nimDecimalsFiveSelected}
-    timeout: 5000
+# iOS can drop this tap (see open_menu.yaml). A late close hides OK, so the tap is optional
+# and the wait is the real check.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.nimDecimalsAlert.okBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.settings.nimDecimalsFiveSelected}
+          timeout: 5000
 # Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 
@@ -73,7 +80,7 @@ tags:
     timeout: 60000
 - assertNotVisible: ${output.home.nimBalanceNoDecimals}
 
-- tapOn: ${output.navigation.openMenuBtn}
+- runFlow: ../../subflows/open_menu.yaml
 - extendedWaitUntil:
     visible: ${output.navigation.settingsBtn}
     timeout: 10000
@@ -88,10 +95,17 @@ tags:
 - tapOn:
     text: ${output.nimDecimalsAlert.twoOption}
     below: ${output.nimDecimalsAlert.noneOption}
-- tapOn: ${output.nimDecimalsAlert.okBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.nimDecimalsTwoSelected}
-    timeout: 5000
+# iOS can drop this tap (see open_menu.yaml). A late close hides OK, so the tap is optional
+# and the wait is the real check.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.nimDecimalsAlert.okBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.settings.nimDecimalsTwoSelected}
+          timeout: 5000
 - waitForAnimationToEnd
 - tapOn: ${output.navigation.backBtn}
 - waitForAnimationToEnd
