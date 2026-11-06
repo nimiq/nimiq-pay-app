@@ -56,6 +56,7 @@ const stringParser = vi.hoisted(() => ({
   isPaymentRequest: vi.fn(),
   getPaymentRequestData: vi.fn(),
 }))
+const device = vi.hoisted(() => ({ isIOS: false }))
 const consensusWait = vi.hoisted(() => ({ promise: undefined as Promise<void> | undefined }))
 
 enableAutoUnmount(afterEach)
@@ -171,6 +172,10 @@ vi.mock('@/components/TheHomeFooter.vue', () => ({
     },
     template: '<div data-testid="home-footer" :data-disabled="String(isPaymentDisabled)" />',
   }),
+}))
+
+vi.mock('@/composables/useDevice', () => ({
+  useDevice: () => device,
 }))
 
 vi.mock('@/composables/useLogger', () => ({
@@ -353,6 +358,7 @@ describe('mainView', () => {
     stringParser.isPaymentRequest.mockReset()
     stringParser.getPaymentRequestData.mockReset()
     consensusWait.promise = undefined
+    device.isIOS = false
   })
 
   it('logs a rejected wallet sync instead of leaving it unhandled', async () => {
@@ -637,6 +643,18 @@ describe('mainView', () => {
 
     expect(stringParser.getPaymentRequestData).toHaveBeenCalledTimes(2)
     expect(displayedPaymentRequests.value).toEqual([pr])
+  })
+
+  it('does not read the clipboard on iOS', async () => {
+    device.isIOS = true
+    capacitor.readClipboard.mockResolvedValue({ type: 'text/plain', value: 'nimiq:NQ00?amount=1' })
+
+    await mountComponent()
+    await flushPromises()
+    const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>
+    await onResume()
+
+    expect(capacitor.readClipboard).not.toHaveBeenCalled()
   })
 
   it('removes the resume listener on unmount', async () => {
