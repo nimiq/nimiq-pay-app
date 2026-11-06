@@ -1069,6 +1069,61 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
   })
 })
 
+describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10, fee: 7 }],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10, 7]],
+    ['sendStakeTransaction', { value: 10, fee: 7 }],
+    ['sendStakeTransaction', [10, 7]],
+    ['sendSetActiveStakeTransaction', { newActiveBalance: 10, fee: 7 }],
+    ['sendSetActiveStakeTransaction', [10, 7]],
+    ['sendUpdateStakerTransaction', { newDelegation: 'NQ33 VALIDATOR', reactivateAllStake: true, fee: 7 }],
+    ['sendUpdateStakerTransaction', ['NQ33 VALIDATOR', true, 7]],
+    ['sendRetireStakeTransaction', { retireStake: 10, fee: 7 }],
+    ['sendRetireStakeTransaction', [10, 7]],
+    ['sendRemoveStakeTransaction', { value: 10, fee: 7 }],
+    ['sendRemoveStakeTransaction', [10, 7]],
+  ])('shows and sends the requested fee for %s %j', async (name, params) => {
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).resolves.toBe('payment-hash')
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ fee: 7 }),
+    }))
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 7 }))
+  })
+
+  it.each([
+    ['sendStakeTransaction', { value: 10 }],
+    ['sendStakeTransaction', [10]],
+  ])('defaults an omitted fee to zero for %s %j', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).resolves.toBe('payment-hash')
+
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 0 }))
+  })
+
+  it.each([
+    ['sendStakeTransaction', { value: 10, fee: 1.5 }],
+    ['sendStakeTransaction', { value: 10, fee: -1 }],
+    ['sendStakeTransaction', { value: 10, fee: 'abc' }],
+    ['sendStakeTransaction', { value: 10, fee: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: 10, fee: 1.5 }],
+  ])('rejects a malformed fee before prompting for %s %j', async (name, params) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message: 'Transaction fee must be a non-negative integer',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+})
+
 describe('MiniAppHost rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
   it('preserves the Nimiq error type and existing RPC fields through serialization', async () => {
     const { handleRequest } = await createPermissionHost({ confirmed: false })

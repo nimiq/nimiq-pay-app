@@ -205,7 +205,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
           const tx = Nimiq.TransactionBuilder.newRemoveStake(
             /* recipient */ useLocalWallet().localAddress,
             /* value */ BigInt(partialArgs.amount),
-            /* fee */ 0n,
+            /* fee */ BigInt(partialArgs.fee ?? 0),
             /* validityStartHeight */ getValidityStartHeight(),
             /* networkId */ networkId.value,
           )
@@ -231,7 +231,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* recipientType */ Nimiq.AccountType.Staking,
       /* recipientData */ data,
       /* value */ value,
-      /* fee */ 0n,
+      /* fee */ BigInt(partialArgs.fee ?? 0),
       // If value > 0, it's a create or add stake transaction, otherwise it's a signaling transaction.
       /* flags */ value > 0n ? 0b00 : 0b10,
       /* validityStartHeight */ getValidityStartHeight(),

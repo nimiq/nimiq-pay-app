@@ -1006,6 +1006,46 @@ describe('useTransactions', () => {
       })
     }
 
+    it('subtracts amount and fee from the remote balance after a send', async () => {
+      const { useTransactions } = await import('./transactions')
+      state.remoteBalance = 100
+      const { signedTx } = createSignedTransaction('remote-payment-with-fee')
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: true })
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPayment,
+        recipient: 'NQ22 TEST RECIPIENT',
+        amount: 42,
+        fee: 1,
+        title: 'Payment',
+      } as any)
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.updateActiveRemoteBalance).toHaveBeenCalledWith(57)
+    })
+
+    it('leaves the remote balance alone after a remove-stake', async () => {
+      const { useTransactions } = await import('./transactions')
+      state.remoteBalance = 100
+      const { signedTx } = createSignedTransaction('remove-stake-with-fee', {
+        sender: 'NQ77 STAKING CONTRACT',
+        senderType: 3,
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+      })
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: true })
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.Staking,
+        amount: 42,
+        fee: 1,
+        title: 'Remove Stake',
+        stakingData: { type: 'remove-stake' },
+      } as any)
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.updateActiveRemoteBalance).not.toHaveBeenCalled()
+    })
+
     it('restores payment, staking, and remote-drain rows without replacing concurrent pending entries', async () => {
       const { useTransactions } = await import('./transactions')
       const existingPayment = { transactionHash: 'existing-payment' }

@@ -1,4 +1,5 @@
 import { ExtendedDialog } from 'capacitor-extended-dialog'
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Asset } from '@/lib/assets'
 import { requestUserConfirmation } from './mini-app-confirmation'
@@ -8,6 +9,7 @@ vi.mock('@/composables/useMiniAppHost', () => ({ MINI_APP_REQUEST_TIMEOUT_MS: 12
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ error: vi.fn() }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ iconForUrl: () => undefined }) }))
 vi.mock('@/lib/site-metadata', () => ({ getFaviconUrl: () => '' }))
+vi.mock('@/stores/local-wallet', () => ({ useLocalWallet: () => ({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } }) }))
 
 describe('requestUserConfirmation Lightning payment', () => {
   beforeEach(() => {
@@ -30,6 +32,31 @@ describe('requestUserConfirmation Lightning payment', () => {
 
     expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
       rows: expect.arrayContaining([{ title: 'Service fee (included)', value: '0.25 USD' }]),
+    }))
+  })
+})
+
+describe('requestUserConfirmation transaction', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+  })
+
+  it.each([
+    [499, '0.00499 NIM'],
+    [1499, '0.01499 NIM'],
+  ])('shows the exact staking fee for %d luna', async (fee, value) => {
+    await requestUserConfirmation({
+      type: 'transaction',
+      network: 'nimiq',
+      url: 'https://app.example',
+      name: 'Example',
+      data: { recipient: 'NQ00 STAKING', amount: 1_000_000, fee },
+      stakingData: { type: 'add-stake' },
+    } as any)
+
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      rows: expect.arrayContaining([{ title: 'Fee', value }]),
     }))
   })
 })
