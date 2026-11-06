@@ -34,3 +34,12 @@
 {"buildId": "229503f89cd3093dc7c1c294743cc1d99160de97", "flow": "settings_threshold_currency", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "low", "triagedAt": "2026-11-05"}
 {"buildId": "de418f0e1d87542baa4c3e727b8063d56b1c6074", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
 {"buildId": "e3af0141b2046c33e274406e6c5fa2b6bbd7eafe", "flow": "security_change_pin_errors", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "381062b201c81ce178f422fa29329ad862171bb4", "flow": "pay_nim_manual", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "15a33723c755f2ec8ee73c9cc9cbff6c7f11d5b3", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "48b79e50171df29ac0ba7b815fe53be517333266", "flow": "testnet_new_wallet", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "bf8a1611866b9b97c4c7b6dc905b5456ac039f19", "flow": "whats_new", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "5ec197702d20f4e6866e86d893b3f8ac80aec167", "flow": "settings_nim_decimals", "outcome": "UNKNOWN", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "5ac9e92213ce566818cb30e3ce76d2c8c7f37b9c", "flow": "security_change_pin", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "28b08cbced6e3adbe9bc5a64e47ef58684b33a12", "flow": "pay_nim_manual", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "b686d2bb7067262c040184a65330c2bcd76aacbd", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "7586d3548b51a5f9c28dcddb2742fa639e45ead9", "flow": "testnet_new_wallet", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
