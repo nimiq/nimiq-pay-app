@@ -1,20 +1,23 @@
+import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { env } = vi.hoisted(() => ({
+const { env, httpGet, preferencesGet } = vi.hoisted(() => ({
   env: { isDev: false, isMockEnabled: false },
+  httpGet: vi.fn((_options?: unknown): Promise<{ status: number, data: unknown }> => Promise.resolve({ status: 200, data: { nimiq: [], evm: [] } })),
+  preferencesGet: vi.fn((_options: { key: string }): Promise<{ value: string | null }> => Promise.resolve({ value: null })),
 }))
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'ios' },
   CapacitorHttp: {
-    get: vi.fn(() => Promise.resolve({ status: 200, data: { nimiq: [], evm: [] } })),
+    get: httpGet,
   },
 }))
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {
-    get: vi.fn(() => Promise.resolve({ value: null })),
+    get: preferencesGet,
     set: vi.fn(() => Promise.resolve()),
     remove: vi.fn(() => Promise.resolve()),
   },
@@ -197,5 +200,63 @@ describe('useMiniApps.addRecentlyViewed hostname dedupe', () => {
     store.addRecentlyViewed({ url: 'https://a.example/deep', name: 'A', icon: '' })
 
     expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://a.example', 'https://b.example'])
+  })
+})
+
+describe('useMiniApps remote catalog', () => {
+  const remoteApp = { name: 'Cinima', url: 'https://cinima.example/', description: 'Movies', logo: '', source: null, developer: null, featured: true, slug: 'cinima', type: 'nimiq' }
+
+  beforeEach(() => {
+    env.isDev = false
+    env.isMockEnabled = false
+    httpGet.mockReset()
+    preferencesGet.mockReset()
+    preferencesGet.mockResolvedValue({ value: null })
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  it('shows a retryable error instead of loading forever when the first fetch fails with no cache', async () => {
+    httpGet.mockRejectedValueOnce(new Error('offline'))
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    expect(store.isLoading).toBe(true)
+    await flushPromises()
+
+    expect(store.isLoading).toBe(false)
+    expect(store.hasLoadError).toBe(true)
+
+    httpGet.mockResolvedValueOnce({ status: 200, data: { nimiq: [remoteApp], evm: [] } })
+    await store.loadRemoteApps()
+
+    expect(store.hasLoadError).toBe(false)
+    expect(store.allDApps.map(d => d.name)).toEqual(['Cinima'])
+  })
+
+  it('falls back to the cached catalog when the fetch fails before the cache is read', async () => {
+    let resolveCache!: (value: { value: string | null }) => void
+    preferencesGet.mockImplementation(({ key }) => key === 'miniAppsRemoteList'
+      ? new Promise(resolve => resolveCache = resolve)
+      : Promise.resolve({ value: null }))
+    httpGet.mockRejectedValueOnce(new Error('offline'))
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+
+    resolveCache({ value: JSON.stringify([remoteApp]) })
+    await flushPromises()
+
+    expect(store.hasLoadError).toBe(false)
+    expect(store.allDApps.map(d => d.name)).toEqual(['Cinima'])
+  })
+
+  it('does not refetch once the catalog loaded', async () => {
+    httpGet.mockResolvedValue({ status: 200, data: { nimiq: [remoteApp], evm: [] } })
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+    await store.loadRemoteApps()
+
+    expect(httpGet).toHaveBeenCalledTimes(1)
   })
 })

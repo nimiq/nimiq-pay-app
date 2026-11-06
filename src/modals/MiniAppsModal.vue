@@ -4,7 +4,7 @@ import type { DAppOpenSource } from '@/lib/analytics'
 import type { CompetitionMiniApp } from '@/stores/competition-mini-apps'
 import type { MiniAppMenuContext, MiniAppType } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
-import { IonBackButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
 import { useStorageAsync } from '@vueuse/core'
 import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -29,8 +29,8 @@ import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 type InAppDAppSource = Exclude<DAppOpenSource, 'deeplink' | 'competition'>
 
 const store = useMiniApps()
-const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
-const { searchedDescriptions, ensureDescription } = store
+const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, hasLoadError, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
+const { searchedDescriptions, ensureDescription, loadRemoteApps } = store
 const competitionStore = useCompetitionMiniApps()
 const {
   newestCycle: competitionNewestCycle,
@@ -69,7 +69,11 @@ const { unregister: unregisterHardwareBack } = useBackButton(101, (processNextHa
 })
 onBeforeUnmount(unregisterHardwareBack)
 
-onMounted(() => warmUpWeb3ProviderScript())
+onMounted(() => {
+  warmUpWeb3ProviderScript()
+  // Retries when the launch fetch failed; no-op once the catalog loaded this session.
+  void loadRemoteApps()
+})
 
 const searchQuery = ref('')
 const isSearching = computed(() => !!searchQuery.value.trim())
@@ -303,6 +307,17 @@ async function openCompetitionExternal(url: string) {
                     <IonSkeletonText :animated="true" class="h-3 w-2/3 rounded" />
                   </div>
                 </div>
+              </div>
+            </template>
+
+            <template v-else-if="hasLoadError && !isSearching">
+              <div data-testid="mini-apps-load-error" class="flex flex-col items-center py-6 text-center">
+                <p class="text-sm text-space/60">
+                  {{ $t('Check your connection and try again.') }}
+                </p>
+                <IonButton class="mt-4" @click="loadRemoteApps()">
+                  {{ $t('Try again') }}
+                </IonButton>
               </div>
             </template>
 

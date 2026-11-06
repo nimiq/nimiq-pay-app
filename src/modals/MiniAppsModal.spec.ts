@@ -728,6 +728,26 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
+  it('shows a retry after the catalog fetch fails and loads the list on retry', async () => {
+    const defaultResponse = capacitorHttpGet.getMockImplementation()!
+    capacitorHttpGet.mockImplementation(options => options?.url.includes('nimiq-mini-apps.json')
+      ? Promise.reject(new Error('offline'))
+      : defaultResponse(options))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    expect(wrapper.find('.skeleton').exists()).toBe(false)
+    const error = wrapper.find('[data-testid="mini-apps-load-error"]')
+    expect(error.exists()).toBe(true)
+
+    capacitorHttpGet.mockImplementation(defaultResponse)
+    await error.find('ion-button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
+  })
+
   it('builds the report url only for awesome-list apps', async () => {
     mountModal()
     await flushPromises()

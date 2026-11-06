@@ -131,7 +131,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       trackCurrentAppOpen('cold_start')
   })
   if (!isAlertRoute) {
-    useMiniApps() // computedAsync triggers description fetching on store creation
+    useMiniApps() // store creation starts the Mini Apps catalog fetch
   }
 
   const { isWeb } = useDevice()
