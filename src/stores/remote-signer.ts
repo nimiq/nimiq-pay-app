@@ -194,7 +194,6 @@ function useRemoteSignerDb() {
       { balance, end, proofSize, start, publicKey, address }: RemoteSigner,
       isCurrent: () => boolean = () => true,
     ) {
-      signerWriteRevision += 1
       const write = enqueueSignerWrite(async () => {
         if (!isCurrent())
           return false
@@ -202,6 +201,9 @@ function useRemoteSignerDb() {
         logger.log('✒️ Adding Remote Signer', { address: addressString, balance, proofSize, publicKey, start, end })
         const result = await run(SQLQuery.InsertInactiveRemoteSigner, [addressString, balance, proofSize, publicKey, start, end, false])
         const inserted = (result.changes?.changes ?? 0) > 0
+        // The history walk re-adds every known HTLC. A no-op must not abort an activation in progress.
+        if (inserted)
+          signerWriteRevision += 1
         if (!inserted || isCurrent())
           return inserted
         await run(SQLQuery.DeleteRemoteSigner, [addressString])

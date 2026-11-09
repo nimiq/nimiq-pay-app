@@ -846,6 +846,45 @@ describe('useRemoteSigner', () => {
     expect(store.remoteBalance).toBe(7)
   })
 
+  it.each([
+    ['already known', 0, true],
+    ['new', 1, false],
+  ])('activation with an %s inactive signer written during its metadata lookup', async (_label, changes, activates) => {
+    const creation = createHtlcCreation({ state: 'included' })
+    mockAddressSpecificSignerMetadata(creation)
+    let finishMetadata!: (result: any) => void
+    state.getRemoteSigner.mockReturnValueOnce(new Promise(resolve => finishMetadata = resolve))
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+    const activation = store.activateRemoteSignerFromTransaction(creation as any)
+    await vi.waitFor(() => expect(state.getRemoteSigner).toHaveBeenCalledOnce())
+
+    state.run.mockImplementationOnce(() => Promise.resolve({ changes: { changes } }) as any)
+    await store.upsertInactiveRemoteSigner({
+      active: false,
+      address: createAddress('NQ22 TEST OLD HTLC ADDRESS'),
+      balance: 0,
+      end: 999_500,
+      proofSize: 98,
+      publicKey: 'service-public-key',
+      start: 123_100,
+    } as any)
+    finishMetadata({
+      data: createRemoteSignerApiData(creation.recipient),
+      error: undefined,
+      hasError: false,
+      status: 200,
+    })
+
+    if (activates) {
+      await expect(activation).resolves.toBeUndefined()
+      expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(creation.recipient)
+    }
+    else {
+      await expect(activation).rejects.toThrow('stale context after metadata')
+    }
+  })
+
   it('retains the included barrier when signer state changes during account lookup', async () => {
     const creation = createHtlcCreation({ state: 'included' })
     mockAddressSpecificSignerMetadata(creation)
