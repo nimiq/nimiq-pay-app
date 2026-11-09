@@ -153,7 +153,7 @@ describe('polygon recovery migrations', () => {
       'refund_block',
       'htlc_id_recovery_failed',
     ])
-    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
       SQLQuery.AddValidityStartHeightToTxsTable,
     ])

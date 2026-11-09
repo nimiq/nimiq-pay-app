@@ -212,6 +212,22 @@ function useRemoteSignerDb() {
       return write
     },
 
+    async getSettledHtlcCreations() {
+      const rows = await query<{ transaction_hash: string }[]>(SQLQuery.GetSettledHtlcCreations)
+      return new Set(rows.map(row => row.transaction_hash))
+    },
+
+    markHtlcCreationSettled(transactionHash: string, isCurrent: () => boolean) {
+      return enqueueSignerWrite(async () => {
+        if (!isCurrent())
+          return
+        await run(SQLQuery.InsertSettledHtlcCreation, [transactionHash])
+        // Logout may have wiped the DB meanwhile; a stale mark would hide this chain after a restore.
+        if (!isCurrent())
+          await run(SQLQuery.DeleteSettledHtlcCreation, [transactionHash])
+      })
+    },
+
     async upsertTargetRemoteSigner(
       signer: RemoteSigner,
       isCurrent: () => boolean = () => true,
@@ -256,6 +272,7 @@ function useRemoteSignerDb() {
       // The check vouched for the purged signer set; the next one must be checked again.
       const write = enqueueSignerWrite(() => runSet([
         { statement: SQLQuery.PurgeRemoteSigners, values: [] },
+        { statement: SQLQuery.PurgeSettledHtlcCreations, values: [] },
         { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
         { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
         { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
@@ -341,7 +358,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const { getStatus, getRemoteSigner, getOwnerWallets } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote } = storeToRefs(useLocks())
-  const { getSignerWriteRevision, getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, deactivateRemoteSignerInDb, insertInactiveRemoteSigner, upsertTargetRemoteSigner, purgeRemoteSigners } = useRemoteSignerDb()
+  const { getSignerWriteRevision, getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, deactivateRemoteSignerInDb, insertInactiveRemoteSigner, upsertTargetRemoteSigner, purgeRemoteSigners, getSettledHtlcCreations, markHtlcCreationSettled } = useRemoteSignerDb()
 
   function getWalletIdentity(): WalletIdentity | undefined {
     if (!localAddress.value)
@@ -1593,6 +1610,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       createdHtlcs: localScan?.creations.map(transaction => transaction.recipient) ?? [],
       historyComplete: localScan?.historyComplete ?? false,
     }
+    const settledCreations = await getSettledHtlcCreations()
     if (!localScan || !isWalletContextCurrent(context))
       return result
 
@@ -1601,6 +1619,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     let evidenceIncomplete = false
 
     for (const transaction of localScan.creations) {
+      if (settledCreations.has(transaction.transactionHash)) {
+        result.alreadyKnown += 1
+        continue
+      }
       let address: Address
       try {
         address = Nimiq.Address.fromString(transaction.recipient)
@@ -1623,6 +1645,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         continue
       }
 
+      // Extensions are only reachable through this root, so one open HTLC keeps the whole chain walking.
+      let chainSettled = true
       const signersToScan = [rootResult.metadata]
       while (signersToScan.length > 0) {
         const metadata = signersToScan.shift()!
@@ -1633,12 +1657,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         const { data: account, error } = await getAccount(metadata.address)
         if (!isWalletContextCurrent(context))
           return { ...result, errors: ['Wallet changed during discovery'] }
+        const drained = error === NO_ACCOUNT_ERROR || account?.type === 'basic'
         if (error && error !== NO_ACCOUNT_ERROR) {
           evidenceIncomplete = true
           result.errors.push(`HTLC account lookup failed: ${metadata.addressString}`)
         }
-        else if (error === NO_ACCOUNT_ERROR
-          || account?.type === 'basic'
+        else if (drained
           || (account?.type === 'htlc'
             && account.sender === owner
             && account.recipient === metadata.cosignerRecipient
@@ -1668,6 +1692,19 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           evidenceIncomplete = true
           result.errors.push(`HTLC history lookup incomplete: ${metadata.addressString}`)
         }
+        // A lagging peer can omit the newest spend, possibly an extension, and still return a short
+        // page that reads as complete. Only finalized history accounting for every luna proves the end.
+        let received = 0
+        let spent = 0
+        for (const entry of history.transactions) {
+          chainSettled &&= entry.state === 'confirmed' && entry.executionResult !== undefined
+          if (entry.recipient === metadata.addressString && entry.executionResult)
+            received += entry.value
+          // A failed transaction still pays its fee.
+          if (entry.sender === metadata.addressString)
+            spent += entry.fee + (entry.executionResult ? entry.value : 0)
+        }
+        chainSettled &&= history.complete && drained && received > 0 && received === spent
 
         for (const extension of history.transactions) {
           const extensionData = extension.data
@@ -1677,8 +1714,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             || extension.recipientType !== 'htlc'
             || (extension.flags & 0b1) !== 0b1
             || extensionData.type !== 'htlc'
-            || extensionData.sender !== owner
-            || !isCosignerAddress(extensionData.recipient)) {
+            || extensionData.sender !== owner) {
+            continue
+          }
+          if (!isCosignerAddress(extensionData.recipient)) {
+            // Swaps land here for good, with a real hash root. An all-zero one is a deposit HTLC of
+            // ours under a key this build doesn't know, so a later walk must still reach it.
+            chainSettled &&= !/^0+$/.test(extensionData.hashRoot)
             continue
           }
 
@@ -1695,17 +1737,23 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             return { ...result, errors: ['Wallet changed during discovery'] }
           if (childResult.status === 'unavailable') {
             evidenceIncomplete = true
+            chainSettled = false
             result.errors.push(`HTLC metadata unavailable: ${extension.recipient} (${childResult.reason})`)
             continue
           }
           if (childResult.status === 'rejected'
             || childResult.metadata.creationTransactionHash !== extension.transactionHash) {
+            chainSettled = false
             logger.warn('Ignoring HTLC extension with mismatched signer metadata', extension.transactionHash)
             continue
           }
           signersToScan.push(childResult.metadata)
         }
       }
+
+      // Recorded per chain so a walk killed mid-way resumes instead of starting over.
+      if (chainSettled)
+        await markHtlcCreationSettled(transaction.transactionHash, () => isWalletContextCurrent(context))
     }
 
     result.localComplete = localScan.historyComplete && !evidenceIncomplete
