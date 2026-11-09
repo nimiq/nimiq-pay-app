@@ -37,7 +37,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { verifyRemoteSignersDb } = useSyncRemoteSigners()
   const { updateSingleTransaction, updateTransactionHistory, updateTransactionsInDb } = useSyncTransactions()
   const syncState = useSyncState()
-  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, nodesAreSynced, walletContextGeneration } = storeToRefs(syncState)
+  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, isVerifyingRemoteSignersDb, nodesAreSynced, walletContextGeneration } = storeToRefs(syncState)
 
   const { resume: startPeriodicTransactionRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
@@ -76,6 +76,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   let remoteAddressListener: ListenerHandle | undefined
   let remoteAddressListenerGeneration = 0
   let completedOnlineSyncContext: OnlineSyncContext | undefined
+  let lastValidityCheckHeight = 0
 
   function getOnlineSyncContext(): OnlineSyncContext | undefined {
     return consensus.value === 'established' ? getListenerContext() : undefined
@@ -103,6 +104,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return false
     // Both callers restore pending sends first. Start before any step that can fail, so a failure can't leave it off.
     startPeriodicTransactionRefresh()
+    // Before the listeners exist: a validity send from a head during startup would make the verification below skip itself.
+    lastValidityCheckHeight = localHeight.value
     if (!await registerWalletListeners(context, isCurrent))
       return false
     logger.log('Updating balances')
@@ -121,12 +124,15 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return false
 
     logger.log('Verifying remote signers in DB')
-    await verifyRemoteSignersDb()
+    // The verification walks every HTLC ever created and can take minutes. Reclaiming an expired
+    // HTLC must not wait for it, or the "Updating connection" modal stays open (APP-317).
+    // Verification starts first: it skips itself when it sees a pending send.
+    await Promise.all([verifyRemoteSignersDb(), checkRemoteValidity(), extendValidity()])
     if (!isCurrent())
       return false
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
-    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
+    await handleFunds()
     return isCurrent()
   }
 
@@ -256,8 +262,11 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
         await updateBalances()
         await handleFunds()
 
-        if (localHeight.value % Nimiq.Policy.BLOCKS_PER_BATCH === 0)
+        // This listener skips heads while busy, so a `height % BLOCKS_PER_BATCH` check could miss every batch.
+        if (localHeight.value - lastValidityCheckHeight >= Nimiq.Policy.BLOCKS_PER_BATCH) {
+          lastValidityCheckHeight = localHeight.value
           await Promise.all([checkRemoteValidity(), extendValidity()])
+        }
 
         if (localHeight.value % 10 === 0)
           await updateTransactionsInDb()
@@ -445,11 +454,14 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   }, { immediate: true })
 
   watch(localHeight, async () => {
-    if (isSyncingWallets.value)
-      return
-    await readinessSyncPromise
-    if (isSyncingWallets.value)
-      return
+    // The walk can take minutes. isHtlcActive comes from this reconciliation, so a new HTLC must not wait for it (APP-317).
+    if (!isVerifyingRemoteSignersDb.value) {
+      if (isSyncingWallets.value)
+        return
+      await readinessSyncPromise
+      if (isSyncingWallets.value)
+        return
+    }
     await maybeCheckHtlcState()
   })
 
