@@ -1,6 +1,6 @@
 # Review brief
 
-Both agents have repo `reviewer` agent (`.claude/agents/reviewer.md` with hunter/verifier panel, `.codex/agents/reviewer.toml` single-pass). Call it with brief below as INTENT so every finding carries production reachability, who's affected, worst case. Pass verbatim, plus: issue ID and summary, worktree path, diff command (`git -C <worktree> diff origin/main...HEAD` plus uncommitted changes), round number, and on re-reviews prior findings and last-reviewed commit.
+Both agents have repo `reviewer` agent (`.claude/agents/reviewer.md` with hunter/verifier panel, `.codex/agents/reviewer.toml` single-pass). Call it with brief below as INTENT so every finding carries production reachability, who's affected, worst case. Pass verbatim, plus: issue ID and summary, worktree path, diff command (`git -C <worktree> diff --merge-base origin/main` plus untracked files from `git -C <worktree> ls-files --others --exclude-standard`), round number, and on re-reviews prior findings and last-reviewed commit.
 
 ---
 
@@ -31,3 +31,23 @@ No style, naming, nits. If nothing blocks, say so in one line.
 - Check each finding's evidence against code before acting. Reviewers sometimes confidently wrong.
 - Fix `Important`. List `Pre-existing` in report. File one as Linear issue only if real and user-facing.
 - Rejected findings: one-line reason in `state.md`, and in PR under Decisions if human reviewer likely raises same thing.
+
+## Security brief
+
+Pass verbatim to fresh subagent, plus issue ID, worktree path, diff command from above.
+
+---
+
+You do security review of change for Linear issue <ID> in nimiq/nimiq-pay-app (Capacitor wallet holding user keys, runs third-party Mini Apps in webview). Read-only: no edit, commit, push. Read `REVIEW.md` and code around diff.
+
+Report only vulnerabilities this diff introduces or makes reachable, with concrete attack path, confidence 8/10 or higher:
+- keys, recovery words, PIN reaching logs, PostHog, Mini Apps, clipboard or network
+- signed recipient, amount or chain differing from what user confirmed
+- Mini App getting signing, account data or host APIs without confirmation; origin checks bypassed; untrusted bridge input trusted
+- deep link, QR or remote response triggering action without user intent
+- OTA bundle or update signature check weakened
+- GitHub workflow letting untrusted PR code reach secrets or write tokens
+
+Not findings: DoS, rate limits, missing hardening without attack path, outdated dependencies, docs.
+
+Per finding give `file:line`, attack path, who's affected, worst case; tag `Important` (this diff) or `Pre-existing` (on main). If nothing, say so in one line.
