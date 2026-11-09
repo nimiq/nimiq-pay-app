@@ -58,6 +58,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
 - Run tests only before committing or when debugging a test failure.
+- Vitest also discovers tests in nested `.claude/worktrees` checkouts. Exclude local agent directories with `pnpm test:unit run --exclude '**/.claude/**' --exclude '**/.codex/**'` when testing the current checkout.
 
 ## Nimiq client & sync
 
