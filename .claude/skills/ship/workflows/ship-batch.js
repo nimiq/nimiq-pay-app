@@ -100,9 +100,14 @@ const REVIEW = {
       },
     },
     rootCauseFixed: { type: 'boolean' },
-    humanReview: { type: 'string' },
   },
   required: ['findings', 'rootCauseFixed'],
+}
+
+const REVIEW_ROUND = {
+  ...REVIEW,
+  properties: { ...REVIEW.properties, humanReviewRequired: { type: 'boolean', description: 'true when your HUMAN REVIEW line says required' } },
+  required: [...REVIEW.required, 'humanReviewRequired'],
 }
 
 const FIXED = {
@@ -187,13 +192,15 @@ Minimal root-cause fix plus vitest coverage that fails on main. Run pnpm lint, p
     if (!impl || impl.status !== 'ready') return { it, impl }
     const prior = []
     let review = null
+    let humanReviewRequired = false
     for (let round = 1; round <= MAX_REVIEW_ROUNDS; round++) {
       review = await limited(
-        `Review round ${round} for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff origin/main (includes uncommitted work). Intent: ${impl.summary}
-Use the brief in ${SKILL}/references/review.md as INTENT: every finding needs reachable-in-production, who, worst case.
+        `Review round ${round} for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files (git -C ${impl.worktree} ls-files --others --exclude-standard). Intent: ${impl.summary}
+Use the brief in ${SKILL}/references/review.md as INTENT: every finding needs reachable-in-production, who, worst case. Set humanReviewRequired from your HUMAN REVIEW line.
 Prior findings (do not repeat): ${JSON.stringify(prior)}`,
-        { label: `review:${it.id}:r${round}`, phase: 'Review', agentType: 'reviewer', schema: REVIEW },
+        { label: `review:${it.id}:r${round}`, phase: 'Review', agentType: 'reviewer', schema: REVIEW_ROUND },
       )
+      humanReviewRequired ||= Boolean(review && review.humanReviewRequired)
       const blocking = review ? review.findings.filter(f => f.tag === 'Important') : []
       if (!blocking.length && (!review || review.rootCauseFixed)) break
       const fix = await limited(
@@ -205,7 +212,34 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
       prior.push(...blocking.map(f => ({ ...f, handled: fix })))
       if (round === MAX_REVIEW_ROUNDS) log(`${it.id}: review cap of ${MAX_REVIEW_ROUNDS} rounds reached, continuing to final review`)
     }
-    return { it, impl, review, prior }
+    return { it, impl, review, prior, humanReviewRequired }
+  },
+
+  // Security review, only when a reviewer round flagged a sensitive change
+  async (s) => {
+    if (!s || !s.review || !s.humanReviewRequired) return s
+    const { it, impl } = s
+    const security = await limited(
+      `Security review for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files (git -C ${impl.worktree} ls-files --others --exclude-standard). Intent: ${impl.summary}
+Use "Security brief" in ${SKILL}/references/review.md. Set rootCauseFixed true: this pass doesn't judge it. Read-only.`,
+      { label: `security:${it.id}`, phase: 'Review', schema: REVIEW },
+    )
+    // review: null makes every later stage skip, so no PR opens without this pass
+    if (!security) return { ...s, review: null, stopped: 'security review failed, re-run it before shipping' }
+    const blocking = security.findings.filter(f => f.tag === 'Important')
+    if (!blocking.length) return { ...s, security }
+    const fix = await limited(
+      `Fix these security findings for ${it.id} in worktree ${impl.worktree} where real (check the evidence first; reviewers can be wrong). Reject wrong ones with a one-line reason. Re-run pnpm lint, pnpm typecheck, pnpm vitest run. Do NOT commit.
+Findings: ${JSON.stringify(blocking)}${RULES}`,
+      { label: `securityfix:${it.id}`, phase: 'Review', schema: FIXED },
+    )
+    const recheck = await limited(
+      `Re-check these security findings for ${it.id}. Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files. Report as Important each one still open, and anything the fix broke. Findings: ${JSON.stringify(blocking)}. Fix notes: ${JSON.stringify(fix)}. Use "Security brief" in ${SKILL}/references/review.md. Set rootCauseFixed true: this pass doesn't judge it. Read-only.`,
+      { label: `securitycheck:${it.id}`, phase: 'Review', schema: REVIEW },
+    )
+    const open = recheck && recheck.findings.filter(f => f.tag === 'Important')
+    if (!fix || !open || open.length) return { ...s, review: null, security, stopped: `security findings still open: ${JSON.stringify(fix && open ? open : blocking)}` }
+    return { ...s, security, prior: [...s.prior, ...blocking.map(f => ({ ...f, handled: fix }))] }
   },
 
   // One final strongest-model review; re-check on the default model if it finds blockers
@@ -213,7 +247,7 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
     if (!s || !s.review) return s
     const { it, impl } = s
     const final = await limited(
-      `Final merge-blocking review for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff origin/main. Intent: ${impl.summary}
+      `Final merge-blocking review for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files. Intent: ${impl.summary}
 Use the brief in ${SKILL}/references/review.md. Already handled (do not repeat): ${JSON.stringify(s.prior)}. Read-only.`,
       { label: `final:${it.id}`, phase: 'Final review', model: 'fable', effort: 'high', schema: REVIEW },
     )
@@ -225,7 +259,7 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
       { label: `finalfix:${it.id}`, phase: 'Final review', schema: FIXED },
     )
     const recheck = await limited(
-      `Re-check that these findings for ${it.id} are fixed and nothing new broke. Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff origin/main. Findings: ${JSON.stringify(blocking)}. Fix notes: ${JSON.stringify(fix)}. Use the brief in ${SKILL}/references/review.md.`,
+      `Re-check that these findings for ${it.id} are fixed and nothing new broke. Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files. Findings: ${JSON.stringify(blocking)}. Fix notes: ${JSON.stringify(fix)}. Use the brief in ${SKILL}/references/review.md.`,
       { label: `recheck:${it.id}`, phase: 'Final review', agentType: 'reviewer', schema: REVIEW },
     )
     return { ...s, final, finalFix: fix, recheck }
@@ -286,7 +320,7 @@ return results.map((r, i) => {
     verified: r.shipped && r.shipped.verified,
     ci: r.shipped && r.shipped.ci,
     rejectedFindings: (r.prior || []).filter(f => f.handled && f.handled.rejected && f.handled.rejected.length).map(f => f.handled.rejected).flat(),
-    preExisting: [r.review, r.final].filter(Boolean).flatMap(v => v.findings.filter(f => f.tag === 'Pre-existing')),
+    preExisting: [r.review, r.security, r.final].filter(Boolean).flatMap(v => v.findings.filter(f => f.tag === 'Pre-existing')),
     device: r.device && { tested: r.device.tested, platform: r.device.platform, blockedOnUser: r.device.blockedOnUser },
     screenshots: r.embed ? r.embed.embedded : 0,
     screenshotFailure: r.embed && r.embed.failed,
