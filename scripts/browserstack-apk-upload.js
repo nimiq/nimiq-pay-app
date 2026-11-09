@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -123,10 +123,11 @@ if (appId.endsWith('.debug')) {
 console.log('📤 Uploading APK to BrowserStack...')
 
 try {
-  const curlCmd = `curl -u "${BS_USERNAME}:${BS_ACCESS_KEY}" -X POST "https://api-cloud.browserstack.com/app-automate/upload" -F "file=@${apkPath}" -F "custom_id=${customId}"`
+  // No shell: arguments built from env values and CLI flags can't inject commands.
+  const curlArgs = ['-u', `${BS_USERNAME}:${BS_ACCESS_KEY}`, '-X', 'POST', 'https://api-cloud.browserstack.com/app-automate/upload', '-F', `file=@${apkPath}`, '-F', `custom_id=${customId}`]
 
   console.log(`📦 Uploading ${path.basename(apkPath)} as custom_id=${customId}...`)
-  const output = execSync(curlCmd).toString()
+  const output = execFileSync('curl', curlArgs).toString()
 
   const response = JSON.parse(output)
   if (response.app_url) {
@@ -136,7 +137,7 @@ try {
 
     if (setRepoVariable) {
       try {
-        execSync(`gh variable set ${repoVariable} --body "${response.app_url} ${buildCommit}"`, { stdio: 'inherit' })
+        execFileSync('gh', ['variable', 'set', repoVariable, '--body', `${response.app_url} ${buildCommit}`], { stdio: 'inherit' })
       }
       catch {
         console.error(`❌ The upload succeeded, but setting ${repoVariable} failed. Set it to "${response.app_url} ${buildCommit}" by hand.`)
@@ -151,7 +152,7 @@ try {
   }
 }
 catch (error) {
-  // Not error.message: for a failed execSync it contains the curl command and its credentials.
+  // Not error.message: for a failed execFileSync it contains the curl command and its credentials.
   console.error(`❌ Error uploading ${path.basename(apkPath)} (exit ${error.status ?? 'unknown'})`)
   if (error.stderr) {
     console.error(String(error.stderr).trim())

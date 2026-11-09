@@ -8,6 +8,10 @@ on:
       #- feature/maestro-improvements
   workflow_dispatch:
 
+# The jobs only read the repo. Results are published with POST_TESTS_RESULTS_TOKEN, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
 # Shares the francisco_tests suite id and the BrowserStack parallels with the suite-only workflow.
 concurrency:
   group: maestro-browserstack-suite

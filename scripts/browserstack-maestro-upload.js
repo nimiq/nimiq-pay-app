@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -96,8 +96,9 @@ console.log(`📦 Zipping ${folderPath} into ${zipPath}...`)
 
 try {
   // BrowserStack rejects the whole suite if the zip holds any other file type (e.g. CLAUDE.md).
-  const allowedFiles = ['yaml', 'yml', 'js', 'png', 'jpeg', 'jpg', 'gif', 'mp4'].map(extension => `"*.${extension}"`).join(' ')
-  execSync(`cd "${zipParent}" && zip -r "${zipPath}" "${zipFolderName}" -i ${allowedFiles} -x "${zipFolderName}/tests_output/*" "*/.mutants/*"`, { stdio: 'inherit' })
+  // Arguments go to zip without a shell, so paths and patterns can't inject commands; zip expands the patterns itself.
+  const allowedFiles = ['yaml', 'yml', 'js', 'png', 'jpeg', 'jpg', 'gif', 'mp4'].map(extension => `*.${extension}`)
+  execFileSync('zip', ['-r', zipPath, zipFolderName, '-i', ...allowedFiles, '-x', `${zipFolderName}/tests_output/*`, '*/.mutants/*'], { cwd: zipParent, stdio: 'inherit' })
 }
 catch (error) {
   console.error('❌ Failed to create zip archive.')
@@ -107,10 +108,10 @@ catch (error) {
 
 console.log('📤 Uploading Maestro test suite to BrowserStack...')
 
-const curlCmd = `curl -u "${BS_USERNAME}:${BS_ACCESS_KEY}" -X POST "https://api-cloud.browserstack.com/app-automate/maestro/v2/test-suite" -F "file=@${zipPath}" -F "custom_id=${customId}"`
+const curlArgs = ['-u', `${BS_USERNAME}:${BS_ACCESS_KEY}`, '-X', 'POST', 'https://api-cloud.browserstack.com/app-automate/maestro/v2/test-suite', '-F', `file=@${zipPath}`, '-F', `custom_id=${customId}`]
 
 try {
-  const output = execSync(curlCmd, { encoding: 'utf8' })
+  const output = execFileSync('curl', curlArgs, { encoding: 'utf8' })
   console.log(output.trim())
 
   // curl exits 0 on HTTP errors too, so only a returned bs:// URL counts as an upload.

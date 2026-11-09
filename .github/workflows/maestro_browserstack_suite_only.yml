@@ -10,6 +10,10 @@ name: Nimiq Pay - Maestro Suite (Suite Only)
 on:
   workflow_dispatch:
 
+# The jobs only read the repo. Results are published with POST_TESTS_RESULTS_TOKEN, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
 # Runs share BrowserStack parallels and custom ids with maestro_browserstack.yml (same group), so
 # they never overlap. GitHub keeps at most one run waiting per group: a newer run replaces a
 # waiting one, including a waiting run of the other workflow (start that again afterwards).
