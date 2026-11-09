@@ -1,25 +1,19 @@
 name: Nimiq Pay - Maestro Suite (Suite Only)
 
 # This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack, on Android and then on iOS, one flow at a time.
-# Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
+# It tests the Maestro suite without building and uploading the Android APK each time.
+# Manual start only (Actions tab or `gh workflow run maestro_browserstack_suite_only.yml --ref <branch>`): a full run takes about
+# 3.5 h of BrowserStack time, too much to spend on every push.
 # The APK under test is the one recorded in the BROWSERSTACK_ANDROID_DEBUG_APP repo variable ("<bs:// url> <commit>"): build it with
 # `node scripts/build-test-apk.mjs` and upload it with `node scripts/browserstack-apk-upload.js --apk <apk> --set-repo-variables`.
 
 on:
-  push:
-    branches:
-      - feature/maestro-improvements
-    paths:
-      - nimiq-pay-tests/**
-      - scripts/browserstack-maestro-*.js
-      - .github/workflows/maestro_browserstack_suite_only.yml
   workflow_dispatch:
 
 # Runs share BrowserStack parallels and custom ids with maestro_browserstack.yml (same group), so
 # they never overlap. GitHub keeps at most one run waiting per group: a newer run replaces a
-# waiting one, so intermediate commits can be skipped and a push also replaces a waiting manual
-# run of maestro_browserstack.yml (start that again afterwards). Not cancel-in-progress:
-# cancelling mid-flow would leave a BrowserStack build running.
+# waiting one, including a waiting run of the other workflow (start that again afterwards).
+# Not cancel-in-progress: cancelling mid-flow would leave a BrowserStack build running.
 concurrency:
   group: maestro-browserstack-suite
   cancel-in-progress: false
