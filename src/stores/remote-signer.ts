@@ -670,6 +670,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const data = creationTransaction.data
     const creationTimestamp = creationTransaction.timestamp
     if (creationRecipient !== addressString
+      || creationTransaction.recipientType !== 'htlc'
+      || (creationTransaction.flags & 0b1) !== 0b1
       || typeof creationTimestamp !== 'number'
       || !Number.isSafeInteger(creationTimestamp)
       || creationTimestamp < 0
@@ -699,7 +701,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function activateRemoteSignerFromTransaction(
-    transaction: Pick<PlainTransactionDetails, 'data' | 'recipient' | 'timestamp' | 'transactionHash' | 'validityStartHeight' | 'value' | 'state' | 'executionResult'>,
+    transaction: PlainTransactionDetails,
     expectedContext?: WalletContext,
     expectedSignerRevision = getSignerWriteRevision(),
   ) {
@@ -715,7 +717,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     catch {
       throw new Error('Cannot activate remote signer from invalid HTLC transaction: invalid recipient')
     }
-    const result = await resolveAddressSpecificSignerMetadata(address, context)
+    const result = await resolveAddressSpecificSignerMetadata(address, context, { knownCreation: transaction })
     if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
       throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after metadata')
 

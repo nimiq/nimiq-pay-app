@@ -690,20 +690,33 @@ describe('useRemoteSigner', () => {
     ])
   })
 
-  it.each(['included', 'confirmed'])('uses live balance for direct %s creation activation', async (status) => {
+  it.each([
+    ['included', 'creation-hash'],
+    ['confirmed', 'creation-hash'],
+    ['included', null],
+    ['confirmed', null],
+  ])('activates known %s creation with cosigner hash %s when history is unavailable', async (status, creatingTransactionHash) => {
     const creation = createHtlcCreation({ state: status })
-    mockAddressSpecificSignerMetadata(creation)
+    state.getRemoteSigner.mockResolvedValue({
+      data: createRemoteSignerApiData(creation.recipient, { creatingTransactionHash }),
+      error: undefined,
+    })
+    state.client.getTransaction.mockRejectedValue(new Error('Transaction not found'))
+    state.client.getTransactionsByAddress.mockRejectedValue(new Error('History unavailable'))
     state.client.getAccount.mockResolvedValue(createLiveHtlcAccount({ balance: 7 }))
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
 
     await store.activateRemoteSignerFromTransaction(creation as any)
 
+    expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(creation.recipient)
     expect(store.remoteBalance).toBe(7)
     expect(state.runSet).toHaveBeenCalledWith([
       { statement: expect.any(String), values: [] },
       { statement: expect.any(String), values: [creation.recipient, 7, 98, 'service-public-key', 123_100, 999_500, true] },
     ])
+    expect(state.client.getTransaction).not.toHaveBeenCalled()
+    expect(state.client.getTransactionsByAddress).not.toHaveBeenCalled()
   })
 
   it.each(['none', 'same', 'successor'])('resolves a drained confirmed creation with %s signer active', async (active) => {
@@ -803,9 +816,9 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
 
-    await expect(store.activateRemoteSignerFromTransaction({ ...creation, validityStartHeight: 1 } as any))
+    await expect(store.activateRemoteSignerFromTransaction({ ...creation, transactionHash: 'other-creation-hash' } as any))
       .rejects
-      .toThrow('invalid HTLC transaction: mismatch validityStartHeight')
+      .toThrow('invalid HTLC transaction: mismatch hash')
 
     state.getRemoteSigner.mockResolvedValueOnce({ data: undefined, error: { message: 'cosigner down', statusCode: 503 }, hasError: true, status: 503 })
     await expect(store.activateRemoteSignerFromTransaction(creation as any))
@@ -1923,7 +1936,7 @@ describe('useRemoteSigner', () => {
     { data: { type: 'htlc', sender: 'NQ44 OTHER OWNER', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 999_500 } },
     { data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ98 COSIGNER B ADDRESS', timeout: 999_500 } },
     { data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 999_501 } },
-  ])('does not activate unverified history when cosigner creation hash is null: %j', async (overrides) => {
+  ])('rejects unverified history when cosigner creation hash is null: %j', async (overrides) => {
     state.getRemoteSigner.mockResolvedValue({
       data: createRemoteSignerApiData(undefined, { creatingTransactionHash: null }),
       error: undefined,
@@ -1932,9 +1945,40 @@ describe('useRemoteSigner', () => {
 
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
-    await expect(store.activateRemoteSignerFromTransaction(createHtlcCreation() as any)).rejects.toThrow()
+    const result = await store.resolveAddressSpecificSignerMetadata(
+      createAddress('NQ22 TEST OLD HTLC ADDRESS') as any,
+      store.getWalletContext()!,
+    )
+    expect(result.status).not.toBe('valid')
     expect(store.remoteSigner).toBeUndefined()
     expect(state.runSet).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { executionResult: false },
+    { state: 'pending' },
+    { flags: 0 },
+    { recipientType: 'basic' },
+    { timestamp: undefined },
+    { recipient: 'NQ44 WRONG HTLC ADDRESS' },
+    { data: { type: 'raw', raw: '' } },
+    { data: { type: 'htlc', sender: 'NQ44 OTHER OWNER', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 999_500 } },
+    { data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ98 COSIGNER B ADDRESS', timeout: 999_500 } },
+    { data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 999_501 } },
+  ])('rejects invalid known creation when history is unavailable: %j', async (overrides) => {
+    state.client.getAccount.mockResolvedValue(createLiveHtlcAccount())
+    state.getRemoteSigner.mockResolvedValue({ data: createRemoteSignerApiData(), error: undefined })
+    state.client.getTransaction.mockRejectedValue(new Error('Transaction not found'))
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await expect(store.activateRemoteSignerFromTransaction(createHtlcCreation({ state: 'included', ...overrides }) as any))
+      .rejects
+      .toThrow('invalid HTLC transaction: metadata rejected:')
+
+    expect(store.remoteSigner).toBeUndefined()
+    expect(state.runSet).not.toHaveBeenCalled()
+    expect(state.client.getTransaction).not.toHaveBeenCalled()
   })
 
   it('keeps missing-hash recovery retryable when history has no creation yet', async () => {
