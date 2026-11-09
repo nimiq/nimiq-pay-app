@@ -121,6 +121,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // but no consensus/sync is started.
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
+  // Lets device tests prove which source is running (.claude/skills/ship/scripts/verify-build.sh). One string, because
+  // the log file writes each arg on its own line. Every build logs it, so the newest line always describes the live JS.
+  useLogger('build').log(`🏷️ Build stamp ${__BUILD_STAMP__}`)
   // Identify user as early as possible to capture all analytics events, including those during app initialization.
   // app_opened waits so the first launch after an OTA reports the new bundle_version, not the previous one.
   void identifyUser().then(() => {
@@ -128,7 +131,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       trackCurrentAppOpen('cold_start')
   })
   if (!isAlertRoute) {
-    useMiniApps() // computedAsync triggers description fetching on store creation
+    useMiniApps() // store creation starts the Mini Apps catalog fetch
   }
 
   const { isWeb } = useDevice()

@@ -186,6 +186,29 @@ describe('getSignedTx', () => {
     expect(success.outcome).toBe('signed')
   })
 
+  it('signs remotely signed staking with the requested fee', async () => {
+    state.sendRemoteTransaction.mockImplementation(async ({ tx }: any) => ({
+      data: { details: tx.toPlain(), txSent: true },
+      error: undefined,
+      hasError: false,
+      status: 200,
+    }))
+
+    await getSignedTx({ transfer: Transfer.Staking, amount: 10, fee: 7, stakingData: { type: 'add-stake' } } as any)
+
+    expect(state.sendRemoteTransaction.mock.calls[0][0].tx.fee).toBe(7n)
+  })
+
+  it('builds a local remove-stake with the requested fee', async () => {
+    const newRemoveStake = vi.fn(() => ({ sign: vi.fn() }))
+    vi.stubGlobal('Nimiq', { TransactionBuilder: { newRemoveStake } })
+
+    const result = await getSignedTx({ transfer: Transfer.Staking, amount: 10, fee: 7, stakingData: { type: 'remove-stake' } } as any)
+
+    expect(result.outcome).toBe('signed')
+    expect(newRemoveStake).toHaveBeenCalledWith(expect.anything(), 10n, 7n, expect.anything(), expect.anything())
+  })
+
   it('rejects remotely signed staking without an active signer', async () => {
     state.remoteAddress = undefined
 

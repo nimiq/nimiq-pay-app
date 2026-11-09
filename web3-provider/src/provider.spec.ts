@@ -6,12 +6,15 @@ import { fileURLToPath } from 'node:url'
 import { TextDecoder, TextEncoder } from 'node:util'
 import { runInNewContext } from 'node:vm'
 import { createBirpc } from 'birpc'
+import type { MockInstance } from 'vitest'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const handleRequest = vi.fn()
 let script: string
 let closeNative: () => void
 let emitFullscreenChange: (enabled: boolean) => void
+let emitNimiqAccountsChanged: (accounts: string[]) => void
+let addWindowListener: MockInstance<typeof window.addEventListener>
 
 // Exercise the actual injected bundle and RPC transport used by old SDK consumers.
 beforeAll(() => {
@@ -26,6 +29,8 @@ beforeAll(() => {
 beforeEach(() => {
   handleRequest.mockReset()
   sessionStorage.clear()
+  // Each test is a new page: listeners of earlier bundles must not handle its messages.
+  addWindowListener = vi.spyOn(window, 'addEventListener')
   const native = createBirpc({ handleRequest }, {
     post: data => window.dispatchEvent(new CustomEvent('messageFromNative', { detail: data })),
     on: (receive) => {
@@ -34,6 +39,7 @@ beforeEach(() => {
   })
   closeNative = () => native.$close()
   emitFullscreenChange = enabled => (native as any).fullscreenChanged.asEvent(enabled)
+  emitNimiqAccountsChanged = accounts => (native as any).nimiqAccountsChanged.asEvent(accounts)
   runInNewContext(script, {
     window,
     sessionStorage,
@@ -86,6 +92,66 @@ describe('Mini App fullscreen API', () => {
 
 afterEach(() => {
   closeNative()
+  for (const [type, listener] of addWindowListener.mock.calls)
+    window.removeEventListener(type, listener)
+  addWindowListener.mockRestore()
+})
+
+describe('Nimiq account updates', () => {
+  it('returns the accounts the host pushed without asking the host again', async () => {
+    handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ11 HTLC'])
+    await window.nimiq!.listAccounts()
+    const listener = vi.fn()
+    const disconnectListener = vi.fn()
+    window.nimiq!.on('accountsChanged', listener)
+    window.nimiq!.on('disconnect', disconnectListener)
+
+    emitNimiqAccountsChanged(['NQ11 WALLET', 'NQ22 HTLC'])
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledWith(['NQ11 WALLET', 'NQ22 HTLC']))
+
+    await expect(window.nimiq!.listAccounts()).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(handleRequest).toHaveBeenCalledOnce()
+    expect(window.nimiq!.connected).toBe(true)
+    expect(disconnectListener).not.toHaveBeenCalled()
+  })
+
+  it('updates a connected provider from a repeat prompt reply', async () => {
+    handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ11 HTLC'])
+    const listener = vi.fn()
+    window.nimiq!.on('accountsChanged', listener)
+    await window.nimiq!.listAccounts()
+    expect(listener).not.toHaveBeenCalled()
+
+    // The page wiped its storage, so this call prompts again while #accounts still holds the old list.
+    sessionStorage.clear()
+    handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ22 HTLC'])
+    await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+
+    await expect(window.nimiq!.listAccounts()).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(listener).toHaveBeenCalledExactlyOnceWith(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(handleRequest).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps accounts pushed while a listAccounts reply is pending', async () => {
+    let reply!: (accounts: string[]) => void
+    handleRequest.mockReturnValue(new Promise((resolve) => {
+      reply = resolve
+    }))
+    const listener = vi.fn()
+    window.nimiq!.on('accountsChanged', listener)
+    const pending = Promise.all([window.nimiq!.listAccounts(), window.nimiq!.listAccounts()])
+    await vi.waitFor(() => expect(handleRequest).toHaveBeenCalledOnce())
+
+    emitNimiqAccountsChanged(['NQ11 WALLET', 'NQ22 HTLC'])
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledWith(['NQ11 WALLET', 'NQ22 HTLC']))
+    reply(['NQ11 WALLET', 'NQ11 HTLC'])
+
+    await expect(pending).resolves.toEqual([['NQ11 WALLET', 'NQ22 HTLC'], ['NQ11 WALLET', 'NQ22 HTLC']])
+    await expect(window.nimiq!.listAccounts()).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])
+    expect(handleRequest).toHaveBeenCalledOnce()
+  })
 })
 
 describe('injected provider errors', () => {

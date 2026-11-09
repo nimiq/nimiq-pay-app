@@ -19,6 +19,7 @@ const {
   clearAllCookies,
   clearToast,
   close,
+  getDeviceInfo,
   getFaviconUrl,
   hostDestroy,
   loggerError,
@@ -31,6 +32,7 @@ const {
   trackDAppClosed,
   trackDAppOpened,
 } = vi.hoisted(() => ({
+  getDeviceInfo: vi.fn(),
   openWebView: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
   close: vi.fn(() => Promise.resolve()),
@@ -53,6 +55,10 @@ const {
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => false },
   CapacitorHttp: { get: capacitorHttpGet },
+}))
+
+vi.mock('@capacitor/device', () => ({
+  Device: { getInfo: getDeviceInfo },
 }))
 
 vi.mock('@capacitor/keyboard', () => ({
@@ -134,6 +140,7 @@ async function importLauncher() {
 describe('mini-app-launcher', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    getDeviceInfo.mockResolvedValue({})
     openWebView.mockReset()
     openWebView.mockImplementation(() => Promise.resolve())
     addListener.mockReset()
@@ -170,6 +177,31 @@ describe('mini-app-launcher', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as [[{ url: string }]]
     expect(firstArg.url).toBe('https://example.com/')
+  })
+
+  it('limits the native bridge to the Mini App origin', async () => {
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://example.com:8443/app?x=1', source: 'deeplink' })
+
+    expect(openWebView).toHaveBeenCalledWith(expect.objectContaining({
+      javascriptBridgeOrigins: ['https://example.com:8443'],
+    }))
+  })
+
+  it.each([
+    ['Android 15', { androidSDKVersion: 35 }, true],
+    ['Android 14', { androidSDKVersion: 34 }, false],
+    ['iOS', {}, false],
+  ])('sets the safe bottom margin on %s', async (_name, deviceInfo, expected) => {
+    getDeviceInfo.mockResolvedValue(deviceInfo)
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://example.com', source: 'deeplink' })
+
+    expect(openWebView).toHaveBeenCalledWith(expect.objectContaining({
+      enabledSafeBottomMargin: expected,
+    }))
   })
 
   it('short-circuits concurrent launches', async () => {

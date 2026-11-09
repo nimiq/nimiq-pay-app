@@ -270,6 +270,8 @@ export class MiniAppHost {
    * webview, while on `origin`, may talk to the host.
    */
   private bridgeGate: BridgeGate = { urlOk: true, open: true }
+  /** Last Nimiq accounts the page received; unset until the user approves sharing them. */
+  private sharedNimiqAccounts?: string
   private readonly pendingLightningInvoices = new Set<string>()
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
@@ -298,16 +300,13 @@ export class MiniAppHost {
     isMiniAppActive.value = true
 
     // When the remote signer address changes (added/refreshed mid-session), the
-    // previously-cached Nimiq accounts list is stale. Clear the webview cache so
-    // the dApp re-prompts and receives the up-to-date account set.
+    // previously-cached Nimiq accounts list is stale. An approved session gets the
+    // new list without a prompt.
     // Watch the address string: signer reloads create new Address objects for
     // the same address, which would clear the cache without a real change.
     this.stopRemoteAddressWatcher = watch(
       () => useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-      () => {
-        logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
-        this.birpc?.clearAccountCache('nimiq')
-      },
+      () => this.pushNimiqAccounts(),
     )
   }
 
@@ -493,7 +492,7 @@ export class MiniAppHost {
       // Fire-and-forget host→webview methods. Without this birpc treats them as
       // request/response and the discarded promises would reject with a 120s
       // timeout if the webview disappears mid-flight (unhandledrejection).
-      eventNames: ['updateRpcUrl', 'clearAccountCache', 'fullscreenChanged'],
+      eventNames: ['updateRpcUrl', 'nimiqAccountsChanged', 'fullscreenChanged'],
       timeout: 120_000,
     })
 
@@ -529,8 +528,11 @@ export class MiniAppHost {
     }).catch(error => logger.error('Could not observe Mini App navigation', error))
 
     void browser.addListener('browserPageLoaded', ({ id }: { id?: string }) => {
-      if (this.isMainWebview(id ?? ''))
+      if (this.isMainWebview(id ?? '')) {
         this.bridgeGate.open = this.bridgeGate.urlOk
+        // A change during a closed gate never reached the page.
+        this.pushNimiqAccounts()
+      }
     }).then((handle) => {
       if (this.destroyed)
         void handle.remove()
@@ -1511,11 +1513,33 @@ export class MiniAppHost {
     return data
   }
 
+  private getNimiqAccounts() {
+    return [
+      useLocalWallet().localAddress.toUserFriendlyAddress(),
+      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+    ].filter((address): address is string => Boolean(address))
+  }
+
+  private pushNimiqAccounts() {
+    // No HTLC address during a replacement: keep the old list until the new one is known.
+    if (this.sharedNimiqAccounts === undefined || !this.bridgeGate.open || !useRemoteSigner().remoteAddress)
+      return
+    const accounts = this.getNimiqAccounts()
+    const shared = JSON.stringify(accounts)
+    if (shared === this.sharedNimiqAccounts)
+      return
+    this.sharedNimiqAccounts = shared
+    this.birpc?.nimiqAccountsChanged(accounts)
+  }
+
   private async listAccounts() {
     // Ask user for permission to list accounts
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // No pushes during the prompt: the page would cache an address the user may still
+    // reject. Approval replies with the list read after the prompt.
+    this.sharedNimiqAccounts = undefined
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1527,10 +1551,8 @@ export class MiniAppHost {
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
-    const accounts = [
-      useLocalWallet().localAddress.toUserFriendlyAddress(),
-      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-    ].filter(Boolean)
+    const accounts = this.getNimiqAccounts()
+    this.sharedNimiqAccounts = JSON.stringify(accounts)
     trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return accounts
   }
@@ -1682,14 +1704,17 @@ export class MiniAppHost {
     // Parse params
     let delegation: string
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       delegation = String(params[0])
       value = Number(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       delegation = String((params as any).delegation)
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createNewStakerTransaction method')
@@ -1700,6 +1725,7 @@ export class MiniAppHost {
       stakingData: { type: 'create-staker', delegation },
       stakingTitle: 'Create Staker',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_create_staker',
     })
   }
@@ -1707,12 +1733,15 @@ export class MiniAppHost {
   private sendAddStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createStakeTransaction method')
@@ -1723,6 +1752,7 @@ export class MiniAppHost {
       stakingData: { type: 'add-stake' },
       stakingTitle: 'Add Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_add_stake',
     })
   }
@@ -1730,12 +1760,15 @@ export class MiniAppHost {
   private async sendSetActiveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let newActiveBalance: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       newActiveBalance = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newActiveBalance = Number((params as any).newActiveBalance)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendSetActiveStakeTransaction method')
@@ -1746,6 +1779,7 @@ export class MiniAppHost {
       stakingData: { type: 'set-active-stake', newActiveBalance },
       stakingTitle: 'Set Active Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_set_active',
     })
   }
@@ -1754,14 +1788,17 @@ export class MiniAppHost {
     // Parse params
     let newDelegation: string
     let reactivateAllStake: boolean
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       newDelegation = String(params[0])
       reactivateAllStake = Boolean(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newDelegation = String((params as any).newDelegation)
       reactivateAllStake = Boolean((params as any).reactivateAllStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendUpdateStakerTransaction method')
@@ -1772,6 +1809,7 @@ export class MiniAppHost {
       stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
       stakingTitle: 'Update Staker',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_update',
     })
   }
@@ -1779,12 +1817,15 @@ export class MiniAppHost {
   private async sendRetireStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let retireStake: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       retireStake = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       retireStake = Number((params as any).retireStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
@@ -1795,6 +1836,7 @@ export class MiniAppHost {
       stakingData: { type: 'retire-stake', retireStake },
       stakingTitle: 'Retire Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_retire',
     })
   }
@@ -1802,12 +1844,15 @@ export class MiniAppHost {
   private async sendRemoveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRemoveStakeTransaction method')
@@ -1817,6 +1862,7 @@ export class MiniAppHost {
       stakingData: { type: 'remove-stake' },
       stakingTitle: 'Remove Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_remove',
     })
   }
@@ -2104,7 +2150,7 @@ export class MiniAppHost {
 
   private async sendPayment(txData: {
     value: number
-    fee?: number
+    fee: number
     message?: string
     analyticsRequestType: Web3RequestType
   } & ({
@@ -2118,6 +2164,9 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // BigInt() throws on fractions and NaN, and the wasm u64 wraps out-of-range values, so the signed fee could differ from the prompt
+    if (!Number.isSafeInteger(txData.fee) || txData.fee < 0)
+      throw new InvalidTransactionError('Transaction fee must be a non-negative integer')
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
     const remoteSigner = useRemoteSigner()
@@ -2147,7 +2196,7 @@ export class MiniAppHost {
             : Nimiq.AccountType.Staking
           : Nimiq.AccountType.Basic,
         amount: txData.value,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2168,7 +2217,7 @@ export class MiniAppHost {
         amount: txData.value,
         title: 'Payment',
         transfer: txData.transfer,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2178,6 +2227,7 @@ export class MiniAppHost {
     else if (txData.transfer === Transfer.Staking) {
       partialTx = {
         amount: txData.value,
+        fee: txData.fee,
         title: txData.stakingTitle,
         transfer: txData.transfer,
         rail: Rail.MiniApp,

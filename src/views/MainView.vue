@@ -15,6 +15,7 @@ import WorldIcon from '@/components/icons/WorldIcon.vue'
 import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
 import StatusMessage from '@/components/StatusMessage.vue'
 import TheHomeFooter from '@/components/TheHomeFooter.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
@@ -276,6 +277,9 @@ async function isValidPaymentRequest(pr: string) {
 }
 
 async function detectPaymentRequest() {
+  // iOS asks for paste permission on every read of another app's clipboard (APP-344)
+  if (useDevice().isIOS)
+    return
   try {
     const { type, value: pr } = await Clipboard.read()
     if (type !== 'text/plain' || !pr || displayedPaymentRequests.value.includes(pr))

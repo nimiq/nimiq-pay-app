@@ -101,12 +101,13 @@ Outside that stop, ask mid-run only for: iPhone passcode or unlock, phone-level 
 - Smallest diff fixing root cause. Reuse existing helpers. No wrappers, no drive-by refactors.
 - Add/adjust vitest coverage that fails on main, passes on branch.
 
-### 5. Gates (loop until clean)
+### 5. Gates (max 3 review rounds)
 
 1. `pnpm lint`, `pnpm typecheck`, `pnpm vitest run`. Check exit code, not only pass counts (unhandled rejections fail CI).
 2. Simplify pass on diff.
 3. **Scope check:** every hunk must be needed for issue. Drop rest; file out-of-scope bugs found as new Linear issues (assigned to user, Todo) instead of fixing here.
-4. Fresh-context review with brief in `references/review.md`, default model. Fix `Important` findings, re-review. Report `Pre-existing` findings only.
+4. Fresh-context review with brief in `references/review.md`, default model, using repo `reviewer` agent. Round 1 full diff; later rounds delta since last-reviewed commit plus prior findings. Keep round count and last-reviewed commit in `state.md`. Fix `Important` findings, re-review. Report `Pre-existing` findings only.
+   **Budget: 3 rounds.** Still `Important` after round 3 = approach problem, not one more patch. Stop looping. Simpler design removes bug class → redo fix once, count restarts. Otherwise keep finding open under **Blocked on me**, don't call PR merge-ready.
 5. One final review on strongest model, once per issue. Blockers → fix, re-check with default model. No second final review (token cost).
 
 Every finding needs: production reachability, who affected, worst case. Replaces user's "is this merge blocking? can this really happen?" round.
@@ -117,7 +118,7 @@ Fill impact matrix from `references/pr.md` (new install, upgraded from old versi
 
 ### 7. Device test with Before/After
 
-Read `references/device.md`, run `scripts/device-preflight.sh` first. Show bug on `main` build ("Before") and fix on branch ("After"), one row per scenario, save PNGs in `/tmp/ship/<ISSUE>/`. Even if change not visual, capture screen where behavior shows (flow step, toast, result state). Skip phase only when nothing runs on device (CI, docs, tooling, USDT HTLC paths on testnet); give one-line reason in PR.
+Read `references/device.md`, run `scripts/device-preflight.sh` first. Show bug on `main` build ("Before") and fix on branch ("After"), one row per scenario, save PNGs in `/tmp/ship/<ISSUE>/`. Right before each Before set and each After set run `scripts/verify-build.sh <worktree> android|ios [device]`, record printed stamp in `state.md`. Nonzero exit = wrong build on device: fix it, no screenshots until it passes. Even if change not visual, capture screen where behavior shows (flow step, toast, result state). Skip phase only when nothing runs on device (CI, docs, tooling, USDT HTLC paths on testnet); give one-line reason in PR.
 
 **Check every screenshot before using it.** Open each PNG, confirm:
 - shows scenario its row claims

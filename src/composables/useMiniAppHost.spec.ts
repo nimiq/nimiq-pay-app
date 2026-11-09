@@ -45,7 +45,7 @@ const {
   addressesEqual: vi.fn(),
   createBirpc: vi.fn(() => ({
     $close: vi.fn(),
-    clearAccountCache: vi.fn(),
+    nimiqAccountsChanged: vi.fn(),
     fullscreenChanged: { asEvent: vi.fn() },
     onChainAdded: { asEvent: vi.fn() },
     onChainChanged: { asEvent: vi.fn() },
@@ -200,27 +200,91 @@ async function createPermissionHost(options: { confirmed?: boolean, evmRpcUrls?:
   }
 }
 
+function mockReactiveSigner() {
+  const signer = reactive<{ remoteAddress?: { toUserFriendlyAddress: () => string } }>({
+    remoteAddress: { toUserFriendlyAddress: () => 'NQ11 REMOTE' },
+  })
+  useRemoteSigner.mockReturnValue(signer)
+  return signer
+}
+
 describe('remote address watcher', () => {
-  it('clears the Nimiq account cache only when the address string changes', async () => {
-    const signer = reactive<{ remoteAddress?: { toUserFriendlyAddress: () => string } }>({
-      remoteAddress: { toUserFriendlyAddress: () => 'NQ11 REMOTE' },
-    })
-    useRemoteSigner.mockReturnValue(signer)
-    const { host } = await createPermissionHost()
+  it('sends the new accounts to an approved session without a prompt', async () => {
+    const signer = mockReactiveSigner()
+    const { host, handleRequest, requestUserConfirmation } = await createPermissionHost()
     const bridge = createBirpc.mock.results.at(-1)!.value
 
-    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ11 REMOTE' }
+    await handleRequest({ network: 'nimiq', name: 'listAccounts' })
+    expect(requestUserConfirmation).toHaveBeenCalledOnce()
+
+    // A replacement passes through no address; the old list stays until the new one is known.
+    signer.remoteAddress = undefined
     await nextTick()
-    expect(bridge.clearAccountCache).not.toHaveBeenCalled()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
 
     signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
     await nextTick()
-    expect(bridge.clearAccountCache).toHaveBeenCalledOnce()
-    expect(bridge.clearAccountCache).toHaveBeenCalledWith('nimiq')
+    expect(bridge.nimiqAccountsChanged).toHaveBeenCalledExactlyOnceWith(['NQ11 LOCAL', 'NQ22 REMOTE'])
 
-    signer.remoteAddress = undefined
+    // Signer reloads create new objects for the same address.
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
     await nextTick()
-    expect(bridge.clearAccountCache).toHaveBeenCalledTimes(2)
+    expect(bridge.nimiqAccountsChanged).toHaveBeenCalledOnce()
+    expect(requestUserConfirmation).toHaveBeenCalledOnce()
+
+    await host.destroy()
+  })
+
+  it('stops sending accounts after a later rejection', async () => {
+    const signer = mockReactiveSigner()
+    const { host, handleRequest, requestUserConfirmation } = await createPermissionHost()
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    await handleRequest({ network: 'nimiq', name: 'listAccounts' })
+    requestUserConfirmation.mockResolvedValue(false)
+    await expect(handleRequest({ network: 'nimiq', name: 'listAccounts' })).rejects.toMatchObject({ code: 4001 })
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    await host.destroy()
+  })
+
+  it('sends nothing during a repeat prompt and replies with the list read after it', async () => {
+    const signer = mockReactiveSigner()
+    const { host, handleRequest, requestUserConfirmation } = await createPermissionHost()
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    await handleRequest({ network: 'nimiq', name: 'listAccounts' })
+    let answer!: (confirmed: boolean) => void
+    requestUserConfirmation.mockReturnValue(new Promise((resolve) => {
+      answer = resolve
+    }))
+    const repeat = handleRequest({ network: 'nimiq', name: 'listAccounts' })
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    answer(true)
+    await expect(repeat).resolves.toEqual(['NQ11 LOCAL', 'NQ22 REMOTE'])
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    await host.destroy()
+  })
+
+  it('does not treat a rejected request as approval', async () => {
+    const signer = mockReactiveSigner()
+    const { host, handleRequest } = await createPermissionHost({ confirmed: false })
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    await expect(handleRequest({ network: 'nimiq', name: 'listAccounts' })).rejects.toMatchObject({ code: 4001 })
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
 
     await host.destroy()
   })
@@ -290,6 +354,30 @@ describe('bridge origin', () => {
       (host.browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
     return { emit, post: transport.post as (data: unknown) => void, receive }
   }
+
+  it('delivers an account change missed on another origin once back, and only once', async () => {
+    const signer = mockReactiveSigner()
+    const { browser, handleRequest } = await createPermissionHost()
+    const { emit } = await bridgeTransport({ browser })
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    await handleRequest({ network: 'nimiq', name: 'listAccounts' })
+
+    emit('browserPageLoaded', { id: 'm' })
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://evil.example/' })
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    emit('browserPageLoaded', { id: 'm' })
+    expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('browserPageLoaded', { id: 'm' })
+    expect(bridge.nimiqAccountsChanged).toHaveBeenCalledExactlyOnceWith(['NQ11 LOCAL', 'NQ22 REMOTE'])
+  })
 
   it('ignores and withholds bridge messages while the webview is on another origin', async () => {
     const { browser } = await createPermissionHost()
@@ -978,6 +1066,61 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
       params: [10],
     })).resolves.toBe('payment-hash')
     expect(confirmationPrompt).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10, fee: 7 }],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10, 7]],
+    ['sendStakeTransaction', { value: 10, fee: 7 }],
+    ['sendStakeTransaction', [10, 7]],
+    ['sendSetActiveStakeTransaction', { newActiveBalance: 10, fee: 7 }],
+    ['sendSetActiveStakeTransaction', [10, 7]],
+    ['sendUpdateStakerTransaction', { newDelegation: 'NQ33 VALIDATOR', reactivateAllStake: true, fee: 7 }],
+    ['sendUpdateStakerTransaction', ['NQ33 VALIDATOR', true, 7]],
+    ['sendRetireStakeTransaction', { retireStake: 10, fee: 7 }],
+    ['sendRetireStakeTransaction', [10, 7]],
+    ['sendRemoveStakeTransaction', { value: 10, fee: 7 }],
+    ['sendRemoveStakeTransaction', [10, 7]],
+  ])('shows and sends the requested fee for %s %j', async (name, params) => {
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).resolves.toBe('payment-hash')
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ fee: 7 }),
+    }))
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 7 }))
+  })
+
+  it.each([
+    ['sendStakeTransaction', { value: 10 }],
+    ['sendStakeTransaction', [10]],
+  ])('defaults an omitted fee to zero for %s %j', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).resolves.toBe('payment-hash')
+
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 0 }))
+  })
+
+  it.each([
+    ['sendStakeTransaction', { value: 10, fee: 1.5 }],
+    ['sendStakeTransaction', { value: 10, fee: -1 }],
+    ['sendStakeTransaction', { value: 10, fee: 'abc' }],
+    ['sendStakeTransaction', { value: 10, fee: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: 10, fee: 1.5 }],
+  ])('rejects a malformed fee before prompting for %s %j', async (name, params) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message: 'Transaction fee must be a non-negative integer',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
   })
 })
 

@@ -2143,6 +2143,21 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     return tx
   }
 
+  const activePaymentCount = shallowRef(0)
+  const isSendingPayment = computed(() => activePaymentCount.value > 0)
+
+  function trackPayment<Args extends unknown[], Output>(send: (...args: Args) => Promise<Output>) {
+    return async (...args: Args) => {
+      activePaymentCount.value++
+      try {
+        return await send(...args)
+      }
+      finally {
+        activePaymentCount.value--
+      }
+    }
+  }
+
   async function sendPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
@@ -3020,8 +3035,9 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     primeTransferFee,
     primeHtlcFee,
     refreshTransferQuote,
-    sendPayment,
-    sendSwapPayment,
+    isSendingPayment,
+    sendPayment: trackPayment(sendPayment),
+    sendSwapPayment: trackPayment(sendSwapPayment),
     refundPolygonSwapHtlc,
   }
 })

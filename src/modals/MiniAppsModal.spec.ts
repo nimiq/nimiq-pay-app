@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import { openingMiniAppUrl } from '@/lib/mini-app-launcher'
 import MiniAppsModal from './MiniAppsModal.vue'
 
@@ -363,7 +364,7 @@ describe('mini apps modal', () => {
     wrapper.unmount()
   })
 
-  it('keeps the Mini Apps modal open on hardware back from the Apps list', () => {
+  it('passes hardware back to Ionic modal dismissal from the Apps list', () => {
     const wrapper = mountModal()
     const processNextHandler = vi.fn()
     const hardwareBackHandler = getHardwareBackHandler()
@@ -371,6 +372,23 @@ describe('mini apps modal', () => {
     expect(hardwareBackHandler).toBeDefined()
     hardwareBackHandler!(processNextHandler)
 
+    expect(processNextHandler).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('closes the action sheet before the Mini Apps modal on hardware back', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const processNextHandler = vi.fn()
+    const hardwareBackHandler = getHardwareBackHandler()
+
+    await wrapper.find('[data-testid="dapp-menu-https-app-uniswap-org"]').trigger('click')
+    expect(wrapper.findComponent(MiniAppActionsSheet).props('open')).toBe(true)
+
+    hardwareBackHandler!(processNextHandler)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(MiniAppActionsSheet).props('open')).toBe(false)
     expect(processNextHandler).not.toHaveBeenCalled()
     wrapper.unmount()
   })
@@ -708,6 +726,26 @@ describe('mini apps modal', () => {
     await flushPromises()
 
     expect(openWebView).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a retry after the catalog fetch fails and loads the list on retry', async () => {
+    const defaultResponse = capacitorHttpGet.getMockImplementation()!
+    capacitorHttpGet.mockImplementation(options => options?.url.includes('nimiq-mini-apps.json')
+      ? Promise.reject(new Error('offline'))
+      : defaultResponse(options))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    expect(wrapper.find('.skeleton').exists()).toBe(false)
+    const error = wrapper.find('[data-testid="mini-apps-load-error"]')
+    expect(error.exists()).toBe(true)
+
+    capacitorHttpGet.mockImplementation(defaultResponse)
+    await error.find('ion-button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
   })
 
   it('builds the report url only for awesome-list apps', async () => {

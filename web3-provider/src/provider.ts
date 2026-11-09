@@ -6,7 +6,7 @@ import { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { createBirpc } from 'birpc'
-import { clearCachedAccounts, getCachedAccounts, getCacheGeneration, setCachedAccounts } from './account-cache'
+import { getCachedAccounts, setCachedAccounts } from './account-cache'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 import { handleAddEthereumChain, handleSwitchEthereumChain } from './chain-request-handler'
 import { generateUUID } from './utils'
@@ -62,9 +62,10 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
     Ethereum.setRPCUrl(rpcUrl)
     log(`Updated RPC URL to ${rpcUrl}`)
   },
-  clearAccountCache: (network: 'nimiq' | 'ethereum') => {
-    clearCachedAccounts(network)
-    log(`Cleared account cache for ${network}`)
+  nimiqAccountsChanged: (accounts: string[]) => {
+    setCachedAccounts('nimiq', accounts)
+    Nimiq.updateAccounts(accounts)
+    log('Updated Nimiq accounts')
   },
   fullscreenChanged: (enabled: boolean) => {
     window.dispatchEvent(new CustomEvent('nimiqPay:fullscreenChange', { detail: { enabled } }))
@@ -86,11 +87,11 @@ const provider = new Web3Provider({
   handler: (params) => {
     log('Dapp requested:', params)
 
-    const forwardToNative = (onResult?: (result: unknown) => void): Promise<unknown> => {
+    const forwardToNative = (resolveResult: (reply: unknown) => unknown = reply => reply): Promise<unknown> => {
       const { id, ...requestParams } = params
       return birpc.handleRequest(requestParams)
-        .then((result) => {
-          onResult?.(result)
+        .then((reply) => {
+          const result = resolveResult(reply)
           provider.sendResponse(id!, result)
           return result
         })
@@ -125,12 +126,19 @@ const provider = new Web3Provider({
           }))
         return
       }
-      // Capture the generation before launching: if clearCachedAccounts fires
-      // mid-flight, the generation will advance and we drop the stale write.
-      const gen = getCacheGeneration(network)
-      const nativePromise = forwardToNative((result) => {
-        if (Array.isArray(result) && getCacheGeneration(network) === gen)
-          setCachedAccounts(network, result as string[])
+      const nativePromise = forwardToNative((reply) => {
+        if (!Array.isArray(reply))
+          return reply
+        // The cache was empty when this call started, so an entry now came from a host push.
+        // The host counts it as delivered and will not resend it, so the reply must not replace it.
+        const pushed = getCachedAccounts(network)
+        if (pushed)
+          return pushed
+        setCachedAccounts(network, reply as string[])
+        // request() doesn't write #accounts, and the host counts this reply as delivered.
+        if (network === 'nimiq' && Nimiq.connected)
+          Nimiq.updateAccounts(reply as string[])
+        return reply
       })
       inFlightAccountRequests.set(network, nativePromise)
       nativePromise
