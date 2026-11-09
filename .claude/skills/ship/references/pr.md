@@ -47,3 +47,5 @@ Sessions started from T3 Code have no Claude in Chrome tools and no `/chrome`, e
 2. `scripts/upload-shots.sh <pr-number> <png>...` appends images to end of PR description in browser editor, clicks **Update**, prints `https://github.com/user-attachments/assets/…` URLs as JSON.
 3. Pull body (`gh pr view <n> --json body --jq .body`), move each `<img>` into its table cell, delete appended block, normalize CRLF to LF, then `gh pr edit <n> --body-file <file>`. Check with `gh pr view` every row has its images.
 4. If script prints `FAILED`, retry once. Still fails → leave table text-only, list local PNG paths under **Blocked on me**, continue.
+
+`FAILED: ... extension not connected` almost always means Google Chrome isn't running (Brave open doesn't count). The script starts Chrome itself now. If it still fails, check `pgrep -x "Google Chrome"` before suspecting env vars or the sandbox.
