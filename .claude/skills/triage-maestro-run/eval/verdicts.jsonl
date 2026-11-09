@@ -43,3 +43,6 @@
 {"buildId": "28b08cbced6e3adbe9bc5a64e47ef58684b33a12", "flow": "pay_nim_manual", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
 {"buildId": "b686d2bb7067262c040184a65330c2bcd76aacbd", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
 {"buildId": "7586d3548b51a5f9c28dcddb2742fa639e45ead9", "flow": "testnet_new_wallet", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-05"}
+{"buildId": "9fc540d1b82faf89faf708a23f34a1a72629079f", "flow": "pay_nim_manual", "outcome": "UNKNOWN", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-09"}
+{"buildId": "3c848f31a6afb0bb654db0cfdeac1223f666ab00", "flow": "mini_apps_deeplinks", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "APP_BUG", "confidence": "medium", "triagedAt": "2026-11-09"}
+{"buildId": "d405986c85a92c562f08f113f63523d29412cd99", "flow": "pay_nim_manual", "outcome": "UNKNOWN", "rule": "UNKNOWN", "triager": "UNKNOWN", "confidence": "low", "triagedAt": "2026-11-09"}
