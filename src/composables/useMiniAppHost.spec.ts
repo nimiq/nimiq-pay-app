@@ -1448,6 +1448,31 @@ describe('miniAppHost', () => {
       expect.objectContaining({ type: 'eth-transaction' }),
       start + MINI_APP_REQUEST_TIMEOUT_MS,
     )
+    expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: false, sheetWaitMs: 30_000 }))
+  })
+
+  it('reports a transaction sheet that ran out its deadline as timed out', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return false
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow()
+
+    expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: true }))
   })
 
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
