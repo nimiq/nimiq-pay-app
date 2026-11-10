@@ -11,7 +11,7 @@ import { isMiniAppActive, MiniAppHost } from '@/composables/useMiniAppHost'
 import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
-import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
+import { trackDAppClosed, trackDAppOpened, trackDAppPopupClosed } from '@/lib/analytics'
 import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
@@ -222,8 +222,10 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     handle = await InAppBrowser.addListener('closeEvent', async ({ id }) => {
       // A popup closing must not tear down the Mini App still open beneath it. No id
       // means the plugin had no registered webview left: treat it as the main one.
-      if (id && !hostRef.isMainWebview(id))
+      if (id && !hostRef.isMainWebview(id)) {
+        trackDAppPopupClosed(targetUrl, appTitle)
         return
+      }
       const h = handle
       if (h === null)
         return

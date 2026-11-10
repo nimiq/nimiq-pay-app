@@ -35,6 +35,7 @@ const {
   setToast,
   trackDAppClosed,
   trackDAppOpened,
+  trackDAppPopupClosed,
 } = vi.hoisted(() => ({
   getDeviceInfo: vi.fn(),
   openWebView: vi.fn(() => Promise.resolve()),
@@ -52,6 +53,7 @@ const {
   screenOrientationLock: vi.fn(() => Promise.resolve()),
   trackDAppClosed: vi.fn(),
   trackDAppOpened: vi.fn(),
+  trackDAppPopupClosed: vi.fn(),
   MiniAppHostCtor: vi.fn(),
   capacitorHttpGet: vi.fn(() => Promise.resolve({ status: 200, data: { nimiq: [], evm: [] } })),
 }))
@@ -123,7 +125,7 @@ vi.mock('@/lib/site-metadata', () => ({
   getFaviconUrl,
 }))
 
-vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened }))
+vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened, trackDAppPopupClosed }))
 
 vi.mock('@/lib', () => ({
   get isDev() { return false },
@@ -167,6 +169,7 @@ describe('mini-app-launcher', () => {
     screenOrientationLock.mockImplementation(() => Promise.resolve())
     trackDAppClosed.mockReset()
     trackDAppOpened.mockReset()
+    trackDAppPopupClosed.mockReset()
     MiniAppHostCtor.mockReset()
 
     sessionStorage.clear()
@@ -307,6 +310,7 @@ describe('mini-app-launcher', () => {
     expect(hostDestroy).not.toHaveBeenCalled()
     expect(removeCloseListener).not.toHaveBeenCalled()
     expect(trackDAppClosed).not.toHaveBeenCalled()
+    expect(trackDAppPopupClosed).toHaveBeenCalledWith('https://app.uniswap.org/', 'app.uniswap.org')
 
     await closeHandler!({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
     await closeHandler!({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
