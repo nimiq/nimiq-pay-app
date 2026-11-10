@@ -71,15 +71,16 @@ function onOpenChange(open: boolean) {
         </DialogDescription>
 
         <div class="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-1">
-          <div :class="WIDGET_GRID_CLASS">
-            <template v-for="preview in previews" :key="preview.key">
-              <div :data-testid="`review-preview-${preview.key}`" class="contents">
+          <div class="flex flex-col gap-3">
+            <div v-for="preview in previews" :key="preview.key" class="flex flex-col gap-1.5">
+              <!-- A grid per preview: the note below would otherwise take a whole grid row. -->
+              <div :data-testid="`review-preview-${preview.key}`" :class="WIDGET_GRID_CLASS">
                 <MiniAppWidget :view="preview.view" preview />
               </div>
-              <p v-if="undrawn.includes(preview.key)" :data-testid="`review-failed-${preview.key}`" class="col-span-4 -mt-1 text-xs text-space/60">
+              <p v-if="undrawn.includes(preview.key)" :data-testid="`review-failed-${preview.key}`" class="text-xs text-space/60">
                 {{ $t('This image could not be checked, so the card stays plain with it.') }}
               </p>
-            </template>
+            </div>
           </div>
         </div>
 

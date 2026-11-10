@@ -190,7 +190,7 @@ watch(() => props.open, (isOpen) => {
                 :key="update.testid"
                 type="button"
                 :data-testid="update.testid"
-                class="flex items-center gap-3 w-full min-h-[52px] px-3 rounded-lg text-left text-lg font-semibold text-space transition-colors active:bg-sky/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                class="flex items-center gap-3 w-full min-h-[56px] px-3 rounded-lg text-left text-lg font-semibold text-space transition-colors active:bg-sky/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
                 @click="update.onClick"
               >
                 <component :is="update.icon" class="w-6 h-6 shrink-0 text-sky" />
