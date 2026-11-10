@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { decodesAsImage } from '@/lib/mini-app-widget-images'
 import { WIDGET_GRID_CLASS } from '@/lib/mini-app-widgets'
 import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 
@@ -11,11 +12,24 @@ const widgets = useMiniAppWidgets()
 const review = computed(() => widgets.imageReview)
 const previews = computed(() => review.value?.keys.map(key => ({ key, view: widgets.reviewView(key)! })) ?? [])
 const app = computed(() => widgets.views.find(view => view.scope === review.value?.scope && view.widgetId === review.value?.widgetId))
-const canAccept = computed(() => !widgets.reviewLoading && previews.value.some(preview => preview.view.background))
+// Keys whose image the device managed to draw, and keys whose image it did not.
+const drawn = ref<string[]>([])
+const undrawn = ref<string[]>([])
+const checking = computed(() => widgets.reviewLoading || drawn.value.length + undrawn.value.length < previews.value.length)
+const canAccept = computed(() => !checking.value && drawn.value.length > 0)
 
-watch(review, (open) => {
-  if (open)
-    void widgets.loadReviewImages()
+watch(review, async (open) => {
+  drawn.value = []
+  undrawn.value = []
+  if (!open)
+    return
+  await widgets.loadReviewImages()
+  for (const { key, view } of previews.value) {
+    const src = view.background?.kind === 'image' ? view.background.src : undefined
+    const ok = !!src && await decodesAsImage(src)
+    if (widgets.imageReview === open)
+      (ok ? drawn : undrawn).value.push(key)
+  }
 }, { immediate: true })
 
 function onOpenChange(open: boolean) {
@@ -62,7 +76,7 @@ function onOpenChange(open: boolean) {
               <div :data-testid="`review-preview-${preview.key}`" class="contents">
                 <MiniAppWidget :view="preview.view" preview />
               </div>
-              <p v-if="!widgets.reviewLoading && !preview.view.background" :data-testid="`review-failed-${preview.key}`" class="col-span-4 -mt-1 text-xs text-space/60">
+              <p v-if="undrawn.includes(preview.key)" :data-testid="`review-failed-${preview.key}`" class="col-span-4 -mt-1 text-xs text-space/60">
                 {{ $t('This image could not be checked, so the card stays plain with it.') }}
               </p>
             </template>
@@ -75,7 +89,7 @@ function onOpenChange(open: boolean) {
             data-testid="review-approve"
             :disabled="!canAccept"
             class="w-full rounded-full bg-sky py-3 text-base font-bold text-white transition-colors active:bg-sky/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky focus-visible:ring-offset-2"
-            @click="widgets.answerImageReview(true)"
+            @click="widgets.answerImageReview(true, drawn)"
           >
             {{ previews.length > 1 ? $t('Show these images') : $t('Show this image') }}
           </button>

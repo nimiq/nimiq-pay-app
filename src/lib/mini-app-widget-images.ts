@@ -86,3 +86,15 @@ export function readWidgetImage(base64: string, sha256: string): { ok: true, val
     return { ok: false, error: `the image is ${width} × ${height}, at most ${WIDGET_LIMITS.imagePixels} × ${WIDGET_LIMITS.imagePixels} is allowed` }
   return { ok: true, value: `data:${type};base64,${base64.replace(/\s/g, '')}` }
 }
+
+/** The checks above read headers only; this says whether the device can actually draw the image. */
+export function decodesAsImage(src: string): Promise<boolean> {
+  const image = new Image()
+  image.src = src
+  if (typeof image.decode === 'function')
+    return image.decode().then(() => true, () => false)
+  return new Promise((resolve) => {
+    image.onload = () => resolve(true)
+    image.onerror = () => resolve(false)
+  })
+}

@@ -18,6 +18,8 @@ const { store } = await vi.hoisted(async () => {
 })
 
 vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => store }))
+const decodes = vi.hoisted(() => vi.fn(async (_src: string) => true))
+vi.mock('@/lib/mini-app-widget-images', () => ({ decodesAsImage: decodes }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en' }) }))
 vi.mock('@capacitor/haptics', () => ({ Haptics: { impact: vi.fn(() => Promise.resolve()) }, ImpactStyle: { Light: 'LIGHT' } }))
 
@@ -82,7 +84,7 @@ describe('miniAppWidgetImagesReview', () => {
   it('answers yes for all of them at once', async () => {
     await render()
     found('review-approve')!.click()
-    expect(store.answerImageReview).toHaveBeenCalledWith(true)
+    expect(store.answerImageReview).toHaveBeenCalledWith(true, ['hero', 'side'])
   })
 
   it('cannot accept while the images load, or when none could be shown', async () => {
@@ -94,6 +96,16 @@ describe('miniAppWidgetImagesReview', () => {
     store.reviewView.mockImplementation((key: string) => view(key))
     await render()
     expect(found('review-approve')!.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('offers only the images the device could draw, and says which could not', async () => {
+    decodes.mockImplementation(async (src: string) => !src.endsWith('side'))
+    await render()
+    expect(found('review-failed-side')).not.toBeNull()
+    expect(found('review-failed-hero')).toBeNull()
+    found('review-approve')!.click()
+    expect(store.answerImageReview).toHaveBeenCalledWith(true, ['hero'])
+    decodes.mockImplementation(async () => true)
   })
 
   it('answers no from Not now', async () => {

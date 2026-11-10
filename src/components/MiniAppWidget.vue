@@ -2,7 +2,7 @@
 import type { DisplayValue, WidgetView } from '@/stores/mini-app-widgets'
 import { FormattableNumber } from '@nimiq/utils'
 import { onLongPress, useNow } from '@vueuse/core'
-import { computed, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import HorizontalEllipsisIcon from '@/components/icons/horizontal-ellipsis.vue'
 import { applyIconFallback } from '@/lib/mini-app-icons'
 import { useApp } from '@/stores/app'
@@ -83,6 +83,10 @@ function shapeOf(chart: WidgetView['chart']) {
   return { kind: 'bars' as const, bars: chart.points.map((p, i) => ({ x: i * width + width * 0.15, width: width * 0.7, y: y(p), height: 32 - y(p) })) }
 }
 
+// Passing the checks only proves the file's header; a card the device cannot draw stays plain.
+const brokenSrc = ref<string>()
+const brokenBackground = computed(() => view.background?.kind === 'image' && view.background.src === brokenSrc.value)
+
 const chartShape = computed(() => shapeOf(view.chart))
 const backgroundShape = computed(() => view.background?.kind === 'chart' ? shapeOf(view.background.chart) : undefined)
 
@@ -124,9 +128,9 @@ function onClickCapture(event: MouseEvent) {
     @click.capture="onClickCapture"
     @contextmenu.prevent="!preview && emit('menu')"
   >
-    <div v-if="isCard && view.background" data-testid="widget-background" aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+    <div v-if="isCard && view.background && !brokenBackground" data-testid="widget-background" aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
       <template v-if="view.background.kind === 'image'">
-        <img :src="view.background.src" alt="" class="size-full object-cover">
+        <img :src="view.background.src" alt="" class="size-full object-cover" @error="brokenSrc = view.background.src">
         <div data-testid="widget-background-scrim" class="absolute inset-0 bg-white/70" />
         <div class="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/90 to-transparent" />
       </template>

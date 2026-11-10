@@ -11,7 +11,7 @@ import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/v
 import { onLongPress } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { defineAsyncComponent, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
 import { useDevice } from '@/composables/useDevice'
@@ -21,6 +21,7 @@ import { trackCurrentAppOpen } from '@/lib/analytics'
 import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { isDev } from '@/lib/index'
 import { isImageReviewOpen } from '@/lib/mini-app-active'
+import { MiniAppWidgetImagesReview } from '@/lib/mini-app-widget-review-sheet'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -28,8 +29,6 @@ import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
-// Rarely shown, so it stays out of the start-up bundle.
-const MiniAppWidgetImagesReview = defineAsyncComponent(() => import('@/components/MiniAppWidgetImagesReview.vue'))
 
 const devFabRef = ref<HTMLElement | null>(null)
 const isDevFabHidden = ref(false)

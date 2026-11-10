@@ -51,6 +51,12 @@ describe('a card\'s background', () => {
     expect(wrapper.find('[data-testid="widget-background-scrim"]').classes()).toContain('bg-white/70')
   })
 
+  it('hides an image the device cannot draw, rather than a broken one', async () => {
+    const wrapper = render({ view: view({ size: 'medium', background: { kind: 'image', src: 'data:image/png;base64,AAAA' } }) })
+    await wrapper.find('[data-testid="widget-background"] img').trigger('error')
+    expect(wrapper.find('[data-testid="widget-background"]').exists()).toBe(false)
+  })
+
   it('draws a chart faintly, with no scrim', () => {
     const wrapper = render({ view: view({ size: 'medium', background: { kind: 'chart', chart: { kind: 'line', points: [1, 2, 3] } } }) })
     const background = wrapper.find('[data-testid="widget-background"]')

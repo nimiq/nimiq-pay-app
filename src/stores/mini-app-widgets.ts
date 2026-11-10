@@ -233,7 +233,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const previews = reactive(new Map<string, string>())
   // Downloaded for the user to look at before approving, and kept only if they do.
   const reviews = reactive(new Map<string, string>())
-  const imageReview = shallowRef<{ scope: string, widgetId: string, offered: Record<string, WidgetImage>, keys: string[], answer: (taken: boolean) => void }>()
+  const imageReview = shallowRef<{ scope: string, widgetId: string, offered: Record<string, WidgetImage>, keys: string[], answer: (taken: boolean | undefined) => void }>()
   const reviewLoading = ref(false)
   let reviewSession = 0
   const savedImages = new Set<string>()
@@ -729,8 +729,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     })
   }
 
-  /** Takes only what the user saw: an image that could not be shown stays waiting, so it is never downloaded unseen. */
-  function answerImageReview(approved: boolean) {
+  /** Takes only what the user saw (`drawn`, when the sheet says): an image that could not be shown stays waiting, so it is never taken unseen. */
+  function answerImageReview(approved: boolean, drawn?: string[]) {
     const review = imageReview.value
     if (!review)
       return
@@ -738,7 +738,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     isImageReviewOpen.value = false
     reviewSession++
     reviewLoading.value = false
-    const seen = approved ? review.keys.filter(key => reviews.has(review.offered[key]!.sha256)) : []
+    const seen = approved ? review.keys.filter(key => reviews.has(review.offered[key]!.sha256) && (!drawn || drawn.includes(key))) : []
     if (seen.length) {
       seen.forEach(key => images.set(review.offered[key]!.sha256, reviews.get(review.offered[key]!.sha256)!))
       patch(review.scope, review.widgetId, (w) => {
@@ -755,6 +755,17 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
     reviews.clear()
     review.answer(seen.length > 0)
+  }
+
+  /** For a sheet that could not show at all: neither a yes nor a no. */
+  function closeImageReview() {
+    const review = imageReview.value
+    imageReview.value = undefined
+    isImageReviewOpen.value = false
+    reviewSession++
+    reviewLoading.value = false
+    reviews.clear()
+    review?.answer(undefined)
   }
 
   /** New or changed images wait for approval. One the file dropped goes at once, since that shows nothing new. */
@@ -1011,6 +1022,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     reviewView,
     openImageReview,
     answerImageReview,
+    closeImageReview,
     loadPreviewImages,
     clearPreviewImages,
     missingPermissions,

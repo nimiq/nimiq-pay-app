@@ -1429,6 +1429,25 @@ describe('images', () => {
       expect(store.views[0]!.pendingImages).toBe(true)
     })
 
+    it('takes only the images the sheet could draw', async () => {
+      const store = await reviewing()
+      const answer = store.openImageReview(SCOPE, 'swap')
+      await store.loadReviewImages()
+      store.answerImageReview(true, ['side'])
+      expect(await answer).toBe(true)
+      expect(store.widgets[0]!.definition.images!.hero!.sha256).toBe(OLD)
+      expect(store.widgets[0]!.definition.images!.side!.sha256).toBe(THIRD)
+      expect(store.views[0]!.pendingImages).toBe(true)
+    })
+
+    it('closes without an answer when the sheet cannot show, which is not a no', async () => {
+      const store = await reviewing()
+      const answer = store.openImageReview(SCOPE, 'swap')
+      store.closeImageReview()
+      expect(await answer).toBeUndefined()
+      expect(store.imageReview).toBeUndefined()
+    })
+
     it('drops downloads that finish after the review closed', async () => {
       const store = await reviewing()
       let finish = (_result: object) => {}
