@@ -303,6 +303,25 @@ describe('widgets.add', () => {
     expect(trackWeb3Request).not.toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_images', approved: false }))
   })
 
+  it('stops waiting for a sheet that never answers, so a sheet closed without a reply cannot hold back the next', async () => {
+    vi.useFakeTimers()
+    try {
+      const { confirm } = createHost()
+      confirm.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(true)
+      const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
+      void handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' }).catch(() => {})
+      const second = handlers.requestChainApproval({ chainId: '0xa', chainName: 'Optimism' }).catch(() => {})
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(confirm).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(confirm).toHaveBeenCalledTimes(2)
+      await second
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('opens no queued sheet once the Mini App has closed', async () => {
     const first = held()
     const { confirm, host, request } = createHost()

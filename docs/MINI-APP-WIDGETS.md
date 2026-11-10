@@ -181,7 +181,7 @@ if (window.nimiqPay?.widgets) {
 
 The sheet says the name your widget will appear under (your `name`, or your catalog name), and tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
 
-Nimiq Pay shows your Mini App one sheet at a time, connection and signing sheets included: a request that needs a sheet waits until the one before is answered.
+Nimiq Pay shows your Mini App one sheet at a time, connection and signing sheets included: a request that needs a sheet waits until the one before is answered, for a minute at most.
 
 Requests are accepted only from the site the Mini App session belongs to. They are refused while the in-app browser shows another site, while it navigates between sites, while a popup your page opened is open, and after Nimiq Pay reloads behind an open Mini App until the page has loaded again. Refused calls fail quietly: `add` rejects, `update` answers `false`, `remove` does nothing and `list` answers `[]`.
 

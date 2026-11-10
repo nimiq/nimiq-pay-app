@@ -246,6 +246,8 @@ export interface MiniAppHostConfig {
   selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
 }
 
+const SHEET_TURN_MS = 60_000
+
 function originOf(url: string): string | null {
   try {
     return new URL(url).origin
@@ -1610,7 +1612,8 @@ export class MiniAppHost {
         throw new InternalError('Host is destroyed')
       return show()
     })
-    this.sheets = turn.catch(() => {})
+    // A sheet closed without an answer (an iOS swipe does that) must not hold back every later one, so the next waits a minute at most.
+    this.sheets = Promise.race([turn.catch(() => {}), this.sheets.then(() => sleep(SHEET_TURN_MS))])
     return turn
   }
 
