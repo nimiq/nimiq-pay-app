@@ -1,66 +1,33 @@
 <script setup lang="ts">
-import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
-import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonNote, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
+import { IonBackButton, IonButtons } from '@ionic/vue'
 import { computedAsync, onLongPress, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, onBeforeMount, ref } from 'vue'
+import { ref } from 'vue'
+import AppsIcon from '@/components/icons/apps.vue'
+import CreditCardIcon from '@/components/icons/credit-card.vue'
+import FingerprintIcon from '@/components/icons/fingerprint.vue'
+import IdVerificationIcon from '@/components/icons/id-verification.vue'
+import SettingsIcon from '@/components/icons/settings.vue'
+import MenuItem from '@/components/MenuItem.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { useBiometric } from '@/composables/useBiometric'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
-import { useNotifications } from '@/composables/useNotifications'
-import { toCoins } from '@/composables/usePrice'
-import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-setup'
 import { isMiniAppsEnabled } from '@/lib'
 import { getBundleVersion, logDiagnostics } from '@/lib/diagnostics'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
-import { Crypto, DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
+import { useApp } from '@/stores/app'
 
 const logger = useLogger('SettingsModal')
 
 const { showModal, closeModal } = useModal()
-const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
-const {
-  language,
-  selectedFiat,
-  pushNotificationsStatus,
-  phoneNumberVerified,
-  showAnimations,
-  decimalsAmount,
-  htlcThreshold,
-  reopenMiniAppWebviewAfterResume,
-} = storeToRefs(useApp())
+const { phoneNumberVerified } = storeToRefs(useApp())
 
-// Threshold is stored in luna; show it in NIM. Edited via the AutoDepositThreshold modal.
-const htlcThresholdNim = computed(() => toCoins(htlcThreshold.value, Crypto.NIM))
-
-const { unregisterNotifications, registerNotifications, requestLocalNotificationsPermission } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
-const nimDecimalsOptions = [0, 2, DECIMALS.NIM]
 
 const bundleVersion = computedAsync(getBundleVersion)
 
 async function onLongPressCallback() {
   await logDiagnostics()
   logger.sendReport()
-}
-
-async function handlePushNotificationsToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
-  if (event.detail.checked && pushNotificationsStatus.value !== PushNotificationsStatus.GRANTED) {
-    await registerNotifications()
-    await requestLocalNotificationsPermission()
-  }
-  else if (!event.detail.checked && pushNotificationsStatus.value === PushNotificationsStatus.GRANTED) {
-    await unregisterNotifications()
-  }
-}
-
-function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
-  if (event.detail.checked)
-    showModal(Modal.EnableBiometric, { isOnTop: true })
-  else
-    isBiometricEnabled.value = false
 }
 
 const clickCount = ref(0)
@@ -86,8 +53,6 @@ onLongPress(
   onLongPressCallback,
   { modifiers: { prevent: true }, delay: 3 * 1e3 },
 )
-
-onBeforeMount(updateBiometryInfo)
 </script>
 
 <template>
@@ -101,89 +66,41 @@ onBeforeMount(updateBiometryInfo)
       <p class="text-space/60 text-sm font-bold text-left uppercase">
         {{ $t('Settings') }}
       </p>
-      <IonList lines="none">
-        <IonItem>
-          <IonSelect
-            :label="$t('Language')" :value="language"
-            @ion-change="setLanguage($event.detail.value)"
-          >
-            <IonSelectOption v-for="lang in SUPPORTED_LANGUAGES" :key="lang" :value="lang">
-              {{ LANGUAGE_LABELS[lang] }}
-            </IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        <IonItem>
-          <IonSelect
-            :label="$t('Currency')" :value="selectedFiat"
-            @ion-change="selectedFiat = $event.detail.value"
-          >
-            <IonSelectOption v-for="currency in Fiat" :key="currency" :value="currency">
-              {{ currency }}
-            </IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        <IonItem>
-          <IonSelect
-            :label="$t('Minimum NIM Decimals')" :value="decimalsAmount"
-            @ion-change="decimalsAmount = $event.detail.value"
-          >
-            <IonSelectOption v-for="decimals in nimDecimalsOptions" :key="decimals" :value="decimals">
-              {{ decimals || 'None' }}
-            </IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        <IonItem button :detail="false" @click="showModal(Modal.AutoDepositThreshold, { isOnTop: true, isSmall: true })">
-          <IonLabel>{{ $t('Auto-deposit threshold') }}</IonLabel>
-          <IonNote slot="end" class="text-lg">
-            {{ htlcThresholdNim }} NIM
-          </IonNote>
-        </IonItem>
-
-        <IonItem>
-          <IonToggle :checked="pushNotificationsStatus === PushNotificationsStatus.GRANTED" @ion-change="handlePushNotificationsToggle">
-            {{ $t('Receive Push Notifications') }}
-          </IonToggle>
-        </IonItem>
-
-        <IonItem v-if="isBiometricSupported">
-          <IonToggle :checked="isBiometricEnabled" @ion-change="handleBiometricToggle">
-            {{ $t('Biometric Authentication') }}
-          </IonToggle>
-        </IonItem>
-
-        <IonItem>
-          <IonToggle :checked="!showAnimations" @ion-change="showAnimations = !$event.detail.checked">
-            {{ $t('Reduce Animations') }}
-          </IonToggle>
-        </IonItem>
-
-        <IonItem v-if="isMiniAppsEnabled">
-          <IonToggle :checked="reopenMiniAppWebviewAfterResume" @ion-change="reopenMiniAppWebviewAfterResume = $event.detail.checked">
-            {{ $t('Reopen Mini App on unlock') }}
-          </IonToggle>
-        </IonItem>
-
-        <!-- TODO: fix this -->
-        <IonItem button :detail="false" @click="initializeFlow(FlowName.ChangePin)">
-          <IonLabel>{{ $t('Change PIN') }}</IonLabel>
-        </IonItem>
-
-        <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
-          <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
-        </IonItem>
-      </IonList>
+      <div class="flex flex-col gap-y-6 pt-4">
+        <MenuItem
+          :icon="SettingsIcon"
+          :title="$t('General')"
+          aria-label="General"
+          @click="showModal(Modal.SettingsGeneral, { isOnTop: true })"
+        />
+        <MenuItem
+          :icon="FingerprintIcon"
+          :title="$t('Security')"
+          aria-label="Security"
+          @click="showModal(Modal.SettingsSecurity, { isOnTop: true })"
+        />
+        <MenuItem
+          :icon="CreditCardIcon"
+          :title="$t('Payments')"
+          aria-label="Payments"
+          @click="showModal(Modal.SettingsPayments, { isOnTop: true })"
+        />
+        <MenuItem
+          v-if="isMiniAppsEnabled"
+          :icon="AppsIcon"
+          :title="$t('Mini Apps')"
+          aria-label="Mini Apps"
+          @click="showModal(Modal.SettingsMiniApps, { isOnTop: true })"
+        />
+        <MenuItem
+          v-if="phoneNumberVerified"
+          :icon="IdVerificationIcon"
+          :title="$t('Account')"
+          aria-label="Account"
+          @click="showModal(Modal.SettingsAccount, { isOnTop: true })"
+        />
+      </div>
       <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60" @click="handleVersionClick">v{{ bundleVersion }}</code>
     </div>
   </ModalTemplate>
 </template>
-
-<style scoped>
-ion-item {
-  @apply text-lg font-semibold;
-  --padding-start: 0;
-  --padding-end: 0;
-}
-</style>
