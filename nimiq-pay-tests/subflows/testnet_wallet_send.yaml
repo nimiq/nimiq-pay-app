@@ -1,0 +1,78 @@
+appId: ${APP_ID}
+---
+# For flows that send 1 NIM from the shared funded testnet wallet: imports it
+# (MAESTRO_TESTNET_WALLET_WORDS), switches to testnet, waits for a settled balance, and stores
+#   output.balanceDigits     the NIM balance, digits only
+#   output.expectedBalance   the balance after sending 1 NIM, formatted like home
+#   output.previousNewestDate the time of the newest history entry, to tell this run's apart
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ${output.launchScreen.loginBtn}
+    timeout: 45000
+- runFlow:
+    file: import_wallet.yaml
+    env:
+      RECOVERY_PHRASE: ${MAESTRO_TESTNET_WALLET_WORDS}
+- runFlow: switch_to_testnet.yaml
+
+# Same balance guards as settings_nim_decimals: the balance needs testnet consensus, and pending
+# NIM would change it while the caller measures it.
+- extendedWaitUntil:
+    visible: ${output.home.nimBalanceNoDecimals}
+    timeout: 120000
+    label: The shared testnet wallet shows a balance of at least 10 NIM
+- extendedWaitUntil:
+    notVisible: ${output.home.pendingNim}
+    timeout: 120000
+    label: The shared testnet wallet has no pending NIM
+- copyTextFrom: ${output.home.nimBalanceNoDecimals}
+# Thousands are grouped with U+202F on home.
+- evalScript: ${output.balanceDigits = maestro.copiedText.replace(/[^0-9]/g, ''); output.expectedBalance = String(parseInt(output.balanceDigits) - 1).replace(/\B(?=(\d{3})+(?!\d))/g, String.fromCharCode(0x202f)) + ' ?'}
+
+# Ready to send: Pay is enabled once the wallet's deposit is active with the cosigner
+# (MainView.vue). Waiting for it also gives the history time to sync.
+- extendedWaitUntil:
+    visible:
+      text: ${output.home.payTitle}
+      enabled: true
+    timeout: 180000
+    label: The shared testnet wallet can send
+
+# Every run sends the same amount to the same address, so remember when the newest history
+# entry happened. Right after the import the list fills from the network, and once its first
+# row was the wallet's oldest entry: read until two reads agree.
+- extendedWaitUntil:
+    visible:
+      text: ${output.transaction.row}
+      index: 1
+    timeout: 120000
+- evalScript: ${output.previousNewestDate = ''; output.lastNewestDate = '-'; output.newestDateReads = 0}
+- repeat:
+    while:
+      true: ${output.newestDateReads < 2 || (output.previousNewestDate != output.lastNewestDate && output.newestDateReads < 5)}
+    commands:
+      - evalScript: ${output.lastNewestDate = output.previousNewestDate}
+      - tapOn:
+          text: ${output.transaction.row}
+          index: 0
+      - extendedWaitUntil:
+          visible: ${output.transaction.date}
+          timeout: 10000
+      - copyTextFrom: ${output.transaction.date}
+      - evalScript: ${output.previousNewestDate = maestro.copiedText; output.newestDateReads++}
+      # A close tap was lost once and the open detail then covered home: retry until it's gone.
+      - repeat:
+          times: 3
+          while:
+            visible: ${output.transaction.date}
+          commands:
+            - tapOn: ${output.navigation.closeFlowModalBtn}
+            # On iOS a tap while the detail is still closing is lost.
+            - waitForAnimationToEnd
+      - assertNotVisible: ${output.transaction.date}
+- assertTrue:
+    condition: ${output.previousNewestDate == output.lastNewestDate}
+    label: Two reads of the newest history entry agree

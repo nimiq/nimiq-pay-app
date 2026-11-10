@@ -1,0 +1,18 @@
+appId: ${APP_ID}
+---
+# Opens the menu from home and leaves its sheet at rest, so the caller can tap a row.
+# On iOS a tap made while the screen is changing can do nothing: WebKit logs "Single tap
+# recognized", but no click follows (home still loading, or a sheet still opening; runs 42024230972
+# and 42054675994). Retry the open, and let the sheet settle before the caller's tap.
+# The tap is optional because a menu that opened late hides the button, and a retry would then
+# fail on the tap alone. The Settings wait is the real check. A skipped tap costs about 14 s.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.navigation.openMenuBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.navigation.settingsBtn}
+          timeout: 5000
+- waitForAnimationToEnd

@@ -1,0 +1,83 @@
+appId: ${APP_ID}
+name: What's New card
+
+tags:
+  - franciscoTest
+  - quarantine
+
+---
+# Scope: a new wallet's home shows the What's New card. Tapping it opens the changelog, after
+# which the card no longer shows once the app restarts; on another new wallet, closing it with X
+# hides it at once and for good. Needs a build whose version has a changelog entry
+# (src/data/changelog.json): release builds always get one.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Tapping the card opens the changelog.
+- extendedWaitUntil:
+    visible: ${output.whatsNewCard.subtitle}
+    timeout: 15000
+- tapOn: ${output.whatsNewCard.subtitle}
+- extendedWaitUntil:
+    visible: ${output.whatsNew.versionHeader}
+    timeout: 10000
+- tapOn: ${output.whatsNew.closeBtn}
+- extendedWaitUntil:
+    notVisible: ${output.whatsNew.versionHeader}
+    timeout: 10000
+# The card itself stays until the next start: cards are only re-checked when home mounts
+# (useNotifications.ts maybeAddChangelogNotification).
+
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+# The card is added after home mounts. Named exception to the no-optional rule: this is a wait
+# for an unwanted card, not an assertion.
+- extendedWaitUntil:
+    visible: ${output.whatsNewCard.subtitle}
+    timeout: 10000
+    optional: true
+    label: Give an unwanted card time to show
+- assertNotVisible: ${output.whatsNewCard.subtitle}
+
+# On another new wallet, closing the card with X hides it for good.
+- runFlow: ../../subflows/create_account.yaml
+- extendedWaitUntil:
+    visible: ${output.whatsNewCard.subtitle}
+    timeout: 15000
+- tapOn: ${output.navigation.closeNotificationCardBtn}
+- extendedWaitUntil:
+    notVisible: ${output.whatsNewCard.subtitle}
+    timeout: 10000
+- assertNotVisible: ${output.whatsNew.versionHeader}
+
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+# Typed while the PIN screen still settles, the first digit was lost once (Pixel_8).
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- extendedWaitUntil:
+    visible: ${output.whatsNewCard.subtitle}
+    timeout: 10000
+    optional: true
+    label: Give an unwanted card time to show
+- assertNotVisible: ${output.whatsNewCard.subtitle}
+
+- stopApp

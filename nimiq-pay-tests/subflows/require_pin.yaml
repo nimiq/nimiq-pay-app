@@ -1,0 +1,7 @@
+appId: ${APP_ID}
+---
+# Fails early when a run forgets -e PIN=..., instead of typing "undefined" into the PIN pad.
+# (No "$" inside ${}: Maestro ends the script at the first "$".)
+- assertTrue:
+    condition: ${typeof PIN != 'undefined' && String(PIN).length > 0 && !/[^0-9]/.test(String(PIN))}
+    label: "PIN is set: pass -e PIN=1111"

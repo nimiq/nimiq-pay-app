@@ -96,7 +96,7 @@ platform :ios do
 
       tmp_dir = "/tmp/nimiq-pay-screens/#{udid}"
       sh "rm -rf #{tmp_dir} && mkdir -p #{tmp_dir}"
-      sh "cd .. && maestro --device #{udid} test -e APP_ID=com.nimiq.pay -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
+      sh "cd .. && maestro --device #{udid} test -e APP_ID=com.nimiq.pay -e PIN=1111 -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
 
       # Drop this device's previous shots so renamed/removed screens don't linger as stale files
       Dir.glob("#{out_dir}/#{device}-*.png").each { |old| FileUtils.rm(old) }
@@ -178,7 +178,7 @@ platform :android do
 
     tmp_dir = "/tmp/nimiq-pay-screens/android"
     sh "rm -rf #{tmp_dir} && mkdir -p #{tmp_dir} #{out_dir}"
-    sh "cd .. && maestro test -e APP_ID=com.nimiq.pay.debug -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
+    sh "cd .. && maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
 
     # Drop previous shots so renamed/removed screens don't linger as stale files
     Dir.glob("#{out_dir}/Phone-*.png").each { |old| FileUtils.rm(old) }
