@@ -19,12 +19,11 @@ import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { isMiniAppActive } from '@/lib/mini-app-active'
-import { localizeDefinition, parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
+import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
 import { nimiqAddresses } from '@/lib/wallet-addresses'
-import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -244,8 +243,6 @@ export interface MiniAppHostConfig {
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
-  /** Shows a widget's new images and resolves with the user's answer; the Mini App steps aside meanwhile. */
-  reviewWidgetImages?: (scope: string, widgetId: string) => Promise<boolean>
   selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
 }
 
@@ -292,7 +289,7 @@ export class MiniAppHost {
   private readonly pendingLightningInvoices = new Set<string>()
   /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
   private readonly declinedWidgetOffers = new Set<string>()
-  /** One sheet at a time, however many widgets a Mini App calls `add` for at once. */
+  /** Whole asks in order, so each sees what the one before changed, and two cannot both take Home's last slot. */
   private widgetSheets: Promise<void> = Promise.resolve()
   private sheets: Promise<unknown> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
@@ -321,7 +318,13 @@ export class MiniAppHost {
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
-    this.config = config
+    const { requestUserConfirmation: confirm, selectLightningAsset: select } = config
+    // Every sheet of this Mini App waits for the one before, so two never stack.
+    this.config = {
+      ...config,
+      requestUserConfirmation: confirm && (request => this.inTurn(() => confirm(request))),
+      selectLightningAsset: select && (app => this.inTurn(() => select(app))),
+    }
     this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
     this.sessionUrl = config.url
@@ -458,7 +461,7 @@ export class MiniAppHost {
         const chainName = request.chainName || (numericChainId ? EVM_CHAIN_NAMES[numericChainId] : undefined)
         // Allowlisted chains always use the host's RPC, so don't show the dApp's.
         const customRpcUrl = numericChainId && this.isAllowedChain(numericChainId) ? undefined : request.rpcUrl
-        const confirmed = await this.confirm({
+        const confirmed = await this.config.requestUserConfirmation({
           url: this.config.url,
           name: this.config.title,
           type: 'chain',
@@ -856,7 +859,7 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'accounts',
@@ -915,7 +918,7 @@ export class MiniAppHost {
     }
 
     logger.log('[MiniAppHost] Requesting user confirmation for message signing:', messageToDisplay)
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'message',
@@ -1005,7 +1008,7 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'message',
@@ -1268,7 +1271,7 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided')
     }
 
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'eth-transaction',
@@ -1556,17 +1559,16 @@ export class MiniAppHost {
     const url = this.sessionUrl
     const definition = file.widgets.find(d => d.id === id)
     if (widgets.isOnHome(scope, id)) {
-      const widgetName = definition ? localizeDefinition(definition, useApp().language).name : id
+      const widgetName = widgets.widgetName(scope, id)
       const name = widgets.pendingName(scope)
       if (name)
-        await this.offerWidgetChange('name', 'widget_name', () => this.confirm({ url, type: 'widgetName', address: name.address, to: name.to }), () => widgets.approveName(scope, name.to))
+        await this.offerWidgetChange('name', 'widget_name', () => this.config.requestUserConfirmation!({ url, type: 'widgetName', address: name.address, to: name.to }), () => widgets.approveName(scope, name.to))
       const permissions = widgets.missingPermissions(scope, id)
       if (permissions.length)
-        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', () => this.confirm({ url, type: 'widgetPermissions', widgetName }), () => widgets.grantPermissions(scope, id, permissions))
-      const review = this.config.reviewWidgetImages
+        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', () => this.config.requestUserConfirmation!({ url, type: 'widgetPermissions', widgetName }), () => widgets.grantPermissions(scope, id, permissions))
       // The review takes the images itself, as it is the user's own answer in Nimiq Pay.
-      if (review && widgets.hasPendingImages(scope, id))
-        await this.offerWidgetChange(`images:${id}`, 'widget_images', () => this.inTurn(() => review(scope, id)), () => {})
+      if (widgets.hasPendingImages(scope, id))
+        await this.offerWidgetChange(`images:${id}`, 'widget_images', () => this.inTurn(() => this.reviewWidgetImages(scope, id)))
       return true
     }
     if (this.declinedWidgetOffers.has(`add:${id}`))
@@ -1577,7 +1579,7 @@ export class MiniAppHost {
       throw new InvalidRequestError(widgets.canAdd ? `This Mini App already has ${WIDGET_LIMITS.widgetsPerMiniApp} widgets on Home` : `Home already holds ${WIDGET_LIMITS.widgetsOnHome} widgets`)
     if (!this.config.requestUserConfirmation)
       throw new InternalError('Confirmation handler not provided')
-    const confirmed = await this.confirm({ url, type: 'widget', ...widgets.consentFor(scope, definition) })
+    const confirmed = await this.config.requestUserConfirmation({ url, type: 'widget', ...widgets.consentFor(scope, definition) })
     trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed) {
       this.declinedWidgetOffers.add(`add:${id}`)
@@ -1587,26 +1589,49 @@ export class MiniAppHost {
   }
 
   /** A change the file made waits for the user. This is where a Mini App can ask, once per session. */
-  private async offerWidgetChange(key: string, requestType: Web3RequestType, ask: () => Promise<boolean>, apply: () => void) {
+  /** `ask` answers undefined when it could not ask, which is not a no. */
+  private async offerWidgetChange(key: string, requestType: Web3RequestType, ask: () => Promise<boolean | undefined>, apply?: () => void) {
     if (this.declinedWidgetOffers.has(key) || !this.config.requestUserConfirmation || !this.mayAskAboutWidgets())
       return
     const confirmed = await ask()
+    if (confirmed === undefined)
+      return
     trackWeb3Request({ requestType, blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed)
       this.declinedWidgetOffers.add(key)
     else if (this.mayAskAboutWidgets())
-      apply()
+      apply?.()
   }
 
-  /** Every sheet of this Mini App waits for the one before, so two never stack. */
   private inTurn<T>(show: () => Promise<T>): Promise<T> {
-    const turn = this.sheets.then(show)
+    const turn = this.sheets.then(() => {
+      // A Mini App closed while its sheet waited asks nothing more.
+      if (this.destroyed)
+        throw new InternalError('Host is destroyed')
+      return show()
+    })
     this.sheets = turn.catch(() => {})
     return turn
   }
 
-  private confirm(request: UserConfirmationRequest): Promise<boolean> {
-    return this.inTurn(() => this.config.requestUserConfirmation!(request))
+  /** Nimiq Pay draws the review under the in-app browser, so the Mini App steps aside while it shows. */
+  private async reviewWidgetImages(scope: string, id: string): Promise<boolean | undefined> {
+    const browser = this.inAppBrowser
+    if (!browser)
+      return undefined
+    try {
+      await browser.hide()
+    }
+    catch (error) {
+      logger.warn('Could not hide the Mini App to show new widget images', error)
+      return undefined
+    }
+    try {
+      return await useMiniAppWidgets().openImageReview(scope, id)
+    }
+    finally {
+      await browser.show().catch(error => logger.error('Could not show the Mini App again', error))
+    }
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {
@@ -1655,7 +1680,7 @@ export class MiniAppHost {
       if (!this.config.requestUserConfirmation)
         throw new InternalError('Confirmation handler not provided')
 
-      const confirmed = await this.confirm({
+      const confirmed = await this.config.requestUserConfirmation({
         url: this.config.url,
         name: this.config.title,
         type: 'deviceIdentifier',
@@ -1733,7 +1758,7 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'accounts',
@@ -1773,7 +1798,7 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'message',
@@ -2036,11 +2061,10 @@ export class MiniAppHost {
     const invoice = (params as { invoice?: unknown } | null)?.invoice
     if (typeof invoice !== 'string' || !invoice.trim())
       throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
-    const select = this.config.selectLightningAsset
-    if (!this.config.requestUserConfirmation || !select)
+    const requestConfirmation = this.config.requestUserConfirmation
+    const selectAsset = this.config.selectLightningAsset
+    if (!requestConfirmation || !selectAsset)
       throw new InternalError('Confirmation handler not provided')
-    const requestConfirmation = (request: UserConfirmationRequest) => this.confirm(request)
-    const selectAsset: typeof select = (...args) => this.inTurn(() => select(...args))
 
     let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
     try {
@@ -2339,7 +2363,7 @@ export class MiniAppHost {
       throw new NetworkError(i18n.t('Something went wrong syncing your account'))
     }
 
-    const confirmed = await this.confirm({
+    const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'transaction',
@@ -2423,7 +2447,7 @@ export class MiniAppHost {
   //     throw new InternalError('Confirmation handler not provided');
   //   }
 
-  //   const confirmed = await this.confirm({
+  //   const confirmed = await this.config.requestUserConfirmation({
   //     type: 'transaction',
   //     plain: tx.toPlain(),
   //   });

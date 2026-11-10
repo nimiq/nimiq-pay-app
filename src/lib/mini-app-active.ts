@@ -6,3 +6,6 @@ import { ref } from 'vue'
  * such as the local-notification visibility check in `useLocks().isHomeVisible`.
  */
 export const isMiniAppActive = ref(false)
+
+/** Lets App.vue mount the review without creating the widget store, whose storage needs the unlocked wallet. */
+export const isImageReviewOpen = ref(false)

@@ -118,7 +118,7 @@ msgstr ""
 msgid "All"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:132
+#: src/components/MiniAppActionsSheet.vue:135
 msgid "Allow sending your addresses"
 msgstr ""
 
@@ -798,7 +798,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2338
+#: src/composables/useMiniAppHost.ts:2364
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1170,7 +1170,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:500
+#: src/stores/mini-app-widgets.ts:525
 msgid "No longer available"
 msgstr ""
 
@@ -1228,11 +1228,11 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:481
+#: src/stores/mini-app-widgets.ts:505
 msgid "Not available"
 msgstr ""
 
-#: src/components/MiniAppWidgetImagesReview.vue:61
+#: src/components/MiniAppWidgetImagesReview.vue:62
 msgid "Not now"
 msgstr ""
 
@@ -1568,7 +1568,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:111
+#: src/components/MiniAppActionsSheet.vue:114
 msgid "Remove from Home"
 msgstr ""
 
@@ -1603,7 +1603,7 @@ msgstr ""
 msgid "Retire Stake"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:129
+#: src/components/MiniAppActionsSheet.vue:132
 msgid "Review its new images"
 msgstr ""
 
@@ -1719,11 +1719,15 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/MiniAppWidgetImagesReview.vue:53
+#: src/components/MiniAppActionsSheet.vue:108
+msgid "Share your addresses again"
+msgstr ""
+
+#: src/components/MiniAppWidgetImagesReview.vue:54
 msgid "Show these images"
 msgstr ""
 
-#: src/components/MiniAppWidgetImagesReview.vue:53
+#: src/components/MiniAppWidgetImagesReview.vue:54
 msgid "Show this image"
 msgstr ""
 
@@ -1798,7 +1802,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2339
+#: src/composables/useMiniAppHost.ts:2365
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1845,7 +1849,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:108
+#: src/components/MiniAppActionsSheet.vue:111
 msgid "Stop sharing your addresses"
 msgstr ""
 
@@ -1873,7 +1877,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:527
+#: src/composables/useMiniAppHost.ts:531
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1989,7 +1993,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:501
+#: src/composables/useMiniAppHost.ts:505
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2140,7 +2144,7 @@ msgstr ""
 msgid "Use {amount}"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:126
+#: src/components/MiniAppActionsSheet.vue:129
 msgid "Use the new name: {name}"
 msgstr ""
 

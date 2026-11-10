@@ -49,6 +49,7 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
     sharesAddresses: view.sharesAddresses,
     newImages: view.pendingImages,
     newPermissions: view.pendingPermissions,
+    stoppedPermissions: view.stoppedPermissions,
   }
 })
 
@@ -58,7 +59,7 @@ function openMenu(view: WidgetView) {
 }
 
 async function allowPermissions(view: WidgetView) {
-  const permissions = widgets.missingPermissions(view.scope, view.widgetId)
+  const permissions = widgets.askablePermissions(view.scope, view.widgetId)
   if (!permissions.length)
     return
   if (await requestUserConfirmation({ type: 'widgetPermissions', url: view.scope, widgetName: widgets.widgetName(view.scope, view.widgetId) }))

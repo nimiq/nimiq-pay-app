@@ -12,7 +12,6 @@ import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
 import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
-import { reviewWidgetImages } from '@/lib/mini-app-widget-review'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
 import { normalizeMiniAppUrl } from '@/modals/mini-app-search'
@@ -198,7 +197,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       url: targetUrl,
       title: appTitle,
       requestUserConfirmation,
-      reviewWidgetImages,
       selectLightningAsset,
       evmRpcUrls,
     })

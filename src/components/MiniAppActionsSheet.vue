@@ -104,6 +104,9 @@ const actions = computed(() => {
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
       : []),
+    ...(context.stoppedPermissions
+      ? [{ testid: 'mini-app-share-again-action', label: i18n.t('Share your addresses again'), icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUsePermissions }]
+      : []),
     ...(context.sharesAddresses
       ? [{ testid: 'mini-app-stop-sharing-action', label: i18n.t('Stop sharing your addresses'), icon: RemoveIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onStopSharing }]
       : []),

@@ -83,14 +83,12 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
   try {
     const { MiniAppHost } = await import('@/composables/useMiniAppHost')
     const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
-    const { reviewWidgetImages } = await import('@/lib/mini-app-widget-review')
 
     const host = MiniAppHost.reconnect(InAppBrowser, {
       url: session.url,
       title: session.title,
       evmRpcUrls: session.evmRpcUrls,
       requestUserConfirmation,
-      reviewWidgetImages,
       selectLightningAsset,
     }, session.chainId)
 

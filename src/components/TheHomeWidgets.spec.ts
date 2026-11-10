@@ -11,7 +11,7 @@ const { background, confirm, launchMiniApp, showModal, store, visible } = await 
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), openImageReview: vi.fn(), grantPermissions: vi.fn(), missingPermissions: vi.fn(() => ['addresses']), widgetName: vi.fn(() => 'Swap status'), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), openImageReview: vi.fn(), grantPermissions: vi.fn(), askablePermissions: vi.fn(() => ['addresses']), widgetName: vi.fn(() => 'Swap status'), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 

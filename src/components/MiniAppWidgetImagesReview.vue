@@ -1,31 +1,21 @@
 <script setup lang="ts">
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { WIDGET_GRID_CLASS } from '@/lib/mini-app-widgets'
 import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 
 const widgets = useMiniAppWidgets()
-const loading = ref(false)
 
 const review = computed(() => widgets.imageReview)
-const previews = computed(() => {
-  const open = review.value
-  if (!open)
-    return []
-  return widgets.pendingImageKeys(open.scope, open.widgetId).flatMap((key) => {
-    const view = widgets.reviewView(open.scope, open.widgetId, key)
-    return view ? [{ key, view }] : []
-  })
-})
-const app = computed(() => previews.value[0]?.view)
+const previews = computed(() => review.value?.keys.map(key => ({ key, view: widgets.reviewView(key)! })) ?? [])
+const app = computed(() => widgets.views.find(view => view.scope === review.value?.scope && view.widgetId === review.value?.widgetId))
+const canAccept = computed(() => !widgets.reviewLoading && previews.value.some(preview => preview.view.background))
 
-watch(review, async (open) => {
-  if (!open)
-    return
-  loading.value = true
-  await widgets.loadReviewImages(open.scope, open.widgetId).finally(() => loading.value = false)
+watch(review, (open) => {
+  if (open)
+    void widgets.loadReviewImages()
 }, { immediate: true })
 
 function onOpenChange(open: boolean) {
@@ -72,7 +62,7 @@ function onOpenChange(open: boolean) {
               <div :data-testid="`review-preview-${preview.key}`" class="contents">
                 <MiniAppWidget :view="preview.view" preview />
               </div>
-              <p v-if="!loading && !preview.view.background" :data-testid="`review-failed-${preview.key}`" class="col-span-4 -mt-1 text-xs text-space/60">
+              <p v-if="!widgets.reviewLoading && !preview.view.background" :data-testid="`review-failed-${preview.key}`" class="col-span-4 -mt-1 text-xs text-space/60">
                 {{ $t('This image could not be checked, so the card stays plain with it.') }}
               </p>
             </template>
@@ -83,7 +73,8 @@ function onOpenChange(open: boolean) {
           <button
             type="button"
             data-testid="review-approve"
-            class="w-full rounded-full bg-sky py-3 text-base font-bold text-white transition-colors active:bg-sky/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky focus-visible:ring-offset-2"
+            :disabled="!canAccept"
+            class="w-full rounded-full bg-sky py-3 text-base font-bold text-white transition-colors active:bg-sky/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky focus-visible:ring-offset-2"
             @click="widgets.answerImageReview(true)"
           >
             {{ previews.length > 1 ? $t('Show these images') : $t('Show this image') }}

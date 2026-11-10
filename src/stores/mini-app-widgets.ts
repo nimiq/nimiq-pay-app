@@ -20,11 +20,12 @@ import type {
 import type { NetworkMode } from '@/lib/network'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import nimiqPayIcon from '@/assets/graphics/nimiq-pay.png'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
+import { isImageReviewOpen } from '@/lib/mini-app-active'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { createWidgetChain, evaluateTrigger, isBalanceLive, needsLookup, resolveLiveValue, resolvePriceHistory } from '@/lib/mini-app-widget-chain'
@@ -54,6 +55,8 @@ export interface HomeWidget {
   pendingImages?: Record<string, WidgetImage>
   /** What the user allowed it to send, kept from install: a file cannot widen it. */
   grants?: WidgetPermission[]
+  /** What the user stopped sending, which is not offered to them again unasked. */
+  stopped?: WidgetPermission[]
   /** Sent to its refresh URL: set by the Mini App, never shown or read back. */
   token?: string
   /** Why refreshes stopped, until the Mini App sends a state or a token. */
@@ -108,6 +111,7 @@ export interface WidgetView {
   sharesAddresses?: boolean
   pendingImages?: boolean
   pendingPermissions?: boolean
+  stoppedPermissions?: boolean
   background?: { kind: 'image', src: string } | { kind: 'chart', chart: NonNullable<WidgetView['chart']> }
 }
 
@@ -125,6 +129,18 @@ const MIN_FORCED_REFRESH_GAP_MS = 60_000
 const DOWNLOADS_AT_ONCE = 6
 const IMAGE_RETRY_MS = 5 * 60_000
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
+
+function ungranted(widget: HomeWidget): WidgetPermission[] {
+  return (widget.definition.permissions ?? []).filter(permission => !widget.grants?.includes(permission))
+}
+
+function waitingPermissions(widget: HomeWidget): WidgetPermission[] {
+  return ungranted(widget).filter(permission => !widget.stopped?.includes(permission))
+}
+
+function changedImageKeys(approved: WidgetDefinition['images'], offered: WidgetDefinition['images']): string[] {
+  return Object.entries(offered ?? {}).filter(([key, image]) => approved?.[key]?.sha256 !== image.sha256).map(([key]) => key)
+}
 
 /** One download per URL: anyone can name the same hash with a URL that fails. */
 function uniqueImages<T extends { image: WidgetImage }>(pinned: T[]): T[] {
@@ -217,8 +233,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const previews = reactive(new Map<string, string>())
   // Downloaded for the user to look at before approving, and kept only if they do.
   const reviews = reactive(new Map<string, string>())
-  const imageReview = ref<{ scope: string, widgetId: string, offered: Record<string, WidgetImage> }>()
-  let answerReview: ((approved: boolean) => void) | undefined
+  const imageReview = shallowRef<{ scope: string, widgetId: string, offered: Record<string, WidgetImage>, keys: string[], answer: (taken: boolean) => void }>()
+  const reviewLoading = ref(false)
+  let reviewSession = 0
   const savedImages = new Set<string>()
   const refusedImages = new Set<string>()
   let previewSession = 0
@@ -270,17 +287,23 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return permissions.filter(permission => definition.permissions?.includes(permission))
   }
 
+  function askablePermissions(scope: string, widgetId: string): WidgetPermission[] {
+    const widget = find(scope, widgetId)
+    return widget ? ungranted(widget) : []
+  }
+
+  /** The ones the Mini App added since the user last decided, as opposed to ones the user stopped. */
   function missingPermissions(scope: string, widgetId: string): WidgetPermission[] {
     const widget = find(scope, widgetId)
-    return widget ? (widget.definition.permissions ?? []).filter(permission => !widget.grants?.includes(permission)) : []
+    return widget ? waitingPermissions(widget) : []
   }
 
   function grantPermissions(scope: string, widgetId: string, permissions: WidgetPermission[]) {
-    patch(scope, widgetId, w => ({ grants: grantable(w.definition, [...new Set([...(w.grants ?? []), ...permissions])]) }))
+    patch(scope, widgetId, w => ({ grants: grantable(w.definition, [...new Set([...(w.grants ?? []), ...permissions])]), stopped: w.stopped?.filter(p => !permissions.includes(p)) }))
   }
 
   function revokePermissions(scope: string, widgetId: string) {
-    patch(scope, widgetId, () => ({ grants: [] }))
+    patch(scope, widgetId, w => ({ grants: [], stopped: [...new Set([...(w.stopped ?? []), ...(w.grants ?? [])])] }))
   }
 
   function add(scope: string, definition: WidgetDefinition, grants: WidgetPermission[] = []): boolean {
@@ -472,7 +495,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       reconnect: widget.halted === 'reconnect',
       sharesAddresses: !!widget.grants?.includes('addresses'),
       pendingImages: !!widget.pendingImages,
-      pendingPermissions: !!widget.definition.permissions?.some(permission => !widget.grants?.includes(permission)),
+      pendingPermissions: waitingPermissions(widget).length > 0,
+      stoppedPermissions: ungranted(widget).some(permission => widget.stopped?.includes(permission)),
     }
   }
 
@@ -493,6 +517,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       sharesAddresses: false,
       pendingImages: false,
       pendingPermissions: false,
+      stoppedPermissions: false,
     }
   }
 
@@ -659,73 +684,83 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return !!find(scope, widgetId)?.pendingImages
   }
 
-  function pendingImageKeys(scope: string, widgetId: string): string[] {
-    const widget = find(scope, widgetId)
-    return Object.entries(widget?.pendingImages ?? {}).filter(([key, image]) => widget!.definition.images?.[key]?.sha256 !== image.sha256).map(([key]) => key)
-  }
-
   function widgetName(scope: string, widgetId: string): string {
     const widget = find(scope, widgetId)
     return widget ? localizeDefinition(widget.definition, useApp().language).name : widgetId
   }
 
-  async function loadReviewImages(scope: string, widgetId: string) {
-    const widget = find(scope, widgetId)
-    const wanted = pendingImageKeys(scope, widgetId).map(key => ({ image: widget!.pendingImages![key]!, scope }))
-    await inTurns(uniqueImages(wanted), async ({ image }) => {
-      if (images.has(image.sha256) || reviews.has(image.sha256))
+  async function loadReviewImages() {
+    const review = imageReview.value
+    if (!review)
+      return
+    const session = reviewSession
+    reviewLoading.value = true
+    await inTurns(uniqueImages(review.keys.map(key => ({ image: review.offered[key]!, scope: review.scope }))), async ({ image, scope }) => {
+      if (session !== reviewSession || images.has(image.sha256) || reviews.has(image.sha256))
         return
       const src = await downloadImage(image, scope)
-      if (src)
+      if (src && session === reviewSession)
         reviews.set(image.sha256, src)
+    })
+    if (session === reviewSession)
+      reviewLoading.value = false
+  }
+
+  /** The widget in its demo state with one of the images under review, at its size on Home; an icon draws no background, so the next size up. */
+  function reviewView(key: string): WidgetView | undefined {
+    const review = imageReview.value
+    const widget = review && find(review.scope, review.widgetId)
+    if (!review || !widget || !review.offered[key])
+      return undefined
+    const size = widget.size === 'icon' ? widget.definition.sizes.find(s => s !== 'icon') ?? 'small' : widget.size
+    const shown = { ...widget, size, definition: { ...widget.definition, images: review.offered } }
+    return { ...toView(shown, now.value, { ...previewContent(widget.definition), background: { image: key } }), key: `${widgetKey(review.scope, review.widgetId)}#${key}` }
+  }
+
+  /** Resolves with whether the user took any of the new images, or undefined when no review could open. */
+  function openImageReview(scope: string, widgetId: string): Promise<boolean | undefined> {
+    const widget = find(scope, widgetId)
+    const offered = widget?.pendingImages
+    if (imageReview.value || !widget || !offered)
+      return Promise.resolve(undefined)
+    return new Promise((answer) => {
+      imageReview.value = { scope, widgetId, offered, keys: changedImageKeys(widget.definition.images, offered), answer }
+      isImageReviewOpen.value = true
     })
   }
 
-  /** The widget in its demo state with one of its new images, at its size on Home; an icon draws no background, so the next size up. */
-  function reviewView(scope: string, widgetId: string, key: string): WidgetView | undefined {
-    const widget = find(scope, widgetId)
-    if (!widget?.pendingImages?.[key])
-      return undefined
-    const size = widget.size === 'icon' ? widget.definition.sizes.find(s => s !== 'icon') ?? 'small' : widget.size
-    const shown = { ...widget, size, definition: { ...widget.definition, images: widget.pendingImages } }
-    return { ...toView(shown, Date.now(), { ...previewContent(widget.definition), background: { image: key } }), key: `${widgetKey(scope, widgetId)}#${key}` }
-  }
-
-  /** Resolves with whether the user took the new images. One review at a time. */
-  function openImageReview(scope: string, widgetId: string): Promise<boolean> {
-    const offered = find(scope, widgetId)?.pendingImages
-    if (imageReview.value || !offered)
-      return Promise.resolve(false)
-    imageReview.value = { scope, widgetId, offered }
-    return new Promise(resolve => answerReview = resolve)
-  }
-
+  /** Takes only what the user saw: an image that could not be shown stays waiting, so it is never downloaded unseen. */
   function answerImageReview(approved: boolean) {
     const review = imageReview.value
-    const answer = answerReview
-    imageReview.value = undefined
-    answerReview = undefined
     if (!review)
       return
-    const widget = find(review.scope, review.widgetId)
-    // Only what the user looked at: the file may have changed again while the review was open.
-    const taken = approved && !!widget?.pendingImages && JSON.stringify(widget.pendingImages) === JSON.stringify(review.offered)
-    if (taken) {
-      for (const { sha256 } of Object.values(review.offered)) {
-        const src = reviews.get(sha256)
-        if (src)
-          images.set(sha256, src)
-      }
-      patch(review.scope, review.widgetId, w => ({ definition: { ...w.definition, images: review.offered }, pendingImages: undefined }))
+    imageReview.value = undefined
+    isImageReviewOpen.value = false
+    reviewSession++
+    reviewLoading.value = false
+    const seen = approved ? review.keys.filter(key => reviews.has(review.offered[key]!.sha256)) : []
+    if (seen.length) {
+      seen.forEach(key => images.set(review.offered[key]!.sha256, reviews.get(review.offered[key]!.sha256)!))
+      patch(review.scope, review.widgetId, (w) => {
+        const unseen = review.keys.filter(key => !seen.includes(key))
+        const taken = Object.fromEntries(Object.entries(review.offered).flatMap(([key, image]): [string, WidgetImage][] => {
+          if (!unseen.includes(key))
+            return [[key, image]]
+          const approved = w.definition.images?.[key]
+          return approved ? [[key, approved]] : []
+        }))
+        const waiting = w.pendingImages && changedImageKeys(taken, w.pendingImages).length ? w.pendingImages : undefined
+        return { definition: { ...w.definition, images: taken }, pendingImages: waiting }
+      })
     }
     reviews.clear()
-    answer?.(taken)
+    review.answer(seen.length > 0)
   }
 
   /** New or changed images wait for approval. One the file dropped goes at once, since that shows nothing new. */
   function checkedImages(widget: HomeWidget, offered: WidgetDefinition['images']) {
     const approved = widget.definition.images
-    return Object.entries(offered ?? {}).some(([key, image]) => approved?.[key]?.sha256 !== image.sha256)
+    return changedImageKeys(approved, offered).length
       ? { images: approved, pendingImages: offered }
       : { images: offered, pendingImages: undefined }
   }
@@ -969,9 +1004,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     catalogScopes,
     setToken,
     hasPendingImages,
-    pendingImageKeys,
     widgetName,
     imageReview,
+    reviewLoading,
     loadReviewImages,
     reviewView,
     openImageReview,
@@ -979,6 +1014,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     loadPreviewImages,
     clearPreviewImages,
     missingPermissions,
+    askablePermissions,
     grantPermissions,
     revokePermissions,
     consentFor,

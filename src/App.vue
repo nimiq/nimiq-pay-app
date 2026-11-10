@@ -11,9 +11,8 @@ import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/v
 import { onLongPress } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import MiniAppWidgetImagesReview from '@/components/MiniAppWidgetImagesReview.vue'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
@@ -21,6 +20,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { trackCurrentAppOpen } from '@/lib/analytics'
 import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { isDev } from '@/lib/index'
+import { isImageReviewOpen } from '@/lib/mini-app-active'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -28,6 +28,8 @@ import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
+// Rarely shown, so it stays out of the start-up bundle.
+const MiniAppWidgetImagesReview = defineAsyncComponent(() => import('@/components/MiniAppWidgetImagesReview.vue'))
 
 const devFabRef = ref<HTMLElement | null>(null)
 const isDevFabHidden = ref(false)
@@ -179,7 +181,7 @@ App.addListener('resume', async () => {
   <IonApp>
     <IonRouterOutlet />
     <NetworkOverrideBadge />
-    <MiniAppWidgetImagesReview />
+    <MiniAppWidgetImagesReview v-if="isImageReviewOpen" />
     <!-- DEV -->
     <!-- Hidden in mock mode (clean screenshots); DevModal stays reachable via the menu header long-press -->
     <IonFab v-if="isDev && !isDevFabHidden && !isMockEnabled" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">

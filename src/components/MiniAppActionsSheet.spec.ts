@@ -166,6 +166,13 @@ describe('miniAppActionsSheet', () => {
       expect(updates.querySelector(`[data-testid="${testid}"]`)).toBeNull()
   })
 
+  it('offers to share addresses again after the user stopped, among the usual actions', async () => {
+    await mountSheet({ app, removable: false, stoppedPermissions: true, widget: { size: 'small', sizes: ['small'] } })
+    expect(action('mini-app-updates')).toBeNull()
+    action('mini-app-share-again-action')!.click()
+    expect(wrapper!.emitted('usePermissions')).toHaveLength(1)
+  })
+
   it('has no updates block when nothing waits', async () => {
     await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
     expect(action('mini-app-updates')).toBeNull()
