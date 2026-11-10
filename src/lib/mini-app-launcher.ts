@@ -7,7 +7,7 @@ import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
-import { isMiniAppActive, MiniAppHost } from '@/composables/useMiniAppHost'
+import { isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from '@/composables/useMiniAppHost'
 import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
@@ -34,6 +34,7 @@ const evmRpcUrls: Record<string, string> = {
 const NIMIQ_RPC_URL = isTestnet ? 'https://rpc.testnet.nimiqwatch.com' : 'https://rpc.nimiqwatch.com'
 
 const LAUNCH_FAILED_TOAST = 'Could not open the Mini App'
+const IOS_PRESENT_TRANSITION_MS = 600
 
 export const openingMiniAppUrl = ref<string | null>(null)
 
@@ -139,13 +140,23 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   let watchdog: ReturnType<typeof setTimeout> | null = null
   let guardCleared = false
   let openCalled = false
+  // Settles when the guard clears: true once the webview is on screen, false if the
+  // launch failed or closed first.
+  let settlePresentation!: (presented: boolean) => void
+  const presentation = new Promise<boolean>(resolve => settlePresentation = resolve)
 
   // iOS resolves `openWebView` before the present animation finishes, so the guard
   // must be held until the webview confirms it loaded / failed / closed.
-  const clearGuard = () => {
+  const clearGuard = (presented = false) => {
     if (guardCleared)
       return
     guardCleared = true
+    // iOS emits browserPageLoaded as the animated present starts and has no event for
+    // its end. UIKit drops a sheet presented mid-transition, so wait the animation out.
+    if (presented && Capacitor.getPlatform() === 'ios')
+      setTimeout(settlePresentation, IOS_PRESENT_TRANSITION_MS, true)
+    else
+      settlePresentation(presented)
     openingMiniAppUrl.value = null
     if (showLoadingToast)
       toast.clearToast()
@@ -189,11 +200,16 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       await until(isMiniAppActive).toBe(false, { timeout: 3000 })
     }
 
+    // The provider runs at documentStart, but Android shows the webview dialog only
+    // after the page loads. A native sheet opened before that ends up under the
+    // later-shown webview window, so hold sheets until the webview is presented.
+    // The deadline defaults to the request's arrival, not the end of the wait, so a
+    // held sheet still closes when the Mini App's request times out.
     host = new MiniAppHost(InAppBrowser, {
       url: targetUrl,
       title: appTitle,
-      requestUserConfirmation,
-      selectLightningAsset,
+      requestUserConfirmation: async (request, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await presentation && requestUserConfirmation(request, deadline),
+      selectLightningAsset: async (app, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await presentation ? selectLightningAsset(app, deadline) : undefined,
       evmRpcUrls,
     })
 
@@ -219,6 +235,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       if (h === null)
         return
       handle = null
+      // clearGuard is a no-op after presentation; this drops sheets still in the iOS wait.
+      settlePresentation(false)
       logger.log('Mini-app webview closed, destroying host')
       trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
       await hostRef.destroy()
@@ -228,13 +246,13 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     })
     // "Presented" = openWebView resolved AND browserPageLoaded fired. Android
     // resolves at show() (its pageLoaded event reaches JS earlier); iOS resolves at
-    // webview creation (pageLoaded fires after presentView). Requiring both clears
-    // the guard at actual presentation on both platforms.
+    // webview creation (pageLoaded fires once presentView has started). Requiring both
+    // clears the guard once the webview is shown on Android and presenting on iOS.
     let opened = false
     let pageLoaded = false
     const clearGuardWhenPresented = () => {
       if (opened && pageLoaded)
-        clearGuard()
+        clearGuard(true)
     }
     pageLoadedHandle = await InAppBrowser.addListener('browserPageLoaded', () => {
       pageLoaded = true

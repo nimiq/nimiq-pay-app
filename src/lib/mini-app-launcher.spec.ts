@@ -21,6 +21,7 @@ const {
   close,
   getDeviceInfo,
   getFaviconUrl,
+  getPlatform,
   hostDestroy,
   loggerError,
   loggerLog,
@@ -33,6 +34,7 @@ const {
   trackDAppOpened,
 } = vi.hoisted(() => ({
   getDeviceInfo: vi.fn(),
+  getPlatform: vi.fn(() => 'ios'),
   openWebView: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
   close: vi.fn(() => Promise.resolve()),
@@ -53,7 +55,7 @@ const {
 }))
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => false },
+  Capacitor: { getPlatform, isNativePlatform: () => false },
   CapacitorHttp: { get: capacitorHttpGet },
 }))
 
@@ -97,6 +99,7 @@ vi.mock('@/composables/useMiniAppHost', async () => {
   const { ref } = await import('vue')
   return {
     isMiniAppActive: ref(false),
+    MINI_APP_REQUEST_TIMEOUT_MS: 120_000,
     MiniAppHost: class {
       constructor(...args: unknown[]) {
         MiniAppHostCtor(...args)
@@ -140,6 +143,7 @@ async function importLauncher() {
 describe('mini-app-launcher', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    getPlatform.mockReturnValue('ios')
     getDeviceInfo.mockResolvedValue({})
     openWebView.mockReset()
     openWebView.mockImplementation(() => Promise.resolve())
@@ -562,6 +566,182 @@ describe('mini-app-launcher', () => {
     deferred.resolve()
     await pending
     expect(trackDAppOpened).not.toHaveBeenCalled()
+  })
+
+  it('holds confirmation sheets until the webview is presented', async () => {
+    getPlatform.mockReturnValue('android')
+    const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
+    vi.mocked(requestUserConfirmation).mockClear()
+    vi.mocked(selectLightningAsset).mockClear()
+    const { launchMiniApp } = await importLauncher()
+    const deferred = createDeferred<void>()
+    openWebView.mockImplementationOnce(() => deferred.promise)
+    let pageLoadedHandler: (() => void) | undefined
+    addListener.mockImplementation(((event: string, handler: () => void) => {
+      if (event === 'browserPageLoaded')
+        pageLoadedHandler = handler
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
+
+    const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+    await flushPromises()
+    const [, config] = MiniAppHostCtor.mock.calls[0] as [unknown, {
+      requestUserConfirmation: (request: unknown, deadline?: number) => Promise<boolean>
+      selectLightningAsset: (app: unknown, deadline?: number) => Promise<unknown>
+    }]
+
+    // The provider is live from documentStart, so a connect can arrive before the webview shows.
+    const request = { type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' }
+    const confirmation = config.requestUserConfirmation(request, 123)
+    const assetSelection = config.selectLightningAsset({ url: 'https://app.uniswap.org/', name: 'Uniswap' }, 456)
+    await flushPromises()
+    expect(requestUserConfirmation).not.toHaveBeenCalled()
+
+    pageLoadedHandler?.()
+    await flushPromises()
+    expect(requestUserConfirmation).not.toHaveBeenCalled()
+
+    deferred.resolve()
+    await pending
+    expect(await confirmation).toBe(true)
+    expect(await assetSelection).toBe('NIM')
+    expect(requestUserConfirmation).toHaveBeenCalledWith(request, 123)
+    expect(selectLightningAsset).toHaveBeenCalledWith({ url: 'https://app.uniswap.org/', name: 'Uniswap' }, 456)
+  })
+
+  it('keeps the request deadline of a held confirmation sheet', async () => {
+    vi.useFakeTimers({ now: 1_000_000 })
+    try {
+      const { requestUserConfirmation } = await import('@/lib/mini-app-confirmation')
+      vi.mocked(requestUserConfirmation).mockClear()
+      const { launchMiniApp } = await importLauncher()
+      const deferred = createDeferred<void>()
+      openWebView.mockImplementationOnce(() => deferred.promise)
+      let pageLoadedHandler: (() => void) | undefined
+      addListener.mockImplementation(((event: string, handler: () => void) => {
+        if (event === 'browserPageLoaded')
+          pageLoadedHandler = handler
+        return Promise.resolve({ remove: vi.fn() })
+      }) as never)
+
+      const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+      await vi.advanceTimersByTimeAsync(0)
+      const [, config] = MiniAppHostCtor.mock.calls[0] as [unknown, {
+        requestUserConfirmation: (request: unknown) => Promise<boolean>
+      }]
+      const request = { type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' }
+      const confirmation = config.requestUserConfirmation(request)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      pageLoadedHandler?.()
+      deferred.resolve()
+      await pending
+      await vi.advanceTimersByTimeAsync(600)
+      await confirmation
+      expect(requestUserConfirmation).toHaveBeenCalledWith(request, 1_000_000 + 120_000)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('releases held sheets on iOS only after the present transition', async () => {
+    vi.useFakeTimers()
+    try {
+      const { requestUserConfirmation } = await import('@/lib/mini-app-confirmation')
+      vi.mocked(requestUserConfirmation).mockClear()
+      const { launchMiniApp } = await importLauncher()
+      let pageLoadedHandler: (() => void) | undefined
+      addListener.mockImplementation(((event: string, handler: () => void) => {
+        if (event === 'browserPageLoaded')
+          pageLoadedHandler = handler
+        return Promise.resolve({ remove: vi.fn() })
+      }) as never)
+
+      const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+      await vi.advanceTimersByTimeAsync(0)
+      const [, config] = MiniAppHostCtor.mock.calls.at(-1) as [unknown, {
+        requestUserConfirmation: (request: unknown, deadline?: number) => Promise<boolean>
+      }]
+      const request = { type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' }
+      const confirmation = config.requestUserConfirmation(request, 123)
+
+      pageLoadedHandler?.()
+      await pending
+      await vi.advanceTimersByTimeAsync(599)
+      expect(requestUserConfirmation).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(await confirmation).toBe(true)
+      expect(requestUserConfirmation).toHaveBeenCalledWith(request, 123)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rejects a held sheet when the webview closes during the iOS present transition', async () => {
+    vi.useFakeTimers()
+    try {
+      const { requestUserConfirmation } = await import('@/lib/mini-app-confirmation')
+      vi.mocked(requestUserConfirmation).mockClear()
+      const { launchMiniApp } = await importLauncher()
+      const handlers: Record<string, () => unknown> = {}
+      addListener.mockImplementation(((event: string, handler: () => unknown) => {
+        handlers[event] = handler
+        return Promise.resolve({ remove: vi.fn() })
+      }) as never)
+
+      const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+      await vi.advanceTimersByTimeAsync(0)
+      const [, config] = MiniAppHostCtor.mock.calls.at(-1) as [unknown, {
+        requestUserConfirmation: (request: unknown) => Promise<boolean>
+      }]
+      const confirmation = config.requestUserConfirmation({ type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' })
+
+      handlers.browserPageLoaded?.()
+      await pending
+      await handlers.closeEvent?.()
+      await vi.advanceTimersByTimeAsync(600)
+
+      expect(await confirmation).toBe(false)
+      expect(requestUserConfirmation).not.toHaveBeenCalled()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rejects held confirmation sheets when the launch fails before presentation', async () => {
+    const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
+    vi.mocked(requestUserConfirmation).mockClear()
+    vi.mocked(selectLightningAsset).mockClear()
+    const { launchMiniApp } = await importLauncher()
+    const deferred = createDeferred<void>()
+    openWebView.mockImplementationOnce(() => deferred.promise)
+    let errorHandler: (() => void) | undefined
+    addListener.mockImplementation(((event: string, handler: () => void) => {
+      if (event === 'pageLoadError')
+        errorHandler = handler
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
+
+    const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+    await flushPromises()
+    const [, config] = MiniAppHostCtor.mock.calls[0] as [unknown, {
+      requestUserConfirmation: (request: unknown) => Promise<boolean>
+      selectLightningAsset: (app: unknown) => Promise<unknown>
+    }]
+    const confirmation = config.requestUserConfirmation({ type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' })
+    const assetSelection = config.selectLightningAsset({ url: 'https://app.uniswap.org/', name: 'Uniswap' })
+
+    errorHandler?.()
+    deferred.resolve()
+    await pending
+    expect(await confirmation).toBe(false)
+    expect(await assetSelection).toBeUndefined()
+    expect(requestUserConfirmation).not.toHaveBeenCalled()
+    expect(selectLightningAsset).not.toHaveBeenCalled()
   })
 
   it('closes the failed dialog when openWebView rejects', async () => {
