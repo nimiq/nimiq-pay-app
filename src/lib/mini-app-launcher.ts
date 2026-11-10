@@ -185,8 +185,13 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
         clearPersistedSession()
       else if (pendingSession)
         await clearSession()
-      await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
-      await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+      // close() targets the active webview, so an open popup takes a second close to reach the Mini App.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
+        await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+        if (!isMiniAppActive.value)
+          break
+      }
     }
 
     host = new MiniAppHost(InAppBrowser, {

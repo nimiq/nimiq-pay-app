@@ -314,6 +314,38 @@ describe('mini-app-launcher', () => {
     expect(removeCloseListener).toHaveBeenCalledTimes(1)
   })
 
+  it('destroys the previous host when a new launch arrives with a popup open', async () => {
+    const { launchMiniApp } = await importLauncher()
+    const { isMiniAppActive } = await import('@/composables/useMiniAppHost')
+    const handlers: Record<string, (event?: unknown) => unknown> = {}
+    addListener.mockImplementation(((event: string, handler: (event?: unknown) => unknown) => {
+      handlers[event] ??= handler
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
+    hostDestroy.mockImplementation(() => {
+      isMiniAppActive.value = false
+      return Promise.resolve()
+    })
+
+    await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+    handlers.browserPageLoaded?.()
+    await flushPromises()
+    isMiniAppActive.value = true
+
+    // Unscoped close() hits the active webview: the popup first, then the Mini App.
+    close.mockImplementationOnce(() => Promise.resolve(handlers.closeEvent?.({ id: 'popup-webview', url: 'https://accounts.example/' })) as never)
+    close.mockImplementationOnce(() => Promise.resolve(handlers.closeEvent?.({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })) as never)
+
+    vi.useFakeTimers()
+    const launch = launchMiniApp({ url: 'https://other.example', source: 'deeplink' })
+    await vi.advanceTimersByTimeAsync(3000)
+    vi.useRealTimers()
+    await launch
+
+    expect(hostDestroy).toHaveBeenCalledTimes(1)
+    isMiniAppActive.value = false
+  })
+
   it('destroys the host on a closeEvent without an id', async () => {
     const { launchMiniApp } = await importLauncher()
     let closeHandler: CloseHandler | undefined
