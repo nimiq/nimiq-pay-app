@@ -151,6 +151,26 @@ describe('miniAppActionsSheet', () => {
     expect(wrapper!.emitted('useNewImages')).toHaveLength(1)
   })
 
+  it('offers a permission waiting for the user, and emits when chosen', async () => {
+    await mountSheet({ app, removable: false, newPermissions: true, widget: { size: 'small', sizes: ['small'] } })
+    action('mini-app-new-permissions-action')!.click()
+    expect(wrapper!.emitted('usePermissions')).toHaveLength(1)
+  })
+
+  it('groups what waits for the user apart from the usual actions', async () => {
+    await mountSheet({ app, removable: false, shareable: true, newName: 'New', newImages: true, newPermissions: true, sharesAddresses: true, widget: { size: 'small', sizes: ['small'] } })
+    const updates = action('mini-app-updates')!
+    for (const testid of ['mini-app-use-new-name-action', 'mini-app-new-images-action', 'mini-app-new-permissions-action'])
+      expect(updates.querySelector(`[data-testid="${testid}"]`)).not.toBeNull()
+    for (const testid of ['mini-app-share-action', 'mini-app-stop-sharing-action', 'mini-app-remove-widget-action'])
+      expect(updates.querySelector(`[data-testid="${testid}"]`)).toBeNull()
+  })
+
+  it('has no updates block when nothing waits', async () => {
+    await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
+    expect(action('mini-app-updates')).toBeNull()
+  })
+
   it('shows no Size row for a single-size widget, but still offers Remove', async () => {
     await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
     expect(document.body.querySelector('[data-testid="mini-app-widget-size"]')).toBeNull()

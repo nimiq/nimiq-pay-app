@@ -960,6 +960,16 @@ describe('permissions', () => {
     expect(store.views[0]!.sharesAddresses).toBe(false)
   })
 
+  it('says when a permission waits for the user', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }))
+    expect(store.views[0]!.pendingPermissions).toBe(false)
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [sharing] } })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
+    expect(store.views[0]!.pendingPermissions).toBe(true)
+  })
+
   it('does not offer revoking on a blocked card', async () => {
     const store = await setup()
     store.add(SCOPE, sharing, ['addresses'])
@@ -1039,7 +1049,7 @@ describe('images', () => {
     expect(fetchWidgetImage).not.toHaveBeenCalled()
     expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
     expect(store.views[0]!.pendingImages).toBe(true)
-    expect(store.hasPendingImages(SCOPE, 'swap')).toBe(true)
+    expect(store.pendingImageKeys(SCOPE, 'swap')).toEqual(['hero'])
   })
 
   it('swaps to the new image once approved, and frees the old one', async () => {
@@ -1047,7 +1057,9 @@ describe('images', () => {
     store.add(SCOPE, old)
     await flushPromises()
     await recheck(store, next)
-    store.approveImages(SCOPE, 'swap')
+    const answer = store.openImageReview(SCOPE, 'swap')
+    store.answerImageReview(true)
+    await answer
     await flushPromises()
     await flushPromises()
     expect(fetchWidgetImage).toHaveBeenCalledWith({ url: url('new'), sha256: NEW }, SCOPE)
@@ -1297,6 +1309,78 @@ describe('images', () => {
     expect(fetchWidgetImage).not.toHaveBeenCalled()
     expect(memory.has(IMAGE_KEY(OLD))).toBe(true)
     expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+  })
+
+  describe('reviewing new images', () => {
+    const THIRD = 'c'.repeat(64)
+    const both = pictured({ hero: { url: url('new'), sha256: NEW }, side: { url: url('side'), sha256: THIRD } })
+    const reviewing = async () => {
+      const store = await setup()
+      store.add(SCOPE, old)
+      await flushPromises()
+      await recheck(store, { ...both, demo: { value: { text: 'Demo' }, tone: 'neutral', rows: [] } })
+      fetchWidgetImage.mockClear()
+      return store
+    }
+
+    it('lists every new or changed image, and downloads them for review without storing them', async () => {
+      const store = await reviewing()
+      expect(store.pendingImageKeys(SCOPE, 'swap')).toEqual(['hero', 'side'])
+      await store.loadReviewImages(SCOPE, 'swap')
+      expect(fetchWidgetImage).toHaveBeenCalledTimes(2)
+      expect(memory.has(IMAGE_KEY(NEW))).toBe(false)
+      expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+    })
+
+    it('shows each one in the widget\'s demo state, at its size on Home', async () => {
+      const store = await reviewing()
+      await store.loadReviewImages(SCOPE, 'swap')
+      const side = store.reviewView(SCOPE, 'swap', 'side')!
+      expect(side.value).toEqual({ kind: 'text', text: 'Demo' })
+      expect(side.size).toBe(store.views[0]!.size)
+      expect(side.background).toEqual({ kind: 'image', src: `data:image/png;base64,${THIRD}` })
+    })
+
+    it('shows the size above an icon, which draws no background', async () => {
+      const store = await reviewing()
+      store.setSize(SCOPE, 'swap', 'icon')
+      expect(store.reviewView(SCOPE, 'swap', 'hero')!.size).not.toBe('icon')
+    })
+
+    it('opens one review at a time, and on yes keeps exactly the bytes it showed', async () => {
+      const store = await reviewing()
+      const answer = store.openImageReview(SCOPE, 'swap')
+      expect(store.imageReview).toMatchObject({ scope: SCOPE, widgetId: 'swap' })
+      expect(await store.openImageReview(SCOPE, 'swap')).toBe(false)
+      await store.loadReviewImages(SCOPE, 'swap')
+      fetchWidgetImage.mockClear()
+      store.answerImageReview(true)
+      expect(await answer).toBe(true)
+      await flushPromises()
+      await flushPromises()
+      expect(fetchWidgetImage).not.toHaveBeenCalled()
+      expect(memory.has(IMAGE_KEY(NEW))).toBe(true)
+      expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${NEW}` })
+      expect(store.imageReview).toBeUndefined()
+    })
+
+    it('keeps the approved images on no', async () => {
+      const store = await reviewing()
+      const answer = store.openImageReview(SCOPE, 'swap')
+      store.answerImageReview(false)
+      expect(await answer).toBe(false)
+      expect(store.views[0]!.pendingImages).toBe(true)
+    })
+
+    it('applies nothing when the file changed again while the review was open', async () => {
+      const store = await reviewing()
+      const answer = store.openImageReview(SCOPE, 'swap')
+      fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [pictured({ hero: { url: url('later'), sha256: 'd'.repeat(64) } })] } })
+      await store.tick({ chain: fakeChain(), at: NOW + 50 * 3600_000 })
+      store.answerImageReview(true)
+      expect(await answer).toBe(false)
+      expect(store.views[0]!.background).toEqual({ kind: 'image', src: `data:image/png;base64,${OLD}` })
+    })
   })
 
   it('draws a chart background, with no download', async () => {

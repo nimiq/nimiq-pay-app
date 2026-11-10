@@ -392,12 +392,6 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         '• Stop any time from its menu',
       ], 'Allow')
 
-    case 'widgetImages':
-      return confirmWidgetChange(request.url, `Let ${request.widgetName} show new images?`, [
-        `• Downloaded once from ${new URL(request.url).hostname}`,
-        '• Until then it keeps the images you have',
-      ], 'Show them')
-
     case 'widgetName': {
       const result = await ExtendedDialog.sheet({
         title: `Show ${request.address} as ${request.to}?`,

@@ -757,9 +757,10 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     await vi.waitFor(() => expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-access' })))
     useLocalWallet().localAddress = { toUserFriendlyAddress: () => 'NQ22 NEW OWNER', toHex: () => 'new-hex' }
     const newWalletRequest = handleRequest(request)
-    await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
+    // Sheets come one at a time, so the new wallet's prompt waits for the old one's answer.
     approveOldWallet(true)
     await expect(oldWalletRequest).rejects.toMatchObject({ type: 'NETWORK_ERROR' })
+    await expect(newWalletRequest).resolves.toMatchObject({ hash: 'payment-hash', swapId: 'swap-id' })
     expect(confirmationPrompt.mock.calls.filter(([value]) => value.type === 'lightning-access')).toHaveLength(2)
     expect(query).toHaveBeenCalledTimes(1)
   })

@@ -13,6 +13,7 @@ import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import MiniAppWidgetImagesReview from '@/components/MiniAppWidgetImagesReview.vue'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
@@ -178,6 +179,7 @@ App.addListener('resume', async () => {
   <IonApp>
     <IonRouterOutlet />
     <NetworkOverrideBadge />
+    <MiniAppWidgetImagesReview />
     <!-- DEV -->
     <!-- Hidden in mock mode (clean screenshots); DevModal stays reachable via the menu header long-press -->
     <IonFab v-if="isDev && !isDevFabHidden && !isMockEnabled" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">

@@ -46,6 +46,7 @@ export interface MiniAppMenuContext {
   newName?: string
   sharesAddresses?: boolean
   newImages?: boolean
+  newPermissions?: boolean
 }
 
 interface BaseDApp {

@@ -8,6 +8,7 @@ import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { Modal, useModal } from '@/composables/useModal'
+import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { launchMiniApp } from '@/lib/mini-app-launcher'
 import { WIDGET_GRID_CLASS } from '@/lib/mini-app-widgets'
 import { useApp } from '@/stores/app'
@@ -47,12 +48,21 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
     newName: view.pendingAppName,
     sharesAddresses: view.sharesAddresses,
     newImages: view.pendingImages,
+    newPermissions: view.pendingPermissions,
   }
 })
 
 function openMenu(view: WidgetView) {
   menuView.value = view
   menuOpen.value = true
+}
+
+async function allowPermissions(view: WidgetView) {
+  const permissions = widgets.missingPermissions(view.scope, view.widgetId)
+  if (!permissions.length)
+    return
+  if (await requestUserConfirmation({ type: 'widgetPermissions', url: view.scope, widgetName: widgets.widgetName(view.scope, view.widgetId) }))
+    widgets.grantPermissions(view.scope, view.widgetId, permissions)
 }
 
 function openGallery(source: 'home_widgets' | 'home_widgets_empty') {
@@ -94,7 +104,8 @@ function open(view: WidgetView, url: string) {
       :context="menuContext"
       @size="size => { if (menuView) { widgets.setSize(menuView.scope, menuView.widgetId, size); void widgets.tick({ force: true }) } }"
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
-      @use-new-images="menuView && widgets.approveImages(menuView.scope, menuView.widgetId)"
+      @use-new-images="menuView && widgets.openImageReview(menuView.scope, menuView.widgetId)"
+      @use-permissions="menuView && allowPermissions(menuView)"
       @stop-sharing="menuView && widgets.revokePermissions(menuView.scope, menuView.widgetId)"
       @use-new-name="menuView?.pendingAppName && widgets.approveName(menuView.scope, menuView.pendingAppName)"
     />

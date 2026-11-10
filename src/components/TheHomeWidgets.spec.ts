@@ -3,14 +3,15 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const visibility = await vi.hoisted(async () => (await import('vue')).ref<'visible' | 'hidden'>('visible'))
-const { background, launchMiniApp, showModal, store, visible } = await vi.hoisted(async () => {
+const { background, confirm, launchMiniApp, showModal, store, visible } = await vi.hoisted(async () => {
   const { ref } = await import('vue')
   return {
     launchMiniApp: vi.fn(),
+    confirm: vi.fn(),
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), approveImages: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), openImageReview: vi.fn(), grantPermissions: vi.fn(), missingPermissions: vi.fn(() => ['addresses']), widgetName: vi.fn(() => 'Swap status'), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 
@@ -20,6 +21,7 @@ vi.mock('@vueuse/core', async o => ({ ...await o<object>(), useDocumentVisibilit
 vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en', selectedFiat: 'EUR' }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ getMiniAppReportUrl: () => undefined }) }))
 vi.mock('@/lib/mini-app-launcher', () => ({ launchMiniApp }))
+vi.mock('@/lib/mini-app-confirmation', () => ({ requestUserConfirmation: confirm }))
 vi.mock('@/composables/useModal', () => ({ Modal: { MiniApps: 'MiniApps' }, useModal: () => ({ showModal }) }))
 
 const { default: TheHomeWidgets } = await import('./TheHomeWidgets.vue')
@@ -169,7 +171,22 @@ describe('theHomeWidgets', () => {
     const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
     expect(sheet.props('context')).toMatchObject({ newImages: true })
     sheet.vm.$emit('useNewImages')
-    expect(store.approveImages).toHaveBeenCalledWith('https://swap.example/', 'swap')
+    expect(store.openImageReview).toHaveBeenCalledWith('https://swap.example/', 'swap')
+  })
+
+  it('asks before granting a permission from the menu', async () => {
+    store.views.value = [{ ...view('small', 'swap'), pendingPermissions: true }]
+    const wrapper = render()
+    await wrapper.find('[data-testid="widget-menu"]').trigger('click')
+    const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
+    expect(sheet.props('context')).toMatchObject({ newPermissions: true })
+    confirm.mockResolvedValueOnce(false)
+    sheet.vm.$emit('usePermissions')
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions', url: 'https://swap.example/' })))
+    expect(store.grantPermissions).not.toHaveBeenCalled()
+    confirm.mockResolvedValueOnce(true)
+    sheet.vm.$emit('usePermissions')
+    await vi.waitFor(() => expect(store.grantPermissions).toHaveBeenCalledWith('https://swap.example/', 'swap', ['addresses']))
   })
 
   it('opens the gallery from Add', async () => {

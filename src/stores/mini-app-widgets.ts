@@ -107,6 +107,7 @@ export interface WidgetView {
   reconnect?: boolean
   sharesAddresses?: boolean
   pendingImages?: boolean
+  pendingPermissions?: boolean
   background?: { kind: 'image', src: string } | { kind: 'chart', chart: NonNullable<WidgetView['chart']> }
 }
 
@@ -214,6 +215,10 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // By hash. Approved images are read from the encrypted database; previews only live while the gallery is open.
   const images = reactive(new Map<string, string>())
   const previews = reactive(new Map<string, string>())
+  // Downloaded for the user to look at before approving, and kept only if they do.
+  const reviews = reactive(new Map<string, string>())
+  const imageReview = ref<{ scope: string, widgetId: string, offered: Record<string, WidgetImage> }>()
+  let answerReview: ((approved: boolean) => void) | undefined
   const savedImages = new Set<string>()
   const refusedImages = new Set<string>()
   let previewSession = 0
@@ -428,7 +433,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return undefined
     if ('image' in background) {
       const hash = widget.definition.images?.[background.image]?.sha256 ?? ''
-      const src = images.get(hash) ?? previews.get(hash)
+      const src = images.get(hash) ?? previews.get(hash) ?? reviews.get(hash)
       return src ? { kind: 'image', src } : undefined
     }
     const chart = chartView(background.chart)
@@ -467,6 +472,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       reconnect: widget.halted === 'reconnect',
       sharesAddresses: !!widget.grants?.includes('addresses'),
       pendingImages: !!widget.pendingImages,
+      pendingPermissions: !!widget.definition.permissions?.some(permission => !widget.grants?.includes(permission)),
     }
   }
 
@@ -486,6 +492,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       reconnect: false,
       sharesAddresses: false,
       pendingImages: false,
+      pendingPermissions: false,
     }
   }
 
@@ -652,8 +659,67 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return !!find(scope, widgetId)?.pendingImages
   }
 
-  function approveImages(scope: string, widgetId: string) {
-    patch(scope, widgetId, w => w.pendingImages ? { definition: { ...w.definition, images: w.pendingImages }, pendingImages: undefined } : {})
+  function pendingImageKeys(scope: string, widgetId: string): string[] {
+    const widget = find(scope, widgetId)
+    return Object.entries(widget?.pendingImages ?? {}).filter(([key, image]) => widget!.definition.images?.[key]?.sha256 !== image.sha256).map(([key]) => key)
+  }
+
+  function widgetName(scope: string, widgetId: string): string {
+    const widget = find(scope, widgetId)
+    return widget ? localizeDefinition(widget.definition, useApp().language).name : widgetId
+  }
+
+  async function loadReviewImages(scope: string, widgetId: string) {
+    const widget = find(scope, widgetId)
+    const wanted = pendingImageKeys(scope, widgetId).map(key => ({ image: widget!.pendingImages![key]!, scope }))
+    await inTurns(uniqueImages(wanted), async ({ image }) => {
+      if (images.has(image.sha256) || reviews.has(image.sha256))
+        return
+      const src = await downloadImage(image, scope)
+      if (src)
+        reviews.set(image.sha256, src)
+    })
+  }
+
+  /** The widget in its demo state with one of its new images, at its size on Home; an icon draws no background, so the next size up. */
+  function reviewView(scope: string, widgetId: string, key: string): WidgetView | undefined {
+    const widget = find(scope, widgetId)
+    if (!widget?.pendingImages?.[key])
+      return undefined
+    const size = widget.size === 'icon' ? widget.definition.sizes.find(s => s !== 'icon') ?? 'small' : widget.size
+    const shown = { ...widget, size, definition: { ...widget.definition, images: widget.pendingImages } }
+    return { ...toView(shown, Date.now(), { ...previewContent(widget.definition), background: { image: key } }), key: `${widgetKey(scope, widgetId)}#${key}` }
+  }
+
+  /** Resolves with whether the user took the new images. One review at a time. */
+  function openImageReview(scope: string, widgetId: string): Promise<boolean> {
+    const offered = find(scope, widgetId)?.pendingImages
+    if (imageReview.value || !offered)
+      return Promise.resolve(false)
+    imageReview.value = { scope, widgetId, offered }
+    return new Promise(resolve => answerReview = resolve)
+  }
+
+  function answerImageReview(approved: boolean) {
+    const review = imageReview.value
+    const answer = answerReview
+    imageReview.value = undefined
+    answerReview = undefined
+    if (!review)
+      return
+    const widget = find(review.scope, review.widgetId)
+    // Only what the user looked at: the file may have changed again while the review was open.
+    const taken = approved && !!widget?.pendingImages && JSON.stringify(widget.pendingImages) === JSON.stringify(review.offered)
+    if (taken) {
+      for (const { sha256 } of Object.values(review.offered)) {
+        const src = reviews.get(sha256)
+        if (src)
+          images.set(sha256, src)
+      }
+      patch(review.scope, review.widgetId, w => ({ definition: { ...w.definition, images: review.offered }, pendingImages: undefined }))
+    }
+    reviews.clear()
+    answer?.(taken)
   }
 
   /** New or changed images wait for approval. One the file dropped goes at once, since that shows nothing new. */
@@ -903,7 +969,13 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     catalogScopes,
     setToken,
     hasPendingImages,
-    approveImages,
+    pendingImageKeys,
+    widgetName,
+    imageReview,
+    loadReviewImages,
+    reviewView,
+    openImageReview,
+    answerImageReview,
     loadPreviewImages,
     clearPreviewImages,
     missingPermissions,

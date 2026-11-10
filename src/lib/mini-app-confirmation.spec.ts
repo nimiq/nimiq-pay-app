@@ -68,15 +68,6 @@ describe('requestUserConfirmation widget', () => {
     expect(rows).toContain('• Cannot move funds')
   })
 
-  it('asks before a widget shows new images', async () => {
-    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
-    expect(await requestUserConfirmation({ type: 'widgetImages', url: 'https://swap.example/app', widgetName: 'Swap status' })).toBe(true)
-    expect(vi.mocked(ExtendedDialog.sheet)).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Let Swap status show new images?',
-      rows: [{ title: '• Downloaded once from swap.example' }, { title: '• Until then it keeps the images you have' }],
-    }))
-  })
-
   it('asks on its own for a permission added after install', async () => {
     vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
     expect(await requestUserConfirmation({ type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status' })).toBe(true)

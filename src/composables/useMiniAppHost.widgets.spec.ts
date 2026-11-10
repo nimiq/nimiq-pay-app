@@ -1,3 +1,4 @@
+import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MiniAppHost } from './useMiniAppHost'
@@ -22,7 +23,6 @@ const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted
     consentFor: vi.fn((_scope: string, definition: { name: string, description?: string, permissions?: string[] }) => ({ widgetName: definition.name, description: definition.description, appName: undefined, permissions: definition.permissions })),
     missingPermissions: vi.fn((): string[] => []),
     hasPendingImages: vi.fn(() => false),
-    approveImages: vi.fn(),
     grantPermissions: vi.fn(),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
     approveName: vi.fn(),
@@ -53,7 +53,7 @@ vi.mock('./useLogger', () => ({ useLogger: () => ({ error: logged, log: logged, 
 const DEFINITION = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['medium'], content: { value: { text: 'Start' }, tone: 'neutral', rows: [] }, translations: {} }
 const SCOPE = 'https://swap.example/app/'
 
-function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = false } = {}) {
+function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = false, review = vi.fn().mockResolvedValue(true) } = {}) {
   const listeners: Record<string, Array<(event: object) => void>> = {}
   const removes: Record<string, ReturnType<typeof vi.fn>> = {}
   const browser = {
@@ -65,7 +65,7 @@ function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = fal
     postMessage: vi.fn(),
     removeAllListeners: vi.fn(() => Promise.resolve()),
   }
-  const config = { requestUserConfirmation: confirm, title: 'Swap', url: 'https://Swap.Example/app' }
+  const config = { requestUserConfirmation: confirm, reviewWidgetImages: review, title: 'Swap', url: 'https://Swap.Example/app' }
   const host = reconnect ? MiniAppHost.reconnect(browser as never, config, '0x1') : new MiniAppHost(browser as never, config)
   const [handlers, options] = createBirpc.mock.calls.at(-1)! as any[]
   const received = vi.fn()
@@ -260,20 +260,34 @@ describe('widgets.add', () => {
     expect(widgets.add).not.toHaveBeenCalled()
   })
 
-  it('asks about new images when the Mini App calls add, once if declined', async () => {
+  it('shows new images for review when the Mini App calls add, once if declined', async () => {
     widgets.isOnHome.mockReturnValue(true)
     widgets.hasPendingImages.mockReturnValue(true)
-    const { confirm, request } = createHost()
-    confirm.mockResolvedValue(false)
+    const review = vi.fn().mockResolvedValue(false)
+    const { confirm, request } = createHost(undefined, { review })
     await request('widgets.add', { id: 'swap' })
     await request('widgets.add', { id: 'swap' })
+    expect(review).toHaveBeenCalledTimes(1)
+    expect(review).toHaveBeenCalledWith(SCOPE, 'swap')
+    expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it('shows one sheet at a time, whatever asks for it', async () => {
+    const first = held()
+    const { confirm, host, request } = createHost()
+    confirm.mockReturnValueOnce(first.promise).mockResolvedValue(true)
+    const adding = request('widgets.add', { id: 'swap' })
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
+    const chain = handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' })
+    await flushPromises()
     expect(confirm).toHaveBeenCalledTimes(1)
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetImages', widgetName: 'Swap status' }))
-    expect(widgets.approveImages).not.toHaveBeenCalled()
-    const again = createHost()
-    again.confirm.mockResolvedValue(true)
-    await again.request('widgets.add', { id: 'swap' })
-    expect(widgets.approveImages).toHaveBeenCalledWith(SCOPE, 'swap')
+    first.answer(true)
+    await adding
+    await chain.catch(() => {})
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'chain' }))
+    void host
   })
 
   it('fails when the Mini App has all the widgets it may have on Home', async () => {

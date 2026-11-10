@@ -28,6 +28,7 @@ const emit = defineEmits<{
   (e: 'useNewName'): void
   (e: 'stopSharing'): void
   (e: 'useNewImages'): void
+  (e: 'usePermissions'): void
 }>()
 
 const widgetSizes = computed(() => WIDGET_SIZES.filter(size => props.context?.widget?.sizes.includes(size)))
@@ -76,6 +77,11 @@ function onUseNewImages() {
   close()
 }
 
+function onUsePermissions() {
+  emit('usePermissions')
+  close()
+}
+
 function onStopSharing() {
   emit('stopSharing')
   close()
@@ -92,17 +98,11 @@ const actions = computed(() => {
   if (!context)
     return []
   return [
-    ...(context.newName
-      ? [{ testid: 'mini-app-use-new-name-action', label: i18n.t('Use the new name: {name}', { name: context.newName }), icon: PenIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUseNewName }]
-      : []),
     ...(context.shareable === false
       ? []
       : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
-      : []),
-    ...(context.newImages
-      ? [{ testid: 'mini-app-new-images-action', label: i18n.t('Show its new images'), icon: PenIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUseNewImages }]
       : []),
     ...(context.sharesAddresses
       ? [{ testid: 'mini-app-stop-sharing-action', label: i18n.t('Stop sharing your addresses'), icon: RemoveIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onStopSharing }]
@@ -112,6 +112,24 @@ const actions = computed(() => {
       : []),
     ...(context.removable
       ? [{ testid: 'mini-app-remove-action', label: 'Remove from Recently Viewed', icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemove }]
+      : []),
+  ]
+})
+
+// What the Mini App changed and waits for the user, kept apart from the usual actions.
+const updates = computed(() => {
+  const context = props.context
+  if (!context)
+    return []
+  return [
+    ...(context.newName
+      ? [{ testid: 'mini-app-use-new-name-action', label: i18n.t('Use the new name: {name}', { name: context.newName }), icon: PenIcon, onClick: onUseNewName }]
+      : []),
+    ...(context.newImages
+      ? [{ testid: 'mini-app-new-images-action', label: i18n.t('Review its new images'), icon: PenIcon, onClick: onUseNewImages }]
+      : []),
+    ...(context.newPermissions
+      ? [{ testid: 'mini-app-new-permissions-action', label: i18n.t('Allow sending your addresses'), icon: PenIcon, onClick: onUsePermissions }]
       : []),
   ]
 })
@@ -158,6 +176,25 @@ watch(() => props.open, (isOpen) => {
           <DialogDescription class="sr-only">
             Actions for {{ context.app.name }}
           </DialogDescription>
+
+          <div v-if="updates.length" data-testid="mini-app-updates" class="mb-3 flex flex-col rounded-xl bg-sky/[0.08] p-1">
+            <p class="px-3 pt-2 pb-1 text-xs font-bold uppercase tracking-wider text-sky">
+              {{ $t('Waiting for you') }}
+            </p>
+            <div class="flex flex-col divide-y divide-sky/10">
+              <button
+                v-for="update in updates"
+                :key="update.testid"
+                type="button"
+                :data-testid="update.testid"
+                class="flex items-center gap-3 w-full min-h-[52px] px-3 rounded-lg text-left text-lg font-semibold text-space transition-colors active:bg-sky/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                @click="update.onClick"
+              >
+                <component :is="update.icon" class="w-6 h-6 shrink-0 text-sky" />
+                <span>{{ update.label }}</span>
+              </button>
+            </div>
+          </div>
 
           <div v-if="context.widget && widgetSizes.length > 1" data-testid="mini-app-widget-size" class="flex items-center justify-between gap-3 px-2 pb-3">
             <span class="text-lg font-semibold text-space">{{ $t('Size') }}</span>
