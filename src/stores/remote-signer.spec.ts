@@ -2109,6 +2109,7 @@ describe('useRemoteSigner', () => {
 
     expect(state.runSet).toHaveBeenCalledExactlyOnceWith([
       { statement: SQLQuery.PurgeRemoteSigners, values: [] },
+      { statement: SQLQuery.PurgeSettledHtlcCreations, values: [] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
@@ -2117,6 +2118,229 @@ describe('useRemoteSigner', () => {
     expect(useSyncState().htlcHistoryChecked).toBe(false)
     expect(useSyncState().htlcExtensionsWalked).toBe(false)
     expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+  })
+
+  describe('settled HTLC chains', () => {
+    const local = 'NQ00 TEST LOCAL ADDRESS'
+    const root = createHtlcCreation({ value: 1_000, fee: 0 })
+    const extension = createHtlcCreation({
+      transactionHash: 'extension-hash',
+      sender: root.recipient,
+      senderType: 'htlc',
+      recipient: 'NQ33 TEST CHILD HTLC ADDRESS',
+      value: 1_000,
+      fee: 0,
+      timestamp: 124_100,
+      data: { type: 'htlc', sender: local, recipient: 'NQ99 COSIGNER ADDRESS', timeout: 1_000_500 },
+    })
+    const payout = {
+      transactionHash: 'payout-hash',
+      state: 'confirmed',
+      executionResult: true,
+      sender: extension.recipient,
+      senderType: 'htlc',
+      recipient: local,
+      recipientType: 'basic',
+      value: 990,
+      fee: 10,
+      flags: 0,
+      data: { type: 'raw', raw: '' },
+    }
+    const drainedHistories = { [root.recipient]: [root, extension], [extension.recipient]: [extension, payout] }
+
+    function mockChain(histories: Record<string, any[]>, creations: any[] = [root]) {
+      mockAddressSpecificSignerMetadata(...creations, extension)
+      state.client.getTransactionsByAddress = vi.fn((address: ReturnType<typeof createAddress>) => Promise.resolve(
+        address.toUserFriendlyAddress() === local ? creations : histories[address.toUserFriendlyAddress()] ?? [],
+      ))
+    }
+
+    async function discover() {
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useRemoteSigner } = await import('./remote-signer')
+      const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+      return { result, SQLQuery }
+    }
+
+    it('records a chain whose funds are fully accounted for', async () => {
+      mockChain(drainedHistories)
+
+      const { result, SQLQuery } = await discover()
+
+      expect(result.localComplete).toBe(true)
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [root.transactionHash])
+    })
+
+    it('counts only the fee of a failed spend', async () => {
+      mockChain({
+        ...drainedHistories,
+        [extension.recipient]: [extension, { ...payout, transactionHash: 'failed-hash', executionResult: false, value: 500, fee: 7 }, { ...payout, value: 983, fee: 10 }],
+      })
+
+      const { SQLQuery } = await discover()
+
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [root.transactionHash])
+    })
+
+    it('makes no network calls for a settled creation', async () => {
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      mockChain(drainedHistories)
+      state.query.mockImplementation((sql: string, _params?: unknown[], options?: { single?: boolean }) => Promise.resolve(
+        sql === SQLQuery.GetSettledHtlcCreations ? [{ transaction_hash: root.transactionHash }] : options?.single ? undefined : [],
+      ))
+
+      const { result } = await discover()
+
+      expect(result).toMatchObject({ localComplete: true, alreadyKnown: 1, added: 0, createdHtlcs: [root.recipient] })
+      // The one remaining lookup is updateRemoteFromApi for the wallet itself, once per walk.
+      expect((state.getRemoteSigner.mock.calls as unknown as [{ address: ReturnType<typeof createAddress> }][]).map(([arg]) => arg.address.toUserFriendlyAddress())).toEqual([local])
+      expect(state.getAccount).not.toHaveBeenCalled()
+      const historyAddresses = (state.client.getTransactionsByAddress.mock.calls as [ReturnType<typeof createAddress>][]).map(([address]) => address.toUserFriendlyAddress())
+      expect(new Set(historyAddresses)).toEqual(new Set([local]))
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertInactiveRemoteSigner, expect.anything())
+    })
+
+    it.each<[string, Record<string, any[]>]>([
+      ['history omits the extension', { ...drainedHistories, [root.recipient]: [root] }],
+      ['history omits the latest partial spend', { ...drainedHistories, [extension.recipient]: [extension, { ...payout, value: 400 }] }],
+      ['history is empty', { ...drainedHistories, [extension.recipient]: [] }],
+      ['the drain is only included', { ...drainedHistories, [extension.recipient]: [extension, { ...payout, state: 'included' }] }],
+      ['the execution result is missing', { ...drainedHistories, [extension.recipient]: [extension, { ...payout, executionResult: undefined }] }],
+    ])('does not settle when %s', async (_name, histories) => {
+      mockChain(histories)
+
+      const { SQLQuery } = await discover()
+
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    it('does not settle a chain with a funded latest extension', async () => {
+      mockChain({ ...drainedHistories, [extension.recipient]: [extension] })
+      state.getAccount.mockImplementation((async (address: ReturnType<typeof createAddress>) => address.toUserFriendlyAddress() === extension.recipient
+        ? { data: createLiveHtlcAccount({ balance: 1_000, totalAmount: 1_000, timeout: 1_000_500 }), error: undefined }
+        : { data: undefined, error: 'No account found' }) as any)
+
+      const { SQLQuery } = await discover()
+
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    it('does not settle when an account lookup fails', async () => {
+      mockChain(drainedHistories)
+      state.getAccount.mockImplementation((async (address: ReturnType<typeof createAddress>) => address.toUserFriendlyAddress() === extension.recipient
+        ? { data: undefined, error: 'Error getting account' }
+        : { data: undefined, error: 'No account found' }) as any)
+
+      const { result, SQLQuery } = await discover()
+
+      expect(result.localComplete).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    it('does not settle when extension metadata is unavailable', async () => {
+      mockChain(drainedHistories)
+      state.getRemoteSigner.mockImplementation((({ address }: { address: ReturnType<typeof createAddress> }) => {
+        const isExtension = address.toUserFriendlyAddress() === extension.recipient
+        const creation = isExtension ? extension : root
+        return Promise.resolve({
+          // A different hash forces a creation lookup, which the default getTransaction mock can't answer.
+          data: createRemoteSignerApiData(creation.recipient, { creatingTransactionHash: isExtension ? 'other-hash' : root.transactionHash, validityStart: creation.validityStartHeight + 10, validityEnd: creation.data.timeout }),
+          error: undefined,
+          hasError: false,
+          status: 200,
+        })
+      }) as any)
+
+      const { result, SQLQuery } = await discover()
+
+      expect(result.localComplete).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    describe('with an HTLC paying an unrecognised recipient', () => {
+      function historiesWithHashRoot(hashRoot: string) {
+        const child = { ...extension, value: 400, data: { ...extension.data, recipient: 'NQ77 UNKNOWN RECIPIENT ADDRESS', hashRoot } }
+        return { [root.recipient]: [root, child, { ...payout, sender: root.recipient, value: 600, fee: 0 }] }
+      }
+
+      it('does not settle when it looks like a deposit under an unknown key', async () => {
+        mockChain(historiesWithHashRoot('00'.repeat(32)))
+
+        const { SQLQuery } = await discover()
+
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+      })
+
+      it('settles a chain that funded a swap', async () => {
+        mockChain(historiesWithHashRoot('ab'.repeat(32)))
+
+        const { SQLQuery } = await discover()
+
+        expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [root.transactionHash])
+      })
+    })
+
+    it('does not settle when a later history page fails', async () => {
+      const fillerSpends = Array.from({ length: 98 }, (_, index) => ({ ...payout, transactionHash: `filler-${index}`, sender: root.recipient, value: 0, fee: 0 }))
+      mockChain(drainedHistories)
+      const implementation = state.client.getTransactionsByAddress.getMockImplementation()!
+      state.client.getTransactionsByAddress = vi.fn((address: ReturnType<typeof createAddress>, sinceHeight: unknown, known: unknown, startAt?: string) => {
+        if (address.toUserFriendlyAddress() !== root.recipient)
+          return implementation(address, sinceHeight, known, startAt)
+        return startAt ? Promise.reject(new Error('later page failed')) : Promise.resolve([root, extension, ...fillerSpends])
+      })
+
+      const { result, SQLQuery } = await discover()
+
+      expect(result.localComplete).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    it('does not settle when extension metadata is rejected', async () => {
+      mockChain(drainedHistories)
+      state.getRemoteSigner.mockImplementation((({ address }: { address: ReturnType<typeof createAddress> }) => Promise.resolve(address.toUserFriendlyAddress() === extension.recipient
+        ? { data: undefined, error: { message: 'not found', statusCode: 404, error: 'NOT_FOUND' }, hasError: true, status: 404 }
+        : { data: createRemoteSignerApiData(root.recipient, { creatingTransactionHash: root.transactionHash, validityStart: root.validityStartHeight + 10, validityEnd: root.data.timeout }), error: undefined, hasError: false, status: 200 })) as any)
+
+      const { SQLQuery } = await discover()
+
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, expect.anything())
+    })
+
+    it('keeps earlier chains settled when the walk is interrupted', async () => {
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const secondRoot = createHtlcCreation({ transactionHash: 'second-root-hash', recipient: 'NQ44 TEST SECOND HTLC ADDRESS', value: 1_000, fee: 0 })
+      mockChain(drainedHistories, [root, secondRoot])
+      state.getAccount.mockImplementation(((address: ReturnType<typeof createAddress>) => address.toUserFriendlyAddress() === secondRoot.recipient
+        ? new Promise(() => {})
+        : Promise.resolve({ data: undefined, error: 'No account found' })) as any)
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      void useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [root.transactionHash]))
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [secondRoot.transactionHash])
+    })
+
+    it('does not leave a settled mark for a wallet that changed during the write', async () => {
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useLocalWallet } = await import('@/stores/local-wallet')
+      const { useRemoteSigner } = await import('./remote-signer')
+      mockChain(drainedHistories)
+      let resolveInsert!: () => void
+      state.run.mockImplementation(((sql: string) => sql === SQLQuery.InsertSettledHtlcCreation
+        ? new Promise<void>(resolve => resolveInsert = resolve)
+        : Promise.resolve({ changes: { changes: 1 } })) as any)
+
+      const discovery = useRemoteSigner().discoverRemoteSignersFromBlockchain()
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSettledHtlcCreation, [root.transactionHash]))
+      state.localAddress = createAddress('NQ01 NEXT LOCAL ADDRESS')
+      ;(useLocalWallet() as any).localAddress = state.localAddress
+      resolveInsert()
+      await discovery
+
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSettledHtlcCreation, [root.transactionHash])
+    })
   })
 
   it('lists HTLC creations from local history even when their metadata is unavailable', async () => {
