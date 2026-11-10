@@ -4,8 +4,9 @@ import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { Share } from '@capacitor/share'
+import { useBackButton } from '@ionic/vue'
 import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { computed, watch } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import FlagIcon from '@/components/icons/flag.vue'
 import PenIcon from '@/components/icons/pen.vue'
 import RemoveIcon from '@/components/icons/remove.vue'
@@ -34,6 +35,15 @@ const emit = defineEmits<{
 const widgetSizes = computed(() => WIDGET_SIZES.filter(size => props.context?.widget?.sizes.includes(size)))
 // Literal calls, so the i18n extraction finds every size name.
 const sizeLabels = computed<Record<WidgetSize, string>>(() => ({ icon: i18n.t('Icon'), small: i18n.t('Small'), medium: i18n.t('Medium'), large: i18n.t('Large') }))
+
+// Reka's sheet only knows Escape; Android's back button goes to Ionic, ahead of any modal underneath while open.
+const { unregister: unregisterBack } = useBackButton(110, (next) => {
+  if (props.open)
+    close()
+  else
+    next()
+})
+onBeforeUnmount(unregisterBack)
 
 function close() {
   emit('update:open', false)

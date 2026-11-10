@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useBackButton } from '@ionic/vue'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { decodesAsImage } from '@/lib/mini-app-widget-images'
@@ -31,6 +32,10 @@ watch(review, async (open) => {
       (ok ? drawn : undrawn).value.push(key)
   }
 }, { immediate: true })
+
+// Mounted only while a review is open, so Android's back button means Not now.
+const { unregister: unregisterBack } = useBackButton(110, () => widgets.answerImageReview(false))
+onBeforeUnmount(unregisterBack)
 
 function onOpenChange(open: boolean) {
   if (!open)

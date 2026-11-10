@@ -313,16 +313,23 @@ async function removeFromRecentlyViewed(wrapper: ReturnType<typeof mountModal>, 
   await flushPromises()
 }
 
+// Like Ionic: the highest priority runs first, and each handler can pass on to the next.
 function getHardwareBackHandler() {
-  let handler: ((processNextHandler: () => void) => void) | undefined
+  const handlers: Array<{ priority: number, handler: (processNextHandler: () => void) => void }> = []
   document.dispatchEvent(new CustomEvent('ionBackButton', {
     detail: {
-      register: (_priority: number, registeredHandler: typeof handler) => {
-        handler = registeredHandler
+      register: (priority: number, handler: (processNextHandler: () => void) => void) => {
+        handlers.push({ priority, handler })
       },
     },
   }))
-  return handler
+  if (!handlers.length)
+    return undefined
+  handlers.sort((a, b) => b.priority - a.priority)
+  return (processNextHandler: () => void) => {
+    const run = (index: number): void => index < handlers.length ? handlers[index]!.handler(() => run(index + 1)) : processNextHandler()
+    run(0)
+  }
 }
 
 describe('mini apps modal', () => {

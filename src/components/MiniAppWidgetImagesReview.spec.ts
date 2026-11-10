@@ -21,6 +21,11 @@ vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => store }))
 const decodes = vi.hoisted(() => vi.fn(async (_src: string) => true))
 vi.mock('@/lib/mini-app-widget-images', () => ({ decodesAsImage: decodes }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en' }) }))
+const backHandlers = vi.hoisted(() => [] as Array<(next: () => void) => void>)
+vi.mock('@ionic/vue', () => ({ useBackButton: (_priority: number, handler: (next: () => void) => void) => {
+  backHandlers.push(handler)
+  return { unregister: vi.fn() }
+} }))
 vi.mock('@capacitor/haptics', () => ({ Haptics: { impact: vi.fn(() => Promise.resolve()) }, ImpactStyle: { Light: 'LIGHT' } }))
 
 const { default: MiniAppWidgetImagesReview } = await import('./MiniAppWidgetImagesReview.vue')
@@ -106,6 +111,12 @@ describe('miniAppWidgetImagesReview', () => {
     found('review-approve')!.click()
     expect(store.answerImageReview).toHaveBeenCalledWith(true, ['hero'])
     decodes.mockImplementation(async () => true)
+  })
+
+  it('answers no on Android\'s back button', async () => {
+    await render()
+    backHandlers.at(-1)!(vi.fn())
+    expect(store.answerImageReview).toHaveBeenCalledWith(false)
   })
 
   it('answers no from Not now', async () => {

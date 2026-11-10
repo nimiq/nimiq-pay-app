@@ -11,6 +11,11 @@ const { browserOpen, shareShare } = vi.hoisted(() => ({
   shareShare: vi.fn(() => Promise.resolve()),
 }))
 
+const backHandlers = vi.hoisted(() => [] as Array<{ priority: number, handler: (next: () => void) => void }>)
+vi.mock('@ionic/vue', () => ({ useBackButton: (priority: number, handler: (next: () => void) => void) => {
+  backHandlers.push({ priority, handler })
+  return { unregister: vi.fn() }
+} }))
 vi.mock('@capacitor/browser', () => ({ Browser: { open: browserOpen } }))
 vi.mock('@capacitor/share', () => ({ Share: { share: shareShare } }))
 vi.mock('@capacitor/haptics', () => ({
@@ -171,6 +176,17 @@ describe('miniAppActionsSheet', () => {
     expect(action('mini-app-updates')).toBeNull()
     action('mini-app-share-again-action')!.click()
     expect(wrapper!.emitted('usePermissions')).toHaveLength(1)
+  })
+
+  it('closes on Android\'s back button while open, and lets it through while closed', async () => {
+    await mountSheet({ app, removable: false, widget: { size: 'small', sizes: ['small'] } })
+    const next = vi.fn()
+    backHandlers.at(-1)!.handler(next)
+    expect(wrapper!.emitted('update:open')).toEqual([[false]])
+    expect(next).not.toHaveBeenCalled()
+    await wrapper!.setProps({ open: false })
+    backHandlers.at(-1)!.handler(next)
+    expect(next).toHaveBeenCalled()
   })
 
   it('has no updates block when nothing waits', async () => {
