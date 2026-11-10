@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { Toast } from '@capacitor/toast'
 import { Interface, parseUnits } from 'ethers'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
@@ -1422,6 +1422,34 @@ describe('miniAppHost', () => {
     }))
   })
 
+  it('bases the transaction sheet deadline on the request start, not the end of its RPC calls', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      vi.setSystemTime(Date.now() + 30_000)
+      return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+    }))
+    requestUserConfirmation.mockResolvedValueOnce(false)
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow()
+
+    expect(Date.now()).toBe(start + 30_000)
+    expect(requestUserConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'eth-transaction' }),
+      start + MINI_APP_REQUEST_TIMEOUT_MS,
+    )
+  })
+
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
     const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const payload = JSON.parse(String(init?.body)) as { method: string }
@@ -1465,7 +1493,7 @@ describe('miniAppHost', () => {
           amount: '123.45 USDT',
         }),
       }),
-    }))
+    }), expect.any(Number))
   })
 
   it('rejects decoded Polygon USDT transfers that include a native token value', async () => {
@@ -1538,6 +1566,6 @@ describe('miniAppHost', () => {
       data: expect.not.objectContaining({
         decodedAssetTransfer: expect.anything(),
       }),
-    }))
+    }), expect.any(Number))
   })
 })

@@ -961,6 +961,8 @@ export class MiniAppHost {
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
+    // The sheet must close when the request times out, however long the RPC calls took.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     logger.log('[ETH_TX] Step 1 - Raw params received:', JSON.stringify(params))
 
     // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
@@ -1211,7 +1213,7 @@ export class MiniAppHost {
         decodedAssetTransfer: decodedAssetTransfer || undefined,
       },
       network: 'ethereum',
-    })
+    }, deadline)
 
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
