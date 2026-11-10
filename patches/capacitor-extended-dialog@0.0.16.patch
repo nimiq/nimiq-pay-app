@@ -1,0 +1,27 @@
+diff --git a/ios/Sources/ExtendedDialogPlugin/ExtendedDialog.swift b/ios/Sources/ExtendedDialogPlugin/ExtendedDialog.swift
+index f4fadad..e6810ac 100644
+--- a/ios/Sources/ExtendedDialogPlugin/ExtendedDialog.swift
++++ b/ios/Sources/ExtendedDialogPlugin/ExtendedDialog.swift
+@@ -618,6 +618,7 @@ public struct DialogStyleOptions {
+             }
+         }
+ 
++        viewController.presentationController?.delegate = viewController as? UIAdaptivePresentationControllerDelegate
+         topVC.present(viewController, animated: true)
+     }
+ 
+diff --git a/ios/Sources/ExtendedDialogPlugin/FullScreenDialogViewController.swift b/ios/Sources/ExtendedDialogPlugin/FullScreenDialogViewController.swift
+index a72b174..7682e3a 100644
+--- a/ios/Sources/ExtendedDialogPlugin/FullScreenDialogViewController.swift
++++ b/ios/Sources/ExtendedDialogPlugin/FullScreenDialogViewController.swift
+@@ -1107,3 +1107,10 @@ extension FullScreenDialogViewController: UITableViewDelegate, UITableViewDataSo
+         return 52
+     }
+ }
++
++extension FullScreenDialogViewController: UIAdaptivePresentationControllerDelegate {
++    // A swipe down closes a page sheet without a button press: answer as Cancel, or the call never resolves.
++    public func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
++        handleCancel()
++    }
++}

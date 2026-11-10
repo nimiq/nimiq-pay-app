@@ -10,6 +10,9 @@ overrides:
   '@swc/wasm': 1.15.33
 
 patchedDependencies:
+  capacitor-extended-dialog@0.0.16:
+    hash: 3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb
+    path: patches/capacitor-extended-dialog@0.0.16.patch
   randombytes@2.1.0:
     hash: f5b3c7befe85e7d7bca014c768e4b1ee51688d5e69d8d710ce6f804b0598bbb2
     path: patches/randombytes@2.1.0.patch
@@ -107,7 +110,7 @@ importers:
         version: 5.7.1
       capacitor-extended-dialog:
         specifier: ^0.0.16
-        version: 0.0.16(@capacitor/core@8.5.2)
+        version: 0.0.16(patch_hash=3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb)(@capacitor/core@8.5.2)
       capacitor-lockdown-mode:
         specifier: 0.0.1
         version: 0.0.1(@capacitor/core@8.5.2)
@@ -9933,7 +9936,7 @@ snapshots:
 
   caniuse-lite@1.0.30001814: {}
 
-  capacitor-extended-dialog@0.0.16(@capacitor/core@8.5.2):
+  capacitor-extended-dialog@0.0.16(patch_hash=3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb)(@capacitor/core@8.5.2):
     dependencies:
       '@capacitor/core': 8.5.2
 
