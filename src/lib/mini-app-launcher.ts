@@ -214,7 +214,11 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     // Null re-entry guard: plugin close() and dialog dismiss can both emit closeEvent.
     const openedAt = Date.now()
     const hostRef = host
-    handle = await InAppBrowser.addListener('closeEvent', async () => {
+    handle = await InAppBrowser.addListener('closeEvent', async ({ id }) => {
+      // A popup closing must not tear down the Mini App still open beneath it. No id
+      // means the plugin had no registered webview left: treat it as the main one.
+      if (id && !hostRef.isMainWebview(id))
+        return
       const h = handle
       if (h === null)
         return

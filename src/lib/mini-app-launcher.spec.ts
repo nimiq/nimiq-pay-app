@@ -2,6 +2,10 @@ import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const MAIN_WEBVIEW_ID = 'main-webview'
+
+type CloseHandler = (event: { id?: string, url: string }) => Promise<void>
+
 function createDeferred<T = void>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -103,6 +107,7 @@ vi.mock('@/composables/useMiniAppHost', async () => {
       }
 
       destroy = hostDestroy
+      isMainWebview = (id: string) => id === MAIN_WEBVIEW_ID
     },
   }
 })
@@ -267,8 +272,8 @@ describe('mini-app-launcher', () => {
 
   it('destroys host and re-locks orientation on close', async () => {
     const { launchMiniApp } = await importLauncher()
-    let closeHandler: (() => Promise<void>) | undefined
-    addListener.mockImplementation(((event: string, handler: () => Promise<void>) => {
+    let closeHandler: CloseHandler | undefined
+    addListener.mockImplementation(((event: string, handler: CloseHandler) => {
       if (event === 'closeEvent')
         closeHandler = handler
       return Promise.resolve({ remove: vi.fn() })
@@ -277,11 +282,51 @@ describe('mini-app-launcher', () => {
     await launchMiniApp({ url: 'https://app.uniswap.org', title: 'Uniswap', source: 'deeplink' })
 
     expect(closeHandler).toBeDefined()
-    await closeHandler!()
+    await closeHandler!({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
 
     expect(hostDestroy).toHaveBeenCalledTimes(1)
     expect(screenOrientationLock).toHaveBeenCalledWith({ orientation: 'portrait' })
     expect(trackDAppClosed).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the host alive when a popup closes, then destroys it once on main close', async () => {
+    const { launchMiniApp } = await importLauncher()
+    const removeCloseListener = vi.fn()
+    let closeHandler: CloseHandler | undefined
+    addListener.mockImplementation(((event: string, handler: CloseHandler) => {
+      if (event === 'closeEvent') {
+        closeHandler = handler
+        return Promise.resolve({ remove: removeCloseListener })
+      }
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
+
+    await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+
+    await closeHandler!({ id: 'popup-webview', url: 'https://accounts.example/' })
+    expect(hostDestroy).not.toHaveBeenCalled()
+    expect(removeCloseListener).not.toHaveBeenCalled()
+    expect(trackDAppClosed).not.toHaveBeenCalled()
+
+    await closeHandler!({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
+    await closeHandler!({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
+    expect(hostDestroy).toHaveBeenCalledTimes(1)
+    expect(removeCloseListener).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroys the host on a closeEvent without an id', async () => {
+    const { launchMiniApp } = await importLauncher()
+    let closeHandler: CloseHandler | undefined
+    addListener.mockImplementation(((event: string, handler: CloseHandler) => {
+      if (event === 'closeEvent')
+        closeHandler = handler
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
+
+    await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+    await closeHandler!({ url: 'https://app.uniswap.org/' })
+
+    expect(hostDestroy).toHaveBeenCalledTimes(1)
   })
 
   it('shows toast and destroys host when opening fails', async () => {
