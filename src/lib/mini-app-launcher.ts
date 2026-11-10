@@ -11,7 +11,7 @@ import { isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from '@/com
 import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
-import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
+import { trackDAppClosed, trackDAppOpened, trackDAppSheetHeld } from '@/lib/analytics'
 import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
@@ -144,6 +144,16 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   // launch failed or closed first.
   let settlePresentation!: (presented: boolean) => void
   const presentation = new Promise<boolean>(resolve => settlePresentation = resolve)
+  let presentationSettled = false
+  void presentation.then(() => presentationSettled = true)
+  const awaitPresentation = async (requestType: string) => {
+    if (presentationSettled)
+      return presentation
+    const arrivedAt = Date.now()
+    const presented = await presentation
+    trackDAppSheetHeld(targetUrl, appTitle, requestType, Date.now() - arrivedAt, presented)
+    return presented
+  }
 
   // iOS resolves `openWebView` before the present animation finishes, so the guard
   // must be held until the webview confirms it loaded / failed / closed.
@@ -208,8 +218,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     host = new MiniAppHost(InAppBrowser, {
       url: targetUrl,
       title: appTitle,
-      requestUserConfirmation: async (request, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await presentation && requestUserConfirmation(request, deadline),
-      selectLightningAsset: async (app, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await presentation ? selectLightningAsset(app, deadline) : undefined,
+      requestUserConfirmation: async (request, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await awaitPresentation(request.type) && requestUserConfirmation(request, deadline),
+      selectLightningAsset: async (app, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) => await awaitPresentation('lightning-asset') ? selectLightningAsset(app, deadline) : undefined,
       evmRpcUrls,
     })
 

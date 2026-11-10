@@ -32,6 +32,7 @@ const {
   setToast,
   trackDAppClosed,
   trackDAppOpened,
+  trackDAppSheetHeld,
 } = vi.hoisted(() => ({
   getDeviceInfo: vi.fn(),
   getPlatform: vi.fn(() => 'ios'),
@@ -50,6 +51,7 @@ const {
   screenOrientationLock: vi.fn(() => Promise.resolve()),
   trackDAppClosed: vi.fn(),
   trackDAppOpened: vi.fn(),
+  trackDAppSheetHeld: vi.fn(),
   MiniAppHostCtor: vi.fn(),
   capacitorHttpGet: vi.fn(() => Promise.resolve({ status: 200, data: { nimiq: [], evm: [] } })),
 }))
@@ -121,7 +123,7 @@ vi.mock('@/lib/site-metadata', () => ({
   getFaviconUrl,
 }))
 
-vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened }))
+vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened, trackDAppSheetHeld }))
 
 vi.mock('@/lib', () => ({
   get isDev() { return false },
@@ -166,6 +168,7 @@ describe('mini-app-launcher', () => {
     screenOrientationLock.mockImplementation(() => Promise.resolve())
     trackDAppClosed.mockReset()
     trackDAppOpened.mockReset()
+    trackDAppSheetHeld.mockReset()
     MiniAppHostCtor.mockReset()
 
     sessionStorage.clear()
@@ -607,6 +610,12 @@ describe('mini-app-launcher', () => {
     expect(await assetSelection).toBe('NIM')
     expect(requestUserConfirmation).toHaveBeenCalledWith(request, 123)
     expect(selectLightningAsset).toHaveBeenCalledWith({ url: 'https://app.uniswap.org/', name: 'Uniswap' }, 456)
+    expect(trackDAppSheetHeld).toHaveBeenCalledWith('https://app.uniswap.org/', 'app.uniswap.org', 'accounts', expect.any(Number), true)
+    expect(trackDAppSheetHeld).toHaveBeenCalledWith('https://app.uniswap.org/', 'app.uniswap.org', 'lightning-asset', expect.any(Number), true)
+
+    trackDAppSheetHeld.mockClear()
+    await config.requestUserConfirmation(request, 123)
+    expect(trackDAppSheetHeld).not.toHaveBeenCalled()
   })
 
   it('keeps the request deadline of a held confirmation sheet', async () => {
