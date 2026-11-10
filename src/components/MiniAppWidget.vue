@@ -183,7 +183,7 @@ function onClickCapture(event: MouseEvent) {
         </span>
       </span>
 
-      <span v-if="view.info" class="pointer-events-none relative min-w-0 truncate text-sm text-space/60" :class="changeClass(view.info)">{{ formatValue(view.info) }}</span>
+      <span v-if="view.info" class="pointer-events-none relative min-w-0 truncate text-sm" :class="changeClass(view.info) || 'text-space/60'">{{ formatValue(view.info) }}</span>
 
       <span v-if="showExtras && view.progress !== undefined" class="pointer-events-none relative mt-2 h-1 w-full overflow-hidden rounded-full bg-space/10">
         <span data-testid="widget-progress" class="block h-full rounded-full bg-sky" :style="{ width: `${view.progress * 100}%` }" />

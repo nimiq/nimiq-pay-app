@@ -115,6 +115,8 @@ describe('miniAppWidget', () => {
     const change = render({ view: view({ info: { kind: 'change', percent: -3.21 } }) })
     expect(change.text()).toContain('−3.2 %')
     expect(change.find('.text-cherry').exists()).toBe(true)
+    // Two text colours on one element: whichever the stylesheet lists later wins, so the muted one must go.
+    expect(change.find('.text-cherry').classes()).not.toContain('text-space/60')
     expect(render({ view: view({ value: { kind: 'pending' } }) }).text()).toContain('…')
   })
 
