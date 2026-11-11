@@ -542,7 +542,7 @@ export class MiniAppHost {
   }
 
   /** The first webview the host hears from is the main one; popups need its page to run first. */
-  private isMainWebview(id: string): boolean {
+  isMainWebview(id: string): boolean {
     this.bridgeGate.mainId ??= id
     return id === this.bridgeGate.mainId
   }

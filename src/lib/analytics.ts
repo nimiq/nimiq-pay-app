@@ -322,8 +322,16 @@ export function trackDAppOpened(url: string, name: string, source: DAppOpenSourc
   capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })
 }
 
+export function trackDAppSheetHeld(url: string, name: string, requestType: string, heldMs: number, presented: boolean): void {
+  capture('miniapp_sheet_held', { dapp_url: url, dapp_name: name, request_type: requestType, held_ms: heldMs, presented })
+}
+
 export function trackDAppClosed(url: string, name: string, durationMs: number): void {
   capture('miniapp_closed', { dapp_url: url, dapp_name: name, session_duration_ms: durationMs })
+}
+
+export function trackDAppPopupClosed(url: string, name: string): void {
+  capture('miniapp_popup_closed', { dapp_url: url, dapp_name: name })
 }
 
 export function trackWeb3Request(opts: {
