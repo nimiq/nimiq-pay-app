@@ -791,7 +791,7 @@ describe('mini-app-launcher', () => {
 
       handlers.browserPageLoaded?.()
       await pending
-      await handlers.closeEvent?.()
+      await (handlers.closeEvent as CloseHandler | undefined)?.({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
       await vi.advanceTimersByTimeAsync(600)
 
       expect(await confirmation).toBe(false)
