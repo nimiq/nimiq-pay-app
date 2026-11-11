@@ -342,6 +342,8 @@ export function trackWeb3Request(opts: {
   approved: boolean
   success: boolean
   chainId?: string
+  timedOut?: boolean
+  sheetWaitMs?: number
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -351,6 +353,8 @@ export function trackWeb3Request(opts: {
     approved: opts.approved,
     success: opts.success,
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
+    ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
   })
 }
 

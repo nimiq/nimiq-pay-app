@@ -961,6 +961,8 @@ export class MiniAppHost {
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
+    // The sheet must close when the request times out, however long the RPC calls took.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     logger.log('[ETH_TX] Step 1 - Raw params received:', JSON.stringify(params))
 
     // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
@@ -1192,6 +1194,7 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided')
     }
 
+    const sheetWaitMs = MINI_APP_REQUEST_TIMEOUT_MS - (deadline - Date.now())
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1211,10 +1214,11 @@ export class MiniAppHost {
         decodedAssetTransfer: decodedAssetTransfer || undefined,
       },
       network: 'ethereum',
-    })
+    }, deadline)
 
     if (!confirmed) {
-      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
+      // The native timeout fires at about the deadline, so a false this close to it is the timeout, not a decline.
+      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId, timedOut: deadline - Date.now() < 1_000, sheetWaitMs })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
@@ -1352,7 +1356,7 @@ export class MiniAppHost {
       chainId: effectiveChainId,
     })
 
-    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId })
+    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId, sheetWaitMs })
     return txHash
   }
 
