@@ -25,13 +25,6 @@ export enum Modal {
   Points = '@/modals/PointsModal.vue',
   MiniApps = '@/modals/MiniAppsModal.vue',
   MiniAppWarning = '@/modals/MiniAppWarningModal.vue',
-  Settings = '@/modals/SettingsModal.vue',
-  SettingsGeneral = '@/modals/settings/General.vue',
-  SettingsSecurity = '@/modals/settings/Security.vue',
-  SettingsPayments = '@/modals/settings/Payments.vue',
-  SettingsMiniApps = '@/modals/settings/MiniApps.vue',
-  SettingsAccount = '@/modals/settings/Account.vue',
-  SettingsSavedAddresses = '@/modals/settings/SavedAddresses.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
@@ -95,27 +88,6 @@ function _useModal() {
         break
       case Modal.MiniAppWarning:
         component = defineAsyncComponent(() => import(Modal.MiniAppWarning))
-        break
-      case Modal.Settings:
-        component = defineAsyncComponent(() => import(Modal.Settings))
-        break
-      case Modal.SettingsGeneral:
-        component = defineAsyncComponent(() => import(Modal.SettingsGeneral))
-        break
-      case Modal.SettingsSecurity:
-        component = defineAsyncComponent(() => import(Modal.SettingsSecurity))
-        break
-      case Modal.SettingsPayments:
-        component = defineAsyncComponent(() => import(Modal.SettingsPayments))
-        break
-      case Modal.SettingsMiniApps:
-        component = defineAsyncComponent(() => import(Modal.SettingsMiniApps))
-        break
-      case Modal.SettingsAccount:
-        component = defineAsyncComponent(() => import(Modal.SettingsAccount))
-        break
-      case Modal.SettingsSavedAddresses:
-        component = defineAsyncComponent(() => import(Modal.SettingsSavedAddresses))
         break
       case Modal.Task:
         component = defineAsyncComponent(() => import(Modal.Task))

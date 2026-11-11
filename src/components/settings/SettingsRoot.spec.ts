@@ -60,6 +60,10 @@ vi.mock('@/components/icons/fingerprint.vue', () => iconStub)
 vi.mock('@/components/icons/id-verification.vue', () => iconStub)
 vi.mock('@/components/icons/settings.vue', () => iconStub)
 
+vi.mock('@/components/WithdrawalAddressList.vue', () => ({
+  default: defineComponent({ template: '<input class="alias">' }),
+}))
+
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({ log: vi.fn(), sendReport }),
 }))
@@ -67,11 +71,6 @@ vi.mock('@/composables/useLogger', () => ({
 vi.mock('@/composables/useModal', () => ({
   Modal: {
     SecretFeatures: 'SecretFeatures',
-    SettingsGeneral: 'SettingsGeneral',
-    SettingsSecurity: 'SettingsSecurity',
-    SettingsPayments: 'SettingsPayments',
-    SettingsMiniApps: 'SettingsMiniApps',
-    SettingsAccount: 'SettingsAccount',
   },
   useModal: () => ({ showModal, closeModal }),
 }))
@@ -92,8 +91,8 @@ vi.mock('@/stores/app', () => ({
 }))
 
 async function mountSettings() {
-  const { default: SettingsModal } = await import('./SettingsModal.vue')
-  const wrapper = mount(SettingsModal, {
+  const { default: SettingsRoot } = await import('./SettingsRoot.vue')
+  const wrapper = mount(SettingsRoot, {
     global: {
       mocks: {
         $t: (value: string) => value,
@@ -108,7 +107,7 @@ function rowTitles(wrapper: Awaited<ReturnType<typeof mountSettings>>) {
   return wrapper.findAll('.menu-item').map(item => item.text())
 }
 
-describe('settingsModal', () => {
+describe('settingsRoot', () => {
   beforeEach(() => {
     phoneNumberVerified.value = false
     miniAppsEnabled.value = false
@@ -139,9 +138,9 @@ describe('settingsModal', () => {
     expect(rowTitles(wrapper)).toEqual(['General', 'Security', 'Payments', 'Account'])
   })
 
-  it('removes the Account delete row once the phone number is no longer verified', async () => {
+  it('removes the Account delete row and goes back once the phone number is no longer verified', async () => {
     phoneNumberVerified.value = true
-    const { default: Account } = await import('./settings/Account.vue')
+    const { default: Account } = await import('./SettingsAccount.vue')
     const wrapper = mount(Account, {
       global: {
         mocks: {
@@ -156,22 +155,24 @@ describe('settingsModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain(deleteRow)
+    expect(wrapper.emitted('back')).toHaveLength(1)
   })
 
   it.each([
-    ['General', 'SettingsGeneral'],
-    ['Security', 'SettingsSecurity'],
-    ['Payments', 'SettingsPayments'],
-    ['Mini Apps', 'SettingsMiniApps'],
-    ['Account', 'SettingsAccount'],
-  ])('opens %s as a stacked sub-screen', async (title, modal) => {
+    ['General', 'settingsGeneral'],
+    ['Security', 'settingsSecurity'],
+    ['Payments', 'settingsPayments'],
+    ['Mini Apps', 'settingsMiniApps'],
+    ['Account', 'settingsAccount'],
+  ])('navigates to the %s step inside the flow', async (title, step) => {
     miniAppsEnabled.value = true
     phoneNumberVerified.value = true
     const wrapper = await mountSettings()
 
     await wrapper.findAll('.menu-item').find(item => item.text() === title)!.trigger('click')
 
-    expect(showModal).toHaveBeenCalledExactlyOnceWith(modal, { isOnTop: true })
+    expect(wrapper.emitted('navigateTo')).toEqual([[{ step }]])
+    expect(showModal).not.toHaveBeenCalled()
   })
 
   it('keeps the version footer with its 5-tap Secret Features trigger', async () => {
@@ -198,5 +199,15 @@ describe('settingsModal', () => {
     await callback()
     expect(logDiagnostics).toHaveBeenCalledOnce()
     expect(sendReport).toHaveBeenCalledOnce()
+  })
+
+  it('does not treat a native select event inside a step as the step completing', async () => {
+    const onSelect = vi.fn()
+    const { default: SavedAddresses } = await import('./SettingsSavedAddresses.vue')
+    const wrapper = mount(SavedAddresses, { attrs: { onSelect } })
+
+    wrapper.find('input.alias').element.dispatchEvent(new Event('select', { bubbles: true }))
+
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })

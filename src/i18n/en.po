@@ -51,8 +51,8 @@ msgstr ""
 msgid "About"
 msgstr ""
 
-#: src/modals/settings/Account.vue:10
-#: src/modals/SettingsModal.vue:41
+#: src/components/settings/SettingsRoot.vue:32
+#: src/lib/flows/steps.ts:597
 msgid "Account"
 msgstr ""
 
@@ -74,7 +74,7 @@ msgstr ""
 msgid "Add Stake"
 msgstr ""
 
-#: src/lib/flows/steps.ts:590
+#: src/lib/flows/steps.ts:608
 msgid "Add to address book"
 msgstr ""
 
@@ -89,7 +89,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:549
+#: src/lib/flows/index.ts:557
 msgid "Address saved"
 msgstr ""
 
@@ -175,18 +175,18 @@ msgstr ""
 msgid "Attach logs"
 msgstr ""
 
+#: src/components/settings/SettingsPayments.vue:5
 #: src/modals/AutoDepositThresholdModal.vue:13
-#: src/modals/settings/Payments.vue:14
 msgid "Auto-deposit threshold"
 msgstr ""
 
+#: src/components/settings/SettingsSecurity.vue:15
 #: src/modals/LogOutModal/Warning.vue:21
 #: src/modals/MenuModal.vue:57
-#: src/modals/settings/Security.vue:25
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:602
+#: src/lib/flows/index.ts:610
 msgid "Backup successful"
 msgstr ""
 
@@ -198,10 +198,10 @@ msgstr ""
 msgid "Before securing new funds, Nimiq Pay checks your account history so no earlier deposit is left behind. Your funds stay safe in your wallet meanwhile. This can take up to {minutes} minutes."
 msgstr ""
 
+#: src/components/settings/SettingsSecurity.vue:6
 #: src/composables/useBiometric.ts:41
 #: src/lib/flows/steps.ts:220
 #: src/modals/EnableBiometricModal.vue:4
-#: src/modals/settings/Security.vue:15
 msgid "Biometric Authentication"
 msgstr ""
 
@@ -283,7 +283,7 @@ msgstr ""
 msgid "Cashlink has no balance"
 msgstr ""
 
-#: src/modals/settings/Security.vue:21
+#: src/components/settings/SettingsSecurity.vue:11
 msgid "Change PIN"
 msgstr ""
 
@@ -409,7 +409,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:594
+#: src/lib/flows/steps.ts:612
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -438,7 +438,7 @@ msgstr ""
 msgid "Could not verify pending transactions"
 msgstr ""
 
-#: src/lib/flows/steps.ts:704
+#: src/lib/flows/steps.ts:722
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
@@ -449,6 +449,10 @@ msgstr ""
 #: src/lib/mini-app-confirmation.ts:106
 #: src/types/transactions.ts:147
 msgid "Create Staker"
+msgstr ""
+
+#: src/components/settings/SettingsPayments.vue:20
+msgid "Crypto"
 msgstr ""
 
 #: src/modals/PointsModal.vue:18
@@ -463,7 +467,7 @@ msgstr ""
 msgid "Cryptocity Points have been credited"
 msgstr ""
 
-#: src/modals/settings/General.vue:26
+#: src/components/settings/SettingsGeneral.vue:17
 msgid "Currency"
 msgstr ""
 
@@ -477,10 +481,6 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:22
-msgid "Default withdrawal unit"
-msgstr ""
-
 #: src/components/ConfirmAddressDeletion.vue:3
 msgid "Delete {address}?"
 msgstr ""
@@ -489,7 +489,7 @@ msgstr ""
 msgid "Delete Address"
 msgstr ""
 
-#: src/modals/settings/Account.vue:14
+#: src/components/settings/SettingsAccount.vue:5
 msgid "Delete Cryptocity Points account"
 msgstr ""
 
@@ -505,7 +505,7 @@ msgstr ""
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr ""
 
-#: src/modals/settings/MiniApps.vue:21
+#: src/components/settings/SettingsMiniApps.vue:12
 msgid "Device ID access"
 msgstr ""
 
@@ -706,11 +706,15 @@ msgstr ""
 msgid "Fees may apply {fee}"
 msgstr ""
 
+#: src/components/settings/SettingsPayments.vue:17
+msgid "Fiat"
+msgstr ""
+
 #: src/components/competition/MiniAppsCompetitionView.vue:76
 msgid "Filter submissions by category"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:35
+#: src/components/settings/SettingsPayments.vue:36
 msgid "Found {count} missing deposits"
 msgstr ""
 
@@ -722,8 +726,8 @@ msgstr ""
 msgid "Full link:"
 msgstr ""
 
-#: src/modals/settings/General.vue:10
-#: src/modals/SettingsModal.vue:15
+#: src/components/settings/SettingsRoot.vue:6
+#: src/lib/flows/steps.ts:592
 msgid "General"
 msgstr ""
 
@@ -748,7 +752,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/lib/flows/steps.ts:594
+#: src/lib/flows/steps.ts:612
 msgid "Give it a name so you recognise it later"
 msgstr ""
 
@@ -917,7 +921,7 @@ msgstr ""
 #: src/composables/useStringParser.ts:177
 #: src/composables/useStringParser.ts:352
 #: src/composables/useStringParser.ts:47
-#: src/lib/flows/steps.ts:621
+#: src/lib/flows/steps.ts:639
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -977,7 +981,7 @@ msgstr ""
 
 #: src/composables/useQRScanner.ts:98
 #: src/composables/useStringParser.ts:40
-#: src/lib/flows/steps.ts:614
+#: src/lib/flows/steps.ts:632
 msgid "Invalid USDT address"
 msgstr ""
 
@@ -1017,7 +1021,7 @@ msgstr ""
 msgid "KYC verification required to complete this payment"
 msgstr ""
 
-#: src/modals/settings/General.vue:15
+#: src/components/settings/SettingsGeneral.vue:6
 msgid "Language"
 msgstr ""
 
@@ -1097,9 +1101,9 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
+#: src/components/settings/SettingsRoot.vue:25
+#: src/lib/flows/steps.ts:596
 #: src/modals/MenuModal.vue:40
-#: src/modals/settings/MiniApps.vue:10
-#: src/modals/SettingsModal.vue:34
 msgid "Mini Apps"
 msgstr ""
 
@@ -1108,11 +1112,11 @@ msgstr ""
 msgid "Mini Apps Competition"
 msgstr ""
 
-#: src/modals/settings/MiniApps.vue:24
+#: src/components/settings/SettingsMiniApps.vue:15
 msgid "Mini Apps you allowed to read an ID for this device."
 msgstr ""
 
-#: src/modals/settings/General.vue:37
+#: src/components/settings/SettingsGeneral.vue:28
 msgid "Minimum NIM Decimals"
 msgstr ""
 
@@ -1198,11 +1202,11 @@ msgstr ""
 msgid "No matching submissions"
 msgstr ""
 
-#: src/modals/settings/MiniApps.vue:37
+#: src/components/settings/SettingsMiniApps.vue:28
 msgid "No Mini App has access"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:37
+#: src/components/settings/SettingsPayments.vue:38
 msgid "No missing deposits found"
 msgstr ""
 
@@ -1379,9 +1383,9 @@ msgstr ""
 msgid "Payment was refunded"
 msgstr ""
 
+#: src/components/settings/SettingsRoot.vue:18
+#: src/lib/flows/steps.ts:594
 #: src/modals/MenuModal.vue:14
-#: src/modals/settings/Payments.vue:10
-#: src/modals/SettingsModal.vue:27
 msgid "Payments"
 msgstr ""
 
@@ -1412,7 +1416,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:631
+#: src/lib/flows/index.ts:639
 msgid "PIN change successful"
 msgstr ""
 
@@ -1554,11 +1558,11 @@ msgstr ""
 msgid "Really delete your Cryptocity Points account?"
 msgstr ""
 
-#: src/modals/settings/General.vue:60
+#: src/components/settings/SettingsGeneral.vue:51
 msgid "Receive Push Notifications"
 msgstr ""
 
-#: src/lib/flows/steps.ts:632
+#: src/lib/flows/steps.ts:650
 msgid "Receive USDT on Polygon"
 msgstr ""
 
@@ -1571,7 +1575,7 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
-#: src/modals/settings/General.vue:48
+#: src/components/settings/SettingsGeneral.vue:39
 msgid "Reduce Animations"
 msgstr ""
 
@@ -1588,7 +1592,7 @@ msgstr ""
 msgid "Remove Stake"
 msgstr ""
 
-#: src/modals/settings/MiniApps.vue:15
+#: src/components/settings/SettingsMiniApps.vue:6
 msgid "Reopen Mini App on unlock"
 msgstr ""
 
@@ -1605,7 +1609,7 @@ msgstr ""
 msgid "Requires Phone Number"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:42
+#: src/components/settings/SettingsPayments.vue:33
 msgid "Rescan pending NIM"
 msgstr ""
 
@@ -1618,7 +1622,7 @@ msgstr ""
 msgid "Retire Stake"
 msgstr ""
 
-#: src/modals/settings/MiniApps.vue:32
+#: src/components/settings/SettingsMiniApps.vue:23
 msgid "Revoke"
 msgstr ""
 
@@ -1632,8 +1636,8 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:35
-#: src/modals/settings/SavedAddresses.vue:10
+#: src/components/settings/SettingsPayments.vue:26
+#: src/lib/flows/steps.ts:595
 msgid "Saved addresses"
 msgstr ""
 
@@ -1662,17 +1666,17 @@ msgstr ""
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/modals/settings/Payments.vue:33
-#: src/modals/settings/Payments.vue:41
+#: src/components/settings/SettingsPayments.vue:34
+#: src/components/settings/SettingsPayments.vue:42
 msgid "Scan incomplete. Try again later."
 msgstr ""
 
 #: src/lib/flows/steps.ts:370
-#: src/lib/flows/steps.ts:661
+#: src/lib/flows/steps.ts:679
 msgid "Scan QR code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:662
+#: src/lib/flows/steps.ts:680
 msgid "Scan the QR code to send NIM to this address"
 msgstr ""
 
@@ -1685,8 +1689,8 @@ msgstr ""
 msgid "Search submissions"
 msgstr ""
 
-#: src/modals/settings/Security.vue:10
-#: src/modals/SettingsModal.vue:21
+#: src/components/settings/SettingsRoot.vue:12
+#: src/lib/flows/steps.ts:593
 msgid "Security"
 msgstr ""
 
@@ -1706,7 +1710,7 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:634
+#: src/lib/flows/steps.ts:652
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
@@ -1718,19 +1722,19 @@ msgstr ""
 msgid "Send logs"
 msgstr ""
 
-#: src/lib/flows/steps.ts:591
+#: src/lib/flows/steps.ts:609
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:632
+#: src/lib/flows/steps.ts:650
 msgid "Send NIM to top up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:634
+#: src/lib/flows/steps.ts:652
 msgid "Send USDT on Polygon to the address below."
 msgstr ""
 
-#: src/lib/flows/steps.ts:591
+#: src/lib/flows/steps.ts:609
 msgid "Send USDT to this address"
 msgstr ""
 
@@ -1760,12 +1764,12 @@ msgstr ""
 msgid "Set an amount"
 msgstr ""
 
+#: src/lib/flows/steps.ts:591
 #: src/modals/MenuModal.vue:51
-#: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
 
-#: src/modals/settings/General.vue:54
+#: src/components/settings/SettingsGeneral.vue:45
 msgid "Show hidden transactions"
 msgstr ""
 
@@ -1886,7 +1890,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/components/ShowWords.vue:30
+#: src/components/ShowWords.vue:40
 msgid "Store screenshot safely"
 msgstr ""
 
@@ -1934,7 +1938,7 @@ msgstr ""
 msgid "Terms of service"
 msgstr ""
 
-#: src/lib/flows/steps.ts:717
+#: src/lib/flows/steps.ts:735
 msgid "Test your backup"
 msgstr ""
 
@@ -1968,7 +1972,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:618
+#: src/lib/flows/index.ts:626
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1998,7 +2002,7 @@ msgstr ""
 msgid "There are currently no free NIM available."
 msgstr ""
 
-#: src/lib/flows/steps.ts:703
+#: src/lib/flows/steps.ts:721
 msgid "There is no \"Forgot password\""
 msgstr ""
 
@@ -2086,7 +2090,7 @@ msgstr ""
 msgid "Total fees"
 msgstr ""
 
-#: src/lib/flows/steps.ts:678
+#: src/lib/flows/steps.ts:696
 msgid "Transaction"
 msgstr ""
 
@@ -2265,7 +2269,7 @@ msgstr ""
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr ""
 
-#: src/lib/flows/steps.ts:724
+#: src/lib/flows/steps.ts:742
 msgid "We're working on something special"
 msgstr ""
 
@@ -2373,11 +2377,15 @@ msgstr ""
 msgid "Withdrawal successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:710
+#: src/components/settings/SettingsPayments.vue:13
+msgid "Withdrawal unit"
+msgstr ""
+
+#: src/lib/flows/steps.ts:728
 msgid "Write down these words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:711
+#: src/lib/flows/steps.ts:729
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
