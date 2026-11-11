@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import type { flowHeightOptions } from '@/lib/flows/index'
-import type { Step, StepInit } from '@/lib/flows/steps.types'
+import type { InfoStep, Step, StepInit } from '@/lib/flows/steps.types'
 import type { ExternalTransaction } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import { computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
@@ -577,6 +577,24 @@ export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
     }
   },
 } satisfies Step)
+
+// Settings: each category is a step, so moving between them slides inside one sheet instead of stacking modals.
+function settingsStep(step: InfoStep['step'], getTitle: () => string, component: Component): StepInit {
+  return async () => ({
+    step,
+    get title() { return getTitle() },
+    main: markRaw(props => h(component, props)),
+    goBackBy: 1,
+  } satisfies Step)
+}
+
+export const settingsRootStep = settingsStep(StepName.Settings, () => i18n.t('Settings'), defineAsyncComponent(() => import('@/components/settings/SettingsRoot.vue')))
+export const settingsGeneralStep = settingsStep(StepName.SettingsGeneral, () => i18n.t('General'), defineAsyncComponent(() => import('@/components/settings/SettingsGeneral.vue')))
+export const settingsSecurityStep = settingsStep(StepName.SettingsSecurity, () => i18n.t('Security'), defineAsyncComponent(() => import('@/components/settings/SettingsSecurity.vue')))
+export const settingsPaymentsStep = settingsStep(StepName.SettingsPayments, () => i18n.t('Payments'), defineAsyncComponent(() => import('@/components/settings/SettingsPayments.vue')))
+export const settingsSavedAddressesStep = settingsStep(StepName.SettingsSavedAddresses, () => i18n.t('Saved addresses'), defineAsyncComponent(() => import('@/components/settings/SettingsSavedAddresses.vue')))
+export const settingsMiniAppsStep = settingsStep(StepName.SettingsMiniApps, () => i18n.t('Mini Apps'), defineAsyncComponent(() => import('@/components/settings/SettingsMiniApps.vue')))
+export const settingsAccountStep = settingsStep(StepName.SettingsAccount, () => i18n.t('Account'), defineAsyncComponent(() => import('@/components/settings/SettingsAccount.vue')))
 
 export const confirmAddressDeletionStep: StepInit = async () => ({
   step: StepName.ConfirmAddressDeletion,

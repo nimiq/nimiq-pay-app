@@ -99,7 +99,7 @@ onLongPress(
       :icon="SettingsIcon"
       :title="$t('Settings')"
       aria-label="Settings"
-      @click="showModal(Modal.Settings, { isOnTop: true })"
+      @click="initializeFlow(FlowName.Settings)"
     />
     <MenuItem
       :icon="BackupIcon"

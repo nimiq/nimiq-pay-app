@@ -529,6 +529,14 @@ const addressSelectionFlow: FlowInit = async () => {
   return { flowName, steps, onCancel }
 }
 
+const settingsFlow: FlowInit = async () => {
+  const { settingsRootStep, settingsGeneralStep, settingsSecurityStep, settingsPaymentsStep, settingsSavedAddressesStep, settingsMiniAppsStep, settingsAccountStep } = await import('./steps')
+  const flowName = FlowName.Settings
+  // Root first; a sub-page (saved addresses) after its parent, so navigateTo({ step }) always slides forward.
+  const steps = await Promise.all([settingsRootStep, settingsGeneralStep, settingsSecurityStep, settingsPaymentsStep, settingsSavedAddressesStep, settingsMiniAppsStep, settingsAccountStep].map(s => s({ flowName })))
+  return { flowName, steps, backButtonNavigates: true }
+}
+
 const addressDeletionFlow: FlowInit = async () => {
   const { confirmAddressDeletionStep } = await import('./steps')
   const flowName = FlowName.AddressDeletion
@@ -667,6 +675,7 @@ const flows = {
   [FlowName.ComingSoon]: comingSoonFlow,
   [FlowName.AddressSelection]: addressSelectionFlow,
   [FlowName.AddressDeletion]: addressDeletionFlow,
+  [FlowName.Settings]: settingsFlow,
   [FlowName.SaveAddress]: saveAddressFlow,
   [FlowName.AskForPin]: askForPinFlow,
 
