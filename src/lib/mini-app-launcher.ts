@@ -11,7 +11,7 @@ import { isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from '@/com
 import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
-import { trackDAppClosed, trackDAppOpened, trackDAppSheetHeld } from '@/lib/analytics'
+import { trackDAppClosed, trackDAppOpened, trackDAppPopupClosed, trackDAppSheetHeld } from '@/lib/analytics'
 import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
@@ -206,8 +206,13 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
         clearPersistedSession()
       else if (pendingSession)
         await clearSession()
-      await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
-      await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+      // close() targets the active webview, so an open popup takes a second close to reach the Mini App.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
+        await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+        if (!isMiniAppActive.value)
+          break
+      }
     }
 
     // The provider runs at documentStart, but Android shows the webview dialog only
@@ -240,7 +245,13 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     // Null re-entry guard: plugin close() and dialog dismiss can both emit closeEvent.
     const openedAt = Date.now()
     const hostRef = host
-    handle = await InAppBrowser.addListener('closeEvent', async () => {
+    handle = await InAppBrowser.addListener('closeEvent', async ({ id }) => {
+      // A popup closing must not tear down the Mini App still open beneath it. No id
+      // means the plugin had no registered webview left: treat it as the main one.
+      if (id && !hostRef.isMainWebview(id)) {
+        trackDAppPopupClosed(targetUrl, appTitle)
+        return
+      }
       const h = handle
       if (h === null)
         return

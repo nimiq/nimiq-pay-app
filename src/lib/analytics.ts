@@ -330,6 +330,10 @@ export function trackDAppClosed(url: string, name: string, durationMs: number): 
   capture('miniapp_closed', { dapp_url: url, dapp_name: name, session_duration_ms: durationMs })
 }
 
+export function trackDAppPopupClosed(url: string, name: string): void {
+  capture('miniapp_popup_closed', { dapp_url: url, dapp_name: name })
+}
+
 export function trackWeb3Request(opts: {
   requestType: Web3RequestType
   blockchain: 'ethereum' | 'nimiq' | 'host'
@@ -338,6 +342,8 @@ export function trackWeb3Request(opts: {
   approved: boolean
   success: boolean
   chainId?: string
+  timedOut?: boolean
+  sheetWaitMs?: number
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -347,6 +353,8 @@ export function trackWeb3Request(opts: {
     approved: opts.approved,
     success: opts.success,
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
+    ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
   })
 }
 
