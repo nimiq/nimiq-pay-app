@@ -9,7 +9,7 @@ import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-s
 import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 
 const { closeModal } = useModal()
-const { language, selectedFiat, pushNotificationsStatus, showAnimations, decimalsAmount } = storeToRefs(useApp())
+const { language, selectedFiat, pushNotificationsStatus, showAnimations, decimalsAmount, showHiddenTransactions } = storeToRefs(useApp())
 const { unregisterNotifications, registerNotifications, requestLocalNotificationsPermission } = useNotifications()
 const nimDecimalsOptions = [0, 2, DECIMALS.NIM]
 
@@ -72,6 +72,12 @@ async function handlePushNotificationsToggle(event: IonToggleCustomEvent<ToggleC
         <IonItem>
           <IonToggle :checked="!showAnimations" @ion-change="showAnimations = !$event.detail.checked">
             {{ $t('Reduce Animations') }}
+          </IonToggle>
+        </IonItem>
+
+        <IonItem>
+          <IonToggle :checked="showHiddenTransactions" @ion-change="showHiddenTransactions = $event.detail.checked">
+            {{ $t('Show hidden transactions') }}
           </IonToggle>
         </IonItem>
 

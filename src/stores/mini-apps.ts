@@ -188,6 +188,11 @@ export const useMiniApps = defineStore('mini-apps', () => {
     deviceIdConsent.value = { ...deviceIdConsent.value, [origin]: true }
   }
 
+  function revokeDeviceIdConsent(origin: string) {
+    const { [origin]: _, ...rest } = deviceIdConsent.value
+    deviceIdConsent.value = rest
+  }
+
   // In-memory description cache for recently-viewed dApps; keyed by raw stored url.
   const recentDescriptionCache = new Map<string, string | undefined>()
 
@@ -376,7 +381,9 @@ export const useMiniApps = defineStore('mini-apps', () => {
     iconForUrl,
     ensureBestIcon,
     getMiniAppReportUrl,
+    deviceIdConsent,
     hasDeviceIdConsent,
     grantDeviceIdConsent,
+    revokeDeviceIdConsent,
   }
 })

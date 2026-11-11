@@ -31,6 +31,7 @@ export enum Modal {
   SettingsPayments = '@/modals/settings/Payments.vue',
   SettingsMiniApps = '@/modals/settings/MiniApps.vue',
   SettingsAccount = '@/modals/settings/Account.vue',
+  SettingsSavedAddresses = '@/modals/settings/SavedAddresses.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
@@ -112,6 +113,9 @@ function _useModal() {
         break
       case Modal.SettingsAccount:
         component = defineAsyncComponent(() => import(Modal.SettingsAccount))
+        break
+      case Modal.SettingsSavedAddresses:
+        component = defineAsyncComponent(() => import(Modal.SettingsSavedAddresses))
         break
       case Modal.Task:
         component = defineAsyncComponent(() => import(Modal.Task))

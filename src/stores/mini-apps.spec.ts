@@ -260,3 +260,23 @@ describe('useMiniApps remote catalog', () => {
     expect(httpGet).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('useMiniApps device ID consent', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  it('revokes consent for one origin and keeps the others', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.grantDeviceIdConsent('https://a.example')
+    store.grantDeviceIdConsent('https://b.example')
+
+    store.revokeDeviceIdConsent('https://a.example')
+
+    expect(store.hasDeviceIdConsent('https://a.example')).toBe(false)
+    expect(store.hasDeviceIdConsent('https://b.example')).toBe(true)
+    expect(Object.keys(store.deviceIdConsent)).toEqual(['https://b.example'])
+  })
+})

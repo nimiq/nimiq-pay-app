@@ -65,7 +65,7 @@ msgstr ""
 msgid "Activating scanner"
 msgstr ""
 
-#: src/components/WithdrawalAddressList.vue:44
+#: src/components/WithdrawalAddressList.vue:45
 msgid "Add another address"
 msgstr ""
 
@@ -182,6 +182,7 @@ msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
 #: src/modals/MenuModal.vue:57
+#: src/modals/settings/Security.vue:25
 msgid "Backup Account"
 msgstr ""
 
@@ -476,6 +477,10 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
+#: src/modals/settings/Payments.vue:22
+msgid "Default withdrawal unit"
+msgstr ""
+
 #: src/components/ConfirmAddressDeletion.vue:3
 msgid "Delete {address}?"
 msgstr ""
@@ -498,6 +503,10 @@ msgstr ""
 
 #: src/modals/DeletePointsModal.vue:16
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
+msgstr ""
+
+#: src/modals/settings/MiniApps.vue:21
+msgid "Device ID access"
 msgstr ""
 
 #: src/modals/MiniAppWarningModal.vue:84
@@ -699,6 +708,10 @@ msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:76
 msgid "Filter submissions by category"
+msgstr ""
+
+#: src/modals/settings/Payments.vue:35
+msgid "Found {count} missing deposits"
 msgstr ""
 
 #: src/components/TestnetFaucet.vue:18
@@ -1095,6 +1108,10 @@ msgstr ""
 msgid "Mini Apps Competition"
 msgstr ""
 
+#: src/modals/settings/MiniApps.vue:24
+msgid "Mini Apps you allowed to read an ID for this device."
+msgstr ""
+
 #: src/modals/settings/General.vue:37
 msgid "Minimum NIM Decimals"
 msgstr ""
@@ -1181,6 +1198,14 @@ msgstr ""
 msgid "No matching submissions"
 msgstr ""
 
+#: src/modals/settings/MiniApps.vue:37
+msgid "No Mini App has access"
+msgstr ""
+
+#: src/modals/settings/Payments.vue:37
+msgid "No missing deposits found"
+msgstr ""
+
 #: src/lib/tx.ts:121
 msgid "No NIM HTLC found in swap"
 msgstr ""
@@ -1205,7 +1230,7 @@ msgstr ""
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr ""
 
-#: src/components/WithdrawalAddressList.vue:41
+#: src/components/WithdrawalAddressList.vue:42
 msgid "No saved addresses"
 msgstr ""
 
@@ -1529,7 +1554,7 @@ msgstr ""
 msgid "Really delete your Cryptocity Points account?"
 msgstr ""
 
-#: src/modals/settings/General.vue:54
+#: src/modals/settings/General.vue:60
 msgid "Receive Push Notifications"
 msgstr ""
 
@@ -1580,6 +1605,10 @@ msgstr ""
 msgid "Requires Phone Number"
 msgstr ""
 
+#: src/modals/settings/Payments.vue:42
+msgid "Rescan pending NIM"
+msgstr ""
+
 #: src/lib/flows/steps.ts:277
 msgid "Resend"
 msgstr ""
@@ -1587,6 +1616,10 @@ msgstr ""
 #: src/lib/mini-app-confirmation.ts:128
 #: src/types/transactions.ts:151
 msgid "Retire Stake"
+msgstr ""
+
+#: src/modals/settings/MiniApps.vue:32
+msgid "Revoke"
 msgstr ""
 
 #: src/composables/useNotifications.ts:154
@@ -1597,6 +1630,11 @@ msgstr ""
 #: src/components/WithdrawalAddressList.vue:18
 #: src/modals/AutoDepositThresholdModal.vue:22
 msgid "Save"
+msgstr ""
+
+#: src/modals/settings/Payments.vue:35
+#: src/modals/settings/SavedAddresses.vue:10
+msgid "Saved addresses"
 msgstr ""
 
 #: src/components/QRScanner.vue:32
@@ -1622,6 +1660,11 @@ msgstr ""
 
 #: src/components/NimAddressDisplay.vue:32
 msgid "Scan Cashlink"
+msgstr ""
+
+#: src/modals/settings/Payments.vue:33
+#: src/modals/settings/Payments.vue:41
+msgid "Scan incomplete. Try again later."
 msgstr ""
 
 #: src/lib/flows/steps.ts:370
@@ -1720,6 +1763,10 @@ msgstr ""
 #: src/modals/MenuModal.vue:51
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
+msgstr ""
+
+#: src/modals/settings/General.vue:54
+msgid "Show hidden transactions"
 msgstr ""
 
 #: src/components/EnableBiometric.vue:16

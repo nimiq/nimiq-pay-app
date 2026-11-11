@@ -43,6 +43,10 @@ onBeforeMount(updateBiometryInfo)
         <IonItem button :detail="false" @click="initializeFlow(FlowName.ChangePin)">
           <IonLabel>{{ $t('Change PIN') }}</IonLabel>
         </IonItem>
+
+        <IonItem button :detail="false" @click="initializeFlow(FlowName.Backup, { isOnTop: true, analyticsSource: 'settings' })">
+          <IonLabel>{{ $t('Backup Account') }}</IonLabel>
+        </IonItem>
       </IonList>
     </div>
   </ModalTemplate>
