@@ -23,9 +23,6 @@ project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@c
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/.pnpm/@capacitor+preferences@8.0.1_@capacitor+core@8.5.2/node_modules/@capacitor/preferences/android')
 
-include ':capacitor-privacy-screen'
-project(':capacitor-privacy-screen').projectDir = new File('../node_modules/.pnpm/@capacitor+privacy-screen@2.0.1_@capacitor+core@8.5.2/node_modules/@capacitor/privacy-screen/android')
-
 include ':capacitor-screen-orientation'
 project(':capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capacitor+screen-orientation@8.0.2_@capacitor+core@8.5.2/node_modules/@capacitor/screen-orientation/android')
 
@@ -41,6 +38,9 @@ project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new F
 include ':capawesome-capacitor-posthog'
 project(':capawesome-capacitor-posthog').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-posthog@8.6.2_@capacitor+core@8.5.2_posthog-js@1.436.1_react@19.3.0_/node_modules/@capawesome/capacitor-posthog/android')
 
+include ':capawesome-capacitor-privacy-screen'
+project(':capawesome-capacitor-privacy-screen').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-privacy-screen@0.1.3_@capacitor+core@8.5.2/node_modules/@capawesome/capacitor-privacy-screen/android')
+
 include ':capgo-camera-preview'
 project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@8.11.6_@capacitor+core@8.5.2/node_modules/@capgo/camera-preview/android')
 
@@ -49,9 +49,6 @@ project(':capgo-capacitor-inappbrowser').projectDir = new File('../node_modules/
 
 include ':capgo-capacitor-updater'
 project(':capgo-capacitor-updater').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-updater@8.52.1_@capacitor+core@8.5.2/node_modules/@capgo/capacitor-updater/android')
-
-include ':rdlabo-capacitor-screenshot-event'
-project(':rdlabo-capacitor-screenshot-event').projectDir = new File('../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.5.2/node_modules/@rdlabo/capacitor-screenshot-event/android')
 
 include ':capacitor-extended-dialog'
 project(':capacitor-extended-dialog').projectDir = new File('../node_modules/.pnpm/capacitor-extended-dialog@0.0.17_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog/android')
