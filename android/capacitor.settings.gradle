@@ -51,7 +51,7 @@ include ':capgo-capacitor-updater'
 project(':capgo-capacitor-updater').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-updater@8.52.1_@capacitor+core@8.5.2/node_modules/@capgo/capacitor-updater/android')
 
 include ':capacitor-extended-dialog'
-project(':capacitor-extended-dialog').projectDir = new File('../node_modules/.pnpm/capacitor-extended-dialog@0.0.17_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog/android')
+project(':capacitor-extended-dialog').projectDir = new File('../node_modules/.pnpm/capacitor-extended-dialog@0.0.19_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog/android')
 
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@8.1.1_@capacitor+core@8.5.2/node_modules/@capacitor-community/sqlite/android')
