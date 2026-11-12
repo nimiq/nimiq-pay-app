@@ -362,6 +362,10 @@ export function trackChainSwitched(dappUrl: string, fromChainId: string, toChain
   capture('miniapp_chain_switched', { dapp_url: dappUrl, from_chain_id: fromChainId, to_chain_id: toChainId })
 }
 
+export function trackLightningPrep(url: string, name: string, stage: 'prepare' | 'recheck', outcome: 'ok' | 'timeout' | 'cancelled' | 'failed', durationMs: number, asset: string): void {
+  capture('miniapp_lightning_prep', { dapp_url: url, dapp_name: name, stage, outcome, duration_ms: durationMs, asset })
+}
+
 export async function identifyUser() {
   try {
     const { identifier } = await Device.getId()

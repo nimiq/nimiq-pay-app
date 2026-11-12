@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { Toast } from '@capacitor/toast'
 import { Interface, parseUnits } from 'ethers'
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
@@ -14,6 +14,7 @@ const erc20Interface = new Interface([
 const {
   addressesEqual,
   createBirpc,
+  dismissLoading,
   getBalance,
   getLightningQuote,
   getLimits,
@@ -31,9 +32,11 @@ const {
   selectLightningAsset,
   sendTx,
   sendSwapPayment,
+  showLoading,
   run,
   signTransaction,
   syncTransactionHistory,
+  trackLightningPrep,
   trackWeb3Request,
   updateBalance,
   useLocalWallet,
@@ -52,6 +55,7 @@ const {
     onUnsupportedChain: { asEvent: vi.fn() },
     updateRpcUrl: vi.fn(),
   })),
+  dismissLoading: vi.fn(async () => {}),
   getBalance: vi.fn(),
   getLightningQuote: vi.fn(),
   getLimits: vi.fn(),
@@ -69,9 +73,11 @@ const {
   selectLightningAsset: vi.fn(async (): Promise<Asset | undefined> => Asset.NIM),
   sendTx: vi.fn(),
   sendSwapPayment: vi.fn(),
+  showLoading: vi.fn((): Promise<{ cancelled: boolean }> => new Promise(() => {})),
   run: vi.fn(),
   signTransaction: vi.fn(async () => '0xsigned'),
   syncTransactionHistory: vi.fn(async () => {}),
+  trackLightningPrep: vi.fn(),
   trackWeb3Request: vi.fn(),
   updateBalance: vi.fn(async () => {}),
   useLocalWallet: vi.fn(),
@@ -89,6 +95,8 @@ vi.mock('@capacitor/toast', () => ({
   },
 }))
 
+vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { showLoading, dismissLoading } }))
+
 vi.mock('birpc', () => ({
   createBirpc,
 }))
@@ -101,6 +109,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   trackChainSwitched: vi.fn(),
+  trackLightningPrep,
   trackWeb3Request,
 }))
 
@@ -807,6 +816,104 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt.mock.calls.map(([prompt, promptDeadline]) => [prompt.type, promptDeadline]))
       .toEqual([['lightning-access', deadline], ['lightning-payment', deadline]])
     expect(selectLightningAsset).toHaveBeenCalledWith(expect.anything(), deadline)
+  })
+
+  describe('while the quote loads', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('rejects before the provider timeout and lets a retry reach the picker', async () => {
+      vi.useFakeTimers()
+      getPaymentRequestData.mockImplementationOnce(() => new Promise(() => {}))
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+      const response = handleRequest(request).catch(error => error)
+      await vi.waitFor(() => expect(getPaymentRequestData).toHaveBeenCalledOnce())
+      await vi.advanceTimersByTimeAsync(MINI_APP_REQUEST_TIMEOUT_MS - 1_000)
+
+      await expect(Promise.race([response, 'still waiting'])).resolves.toMatchObject({ type: 'NETWORK_ERROR' })
+      expect(Toast.show).toHaveBeenCalledOnce()
+      expect(dismissLoading).toHaveBeenCalledOnce()
+      expect(trackLightningPrep).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), 'prepare', 'timeout', expect.any(Number), 'NIM')
+      expect(confirmationPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-payment' }), expect.anything())
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(selectLightningAsset).toHaveBeenCalledTimes(2)
+    })
+
+    it('shows the loading sheet after the picker and closes it before the approval sheet', async () => {
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+      await handleRequest(request)
+
+      expect(showLoading).toHaveBeenCalledTimes(2)
+      const approval = confirmationPrompt.mock.calls.findIndex(([prompt]) => prompt.type === 'lightning-payment')
+      const [picked] = selectLightningAsset.mock.invocationCallOrder
+      const [shown, shownForRecheck] = showLoading.mock.invocationCallOrder
+      const [dismissed, dismissedForRecheck] = dismissLoading.mock.invocationCallOrder
+      expect(picked).toBeLessThan(shown)
+      expect(shown).toBeLessThan(dismissed)
+      expect(dismissed).toBeLessThan(confirmationPrompt.mock.invocationCallOrder[approval])
+      expect(confirmationPrompt.mock.invocationCallOrder[approval]).toBeLessThan(shownForRecheck)
+      expect(shownForRecheck).toBeLessThan(dismissedForRecheck)
+      expect(dismissedForRecheck).toBeLessThan(sendTx.mock.invocationCallOrder[0])
+    })
+
+    it('bounds the quote recheck after approval, ignores a late quote and lets a retry pay', async () => {
+      vi.useFakeTimers()
+      const quote = await getLightningQuote()
+      let returnLateQuote: (value: typeof quote) => void = () => {}
+      getLightningQuote
+        .mockResolvedValueOnce(quote)
+        .mockImplementationOnce(() => new Promise((resolve) => {
+          returnLateQuote = resolve
+        }))
+      const { handleRequest } = await createPermissionHost()
+
+      const response = handleRequest(request).catch(error => error)
+      await vi.waitFor(() => expect(getLightningQuote).toHaveBeenCalledTimes(3))
+      await vi.advanceTimersByTimeAsync(MINI_APP_REQUEST_TIMEOUT_MS - 1_000)
+
+      await expect(Promise.race([response, 'still waiting'])).resolves.toMatchObject({ type: 'NETWORK_ERROR' })
+      expect(dismissLoading).toHaveBeenCalledTimes(2)
+      returnLateQuote(quote)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(sendTx).not.toHaveBeenCalled()
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(sendTx).toHaveBeenCalledOnce()
+    })
+
+    it('rejects like a user rejection on Cancel and releases the invoice', async () => {
+      getPaymentRequestData.mockImplementationOnce(() => new Promise(() => {}))
+      showLoading.mockResolvedValueOnce({ cancelled: true })
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+      await expect(handleRequest(request)).rejects.toMatchObject({ type: 'PERMISSION_DENIED' })
+      expect(Toast.show).not.toHaveBeenCalled()
+      expect(dismissLoading).toHaveBeenCalledOnce()
+      expect(trackLightningPrep).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), 'prepare', 'cancelled', expect.any(Number), 'NIM')
+      expect(confirmationPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-payment' }), expect.anything())
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(selectLightningAsset).toHaveBeenCalledTimes(2)
+    })
+
+    it('closes the loading sheet when preparing the payment fails', async () => {
+      getPaymentRequestData.mockResolvedValueOnce({ error: 'Swap unavailable' })
+      const { handleRequest } = await createPermissionHost()
+
+      await expect(handleRequest(request)).rejects.toMatchObject({ type: 'INVALID_TRANSACTION', message: 'Swap unavailable' })
+      expect(dismissLoading).toHaveBeenCalledOnce()
+    })
+
+    it('still pays on a native build without the loading sheet', async () => {
+      showLoading.mockRejectedValueOnce(new Error('not implemented'))
+      dismissLoading.mockRejectedValueOnce(new Error('not implemented'))
+      const { handleRequest } = await createPermissionHost()
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+    })
   })
 
   it('lets the user choose USDT and returns when Polygon funding is submitted', async () => {

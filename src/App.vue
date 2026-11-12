@@ -9,6 +9,7 @@ import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
@@ -37,6 +38,9 @@ onLongPress(
 )
 
 onMounted(async () => {
+  // The native loading sheet survives a webview reload. Native builds without this method reject.
+  ExtendedDialog.dismissLoading().catch(() => {})
+
   try {
     const { version, build } = await App.getInfo()
     logger.log(`Nimiq Pay v${version} (build ${build})`)
