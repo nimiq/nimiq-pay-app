@@ -1466,6 +1466,7 @@ export class MiniAppHost {
       case 'sign': return this.sign(message.params)
       case 'isConsensusEstablished': return this.isConsensusEstablished()
       case 'getBlockNumber': return this.getBlockNumber()
+      case 'getCapabilities': return this.getCapabilities()
       case 'getBalance': return this.getBalance(message.params)
       case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
       case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
@@ -1484,6 +1485,11 @@ export class MiniAppHost {
 
   private isConsensusEstablished() {
     return useNimiqNetwork().consensus === 'established'
+  }
+
+  // Host features a Mini App cannot detect otherwise. No prompt, no network access. Unknown fields must be ignored.
+  private getCapabilities() {
+    return { stakingSignalsFromLocalAccount: true }
   }
 
   private getBlockNumber() {
@@ -2167,8 +2173,9 @@ export class MiniAppHost {
     // BigInt() throws on fractions and NaN, and the wasm u64 wraps out-of-range values, so the signed fee could differ from the prompt
     if (!Number.isSafeInteger(txData.fee) || txData.fee < 0)
       throw new InvalidTransactionError('Transaction fee must be a non-negative integer')
-    // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
-    const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
+    // Everything but remove-stake and the value-0 staking signals (sent from the local wallet, see tx.ts) spends from
+    // the HTLC; fail before prompting instead of after the user confirms
+    const spendsFromRemote = !(txData.transfer === Transfer.Staking && STAKING_FROM_LOCAL.has(txData.stakingData.type))
     const remoteSigner = useRemoteSigner()
     if (spendsFromRemote && !remoteSigner.remoteAddress) {
       // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.
@@ -2304,6 +2311,9 @@ abstract class MiniAppError extends Error {
   abstract readonly type: string
   readonly data?: { hash?: string, swapId?: string }
 }
+
+// Staking transactions sent from the local wallet instead of the HTLC (tx.ts)
+const STAKING_FROM_LOCAL = new Set(['remove-stake', 'set-active-stake', 'retire-stake', 'update-staker'])
 
 class UnknownRequestError extends MiniAppError {
   readonly type = 'UNKNOWN_REQUEST'

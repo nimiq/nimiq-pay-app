@@ -219,6 +219,31 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: e instanceof Error ? e.message : String(e) }
     }
 
+    // Signalling transactions (set-active-stake, retire-stake, update-staker: value 0) move no funds, so they are
+    // sent from the local wallet, which is also the staker, like remove-stake. Sending them from the HTLC fails when
+    // the HTLC was emptied by staking (a pruned HTLC cannot be a sender) or is being renewed.
+    if (value === 0n) {
+      const { localWallet, localAddress } = useLocalWallet()
+      const tx = new Nimiq.Transaction(
+        /* sender */ localAddress,
+        /* senderType */ Nimiq.AccountType.Basic,
+        /* senderData */ new Uint8Array(0),
+        /* recipient */ Nimiq.Address.fromString(Nimiq.Policy.STAKING_CONTRACT_ADDRESS),
+        /* recipientType */ Nimiq.AccountType.Staking,
+        /* recipientData */ data,
+        /* value */ 0n,
+        /* fee */ BigInt(partialArgs.fee ?? 0),
+        /* flags */ 0b10,
+        /* validityStartHeight */ getValidityStartHeight(),
+        /* networkId */ networkId.value,
+      )
+      // Inner (staker) signature over the content, then the sender signature over the content including it.
+      const innerSig = Nimiq.Signature.create(localWallet.privateKey, localWallet.publicKey, tx.serializeContent())
+      tx.data = Nimiq.StakingDataBuilder.setProof(tx.data, Nimiq.SignatureProof.singleSig(localWallet.publicKey, innerSig))
+      tx.sign(localWallet, undefined)
+      return { outcome: 'signed', signedTx: tx }
+    }
+
     // wasm-bindgen throws an opaque "expected instance of Address" for an undefined sender
     if (!useRemoteSigner().remoteAddress)
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }

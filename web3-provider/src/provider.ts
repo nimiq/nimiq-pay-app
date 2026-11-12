@@ -259,6 +259,11 @@ window.addEventListener('eip6963:requestProvider', () => {
   announceProvider()
 })
 
+// Host capabilities (see useMiniAppHost.ts getCapabilities). Defined here until NimiqProvider in
+// vendor/trust-web3-provider gets the method; unknown methods are forwarded to native by default.
+if (typeof (Nimiq as any).getCapabilities !== 'function')
+  (Nimiq as any).getCapabilities = () => Nimiq.request({ method: 'getCapabilities' })
+
 window.nimiq = Nimiq
 window.ethereum = Ethereum
 
