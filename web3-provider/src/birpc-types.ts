@@ -30,3 +30,12 @@ export interface WebviewFunctions {
   nimiqAccountsChanged: (accounts: string[]) => void
   fullscreenChanged: (enabled: boolean) => void
 }
+
+/**
+ * How long the provider waits for the host to answer one Mini App request.
+ * It covers the host's worst case for a confirmed EVM transaction: the sheet
+ * deadline (MINI_APP_REQUEST_TIMEOUT_MS, 120s) plus the broadcast RPC timeout
+ * (MiniAppHost.RPC_TIMEOUT_MS, 30s) plus 5s margin. Any shorter, and the Mini
+ * App can get a timeout for a transaction the host still sends.
+ */
+export const MINI_APP_PROVIDER_TIMEOUT_MS = 155_000
