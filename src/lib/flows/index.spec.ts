@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   trackWalletImported: vi.fn(),
   routerReplace: vi.fn(async () => {}),
   decrypt: vi.fn(async () => undefined),
+  decrypted: { value: true },
   phoneNumberVerified: false,
   showModal: vi.fn(async () => {}),
   clearPinInputTs: vi.fn(),
@@ -71,6 +72,7 @@ vi.mock('@/composables/useStringParser', () => ({
 vi.mock('@/composables/useDecrypt', () => ({
   useDecrypt: () => ({
     decrypt: state.decrypt,
+    decrypted: state.decrypted,
     clearPinInputTs: state.clearPinInputTs,
   }),
 }))
@@ -192,6 +194,7 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.trackWalletImported.mockClear()
     state.routerReplace.mockClear()
     state.decrypt.mockClear()
+    state.decrypted.value = true
     state.phoneNumberVerified = false
     state.showModal.mockClear()
     state.sendTx.mockReset()
@@ -277,6 +280,34 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.routerReplace).toHaveBeenCalledWith('/app')
     expect(state.trackWalletImported).toHaveBeenCalled()
     expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
+  })
+
+  it.each([FlowName.Setup, FlowName.SetupWithPromoCode, FlowName.Login])('completes %s after the biometric step wiped the PIN', async (flowName) => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(flowName)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+
+    await flow.onDone({ [StepName.PinCode]: '' }, { err, setToast: vi.fn() })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(state.decrypt).not.toHaveBeenCalled()
+    expect(state.routerReplace).toHaveBeenCalledWith('/app')
+  })
+
+  it.each([FlowName.Setup, FlowName.Login])('fails %s completion when the db was never unlocked', async (flowName) => {
+    state.decrypted.value = false
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(flowName)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+
+    await flow.onDone({ [StepName.PinCode]: '1234' }, { err, setToast: vi.fn() })
+
+    expect(err).toHaveBeenCalledWith('Something went wrong decrypting the database')
+    expect(state.routerReplace).not.toHaveBeenCalled()
   })
 
   it('reports the payment state readably when the scanned request has no data', async () => {
