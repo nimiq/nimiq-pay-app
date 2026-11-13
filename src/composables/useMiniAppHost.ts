@@ -8,11 +8,12 @@ import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { getAddress, Interface } from 'ethers'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
+import { trackChainSwitched, trackLightningPrep, trackWeb3Request } from '@/lib/analytics'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
@@ -152,6 +153,8 @@ type Network = 'ethereum' | 'nimiq'
 // Matches the birpc timeout of Mini App requests in web3-provider/src/provider.ts.
 // A sheet still open after it would approve a request the Mini App gave up on.
 export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
+// Leaves time for the host's error to reach the Mini App before that timeout.
+const LIGHTNING_QUOTE_TIMEOUT_MARGIN_MS = 2_000
 
 export type UserConfirmationRequest
   = | (MiniAppBase & { type: 'accounts', network: Network })
@@ -1958,49 +1961,99 @@ export class MiniAppHost {
       if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
         throw new NetworkError('Wallet changed before Lightning payment approval')
 
-      const { useStringParser } = await import('./useStringParser')
-      const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
-      if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
-        throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
-      const description = decoded.description || payment.message
+      const prepare = async () => {
+        const { useStringParser } = await import('./useStringParser')
+        const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
+        if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
+          throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
+        const description = decoded.description || payment.message
 
-      const { getSwap } = await useFastspotApiV2()
-      const quote = await getSwap(payment.paymentRef)
-      if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
-        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+        const { getSwap } = await useFastspotApiV2()
+        const quote = await getSwap(payment.paymentRef)
+        if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
+          throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
 
-      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
-        throw new NetworkError('Wallet changed before Lightning payment approval')
-      const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
-      const context = signer?.getWalletContext()
-      const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
-      const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
-      if (polygon)
-        await polygon.updateBalance()
-      if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
-        throw new NetworkError('NIM wallet is not ready')
-      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
-        throw new InvalidTransactionError('Insufficient NIM balance')
-      if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
-        throw new NetworkError('USDT wallet is not ready')
-      if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
-        throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
-      let usdtFeeAllowance = 0
-      if (polygon) {
-        const feeSnapshot = await polygon.primeHtlcFee()
-        const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
-        usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
-        if (polygon.balance < payment.amount + usdtFeeAllowance)
-          throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+        if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+          throw new NetworkError('Wallet changed before Lightning payment approval')
+        const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
+        const context = signer?.getWalletContext()
+        const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
+        const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
+        if (polygon)
+          await polygon.updateBalance()
+        if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
+          throw new NetworkError('NIM wallet is not ready')
+        if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+          throw new InvalidTransactionError('Insufficient NIM balance')
+        if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
+          throw new NetworkError('USDT wallet is not ready')
+        if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
+          throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
+        let usdtFeeAllowance = 0
+        if (polygon) {
+          const feeSnapshot = await polygon.primeHtlcFee()
+          const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
+          usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
+          if (polygon.balance < payment.amount + usdtFeeAllowance)
+            throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+        }
+
+        const { getLimits, SwapAsset } = await useFastspotApiV1()
+        const localAddress = useLocalWallet().localAddress
+        const limits = asset === Asset.USDT
+          ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
+          : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
+        if (payment.amount > Math.floor(limits.current * 0.99))
+          throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+        return {
+          // Narrowing of these properties does not survive the return.
+          payment: { ...payment, paymentRef: payment.paymentRef, invoiced: payment.invoiced },
+          description,
+          getSwap,
+          signer,
+          context,
+          polygon,
+          ethAddress,
+          usdtFeeAllowance,
+        }
       }
 
-      const { getLimits, SwapAsset } = await useFastspotApiV1()
-      const localAddress = useLocalWallet().localAddress
-      const limits = asset === Asset.USDT
-        ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
-        : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
-      if (payment.amount > Math.floor(limits.current * 0.99))
-        throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+      // Nothing else is on screen during these Fastspot calls, and the invoice stays locked until they settle.
+      const withLoadingSheet = <T>(work: Promise<T>, stage: 'prepare' | 'recheck') => {
+        const startedAt = Date.now()
+        let outcome: 'timeout' | 'cancelled' | 'failed' | undefined
+        let timer: ReturnType<typeof setTimeout> | undefined
+        return Promise.race([
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => {
+                outcome = 'timeout'
+                reject(new NetworkError(i18n.t('The Lightning payment could not be prepared in time. Please try again.')))
+              },
+              deadline - LIGHTNING_QUOTE_TIMEOUT_MARGIN_MS - Date.now(),
+            )
+            ExtendedDialog.showLoading({ message: i18n.t('Preparing your Lightning payment'), cancelButtonTitle: i18n.t('Cancel') })
+              .then(({ cancelled }) => {
+                if (cancelled) {
+                  outcome = 'cancelled'
+                  reject(new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE))
+                }
+              })
+              // OTA bundles can run on native builds without this method; the wait stays bounded.
+              .catch(error => logger.warn('Could not show the Lightning loading sheet', error))
+          }),
+          work,
+        ]).catch((error) => {
+          outcome ??= 'failed'
+          throw error
+        }).finally(async () => {
+          clearTimeout(timer)
+          trackLightningPrep(this.config.url, this.config.title, stage, outcome ?? 'ok', Date.now() - startedAt, asset)
+          await ExtendedDialog.dismissLoading().catch(error => logger.warn('Could not close the Lightning loading sheet', error))
+        })
+      }
+
+      const { payment, description, getSwap, signer, context, polygon, ethAddress, usdtFeeAllowance } = await withLoadingSheet(prepare(), 'prepare')
 
       const confirmed = await requestConfirmation({
         url: this.config.url,
@@ -2025,7 +2078,7 @@ export class MiniAppHost {
         throw new NetworkError('Wallet changed before sending')
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
-      const currentQuote = await getSwap(payment.paymentRef)
+      const currentQuote = await withLoadingSheet(getSwap(payment.paymentRef), 'recheck')
       if (currentQuote.status !== 'PENDING_CONFIRMATION' || currentQuote.expiry <= Date.now() / 1e3 + 20 || currentQuote.sell.amount !== payment.amount)
         throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
       if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
