@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
+import { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp, isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -82,6 +82,12 @@ const {
 }))
 
 const ethAddress = '0x1111111111111111111111111111111111111111'
+
+const inAppBrowser = vi.hoisted(() => ({
+  close: vi.fn((_options?: { id?: string }) => Promise.resolve()),
+  hide: vi.fn((_options?: { id?: string }) => Promise.resolve()),
+}))
+vi.mock('@capgo/capacitor-inappbrowser', () => ({ InAppBrowser: inAppBrowser }))
 
 vi.mock('@capacitor/toast', () => ({
   Toast: {
@@ -325,8 +331,8 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    // fullscreenChange + urlChangeEvent + browserPageLoaded
-    expect(browser.removeListener).toHaveBeenCalledTimes(3)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
+    expect(browser.removeListener).toHaveBeenCalledTimes(5)
   })
 
   it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
@@ -337,8 +343,8 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    // fullscreenChange + urlChangeEvent + browserPageLoaded
-    expect(browser.removeListener).toHaveBeenCalledTimes(3)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
+    expect(browser.removeListener).toHaveBeenCalledTimes(5)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
   })
@@ -429,6 +435,92 @@ describe('bridge origin', () => {
 
     post('response')
     expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
+  })
+})
+
+describe('app-driven close and hide', () => {
+  async function createMiniApp() {
+    const { browser, host } = await createPermissionHost()
+    const emit = (event: string, payload: unknown) =>
+      (browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
+    // The launcher registers the id openWebView returns.
+    host.isMainWebview('main')
+    inAppBrowser.close.mockClear()
+    inAppBrowser.hide.mockClear()
+    return { emit, host }
+  }
+
+  it('closes open popups, newest first, before the main webview', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    emit('popupWindowOpened', { id: 'popup-2', visible: true })
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close.mock.calls).toEqual([[{ id: 'popup-2', isAnimated: false }], [{ id: 'popup-1', isAnimated: false }], [{ id: 'main' }]])
+    await host.destroy()
+  })
+
+  it('still closes the main webview when a popup close fails', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    inAppBrowser.close.mockRejectedValueOnce(new Error('WebView is not initialized'))
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenLastCalledWith({ id: 'main' })
+    await host.destroy()
+  })
+
+  it('hides the main webview only after closing its popups', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+
+    await hideActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'popup-1', isAnimated: false })
+    expect(inAppBrowser.hide).toHaveBeenCalledExactlyOnceWith({ id: 'main' })
+    expect(inAppBrowser.close.mock.invocationCallOrder[0]).toBeLessThan(inAppBrowser.hide.mock.invocationCallOrder[0])
+    await host.destroy()
+  })
+
+  it('forgets popups the user already closed', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    emit('closeEvent', { id: 'popup-1', url: 'https://accounts.example/' })
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'main' })
+    await host.destroy()
+  })
+
+  it('closes a webview left from before a reload once, without an id', async () => {
+    const { host } = await createMiniApp()
+    await host.destroy()
+    inAppBrowser.close.mockClear()
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it('closes again without an id while the Mini App is still active and its id unknown', async () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const { host } = await createPermissionHost()
+    inAppBrowser.close.mockClear()
+    // The first close only reaches a popup; the second one closes the Mini App.
+    inAppBrowser.close.mockResolvedValueOnce(undefined).mockImplementationOnce(() => host.destroy())
+
+    const closing = closeActiveMiniApp()
+    await vi.advanceTimersByTimeAsync(3000)
+    await closing
+
+    expect(inAppBrowser.close.mock.calls).toEqual([[], []])
+    expect(isMiniAppActive.value).toBe(false)
   })
 })
 

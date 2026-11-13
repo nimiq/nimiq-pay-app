@@ -1,5 +1,4 @@
 import type { PluginListenerHandle } from '@capacitor/core'
-import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import type { Address } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
@@ -7,6 +6,8 @@ import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
+import { until } from '@vueuse/core'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
 import { ref, watch } from 'vue'
@@ -76,6 +77,8 @@ interface BridgeGate {
 
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
 let _activeMiniAppSession: MiniAppSessionState | null = null
+/** The host that owns `_activeMiniAppSession`; its webview ids scope app-driven close/hide. */
+let _activeMiniAppHost: MiniAppHost | null = null
 
 /**
  * Reactive flag mirroring whether a MiniAppHost session is currently active.
@@ -90,6 +93,43 @@ export const isMiniAppActive = ref(false)
  */
 export function getActiveMiniAppSession(): MiniAppSessionState | null {
   return _activeMiniAppSession ? { ..._activeMiniAppSession } : null
+}
+
+/**
+ * Closes the active Mini App, popups first, newest first. close() without an id
+ * hits the plugin's active webview, which is the top popup while one is open.
+ */
+export async function closeActiveMiniApp(): Promise<void> {
+  const host = _activeMiniAppHost
+  // Popups close without animation: iOS close() resolves while an animated dismiss
+  // still runs, and UIKit ignores the main webview's dismiss started before it ends.
+  for (const id of [...(host?.popupIds ?? [])].reverse())
+    await InAppBrowser.close({ id, isAnimated: false }).catch(error => logger.warn('Could not close Mini App popup', error))
+  if (host?.mainId !== undefined) {
+    await InAppBrowser.close({ id: host.mainId })
+    return
+  }
+  // No main id: still opening, or a webview left from before a reload. Each close()
+  // hits the top webview, so a popup can take a second close to reach the Mini App.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await InAppBrowser.close()
+    await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+    if (!isMiniAppActive.value)
+      return
+  }
+}
+
+/**
+ * Hides the active Mini App's main webview after closing its popups, which
+ * hide() without an id would hit instead. A popup can't outlive the reload that
+ * follows a hide anyway: the relaunch closes the old webview.
+ */
+export async function hideActiveMiniApp(): Promise<void> {
+  const host = _activeMiniAppHost
+  // Not animated, like in closeActiveMiniApp().
+  for (const id of [...(host?.popupIds ?? [])].reverse())
+    await InAppBrowser.close({ id, isAnimated: false }).catch(error => logger.warn('Could not close Mini App popup', error))
+  await InAppBrowser.hide({ id: host?.mainId })
 }
 
 export interface SignatureResult {
@@ -252,6 +292,10 @@ export class MiniAppHost {
   private fullscreenChangeListener: PluginListenerHandle | null = null
   private urlChangeListener: PluginListenerHandle | null = null
   private pageLoadedListener: PluginListenerHandle | null = null
+  private popupOpenedListener: PluginListenerHandle | null = null
+  private closeListener: PluginListenerHandle | null = null
+  /** Open popup webviews in opening order, so app-driven close/hide can reach the main webview. */
+  readonly popupIds = new Set<string>()
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
@@ -297,6 +341,8 @@ export class MiniAppHost {
       evmRpcUrls: this.evmRpcUrls,
     }
     this.sessionState = _activeMiniAppSession
+    // eslint-disable-next-line ts/no-this-alias -- module-level registry of the active host
+    _activeMiniAppHost = this
     isMiniAppActive.value = true
 
     // When the remote signer address changes (added/refreshed mid-session), the
@@ -323,6 +369,7 @@ export class MiniAppHost {
     // launch's closeEvent/browserPageLoaded listeners too).
     if (_activeMiniAppSession === this.sessionState) {
       _activeMiniAppSession = null
+      _activeMiniAppHost = null
       isMiniAppActive.value = false
     }
     const cleanupResults = await Promise.allSettled([
@@ -331,6 +378,8 @@ export class MiniAppHost {
       this.fullscreenChangeListener?.remove(),
       this.urlChangeListener?.remove(),
       this.pageLoadedListener?.remove(),
+      this.popupOpenedListener?.remove(),
+      this.closeListener?.remove(),
     ])
     for (const result of cleanupResults) {
       if (result.status === 'rejected')
@@ -340,6 +389,8 @@ export class MiniAppHost {
     this.fullscreenChangeListener = null
     this.urlChangeListener = null
     this.pageLoadedListener = null
+    this.popupOpenedListener = null
+    this.closeListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
@@ -539,6 +590,29 @@ export class MiniAppHost {
       else
         this.pageLoadedListener = handle
     }).catch(error => logger.error('Could not observe Mini App page loads', error))
+
+    void browser.addListener('popupWindowOpened', ({ id }) => {
+      this.popupIds.add(id)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.popupOpenedListener = handle
+    }).catch(error => logger.error('Could not observe Mini App popups', error))
+
+    void browser.addListener('closeEvent', ({ id }) => {
+      if (id)
+        this.popupIds.delete(id)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.closeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App popup closes', error))
+  }
+
+  get mainId(): string | undefined {
+    return this.bridgeGate.mainId
   }
 
   /** The first webview the host hears from is the main one; popups need its page to run first. */

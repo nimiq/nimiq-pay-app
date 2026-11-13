@@ -7,7 +7,7 @@ import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
-import { isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from '@/composables/useMiniAppHost'
+import { closeActiveMiniApp, isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from '@/composables/useMiniAppHost'
 import { clearPersistedSession, clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
@@ -188,7 +188,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     logger.warn('Mini App launch failed:', reason, targetUrl)
     clearGuard()
     toast.setToast({ message: LAUNCH_FAILED_TOAST, type: 'error' })
-    void InAppBrowser.close().catch(() => host?.destroy())
+    void closeActiveMiniApp().catch(() => host?.destroy())
   }
 
   // Scheduled before any await so a hung fetch/native call can never wedge the guard
@@ -206,13 +206,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
         clearPersistedSession()
       else if (pendingSession)
         await clearSession()
-      // close() targets the active webview, so an open popup takes a second close to reach the Mini App.
-      for (let attempt = 0; attempt < 2; attempt++) {
-        await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
-        await until(isMiniAppActive).toBe(false, { timeout: 3000 })
-        if (!isMiniAppActive.value)
-          break
-      }
+      await closeActiveMiniApp().catch(err => logger.log('close before launch failed (likely no webview):', err))
+      await until(isMiniAppActive).toBe(false, { timeout: 3000 })
     }
 
     // The provider runs at documentStart, but Android shows the webview dialog only
@@ -298,7 +293,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     }
 
     openCalled = true
-    await InAppBrowser.openWebView({
+    const { id: mainId } = await InAppBrowser.openWebView({
       url: targetUrl,
       title: appTitle,
       toolbarType: ToolBarType.NAVIGATION,
@@ -315,6 +310,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       // bar. Older windows already sit above it, so this would add a second gap there.
       enabledSafeBottomMargin: androidSDKVersion >= 35,
     })
+    // Registers the main webview id before any of its events, so app-driven close/hide can target it.
+    host.isMainWebview(mainId)
     // Watchdog/pageLoadError may have failed this launch (and closed the webview)
     // while openWebView was in flight; skip the success bookkeeping then.
     if (guardCleared)
@@ -342,7 +339,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       // A rejected openWebView leaves the not-yet-shown dialog alive on Android;
       // close it so its error page can't present itself later.
       if (openCalled)
-        void InAppBrowser.close().catch(() => {})
+        void closeActiveMiniApp().catch(() => {})
     }
     if (host)
       await host.destroy()

@@ -6,8 +6,11 @@ import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import PinInput from '@/components/PinInput.vue'
 
 const state = vi.hoisted(() => ({
+  closeActiveMiniApp: vi.fn(async () => {}),
   decrypt: vi.fn(),
+  launchMiniApp: vi.fn(async () => {}),
   replace: vi.fn(async () => {}),
+  session: undefined as { url: string, title: string } | undefined,
   logger: { error: vi.fn(), log: vi.fn(), warn: vi.fn(), sendReport: vi.fn() },
 }))
 
@@ -27,7 +30,6 @@ vi.mock('@capacitor/haptics', () => ({
   NotificationType: { Error: 'error' },
 }))
 vi.mock('@capacitor/keyboard', () => ({ Keyboard: { show: vi.fn() } }))
-vi.mock('@capgo/capacitor-inappbrowser', () => ({ InAppBrowser: { close: vi.fn(async () => {}) } }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ replace: state.replace }) }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (s: string) => s } }))
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
@@ -35,9 +37,12 @@ vi.mock('@/composables/useDevice', () => ({ useDevice: () => ({ isAndroid: false
 vi.mock('@/composables/useDecrypt', () => ({
   useDecrypt: () => ({ decrypt: state.decrypt, decrypted: ref(false) }),
 }))
+vi.mock('@/composables/useMiniAppHost', () => ({ closeActiveMiniApp: state.closeActiveMiniApp }))
+vi.mock('@/lib/mini-app-launcher', () => ({ launchMiniApp: state.launchMiniApp }))
+vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en', selectedFiat: 'USD' }) }))
 vi.mock('@/composables/useMiniAppSession', () => ({
   clearSession: vi.fn(async () => {}),
-  getSession: () => undefined,
+  getSession: () => state.session,
   hasPendingSession: () => false,
   reconnectAndShow: vi.fn(async () => {}),
 }))
@@ -82,6 +87,9 @@ describe('pinView', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     state.decrypt.mockReset()
     state.replace.mockClear()
+    state.closeActiveMiniApp.mockClear()
+    state.launchMiniApp.mockReset()
+    state.session = undefined
   })
 
   afterEach(() => {
@@ -135,6 +143,25 @@ describe('pinView', () => {
     await typePin()
     expect(wrapper.text()).toContain('Something went wrong decrypting the database. Try reloading the app.')
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+  })
+
+  it('closes the active Mini App when the PIN screen opens', async () => {
+    await mountPinView()
+
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+  })
+
+  it('closes the Mini App when its relaunch fails', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    state.launchMiniApp.mockRejectedValueOnce(new Error('open failed'))
+    await mountPinView()
+    state.closeActiveMiniApp.mockClear()
+
+    await typePin()
+
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+    expect(state.replace).toHaveBeenCalledWith('/app')
   })
 
   it('clears the loading spinner when the same error repeats', async () => {

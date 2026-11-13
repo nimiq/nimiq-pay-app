@@ -22,11 +22,12 @@ const {
   capacitorHttpGet,
   clearAllCookies,
   clearToast,
-  close,
+  closeActiveMiniApp,
   getDeviceInfo,
   getFaviconUrl,
   getPlatform,
   hostDestroy,
+  hostIsMainWebview,
   loggerError,
   loggerLog,
   loggerWarn,
@@ -41,9 +42,9 @@ const {
 } = vi.hoisted(() => ({
   getDeviceInfo: vi.fn(),
   getPlatform: vi.fn(() => 'ios'),
-  openWebView: vi.fn(() => Promise.resolve()),
+  openWebView: vi.fn(() => Promise.resolve({ id: MAIN_WEBVIEW_ID })),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
-  close: vi.fn(() => Promise.resolve()),
+  closeActiveMiniApp: vi.fn(() => Promise.resolve()),
   clearAllCookies: vi.fn(() => Promise.resolve()),
   setToast: vi.fn(() => Promise.resolve()),
   clearToast: vi.fn(),
@@ -52,6 +53,7 @@ const {
   loggerWarn: vi.fn(),
   getFaviconUrl: vi.fn((url: string) => `https://icons.example/${encodeURIComponent(url)}`),
   hostDestroy: vi.fn(() => Promise.resolve()),
+  hostIsMainWebview: vi.fn((id: string) => id === MAIN_WEBVIEW_ID),
   screenOrientationUnlock: vi.fn(() => Promise.resolve()),
   screenOrientationLock: vi.fn(() => Promise.resolve()),
   trackDAppClosed: vi.fn(),
@@ -91,7 +93,7 @@ vi.mock('@capacitor/screen-orientation', () => ({
 }))
 
 vi.mock('@capgo/capacitor-inappbrowser', () => ({
-  InAppBrowser: { openWebView, addListener, clearAllCookies, close },
+  InAppBrowser: { openWebView, addListener, clearAllCookies },
   ToolBarType: { NAVIGATION: 'navigation' },
 }))
 
@@ -106,6 +108,7 @@ vi.mock('@/composables/useToast', () => ({
 vi.mock('@/composables/useMiniAppHost', async () => {
   const { ref } = await import('vue')
   return {
+    closeActiveMiniApp,
     isMiniAppActive: ref(false),
     MINI_APP_REQUEST_TIMEOUT_MS: 120_000,
     MiniAppHost: class {
@@ -114,7 +117,7 @@ vi.mock('@/composables/useMiniAppHost', async () => {
       }
 
       destroy = hostDestroy
-      isMainWebview = (id: string) => id === MAIN_WEBVIEW_ID
+      isMainWebview = hostIsMainWebview
     },
   }
 })
@@ -155,11 +158,12 @@ describe('mini-app-launcher', () => {
     getPlatform.mockReturnValue('ios')
     getDeviceInfo.mockResolvedValue({})
     openWebView.mockReset()
-    openWebView.mockImplementation(() => Promise.resolve())
+    openWebView.mockImplementation(() => Promise.resolve({ id: MAIN_WEBVIEW_ID }))
     addListener.mockReset()
     addListener.mockImplementation(() => Promise.resolve({ remove: vi.fn() }))
-    close.mockReset()
-    close.mockImplementation(() => Promise.resolve())
+    closeActiveMiniApp.mockReset()
+    closeActiveMiniApp.mockImplementation(() => Promise.resolve())
+    hostIsMainWebview.mockClear()
     clearAllCookies.mockReset()
     clearAllCookies.mockImplementation(() => Promise.resolve())
     setToast.mockReset()
@@ -221,7 +225,7 @@ describe('mini-app-launcher', () => {
 
   it('short-circuits concurrent launches', async () => {
     const { launchMiniApp } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const first = launchMiniApp({ url: 'https://app.uniswap.org', source: 'deeplink' })
@@ -232,13 +236,13 @@ describe('mini-app-launcher', () => {
     await launchMiniApp({ url: 'https://opensea.io', source: 'deeplink' })
     expect(openWebView).toHaveBeenCalledTimes(1)
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await first
   })
 
   it('exposes openingMiniAppUrl ref while webview is opening', async () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
     let pageLoadedHandler: (() => void) | undefined
     addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -252,7 +256,7 @@ describe('mini-app-launcher', () => {
 
     expect(openingMiniAppUrl.value).toBe('https://app.uniswap.org/')
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
 
     // Guard is held until the webview confirms it loaded; simulate the native event.
@@ -343,9 +347,11 @@ describe('mini-app-launcher', () => {
     await flushPromises()
     isMiniAppActive.value = true
 
-    // Unscoped close() hits the active webview: the popup first, then the Mini App.
-    close.mockImplementationOnce(() => Promise.resolve(handlers.closeEvent?.({ id: 'popup-webview', url: 'https://accounts.example/' })) as never)
-    close.mockImplementationOnce(() => Promise.resolve(handlers.closeEvent?.({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })) as never)
+    // closeActiveMiniApp closes the popup, then the Mini App.
+    closeActiveMiniApp.mockImplementationOnce(async () => {
+      await handlers.closeEvent?.({ id: 'popup-webview', url: 'https://accounts.example/' })
+      await handlers.closeEvent?.({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
+    })
 
     vi.useFakeTimers()
     const launch = launchMiniApp({ url: 'https://other.example', source: 'deeplink' })
@@ -355,6 +361,14 @@ describe('mini-app-launcher', () => {
 
     expect(hostDestroy).toHaveBeenCalledTimes(1)
     isMiniAppActive.value = false
+  })
+
+  it('registers the id openWebView returns as the main webview before any of its events', async () => {
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
+
+    expect(hostIsMainWebview).toHaveBeenCalledExactlyOnceWith(MAIN_WEBVIEW_ID)
   })
 
   it('destroys the host on a closeEvent without an id', async () => {
@@ -393,7 +407,7 @@ describe('mini-app-launcher', () => {
 
   it('shows the loading toast while opening', async () => {
     const { launchMiniApp } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const pending = launchMiniApp({
@@ -411,7 +425,7 @@ describe('mini-app-launcher', () => {
     }))
     expect(clearToast).not.toHaveBeenCalled()
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
   })
 
@@ -464,7 +478,7 @@ describe('mini-app-launcher', () => {
 
   it('holds the guard until both openWebView resolves and browserPageLoaded fires (page loads first)', async () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
     let pageLoadedHandler: (() => void) | undefined
     addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -480,7 +494,7 @@ describe('mini-app-launcher', () => {
     pageLoadedHandler?.()
     expect(openingMiniAppUrl.value).toBe('https://app.uniswap.org/')
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
     expect(openingMiniAppUrl.value).toBeNull()
   })
@@ -514,7 +528,7 @@ describe('mini-app-launcher', () => {
 
       await vi.advanceTimersByTimeAsync(15_000)
       expect(openingMiniAppUrl.value).toBeNull()
-      expect(close).toHaveBeenCalledTimes(1)
+      expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
       expect(setToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'error' }))
     }
     finally {
@@ -564,16 +578,16 @@ describe('mini-app-launcher', () => {
     const { launchMiniApp } = await importLauncher()
     const { isMiniAppActive } = await import('@/composables/useMiniAppHost')
     isMiniAppActive.value = true
-    close.mockImplementationOnce(() => {
+    closeActiveMiniApp.mockImplementationOnce(() => {
       isMiniAppActive.value = false
       return Promise.resolve()
     })
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
     expect(openWebView).toHaveBeenCalledTimes(1)
-    expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
+    expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
 
   it('clears a preserved session and closes its hidden webview before opening', async () => {
@@ -589,9 +603,9 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
     expect(sessionStorage.getItem('miniAppSession')).toBeNull()
-    expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
+    expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
 
   it('relaunches a preserved session in a fresh webview without clearing its cookies', async () => {
@@ -607,7 +621,7 @@ describe('mini-app-launcher', () => {
 
     expect(clearAllCookies).not.toHaveBeenCalled()
     expect(sessionStorage.getItem('miniAppSession')).toBeNull()
-    expect(close.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
+    expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
     expect(trackDAppOpened).toHaveBeenCalledWith('https://app.uniswap.org/', 'Uniswap', 'resume')
   })
 
@@ -619,7 +633,7 @@ describe('mini-app-launcher', () => {
       hiddenAt: Date.now(),
     }))
     // Native close() rejects without a closeEvent when no webview exists.
-    close.mockRejectedValueOnce(new Error('WebView is not initialized'))
+    closeActiveMiniApp.mockRejectedValueOnce(new Error('WebView is not initialized'))
     const { launchMiniApp } = await importLauncher()
 
     await launchMiniApp({ url: 'https://app.uniswap.org/', title: 'Uniswap', source: 'resume', keepCookies: true })
@@ -630,7 +644,7 @@ describe('mini-app-launcher', () => {
 
   it('fails the launch on pageLoadError and skips success bookkeeping', async () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
     let errorHandler: (() => void) | undefined
     addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -645,9 +659,9 @@ describe('mini-app-launcher', () => {
     errorHandler?.()
     expect(openingMiniAppUrl.value).toBeNull()
     expect(setToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'error' }))
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
     expect(trackDAppOpened).not.toHaveBeenCalled()
   })
@@ -658,7 +672,7 @@ describe('mini-app-launcher', () => {
     vi.mocked(requestUserConfirmation).mockClear()
     vi.mocked(selectLightningAsset).mockClear()
     const { launchMiniApp } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
     let pageLoadedHandler: (() => void) | undefined
     addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -685,7 +699,7 @@ describe('mini-app-launcher', () => {
     await flushPromises()
     expect(requestUserConfirmation).not.toHaveBeenCalled()
 
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
     expect(await confirmation).toBe(true)
     expect(await assetSelection).toBe('NIM')
@@ -705,7 +719,7 @@ describe('mini-app-launcher', () => {
       const { requestUserConfirmation } = await import('@/lib/mini-app-confirmation')
       vi.mocked(requestUserConfirmation).mockClear()
       const { launchMiniApp } = await importLauncher()
-      const deferred = createDeferred<void>()
+      const deferred = createDeferred<{ id: string }>()
       openWebView.mockImplementationOnce(() => deferred.promise)
       let pageLoadedHandler: (() => void) | undefined
       addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -724,7 +738,7 @@ describe('mini-app-launcher', () => {
 
       await vi.advanceTimersByTimeAsync(10_000)
       pageLoadedHandler?.()
-      deferred.resolve()
+      deferred.resolve({ id: MAIN_WEBVIEW_ID })
       await pending
       await vi.advanceTimersByTimeAsync(600)
       await confirmation
@@ -807,7 +821,7 @@ describe('mini-app-launcher', () => {
     vi.mocked(requestUserConfirmation).mockClear()
     vi.mocked(selectLightningAsset).mockClear()
     const { launchMiniApp } = await importLauncher()
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
     let errorHandler: (() => void) | undefined
     addListener.mockImplementation(((event: string, handler: () => void) => {
@@ -826,7 +840,7 @@ describe('mini-app-launcher', () => {
     const assetSelection = config.selectLightningAsset({ url: 'https://app.uniswap.org/', name: 'Uniswap' })
 
     errorHandler?.()
-    deferred.resolve()
+    deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
     expect(await confirmation).toBe(false)
     expect(await assetSelection).toBeUndefined()
@@ -840,7 +854,7 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
     expect(hostDestroy).toHaveBeenCalledTimes(1)
   })
 })
