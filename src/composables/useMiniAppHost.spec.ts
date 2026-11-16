@@ -790,7 +790,7 @@ describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10], 'nimiq_send_transaction'],
     ['sendBasicTransactionWithData', ['NQ22 RECIPIENT', 100000, 0, 'Payment reference'], 'nimiq_send_transaction'],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10], 'nimiq_staking_create_staker'],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000], 'nimiq_staking_create_staker'],
   ])('returns -32001 with a reconciliation hash for uncertain %s', async (name, params, requestType) => {
     sendTx.mockResolvedValue({
       outcome: 'unknown',
@@ -1195,7 +1195,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
 describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line test/prefer-lowercase-title
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000]],
     ['sendStakeTransaction', [10]],
   ])('rejects %s before confirmation without an active remote signer', async (name, params) => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
@@ -1216,7 +1216,7 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
 
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000]],
     ['sendStakeTransaction', [10]],
   ])('rejects %s as insufficient balance for a synced never-funded wallet', async (name, params) => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState: 'resolved-empty' })
@@ -1271,8 +1271,8 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
 
 describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-lowercase-title
   it.each([
-    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10, fee: 7 }],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10, 7]],
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10_000_000, fee: 7 }],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000, 7]],
     ['sendStakeTransaction', { value: 10, fee: 7 }],
     ['sendStakeTransaction', [10, 7]],
     ['sendSetActiveStakeTransaction', { newActiveBalance: 10, fee: 7 }],
@@ -1321,6 +1321,41 @@ describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-l
     })
     expect(confirmationPrompt).not.toHaveBeenCalled()
     expect(sendTx).not.toHaveBeenCalled()
+  })
+})
+
+describe('MiniAppHost staking protocol rules', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 100_000 }, 'Staker must be created with at least 100 NIM'],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 9_999_999], 'Staker must be created with at least 100 NIM'],
+    ['sendStakeTransaction', { value: 0 }, 'Added stake must be greater than zero'],
+    ['sendStakeTransaction', [0], 'Added stake must be greater than zero'],
+    ['sendRetireStakeTransaction', { retireStake: 0 }, 'Retired stake must be greater than zero'],
+    ['sendRetireStakeTransaction', [0], 'Retired stake must be greater than zero'],
+  ])('rejects %s %j before confirmation', async (name, params, message) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message,
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    // sendTx is what stages the transaction with the cosigner
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('prompts for a staker created with exactly the minimum stake', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewStakerTransaction',
+      params: { delegation: 'NQ33 VALIDATOR', value: 10_000_000 },
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: 10_000_000 }),
+    }))
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ amount: 10_000_000 }))
   })
 })
 
