@@ -1,5 +1,5 @@
 import type { TargetedRemoteSignerRecoveryResult } from '@/stores/sync/remote-signers'
-import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
+import type { PaymentMethod, Rail, TransactionSendResult, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
@@ -354,7 +354,13 @@ export function trackWeb3Request(opts: {
   success: boolean
   chainId?: string
   timedOut?: boolean
+  // Request start to sheet open (pre-sheet prep time)
   sheetWaitMs?: number
+  // Request start to sheet close (includes time the user spends in the sheet)
+  sheetCloseMs?: number
+  sendMs?: number
+  txOutcome?: TransactionSendResult['outcome'] | 'failed'
+  exceededProviderTimeout?: boolean
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -366,6 +372,10 @@ export function trackWeb3Request(opts: {
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
     ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
     ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
+    ...(opts.sheetCloseMs === undefined ? {} : { sheet_close_ms: opts.sheetCloseMs }),
+    ...(opts.sendMs === undefined ? {} : { send_ms: opts.sendMs }),
+    ...(opts.txOutcome === undefined ? {} : { tx_outcome: opts.txOutcome }),
+    ...(opts.exceededProviderTimeout === undefined ? {} : { exceeded_provider_timeout: opts.exceededProviderTimeout }),
   })
 }
 
