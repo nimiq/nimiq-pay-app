@@ -7,7 +7,6 @@ import type { NotificationRes } from '@/composables/useApi'
 import type { UserReceiptTransaction } from '@/types/transactions'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { PushNotifications } from '@capacitor/push-notifications'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
@@ -16,6 +15,7 @@ import { useChangelog } from '@/composables/useChangelog'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
+import { closeActiveMiniApp } from '@/composables/useMiniAppHost'
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
@@ -398,7 +398,7 @@ export function useNotifications() {
         return
       }
       try {
-        await InAppBrowser.close()
+        await closeActiveMiniApp()
       }
       catch {}
       initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })

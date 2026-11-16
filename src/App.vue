@@ -6,7 +6,6 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
@@ -109,7 +108,7 @@ App.addListener('resume', async () => {
     await logger.forceSaveToFile()
 
     // If a mini-app webview is open, keep it only when auto-reopen is enabled
-    const { getActiveMiniAppSession } = await import('@/composables/useMiniAppHost')
+    const { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp } = await import('@/composables/useMiniAppHost')
     const { clearSession, saveSession } = await import('@/composables/useMiniAppSession')
     const activeSession = getActiveMiniAppSession()
     const preserveSession = shouldPreserveMiniAppSession({
@@ -119,7 +118,7 @@ App.addListener('resume', async () => {
 
     if (preserveSession && activeSession) {
       try {
-        await InAppBrowser.hide()
+        await hideActiveMiniApp()
         saveSession(activeSession)
         logger.log('Mini-app webview hidden, session saved for reconnection after PIN')
       }
@@ -127,7 +126,7 @@ App.addListener('resume', async () => {
         logger.error('Failed to hide webview, falling back to close:', err)
         await clearSession()
         try {
-          await InAppBrowser.close()
+          await closeActiveMiniApp()
         }
         catch {}
       }
@@ -137,7 +136,7 @@ App.addListener('resume', async () => {
       if (activeSession && !reopenMiniAppWebviewAfterResume.value)
         logger.log('Mini-app webview auto-reopen disabled, closing webview on app reload')
       try {
-        await InAppBrowser.close()
+        await closeActiveMiniApp()
       }
       catch {}
     }

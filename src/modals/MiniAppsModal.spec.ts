@@ -89,7 +89,7 @@ const {
   trackFeatureOpened,
   trackDAppOpened,
 } = vi.hoisted(() => ({
-  openWebView: vi.fn(() => Promise.resolve()),
+  openWebView: vi.fn(() => Promise.resolve({ id: 'main-webview' })),
   browserOpen: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
   clearAllCookies: vi.fn(() => Promise.resolve()),
@@ -156,7 +156,6 @@ vi.mock('@capgo/capacitor-inappbrowser', () => ({
     openWebView,
     addListener,
     clearAllCookies,
-    close: vi.fn(() => Promise.resolve()),
   },
   ToolBarType: {
     NAVIGATION: 'navigation',
@@ -180,9 +179,11 @@ vi.mock('@/composables/useToast', () => ({
 
 vi.mock('@/composables/useMiniAppHost', async () => {
   return {
+    closeActiveMiniApp: vi.fn(() => Promise.resolve()),
     isMiniAppActive: miniAppActiveState,
     MiniAppHost: class {
       destroy = hostDestroy
+      isMainWebview = vi.fn()
     },
   }
 })
@@ -318,7 +319,7 @@ describe('mini apps modal', () => {
     openingMiniAppUrl.value = null
 
     openWebView.mockReset()
-    openWebView.mockImplementation(() => Promise.resolve())
+    openWebView.mockImplementation(() => Promise.resolve({ id: 'main-webview' }))
     browserOpen.mockReset()
     browserOpen.mockImplementation(() => Promise.resolve())
     addListener.mockReset()
@@ -548,7 +549,7 @@ describe('mini apps modal', () => {
   })
 
   it('blocks repeated taps while first open is pending', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -563,12 +564,12 @@ describe('mini apps modal', () => {
 
     expect(openWebView).toHaveBeenCalledTimes(1)
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 
   it('locks all app rows while opening', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -583,12 +584,12 @@ describe('mini apps modal', () => {
       expect(button.attributes('disabled')).toBeDefined()
     }
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 
   it('shows loading indicator in clicked dapp icon while opening', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -602,7 +603,7 @@ describe('mini apps modal', () => {
     expect(wrapper.find('[data-testid="dapp-icon-loading-https-app-uniswap-org"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="dapp-icon-loading-https-polymarket-com"]').exists()).toBe(false)
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 

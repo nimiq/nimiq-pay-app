@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Keyboard } from '@capacitor/keyboard'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -10,6 +9,7 @@ import PinInput from '@/components/PinInput.vue'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
+import { closeActiveMiniApp } from '@/composables/useMiniAppHost'
 import { clearSession, getSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { i18n } from '@/i18n/i18n-setup'
 import { promiseWithTimeout } from '@/lib/utils'
@@ -81,7 +81,7 @@ async function handleSubmit(pin: string) {
         logger.error('Failed to relaunch Mini App session:', err)
         await clearSession()
         try {
-          await InAppBrowser.close()
+          await closeActiveMiniApp()
         }
         catch {}
       }
@@ -124,10 +124,7 @@ onMounted(async () => {
   if (!dbExists.value) {
     // No wallet — clear any stale session and close orphaned webview
     await clearSession()
-    try {
-      InAppBrowser.close()
-    }
-    catch {}
+    void closeActiveMiniApp().catch(() => {})
     router.replace('/setup')
   }
   else if (decrypted.value) {
@@ -135,12 +132,8 @@ onMounted(async () => {
   }
   else {
     // PIN screen shown — only close webview if there's no pending session to preserve
-    if (!hasPendingSession()) {
-      try {
-        InAppBrowser.close()
-      }
-      catch {}
-    }
+    if (!hasPendingSession())
+      void closeActiveMiniApp().catch(() => {})
   }
   shown()
 })
