@@ -4,7 +4,7 @@ import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
+import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData, TransactionSendResult } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
@@ -2367,6 +2367,8 @@ export class MiniAppHost {
     stakingTitle: PartialStakingTxArgs['title']
     stakingData: StakingData
   })): Promise<string> {
+    const requestStart = Date.now()
+    const deadline = requestStart + MINI_APP_REQUEST_TIMEOUT_MS
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
@@ -2410,9 +2412,11 @@ export class MiniAppHost {
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
       network: 'nimiq',
-    })
+    }, deadline)
+    const sheetCloseMs = Date.now() - requestStart
     if (!confirmed) {
-      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
+      // The native timeout fires at about the deadline, so a false this close to it is the timeout, not a decline.
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, timedOut: deadline - Date.now() < 1_000, sheetCloseMs })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
@@ -2446,8 +2450,17 @@ export class MiniAppHost {
       throw new InternalError('Invalid transfer type')
     }
 
-    const result = await useTransactions().sendTx(partialTx)
-    trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: result.outcome === 'submitted' })
+    // 'failed' stays only if sendTx throws
+    const sendStart = Date.now()
+    let txOutcome: TransactionSendResult['outcome'] | 'failed' = 'failed'
+    let result: TransactionSendResult
+    try {
+      result = await useTransactions().sendTx(partialTx)
+      txOutcome = result.outcome
+    }
+    finally {
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: txOutcome === 'submitted', sheetCloseMs, sendMs: Date.now() - sendStart, txOutcome, exceededProviderTimeout: Date.now() - requestStart > MINI_APP_PROVIDER_TIMEOUT_MS })
+    }
     if (result.outcome === 'rejected')
       throw new InternalError(`Failed to send payment transaction: ${result.error}`)
     if (result.outcome === 'unknown') {

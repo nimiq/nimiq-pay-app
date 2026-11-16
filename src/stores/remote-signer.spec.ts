@@ -32,6 +32,25 @@ function createHtlcCreation(overrides: Record<string, unknown> = {}) {
   }
 }
 
+// A successful spend from the HTLC: the history evidence a drained creation needs.
+function createHtlcDrain(creation: ReturnType<typeof createHtlcCreation>) {
+  return {
+    transactionHash: 'drain-hash',
+    state: 'confirmed',
+    executionResult: true,
+    sender: creation.recipient,
+    senderType: 'htlc',
+    recipient: 'NQ00 TEST LOCAL ADDRESS',
+    recipientType: 'basic',
+    value: creation.value,
+    fee: 0,
+    flags: 0,
+    timestamp: 123_200,
+    validityStartHeight: 120,
+    data: { type: 'raw', raw: '' },
+  }
+}
+
 function createLiveHtlcAccount(overrides: Record<string, unknown> = {}) {
   return {
     type: 'htlc',
@@ -737,6 +756,7 @@ describe('useRemoteSigner', () => {
     }
     state.runSet.mockClear()
     state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
+    state.client.getTransactionsByAddress.mockResolvedValue([createHtlcDrain(creation)])
 
     await store.activateRemoteSignerFromTransaction(creation as any)
 
@@ -752,6 +772,7 @@ describe('useRemoteSigner', () => {
     mockAddressSpecificSignerMetadata(creation)
     // The pruned HTLC address is now a basic account: its balance can't be reclaimed.
     state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 100_000 })
+    state.client.getTransactionsByAddress.mockResolvedValue([createHtlcDrain(creation)])
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
 
@@ -794,7 +815,7 @@ describe('useRemoteSigner', () => {
   it('resolves a drained history-only creation even when activation metadata is unavailable', async () => {
     const creation = createHtlcCreation()
     state.client.getTransaction.mockRejectedValue(new Error('not found'))
-    state.client.getTransactionsByAddress.mockResolvedValue([creation])
+    state.client.getTransactionsByAddress.mockResolvedValue([creation, createHtlcDrain(creation)])
     state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
     const { useSyncState } = await import('./sync/state')
     const { useSyncHtlc } = await import('./sync/htlc')
@@ -806,6 +827,61 @@ describe('useRemoteSigner', () => {
     expect(sync.pendingHtlcCreationTransactions).toEqual([])
     expect(state.runSet).not.toHaveBeenCalled()
     expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: creation.transactionHash, status: 'confirmed', timestamp: creation.timestamp })
+  })
+
+  it('keeps a confirmed creation pending while a lagging peer reports it drained without a spend', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    state.client.getAccount = vi.fn()
+      .mockResolvedValueOnce({ type: 'basic', balance: 0 })
+      .mockResolvedValue(createLiveHtlcAccount())
+    const { useRemoteSigner } = await import('./remote-signer')
+    const { useSyncState } = await import('./sync/state')
+    const { useSyncHtlc } = await import('./sync/htlc')
+    const store = useRemoteSigner()
+    const sync = useSyncState()
+    sync.pendingHtlcCreationTransactions.push({ ...creation, state: 'pending' } as any)
+
+    await useSyncHtlc().checkHtlcState()
+
+    expect(sync.pendingHtlcCreationTransactions.map(tx => tx.transactionHash)).toEqual([creation.transactionHash])
+    expect(store.remoteAddress).toBeUndefined()
+    expect(state.runSet).not.toHaveBeenCalled()
+    expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+
+    await useSyncHtlc().checkHtlcState()
+
+    expect(sync.pendingHtlcCreationTransactions).toEqual([])
+    expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(creation.recipient)
+    expect(store.remoteBalance).toBe(696_900_000)
+  })
+
+  it('keeps the active signer when its HTLC reads as drained after only a partial spend', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+    await store.updateRemoteSigner({
+      active: true,
+      address: createAddress(creation.recipient),
+      balance: 7,
+      end: 999_500,
+      proofSize: 98,
+      publicKey: 'service-public-key',
+      start: 123_100,
+    } as any, store.getWalletContext()!)
+    state.runSet.mockClear()
+    state.run.mockClear()
+    state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
+    // An early-resolve payment spends part of the HTLC; the rest is still there.
+    state.client.getTransactionsByAddress.mockResolvedValue([{ ...createHtlcDrain(creation), value: 1 }])
+
+    await expect(store.activateRemoteSignerFromTransaction(creation as any)).rejects.toThrow('history spends 1 of 696900000')
+
+    expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(creation.recipient)
+    expect(store.remoteBalance).toBe(7)
+    expect(state.runSet).not.toHaveBeenCalled()
+    expect(state.run).not.toHaveBeenCalled()
   })
 
   it('names the failed check when activation rejects an HTLC transaction', async () => {
