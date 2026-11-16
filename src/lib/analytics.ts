@@ -1,3 +1,4 @@
+import type { TargetedRemoteSignerRecoveryResult } from '@/stores/sync/remote-signers'
 import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
@@ -299,6 +300,16 @@ export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
   pending_htlc_creation_hashes: string[]
 }): void {
   capture(`funds_processing_${state}`, props)
+}
+
+// An own funded HTLC that is not the active signer is missing from the balance until this recovery lands (APP-332).
+export function trackStrayHtlcRecovery(props: {
+  status: TargetedRemoteSignerRecoveryResult['status']
+  reason?: Extract<TargetedRemoteSignerRecoveryResult, { status: 'deferred' }>['reason']
+  funded_count: number
+  has_active: boolean
+}): void {
+  capture('stray_htlc_recovery', props)
 }
 
 export function trackSyncSlow(props: { duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {

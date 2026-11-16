@@ -776,6 +776,45 @@ describe('useSyncRemoteSigners', () => {
       expect(state.updateRemoteSigner).not.toHaveBeenCalled()
     })
 
+    it('reports a stray funded HTLC recovery once', async () => {
+      mockAccounts({ [activeAddress]: htlcAccount(261_000), [strayAddress]: htlcAccount(860_000) })
+      mockRecoverableStray(860_000)
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { trackStrayHtlcRecovery } = await import('@/lib/analytics')
+      vi.mocked(trackStrayHtlcRecovery).mockClear()
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress, strayAddress]) })
+
+      expect(trackStrayHtlcRecovery).toHaveBeenCalledExactlyOnceWith({ status: 'submitted', funded_count: 2, has_active: true })
+    })
+
+    it('reports an unrecoverable stray once across verification runs', async () => {
+      mockAccounts({ [activeAddress]: htlcAccount(261_000), [strayAddress]: htlcAccount(860_000) })
+      state.registerValidatedRemoteSigner.mockRejectedValue(new Error('HTLC no longer valid'))
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { trackStrayHtlcRecovery } = await import('@/lib/analytics')
+      vi.mocked(trackStrayHtlcRecovery).mockClear()
+      const store = useSyncRemoteSigners()
+
+      await store.verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress, strayAddress]) })
+      await store.verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress, strayAddress]) })
+
+      expect(state.registerValidatedRemoteSigner).toHaveBeenCalledTimes(2)
+      expect(trackStrayHtlcRecovery).toHaveBeenCalledExactlyOnceWith({ status: 'rejected', funded_count: 2, has_active: true })
+    })
+
+    it('does not report a recovery when only the active HTLC is funded', async () => {
+      mockAccounts({ [activeAddress]: htlcAccount(261_000) })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { trackStrayHtlcRecovery } = await import('@/lib/analytics')
+      vi.mocked(trackStrayHtlcRecovery).mockClear()
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress, strayAddress]) })
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(trackStrayHtlcRecovery).not.toHaveBeenCalled()
+    })
+
     it('skips the remaining reconciliation after starting a drain', async () => {
       mockAccounts({ [activeAddress]: htlcAccount(261_000), [strayAddress]: htlcAccount(860_000) })
       mockRecoverableStray(860_000)
