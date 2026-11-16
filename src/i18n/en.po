@@ -255,6 +255,7 @@ msgstr ""
 #: src/components/TheHomeTransactions.vue:78
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
+#: src/composables/useMiniAppHost.ts:2035
 msgid "Cancel"
 msgstr ""
 
@@ -835,7 +836,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:169
-#: src/composables/useMiniAppHost.ts:2177
+#: src/composables/useMiniAppHost.ts:2234
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1525,6 +1526,10 @@ msgstr ""
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr ""
 
+#: src/composables/useMiniAppHost.ts:2035
+msgid "Preparing your Lightning payment"
+msgstr ""
+
 #: src/modals/ChangelogModal.vue:28
 msgid "Previous versions"
 msgstr ""
@@ -1780,7 +1785,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/components/Flow.vue:101
-#: src/components/Flow.vue:441
+#: src/components/Flow.vue:455
 #: src/composables/useApi.ts:230
 #: src/composables/useApi.ts:73
 #: src/lib/flows/index.ts:491
@@ -1835,7 +1840,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2178
+#: src/composables/useMiniAppHost.ts:2235
 #: src/lib/tx.ts:224
 #: src/lib/tx.ts:291
 #: src/lib/tx.ts:395
@@ -1922,7 +1927,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:465
+#: src/composables/useMiniAppHost.ts:468
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1956,6 +1961,10 @@ msgstr ""
 
 #: src/lib/issuer-websocket.ts:71
 msgid "The exchange rate is unfavorable. Please try again later"
+msgstr ""
+
+#: src/composables/useMiniAppHost.ts:2031
+msgid "The Lightning payment could not be prepared in time. Please try again."
 msgstr ""
 
 #: src/components/NimAddressDisplay.vue:11
@@ -2034,7 +2043,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:439
+#: src/composables/useMiniAppHost.ts:442
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
