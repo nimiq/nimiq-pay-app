@@ -5,7 +5,7 @@ import type { TransactionSendResult } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { trackSyncSlow } from '@/lib/analytics'
+import { trackStrayHtlcRecovery, trackSyncSlow } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
@@ -49,6 +49,8 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
   // Start of the current streak of incomplete discoveries. One fast incomplete run is normal on startup; a streak
   // that outlasts VERIFY_SLOW_MS across retries is the slow case.
   let incompleteSince: number | undefined
+  // Verification retries every 10 blocks while the balance is empty, so an unrecoverable stray would report every run.
+  const reportedStrayRecoveries = new Set<string>()
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -271,6 +273,12 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
         logger.log('🧲 Recovering funded HTLC that is not the active signer', { target, activeAddress, funded: funded.length })
         const result = await recoverRemoteSigner({ address: target.address }, target.timeout)
         logger.log('🧲 Stray HTLC recovery result', { address: target.address, result })
+        const reason = result.status === 'deferred' ? result.reason : undefined
+        const reportKey = `${target.address}:${result.status}:${reason}`
+        if (!reportedStrayRecoveries.has(reportKey)) {
+          reportedStrayRecoveries.add(reportKey)
+          trackStrayHtlcRecovery({ status: result.status, reason, funded_count: funded.length, has_active: !!activeAddress })
+        }
         if (result.status === 'submitted' || result.status === 'unknown')
           return 'recovering'
       }
