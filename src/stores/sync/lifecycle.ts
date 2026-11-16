@@ -118,6 +118,10 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (!isCurrent())
       return false
 
+    // A fresh DB learns its active signer from the cosigner; checking before that leaves PAY off (APP-369).
+    await useRemoteSigner().waitForActiveSignerHydration()
+    if (!isCurrent())
+      return false
     // Initial reconciliation can finish before signer hydration. Unblock deposits before history verification.
     await checkHtlcState()
     if (!isCurrent())

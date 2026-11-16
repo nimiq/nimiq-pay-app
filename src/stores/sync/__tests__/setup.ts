@@ -60,6 +60,7 @@ function makeState() {
   const getTransactionState = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: undefined }))
   const getContract = vi.fn((..._args: any[]): Promise<any> => Promise.reject(new Error('mocked fastspot failure')))
   const initRemoteSigner = vi.fn((): Promise<void> => Promise.resolve())
+  const waitForActiveSignerHydration = vi.fn((): Promise<void> => Promise.resolve())
   const initPolygon = vi.fn((): Promise<void> => Promise.resolve())
   const resolveHomeBalanceState = vi.fn((): Promise<void> => Promise.resolve())
   const blockHeightToTimestamp = vi.fn((height: number): Promise<number> => Promise.resolve(height * 1000))
@@ -157,6 +158,7 @@ function makeState() {
     getTransactionState,
     getContract,
     initRemoteSigner,
+    waitForActiveSignerHydration,
     initPolygon,
     resolveHomeBalanceState,
     blockHeightToTimestamp,
@@ -298,6 +300,7 @@ export function resetSyncState() {
     state.getTransactionState,
     state.getContract,
     state.initRemoteSigner,
+    state.waitForActiveSignerHydration,
     state.initPolygon,
     state.resolveHomeBalanceState,
     state.blockHeightToTimestamp,
@@ -360,6 +363,7 @@ export function resetSyncState() {
   state.getTransactionState.mockResolvedValue({ data: undefined, error: undefined })
   state.getContract.mockRejectedValue(new Error('mocked fastspot failure'))
   state.initRemoteSigner.mockResolvedValue(undefined)
+  state.waitForActiveSignerHydration.mockResolvedValue(undefined)
   state.initPolygon.mockResolvedValue(undefined)
   state.resolveHomeBalanceState.mockResolvedValue(undefined)
   state.blockHeightToTimestamp.mockImplementation((height: number) => Promise.resolve(height * 1000))
@@ -568,6 +572,7 @@ vi.mock('@/stores/remote-signer', () => {
     activateRemoteSignerFromTransaction: state.activateRemoteSignerFromTransaction,
     getSignerWriteRevision: () => 0,
     init: state.initRemoteSigner,
+    waitForActiveSignerHydration: state.waitForActiveSignerHydration,
     resolveHomeBalanceState: state.resolveHomeBalanceState,
   }))
   return { parseAddress, sameWalletContext, useRemoteSigner }

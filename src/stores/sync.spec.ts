@@ -283,6 +283,7 @@ vi.mock('@/stores/remote-signer', () => {
     updateSignersTableBalance: state.updateSignersTableBalance,
     updateRemoteSigner: state.updateRemoteSigner,
     init: vi.fn(() => Promise.resolve()),
+    waitForActiveSignerHydration: vi.fn(() => Promise.resolve()),
     resolveHomeBalanceState: vi.fn(() => Promise.resolve()),
   }))
 

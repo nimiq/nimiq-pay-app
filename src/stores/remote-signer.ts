@@ -20,6 +20,7 @@ const REMOTE_SIGNER_BALANCE_BATCH_SIZE = 20
 const HISTORY_PAGE_SIZE = 100
 const DISCOVER_TIMEOUT_MS = 30_000
 const COSIGNER_LISTING_RETRY_MS = 5 * 60 * 1000
+const ACTIVE_SIGNER_HYDRATION_TIMEOUT_MS = 10_000
 
 export interface RemoteSignerValidationDetails {
   address: string
@@ -1781,6 +1782,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   let headListener: HeadListener | undefined
   let staleHeadListeners: HeadListener[] = []
+  let activeSignerHydration: Promise<void> = Promise.resolve()
   let initGeneration = 0
 
   /**
@@ -1866,9 +1868,15 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       if (!remoteSigner.value) {
         logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
         void discoverRemoteSignersFromBlockchain()
+        // A fresh DB knows the active signer only from the cosigner. Startup verification before that
+        // would drain the live HTLC as a stray, and PAY stays off until the full walk ends (APP-369).
+        // Not awaited here: incoming-tx listeners and balances must not wait on the cosigner.
+        activeSignerHydration = promiseWithTimeout(updateRemoteFromApi(false, context), ACTIVE_SIGNER_HYDRATION_TIMEOUT_MS)
+          .catch(error => logger.warn('📡 Active signer not hydrated before verification', error instanceof Error ? error.message : String(error)))
       }
-
-      void updateRemoteFromApi()
+      else {
+        void updateRemoteFromApi()
+      }
       if (!isCurrentInit() || consensus.value !== 'established' || !isWalletContextCurrent(context))
         return
       const listenerId = await context.client.addHeadChangedListener(async () => {
@@ -1929,6 +1937,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     resolveHomeBalanceState,
     getWalletContext,
     isWalletContextCurrent,
+    waitForActiveSignerHydration: () => activeSignerHydration,
     getLocalTransactions,
     getAllTransactionsForAddress,
     findTransactionInHistory,

@@ -481,6 +481,20 @@ describe('useSyncRemoteSigners', () => {
       expect(state.discoverRemoteSignersFromBlockchain).not.toHaveBeenCalled()
     })
 
+    it('waits for the active signer hydration before sweeping', async () => {
+      let hydrate!: () => void
+      state.waitForActiveSignerHydration.mockReturnValue(new Promise<void>(resolve => hydrate = resolve))
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncState } = await import('./state')
+      const verifying = useSyncRemoteSigners().verifyRemoteSignersDb()
+      expect(useSyncState().isVerifyingRemoteSignersDb).toBe(true)
+      await Promise.resolve()
+      expect(state.scanLocalHtlcCreations).not.toHaveBeenCalled()
+      hydrate()
+      await verifying
+      expect(state.scanLocalHtlcCreations).toHaveBeenCalled()
+    })
+
     it('calls discoverRemoteSignersFromBlockchain BEFORE updateSignersTableBalance', async () => {
       const events: string[] = []
       state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {

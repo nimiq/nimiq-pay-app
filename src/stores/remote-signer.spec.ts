@@ -2858,6 +2858,51 @@ describe('useRemoteSigner', () => {
     expect(state.client.addHeadChangedListener).not.toHaveBeenCalled()
   })
 
+  it('hydrates the active signer from the cosigner on a fresh DB without holding init', async () => {
+    let answer!: (value: unknown) => void
+    state.getRemoteSigner.mockReturnValue(new Promise(resolve => answer = resolve))
+    state.client.getTransaction.mockResolvedValue(createHtlcCreation())
+    const { useRemoteSigner } = await import('./remote-signer')
+    const { useSyncHtlc } = await import('./sync/htlc')
+    const store = useRemoteSigner()
+
+    await store.init()
+    expect(state.client.addHeadChangedListener).toHaveBeenCalledOnce()
+    let hydrated = false
+    const hydration = store.waitForActiveSignerHydration().then(() => hydrated = true)
+    await vi.waitFor(() => expect(state.getRemoteSigner).toHaveBeenCalled())
+    const hydratedBeforeAnswer = hydrated
+    answer({ data: createRemoteSignerApiData(), error: undefined, hasError: false, status: 200 })
+    await hydration
+    await useSyncHtlc().checkHtlcState()
+
+    expect(hydratedBeforeAnswer).toBe(false)
+    expect(store.remoteAddress?.toUserFriendlyAddress()).toBe('NQ22 TEST OLD HTLC ADDRESS')
+    expect(store.isHtlcActive).toBe(true)
+  })
+
+  it('ends a fresh-DB active signer hydration without a signer when the cosigner does not answer', async () => {
+    vi.useFakeTimers()
+    try {
+      state.getRemoteSigner.mockReturnValue(new Promise(() => {}))
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await store.init()
+      let hydrated = false
+      void store.waitForActiveSignerHydration().then(() => hydrated = true)
+
+      await vi.advanceTimersByTimeAsync(9_000)
+      expect(hydrated).toBe(false)
+      await vi.advanceTimersByTimeAsync(1_001)
+
+      expect(hydrated).toBe(true)
+      expect(store.remoteAddress).toBeUndefined()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('registers one listener after consensus retry and replaces it on the next retry', async () => {
     state.consensus = 'connecting'
     const { useRemoteSigner } = await import('./remote-signer')

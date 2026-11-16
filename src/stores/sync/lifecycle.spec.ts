@@ -1094,6 +1094,62 @@ describe('useSyncLifecycle', () => {
       }
     })
 
+    it('keeps a fresh DB\'s live HTLC active and undrained while the history walk runs', async () => {
+      const live = 'NQ22 TEST LIVE HTLC'
+      state.consensus = 'established'
+      state.remoteAddress = undefined
+      state.remoteBalance = 0
+      state.isHtlcActive = false
+      // Hydration resolves once the cosigner names the active signer (APP-369).
+      state.waitForActiveSignerHydration.mockImplementation(async () => {
+        state.remoteAddress = createAddress(live)
+        state.remoteBalance = 10_000_000
+      })
+      state.getBalance.mockImplementation(async address => ({
+        data: (address as { toUserFriendlyAddress: () => string }).toUserFriendlyAddress() === live ? 10_000_000 : 0,
+        error: undefined,
+      }))
+      state.listCosignerHtlcs.mockResolvedValue([live])
+      state.scanLocalHtlcCreations.mockResolvedValue({ creations: [{ recipient: live }], historyComplete: true, sawHtlcTransaction: true, errors: [] })
+      state.client.getAccounts = vi.fn((addresses: { toUserFriendlyAddress: () => string }[]) => Promise.resolve(addresses.map(address => address.toUserFriendlyAddress() === live
+        ? { type: 'htlc', balance: 10_000_000, sender: state.localAddress.toUserFriendlyAddress(), recipient: 'NQ99 TEST COSIGNER', timeout: 300_000 }
+        : { type: 'basic', balance: 0 })))
+      let finishWalk!: () => void
+      state.getAllTransactionsForAddress.mockReturnValue(new Promise(resolve => finishWalk = () => resolve({ transactions: [], complete: true })))
+      const { useSyncHtlc } = await import('./htlc')
+      vi.spyOn(useSyncHtlc(), 'checkRemoteValidity').mockResolvedValue(undefined)
+      vi.spyOn(useSyncHtlc(), 'extendValidity').mockResolvedValue(undefined)
+      const { useSyncState } = await import('./state')
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      const syncing = useSyncLifecycle().syncWallets()
+      try {
+        await vi.waitFor(() => expect(state.getAllTransactionsForAddress.mock.calls.some(([address]) =>
+          (address as { toUserFriendlyAddress: () => string }).toUserFriendlyAddress() === live)).toBe(true))
+
+        expect(useSyncState().isVerifyingRemoteSignersDb).toBe(true)
+        expect(state.isHtlcActive).toBe(true)
+        expect(state.registerValidatedRemoteSigner).not.toHaveBeenCalled()
+        expect(state.sendTx).not.toHaveBeenCalled()
+      }
+      finally {
+        finishWalk()
+        await syncing
+      }
+    })
+
+    it('registers the incoming transaction listener while the active signer hydration is pending', async () => {
+      state.consensus = 'established'
+      state.waitForActiveSignerHydration.mockReturnValue(new Promise(() => {}))
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      void useSyncLifecycle().syncWallets()
+
+      await vi.waitFor(() => expect(state.client.addTransactionListener).toHaveBeenCalled())
+      expect(state.waitForActiveSignerHydration).toHaveBeenCalled()
+      expect(state.scanLocalHtlcCreations).not.toHaveBeenCalled()
+    })
+
     it('leaves the first validity check to startup when a head arrives during sync', async () => {
       state.consensus = 'established'
       state.height = 1_000

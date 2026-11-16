@@ -443,6 +443,8 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }, VERIFY_WEDGED_MS)
     let result: RemoteSignerDiscoveryResult | undefined
     try {
+      // Head-triggered runs can start before a fresh DB knows its active signer; the sweep would drain it as a stray (APP-369).
+      await remoteSignerStore.waitForActiveSignerHydration()
       // The cosigner lists our HTLCs in one query while the chain scan pages, which can stall for minutes.
       const listing = remoteSignerStore.listCosignerHtlcs()
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
