@@ -344,6 +344,8 @@ export function trackWeb3Request(opts: {
   chainId?: string
   timedOut?: boolean
   sheetWaitMs?: number
+  broadcastMs?: number
+  broadcastResult?: 'hash' | 'rpc_error' | 'timeout' | 'network_error'
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -355,6 +357,24 @@ export function trackWeb3Request(opts: {
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
     ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
     ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
+    ...(opts.broadcastMs === undefined ? {} : { broadcast_ms: opts.broadcastMs }),
+    ...(opts.broadcastResult === undefined ? {} : { broadcast_result: opts.broadcastResult }),
+  })
+}
+
+export function trackEvmBroadcastUnknownResolved(opts: {
+  dappUrl: string
+  dappName: string
+  chainId?: string
+  broadcastResult: 'timeout' | 'network_error'
+  landed: boolean
+}): void {
+  capture('miniapp_evm_broadcast_unknown_resolved', {
+    dapp_url: opts.dappUrl,
+    dapp_name: opts.dappName,
+    ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    broadcast_result: opts.broadcastResult,
+    landed: opts.landed,
   })
 }
 
