@@ -855,7 +855,7 @@ describe('MiniAppHost Nimiq transaction message', () => { // eslint-disable-line
       name: 'sendBasicTransactionWithData',
       params: ['NQ22 RECIPIENT', 10, 0, message],
     })).resolves.toBe('payment-hash')
-    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ message }) }))
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ message }) }), expect.any(Number))
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ message }))
   })
 })
@@ -1291,7 +1291,7 @@ describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-l
 
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ fee: 7 }),
-    }))
+    }), expect.any(Number))
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 7 }))
   })
 
@@ -1673,6 +1673,68 @@ describe('miniAppHost', () => {
     })).rejects.toThrow()
 
     expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: true }))
+  })
+
+  describe('nimiq send timing', () => {
+    let start: number
+
+    beforeEach(() => {
+      start = Date.now()
+      vi.setSystemTime(start)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    async function send(confirm: (deadline: number) => boolean) {
+      const { handleRequest, requestUserConfirmation: prompt } = await createPermissionHost()
+      prompt.mockImplementationOnce(async (_request: unknown, deadline: number) => confirm(deadline))
+      return { prompt, response: handleRequest({ network: 'nimiq', name: 'sendBasicTransaction', params: ['NQ22 RECIPIENT', 10] }) }
+    }
+
+    it('reports how long the sheet stayed open before a submitted send', async () => {
+      const { response } = await send(() => {
+        vi.setSystemTime(start + 30_000)
+        return true
+      })
+
+      await expect(response).resolves.toBe('payment-hash')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: true, sheetCloseMs: 30_000, sendMs: 0, txOutcome: 'submitted', exceededProviderTimeout: false }))
+    })
+
+    it('reports a send that finished after the provider stopped waiting', async () => {
+      sendTx.mockImplementationOnce(async () => {
+        vi.setSystemTime(Date.now() + 60_000)
+        return { outcome: 'unknown', stagedHash: 'staged-hash', stagedTx: { hash: 'staged-hash' }, error: 'response lost' }
+      })
+      const { response } = await send(() => {
+        vi.setSystemTime(start + 115_000)
+        return true
+      })
+
+      await expect(response).rejects.toMatchObject({ code: -32001 })
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ sheetCloseMs: 115_000, sendMs: 60_000, txOutcome: 'unknown', exceededProviderTimeout: true }))
+    })
+
+    it('reports a sheet that ran out its deadline as timed out', async () => {
+      const { prompt, response } = await send((deadline) => {
+        vi.setSystemTime(deadline)
+        return false
+      })
+
+      await expect(response).rejects.toThrow()
+      expect(prompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'transaction' }), start + MINI_APP_REQUEST_TIMEOUT_MS)
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: false, timedOut: true, sheetCloseMs: MINI_APP_REQUEST_TIMEOUT_MS }))
+    })
+
+    it('reports a send that threw as failed', async () => {
+      sendTx.mockRejectedValueOnce(new Error('send crashed'))
+      const { response } = await send(() => true)
+
+      await expect(response).rejects.toThrow()
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: true, success: false, txOutcome: 'failed' }))
+    })
   })
 
   it('reports a transaction confirmed at the deadline before the provider stops waiting', async () => {
