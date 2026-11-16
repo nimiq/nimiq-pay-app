@@ -750,6 +750,18 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     // A drained HTLC that later receives NIM is a basic account nobody can spend from.
     if (transaction.state === 'confirmed' && transaction.executionResult !== false
       && (account.type !== 'htlc' || account.balance === 0)) {
+      // A lagging peer can report a funded HTLC as missing, but it cannot invent spends from it (APP-368).
+      // HTLCs are spent in parts and only their creation funds them, so drained means the spends cover its value.
+      // Failed spends still pay the fee; spends without an execution result count as nothing.
+      const history = await getAllTransactionsForAddress(address)
+      if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
+        throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context after history')
+      const spent = history.transactions
+        .filter(entry => entry.sender === transaction.recipient && entry.executionResult !== undefined)
+        .reduce((sum, entry) => sum + entry.fee + (entry.executionResult ? entry.value : 0), 0)
+      if (spent < transaction.value)
+        throw new Error(`Cannot resolve drained HTLC transaction: history spends ${spent} of ${transaction.value}`)
+      logger.log('Resolved drained HTLC creation', { address: transaction.recipient, spent })
       if (remoteAddress.value?.toUserFriendlyAddress() === transaction.recipient
         && !await deactivateRemoteSigner(address, context, true)) {
         throw new Error('Cannot resolve drained HTLC transaction')
