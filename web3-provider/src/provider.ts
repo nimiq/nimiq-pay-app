@@ -8,6 +8,7 @@ import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { createBirpc } from 'birpc'
 import { getCachedAccounts, setCachedAccounts } from './account-cache'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
+import { MINI_APP_PROVIDER_TIMEOUT_MS } from './birpc-types'
 import { handleAddEthereumChain, handleSwitchEthereumChain } from './chain-request-handler'
 import { generateUUID } from './utils'
 
@@ -79,7 +80,7 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
     }) as EventListener)
   },
   eventNames: ['onChainChanged', 'onChainAdded', 'onUnsupportedChain'],
-  timeout: 120_000,
+  timeout: MINI_APP_PROVIDER_TIMEOUT_MS,
 })
 
 const provider = new Web3Provider({

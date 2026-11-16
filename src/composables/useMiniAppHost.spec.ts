@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
 import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
@@ -1473,6 +1474,80 @@ describe('miniAppHost', () => {
     })).rejects.toThrow()
 
     expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: true }))
+  })
+
+  it('reports a transaction confirmed at the deadline before the provider stops waiting', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const rpcTimeoutMs = (MiniAppHost as any).RPC_TIMEOUT_MS as number
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+      switch (payload.method) {
+        case 'eth_sendRawTransaction':
+          // Slowest broadcast that still beats the RPC timeout.
+          vi.setSystemTime(Date.now() + rpcTimeoutMs - 1)
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0xabc123' })
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: { status: '0x1' } })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    }))
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return true
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).resolves.toBe('0xabc123')
+    await vi.waitFor(() => expect(updateBalance).toHaveBeenCalledOnce())
+
+    expect(Date.now() - start).toBeGreaterThan(MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(Date.now() - start).toBeLessThan(MINI_APP_PROVIDER_TIMEOUT_MS)
+  })
+
+  it('does not broadcast once a stalled signing leaves no time to report the outcome', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const rpcMethods: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      rpcMethods.push((JSON.parse(String(init?.body)) as { method: string }).method)
+      return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+    }))
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return true
+    })
+    signTransaction.mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 10_000)
+      return '0xsigned'
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow('Request timed out before the transaction was sent')
+
+    expect(signTransaction).toHaveBeenCalledOnce()
+    expect(rpcMethods).not.toContain('eth_sendRawTransaction')
   })
 
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {

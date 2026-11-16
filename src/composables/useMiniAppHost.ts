@@ -31,6 +31,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
+import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
 import {
   TRANSACTION_OUTCOME_UNKNOWN_CODE,
   TRANSACTION_OUTCOME_UNKNOWN_MESSAGE,
@@ -149,8 +150,9 @@ interface MiniAppBase {
 
 type Network = 'ethereum' | 'nimiq'
 
-// Matches the birpc timeout of Mini App requests in web3-provider/src/provider.ts.
-// A sheet still open after it would approve a request the Mini App gave up on.
+// How long the sheets of one Mini App request stay open. The provider waits
+// longer (MINI_APP_PROVIDER_TIMEOUT_MS) so a transaction confirmed at this
+// deadline can still broadcast and report its outcome to the Mini App.
 export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
 
 export type UserConfirmationRequest
@@ -962,7 +964,8 @@ export class MiniAppHost {
 
   private async signEthTransaction(params: unknown): Promise<string> {
     // The sheet must close when the request times out, however long the RPC calls took.
-    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
+    const requestStart = Date.now()
+    const deadline = requestStart + MINI_APP_REQUEST_TIMEOUT_MS
     logger.log('[ETH_TX] Step 1 - Raw params received:', JSON.stringify(params))
 
     // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
@@ -1194,7 +1197,7 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided')
     }
 
-    const sheetWaitMs = MINI_APP_REQUEST_TIMEOUT_MS - (deadline - Date.now())
+    const sheetWaitMs = Date.now() - requestStart
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1313,6 +1316,11 @@ export class MiniAppHost {
     if (!rpcUrl) {
       throw new NetworkError('Missing Ethereum RPC URL to broadcast transaction')
     }
+
+    // A broadcast that could outlast the provider timeout would send a transaction
+    // the Mini App already saw time out, e.g. after signing stalled.
+    if (Date.now() + MiniAppHost.RPC_TIMEOUT_MS > requestStart + MINI_APP_PROVIDER_TIMEOUT_MS)
+      throw new NetworkError('Request timed out before the transaction was sent')
 
     logger.log('[ETH_TX] Step 6 - Broadcasting via RPC:', { rpcUrl, method: 'eth_sendRawTransaction' })
 
