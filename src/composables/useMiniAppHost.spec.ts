@@ -1322,6 +1322,38 @@ describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-l
     expect(confirmationPrompt).not.toHaveBeenCalled()
     expect(sendTx).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['sendStakeTransaction', { value: 1.5 }],
+    ['sendStakeTransaction', { value: -1 }],
+    ['sendStakeTransaction', { value: 'abc' }],
+    ['sendStakeTransaction', { value: 2 ** 64 }],
+    ['sendSetActiveStakeTransaction', { newActiveBalance: 2 ** 64 }],
+    ['sendSetActiveStakeTransaction', [1.5]],
+    ['sendRetireStakeTransaction', { retireStake: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: -1 }],
+  ])('rejects a malformed amount before prompting for %s %j', async (name, params) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message: 'Transaction amount must be a non-negative integer',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('still sends a basic transaction with a fractional value', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransaction',
+      params: { recipient: 'NQ22 RECIPIENT', value: 0.07 * 1e5 },
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('MiniAppHost rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
