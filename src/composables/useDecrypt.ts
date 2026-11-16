@@ -95,12 +95,12 @@ export function useDecrypt() {
     // Queue rather than share: a later call may carry a different PIN, so it only reuses a success.
     // Chained on the real run, not a caller's timeout wrapper, since promiseWithTimeout doesn't cancel.
     const run = decrypting.catch(() => {}).then(async (): Promise<Option<string>> => {
+      const inputHash = sha256Hex(pin)
       if (decrypted.value) {
         logger.log('🔓 decrypt: already decrypted, short-circuit')
-        return
+        return inputHash === pinHash.value ? undefined : i18n.t('Invalid PIN')
       }
 
-      const inputHash = sha256Hex(pin)
       logger.log('🔓 decrypt: running', { isWeb })
       const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
       logger.log('🔓 decrypt: db unlock done', { error })

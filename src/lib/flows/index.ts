@@ -46,9 +46,9 @@ async function completeWalletSetup(
     { useDecrypt },
     { useApp },
   ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
-  const error = await useDecrypt().decrypt(state[StepName.PinCode])
-  if (error)
-    return err(error)
+  // pinCodeConfirmStep already unlocked the db; the PIN in state may be wiped by now (biometric step).
+  if (!useDecrypt().decrypted.value)
+    return err(i18n.t('Something went wrong decrypting the database'))
 
   // Clear the setup PIN from memory after it has been persisted.
   state[StepName.PinCode] = ''
@@ -84,9 +84,9 @@ const loginFlow: FlowInit = async () => {
       { useDecrypt },
       { useApp },
     ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
-    const error = await useDecrypt().decrypt(state[StepName.PinCode])
-    if (error) {
-      err(error)
+    // pinCodeConfirmStep already unlocked the db; the PIN in state may be wiped by now (biometric step).
+    if (!useDecrypt().decrypted.value) {
+      err(i18n.t('Something went wrong decrypting the database'))
       return
     }
 
