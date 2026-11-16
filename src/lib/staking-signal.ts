@@ -5,7 +5,8 @@ import type { KeyPair, Transaction } from '@nimiq/core'
  * from the local wallet, which is also the staker.
  *
  * For a signalling transaction from a basic account, `Transaction.sign(keyPair)` already fills the staker's inner
- * proof in the data before signing the content; setting that proof by hand first makes the outer signature invalid.
+ * proof in the data before signing the content; setting that proof by hand first leaves an invalid inner (staker)
+ * proof in the data (the outer signature stays valid), so the transaction is refused ("Invalid proof").
  * The transaction is verified before it is returned, so an invalid one is never sent (it would only stay "pending").
  */
 export function buildLocalStakingSignal(args: {
