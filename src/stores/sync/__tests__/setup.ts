@@ -403,6 +403,7 @@ vi.mock('@/lib/analytics', () => ({
   trackTopUpReceived: vi.fn(),
   trackFundsBlocked: vi.fn(),
   trackSyncSlow: vi.fn(),
+  trackStrayHtlcRecovery: vi.fn(),
   trackSwapStep: vi.fn(),
 }))
 
