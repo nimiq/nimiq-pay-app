@@ -2,6 +2,22 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.24.0 — 2026-11-17
+
+### Redesigned Settings
+Settings are now grouped into categories: General, Security, Payments, Mini Apps and Account. There are new options too: show hidden transactions, pick your default withdrawal unit, manage saved addresses, and revoke device ID access for Mini Apps.
+
+_How to use:_ Open Settings and tap a category to see its options. Tap back to return to the main list.
+
+### Safer logout
+If your wallet isn't backed up and still holds USDT, the app now warns you before you log out. This helps you avoid losing access to your funds by accident.
+
+### Smoother Mini Apps
+Mini Apps open and close more reliably, and their content stays clear of the navigation bar. Payment and staking requests with a problem are now stopped before you're asked to confirm, and Lightning payments no longer leave you waiting with nothing on screen.
+
+### Fewer interruptions
+On iPhone, the app no longer asks to paste from your clipboard every time you open it. On Android, you can take screenshots of your recovery words again. Startup is more reliable, PIN checks are stricter, and many smaller fixes make the app more dependable.
+
 ## 2.23.0 — 2026-10-30
 
 ### Better support chat
