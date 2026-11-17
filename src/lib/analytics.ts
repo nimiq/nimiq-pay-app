@@ -1,4 +1,5 @@
-import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
+import type { TargetedRemoteSignerRecoveryResult } from '@/stores/sync/remote-signers'
+import type { PaymentMethod, Rail, TransactionSendResult, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
@@ -301,6 +302,16 @@ export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
   capture(`funds_processing_${state}`, props)
 }
 
+// An own funded HTLC that is not the active signer is missing from the balance until this recovery lands (APP-332).
+export function trackStrayHtlcRecovery(props: {
+  status: TargetedRemoteSignerRecoveryResult['status']
+  reason?: Extract<TargetedRemoteSignerRecoveryResult, { status: 'deferred' }>['reason']
+  funded_count: number
+  has_active: boolean
+}): void {
+  capture('stray_htlc_recovery', props)
+}
+
 export function trackSyncSlow(props: { duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
   capture('sync_slow', { stage: 'remote_signer_verification', ...props })
 }
@@ -343,7 +354,15 @@ export function trackWeb3Request(opts: {
   success: boolean
   chainId?: string
   timedOut?: boolean
+  // Request start to sheet open (pre-sheet prep time)
   sheetWaitMs?: number
+  // Request start to sheet close (includes time the user spends in the sheet)
+  sheetCloseMs?: number
+  sendMs?: number
+  txOutcome?: TransactionSendResult['outcome'] | 'failed'
+  exceededProviderTimeout?: boolean
+  broadcastMs?: number
+  broadcastResult?: 'hash' | 'rpc_error' | 'timeout' | 'network_error'
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -355,6 +374,28 @@ export function trackWeb3Request(opts: {
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
     ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
     ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
+    ...(opts.sheetCloseMs === undefined ? {} : { sheet_close_ms: opts.sheetCloseMs }),
+    ...(opts.sendMs === undefined ? {} : { send_ms: opts.sendMs }),
+    ...(opts.txOutcome === undefined ? {} : { tx_outcome: opts.txOutcome }),
+    ...(opts.exceededProviderTimeout === undefined ? {} : { exceeded_provider_timeout: opts.exceededProviderTimeout }),
+    ...(opts.broadcastMs === undefined ? {} : { broadcast_ms: opts.broadcastMs }),
+    ...(opts.broadcastResult === undefined ? {} : { broadcast_result: opts.broadcastResult }),
+  })
+}
+
+export function trackEvmBroadcastUnknownResolved(opts: {
+  dappUrl: string
+  dappName: string
+  chainId?: string
+  broadcastResult: 'timeout' | 'network_error'
+  landed: boolean
+}): void {
+  capture('miniapp_evm_broadcast_unknown_resolved', {
+    dapp_url: opts.dappUrl,
+    dapp_name: opts.dappName,
+    ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    broadcast_result: opts.broadcastResult,
+    landed: opts.landed,
   })
 }
 
