@@ -17,11 +17,10 @@ tags:
     timeout: 90000
 - assertNotVisible: ${output.home.eurSymbol}
 
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.generalCategory}
 - extendedWaitUntil:
     visible: ${output.settings.currency}
     timeout: 5000
@@ -44,15 +43,10 @@ tags:
 # Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 
-- tapOn: ${output.navigation.backBtn}
+# Closing Settings lands on home (the menu closed when Settings opened).
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
-# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
 - assertNotVisible: ${output.settings.currency}
-- assertVisible: ${output.navigation.backupAccountBtn}
-- tapOn:
-    point: ${output.navigation.sheetBackdrop}
-- waitForAnimationToEnd
-- assertNotVisible: ${output.navigation.backupAccountBtn}
 
 - extendedWaitUntil:
     visible: ${output.home.eurSymbol}

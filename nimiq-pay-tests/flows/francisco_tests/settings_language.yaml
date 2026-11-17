@@ -5,18 +5,18 @@ tags:
   - franciscoTest
 
 ---
-# Scope: choosing German, Spanish, French and Portuguese in Settings translates the Settings
+# Scope: choosing German, Spanish, French and Portuguese in Settings > General translates its
 # labels right away, and the last choice survives a relaunch.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/create_account.yaml
 
-# Menu items keep English aria-labels in every language, so navigation needs no translation.
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
+# Menu and Settings category rows keep English aria-labels in every language, so navigation
+# needs no translation.
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.generalCategory}
 - extendedWaitUntil:
     visible: ${output.settings.language}
     timeout: 5000
@@ -60,11 +60,10 @@ tags:
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
     timeout: 30000
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.generalCategory}
 - extendedWaitUntil:
     visible: ${output.languages.pt.languageLabel}
     timeout: 10000

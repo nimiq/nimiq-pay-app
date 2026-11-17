@@ -6,7 +6,7 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 
 - `flows/francisco_tests/`: the suite CI runs on BrowserStack, one build per flow (`.github/workflows/maestro_browserstack_suite_only.yml`), on Android, then on iOS (`max-parallel: 1`), one flow at a time, so a run uses a single BrowserStack session and the shared wallet is never logged in twice at once. Every flow starts from a fresh wallet. The iOS job doesn't fail the workflow until it has 2 green runs in a row.
 - `flows/*.yaml` (top level): older flows that assume an already set-up wallet with history (`subflows/launch_app.yaml`). Not run in CI.
-- `subflows/`: shared steps. `create_account.yaml` wipes app data and creates a wallet with `${PIN}`.
+- `subflows/`: shared steps. `create_account.yaml` wipes app data and creates a wallet with `${PIN}`. `open_settings_category.yaml` opens Settings and one of its categories (General, Security, Payments, Mini Apps); opening Settings closes the menu, and its close button lands on home.
 - `pageObjects/android/mainFlowsAndroid.page.js`: every selector, loaded with `runScript` and used as `${output.<screen>.<element>}`. Its comments explain past fixes (shadow DOM search box, anchored regexes).
 
 ## Writing flows
@@ -14,8 +14,8 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 - Header: `appId: ${APP_ID}`, tag `franciscoTest`, then `runScript` of the page objects and `runFlow: ../../subflows/create_account.yaml`. Setup/Login flows start with `launchApp: clearState: true` instead, since Login only exists before a wallet is created. Never hard-code the app id or `'1111'`; use `${APP_ID}` and `${PIN}`.
 - Maestro sees visible text, `aria-label` and HTML `id` of the WebView. It does not see `data-testid`. Selectors depend on English UI text.
 - Flows run on Android and iOS (app id `com.nimiq.pay` on iOS). What differs on iOS:
-  - `back` does nothing. Close screens with the app's own controls: `navigation.backBtn` (Settings), `navigation.closeFlowModalBtn` (flows), `whatsNew.closeBtn`, or a tap on `navigation.sheetBackdrop` for the menu and Log Out sheets, whose close button has no label.
-  - A screen covered by a modal stays in the hierarchy (the menu under Settings), so after closing, assert an element only the closed screen has is gone.
+  - `back` does nothing. Close screens with the app's own controls: `navigation.backBtn` (a Settings category back to its list), `navigation.closeFlowModalBtn` (flows), `whatsNew.closeBtn`, or a tap on `navigation.sheetBackdrop` for the menu and Log Out sheets, whose close button has no label.
+  - A screen covered by a modal stays in the hierarchy (Settings > Security under Change PIN), so after closing, assert an element only the closed screen has is gone.
   - HTML `id` is not visible. Use text or `aria-label`, or a `when: platform:` branch (`subflows/tap_mini_apps_search.yaml`).
   - Earlier slides of a flow stay in the hierarchy pinned to the left edge (x=0); `rightOf: ${output.navigation.backBtn}` keeps only the current slide (backup quiz).
   - Text can split into more nodes (the address is nine 4-character nodes, `subflows/capture_top_up_address.yaml`) or gain invisible characters (Safari's URL starts with U+200E).

@@ -67,7 +67,8 @@ output.navigation = {
     topUpBtn: "Top Up",
     withdrawBtn: "Withdraw",
     closeFlowModalBtn: "close flow modal",
-    // Toolbar back button of stacked modals (Settings): "back" on Android, "Back" on iOS.
+    // Toolbar back button of a flow step (a Settings category back to the list): "back" on
+    // Android, "Back" on iOS.
     // Used instead of the `back` command, which does nothing on iOS.
     backBtn: "back",
     // A point on the backdrop above a sheet modal; tapping it closes the sheet. The menu and
@@ -78,16 +79,26 @@ output.navigation = {
     sheetBackdrop: "50%,10%"
 };
 
+// Settings opens on a list of categories (SettingsRoot.vue); each option sits in one of them.
+// Open one with subflows/open_settings_category.yaml (env CATEGORY: one of the *Category values).
 output.settings = {
     title: "Settings",
+    generalCategory: "General",
+    securityCategory: "Security",
+    paymentsCategory: "Payments",
+    // Mini Apps builds only.
+    miniAppsCategory: "Mini Apps",
+    // General
     language: "Language",
     currency: "Currency",
     minimumNimDecimals: "Minimum NIM Decimals",
-    autoDepositThreshold: "Auto-deposit threshold.*",
     pushNotifications: "Receive Push Notifications",
     reduceAnimations: "Reduce Animations",
-    // On by default; Mini Apps builds only.
+    // Payments
+    autoDepositThreshold: "Auto-deposit threshold.*",
+    // Mini Apps. On by default.
     reopenMiniAppOnUnlock: "Reopen Mini App on unlock",
+    // Security. Change PIN opens on top of Settings and returns to Security when done.
     changePin: "Change PIN",
     // Ionic select exposes "<label>, <selected value>" as its accessible name.
     currencyEurSelected: "Currency, EUR",
@@ -98,14 +109,14 @@ output.settings = {
     autoDepositThresholdPrefix: "Auto-deposit threshold "
 };
 
-// Sheet opened from Settings > Auto-deposit threshold. Its close button has no label: close it
+// Sheet opened from Settings > Payments > Auto-deposit threshold. Its close button has no label: close it
 // without saving with a tap on navigation.sheetBackdrop.
 output.autoDepositSheet = {
     description: "Incoming funds accumulate.*",
     saveBtn: "Save"
 };
 
-// Ionic select alert opened from Settings > Minimum NIM Decimals (options None, 2, 5).
+// Ionic select alert opened from Settings > General > Minimum NIM Decimals (options None, 2, 5).
 output.nimDecimalsAlert = {
     noneOption: "None",
     // On iOS the alert title's node also reads "2" (its heading level) and comes first in the
@@ -115,7 +126,7 @@ output.nimDecimalsAlert = {
     okBtn: "OK"
 };
 
-// Ionic select alert opened from Settings > Currency.
+// Ionic select alert opened from Settings > General > Currency.
 output.currencyAlert = {
     eurOption: "EUR",
     crcOption: "CRC",
@@ -123,7 +134,7 @@ output.currencyAlert = {
     okBtn: "OK"
 };
 
-// Settings > Language. Option names and the alert's OK are never translated; the Settings
+// Settings > General > Language. Option names and the alert's OK are never translated; the Settings
 // labels are (src/i18n/*.po).
 output.languageAlert = {
     okBtn: "OK"
@@ -147,7 +158,7 @@ output.unlock = {
     invalidPinError: "Invalid PIN"
 };
 
-// Settings > Change PIN reuses the onboarding "Choose a PIN" / "Confirm your PIN" steps.
+// Settings > Security > Change PIN reuses the onboarding "Choose a PIN" / "Confirm your PIN" steps.
 output.changePin = {
     currentPinTitle: "Insert PIN to confirm",
     // Wrong current PIN. The unlock screen says "Invalid PIN" instead (unlock.invalidPinError).

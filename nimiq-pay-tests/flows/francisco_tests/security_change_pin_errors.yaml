@@ -11,18 +11,17 @@ env:
   WRONG_PIN: "9876"
 
 ---
-# Scope: Settings > Change PIN rejects a wrong current PIN and a confirmation that differs from
+# Scope: Settings > Security > Change PIN rejects a wrong current PIN and a confirmation that differs from
 # the new PIN, and closing the flow after those errors keeps ${PIN}: after a relaunch the
 # attempted new PIN is rejected and ${PIN} still unlocks.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/create_account.yaml
 
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.securityCategory}
 - extendedWaitUntil:
     visible: ${output.settings.changePin}
     timeout: 5000

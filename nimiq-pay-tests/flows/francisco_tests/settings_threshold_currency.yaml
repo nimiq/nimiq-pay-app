@@ -12,22 +12,20 @@ env:
   DISCARDED_THRESHOLD: "7"
 
 ---
-# Scope: Settings saves an auto-deposit threshold and drops an edit closed without Save; Reduce
-# Animations and the CRC currency change the home amount (one "₡0" node instead of one node
+# Scope: Settings > Payments saves an auto-deposit threshold and drops an edit closed without
+# Save; Settings > General's Reduce Animations and the CRC currency change the home amount (one "₡0" node instead of one node
 # per character); all three survive a relaunch, and GMD works too.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/create_account.yaml
 
-- runFlow: ../../subflows/open_menu.yaml
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.paymentsCategory}
 - extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 10000
-- tapOn: ${output.navigation.settingsBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.changePin}
+    visible: ${output.settings.autoDepositThresholdPrefix + DEFAULT_THRESHOLD + ' NIM'}
     timeout: 5000
-- assertVisible: ${output.settings.pushNotifications}
 
 # Save a new threshold. A tap on the value can leave the cursor before it (the Galaxy S26 and the
 # iPhone saved "205"), and eraseText only deletes to its left, so select the value first: a double
@@ -92,6 +90,17 @@ env:
 - assertVisible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
 - assertNotVisible: ${output.settings.autoDepositThresholdPrefix + DISCARDED_THRESHOLD + ' NIM'}
 
+# Back to the category list, then General.
+- tapOn: ${output.navigation.backBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.generalCategory}
+    timeout: 5000
+- tapOn:
+    text: ${output.settings.generalCategory}
+    index: 0
+- extendedWaitUntil:
+    visible: ${output.settings.reduceAnimations}
+    timeout: 5000
 - tapOn: ${output.settings.reduceAnimations}
 - tapOn: ${output.settings.currency}
 - extendedWaitUntil:
@@ -112,14 +121,10 @@ env:
 # Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 
-- tapOn: ${output.navigation.backBtn}
+# Closing Settings lands on home (the menu closed when Settings opened).
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
-# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
 - assertNotVisible: ${output.settings.currency}
-- tapOn:
-    point: ${output.navigation.sheetBackdrop}
-- waitForAnimationToEnd
-- assertNotVisible: ${output.navigation.backupAccountBtn}
 
 # The home amount replaces its skeleton only once the balance is resolved (needs consensus).
 - extendedWaitUntil:
@@ -141,15 +146,23 @@ env:
     visible: ${output.home.crcZeroReduced}
     timeout: 90000
 
-- runFlow: ../../subflows/open_menu.yaml
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.paymentsCategory}
 - extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 10000
-- tapOn: ${output.navigation.settingsBtn}
+    visible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
+    timeout: 5000
+- tapOn: ${output.navigation.backBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.generalCategory}
+    timeout: 5000
+- tapOn:
+    text: ${output.settings.generalCategory}
+    index: 0
 - extendedWaitUntil:
     visible: ${output.settings.currencyCrcSelected}
     timeout: 5000
-- assertVisible: ${output.settings.autoDepositThresholdPrefix + SAVED_THRESHOLD + ' NIM'}
 
 - tapOn: ${output.settings.currencyCrcSelected}
 - extendedWaitUntil:
@@ -171,12 +184,9 @@ env:
     notVisible: ${output.settings.currencyCrcSelected}
     timeout: 5000
 - waitForAnimationToEnd
-- tapOn: ${output.navigation.backBtn}
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
 - assertNotVisible: ${output.settings.currency}
-- tapOn:
-    point: ${output.navigation.sheetBackdrop}
-- waitForAnimationToEnd
 - extendedWaitUntil:
     visible: ${output.home.gmdZeroReduced}
     timeout: 15000

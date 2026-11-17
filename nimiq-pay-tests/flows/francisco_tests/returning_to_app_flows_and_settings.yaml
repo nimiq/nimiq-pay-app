@@ -12,33 +12,47 @@ tags:
 
 - runFlow: ../../subflows/returning_to_dashboard.yaml
 
-- runFlow: ../../subflows/open_menu.yaml
+# Settings opens on its category list; each category's options sit on their own step.
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.generalCategory}
 - extendedWaitUntil:
-    visible: ${output.settings.title}
+    visible: ${output.settings.language}
     timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
-- extendedWaitUntil:
-    visible: ${output.settings.title}
-    timeout: 5000
-
-- assertVisible: ${output.settings.language}
 - assertVisible: ${output.settings.currency}
 - assertVisible: ${output.settings.minimumNimDecimals}
-- assertVisible:
-    text: ${output.settings.autoDepositThreshold}
 - assertVisible: ${output.settings.pushNotifications}
 - assertVisible: ${output.settings.reduceAnimations}
-- assertVisible: ${output.settings.changePin}
+
+# Back returns to the category list inside the same sheet.
+- tapOn: ${output.navigation.backBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.paymentsCategory}
+    timeout: 5000
+- assertVisible: ${output.settings.securityCategory}
+- tapOn:
+    text: ${output.settings.paymentsCategory}
+    index: 0
+- extendedWaitUntil:
+    visible: ${output.settings.autoDepositThreshold}
+    timeout: 5000
 
 - tapOn: ${output.navigation.backBtn}
-- waitForAnimationToEnd
-# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
-- assertNotVisible: ${output.settings.changePin}
-- assertVisible: ${output.navigation.backupAccountBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.securityCategory}
+    timeout: 5000
 - tapOn:
-    point: ${output.navigation.sheetBackdrop}
+    text: ${output.settings.securityCategory}
+    index: 0
+- extendedWaitUntil:
+    visible: ${output.settings.changePin}
+    timeout: 5000
+
+# Closing Settings lands on home (the menu closed when Settings opened).
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
-- assertNotVisible: ${output.navigation.backupAccountBtn}
+- assertNotVisible: ${output.settings.changePin}
 - assertVisible: ${output.home.payTitle}
 
 - runFlow: ../../subflows/open_menu.yaml

@@ -19,7 +19,7 @@ env:
 
 ---
 # Scope: after more than 2 minutes in the background the app asks for the PIN again
-# (App.vue). With Settings > "Reopen Mini App on unlock" on (the default) the open Mini App is
+# (App.vue). With Settings > Mini Apps > "Reopen Mini App on unlock" on (the default) the open Mini App is
 # back after the PIN; with it off, the PIN leads to home and the Mini App is closed.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
@@ -37,23 +37,20 @@ env:
     timeout: 10000
 
 # Setting off: the PIN leads to home and the Mini App stays closed.
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 10000
-- tapOn: ${output.navigation.settingsBtn}
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.miniAppsCategory}
 - extendedWaitUntil:
     visible: ${output.settings.reopenMiniAppOnUnlock}
     timeout: 5000
 - tapOn: ${output.settings.reopenMiniAppOnUnlock}
 - waitForAnimationToEnd
-- tapOn: ${output.navigation.backBtn}
+# Closing Settings lands on home (the menu closed when Settings opened).
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
 - assertNotVisible: ${output.settings.reopenMiniAppOnUnlock}
-- tapOn:
-    point: ${output.navigation.sheetBackdrop}
-- waitForAnimationToEnd
-- assertNotVisible: ${output.navigation.backupAccountBtn}
+- assertVisible: ${output.home.payTitle}
 
 - runFlow: ../../subflows/open_mini_app_link_background.yaml
 - extendedWaitUntil:

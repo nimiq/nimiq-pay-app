@@ -9,17 +9,16 @@ env:
   NEW_PIN: "2580"
 
 ---
-# Scope: Settings > Change PIN replaces ${PIN} with ${NEW_PIN}; after a relaunch the old
+# Scope: Settings > Security > Change PIN replaces ${PIN} with ${NEW_PIN}; after a relaunch the old
 # PIN is rejected and the new one unlocks the wallet.
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/create_account.yaml
 
-- runFlow: ../../subflows/open_menu.yaml
-- extendedWaitUntil:
-    visible: ${output.navigation.settingsBtn}
-    timeout: 5000
-- tapOn: ${output.navigation.settingsBtn}
+- runFlow:
+    file: ../../subflows/open_settings_category.yaml
+    env:
+      CATEGORY: ${output.settings.securityCategory}
 - extendedWaitUntil:
     visible: ${output.settings.changePin}
     timeout: 5000
@@ -38,11 +37,12 @@ env:
     timeout: 10000
 - inputText: ${NEW_PIN}
 
-# The flow closes back to the menu once the database secret has been changed.
+# The flow closes back to Settings > Security once the database secret has been changed.
+# Security stays in the hierarchy under the Change PIN flow, so wait for the flow to go first.
 - extendedWaitUntil:
-    visible: ${output.navigation.backupAccountBtn}
+    notVisible: ${output.onboarding.confirmPinTitle}
     timeout: 15000
-- assertNotVisible: ${output.onboarding.confirmPinTitle}
+- assertVisible: ${output.settings.changePin}
 
 - stopApp
 - launchApp:
