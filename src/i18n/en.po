@@ -31,14 +31,14 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2217
+#: src/stores/polygon-usdt.ts:2220
 msgid "A previous transaction was confirmed. No new payment was sent."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2182
-#: src/stores/polygon-usdt.ts:2436
-#: src/stores/polygon-usdt.ts:2467
-#: src/stores/polygon-usdt.ts:2480
+#: src/stores/polygon-usdt.ts:2185
+#: src/stores/polygon-usdt.ts:2439
+#: src/stores/polygon-usdt.ts:2470
+#: src/stores/polygon-usdt.ts:2483
 #: src/stores/transactions.ts:381
 msgid "A transaction is already in progress"
 msgstr ""
@@ -255,7 +255,7 @@ msgstr ""
 #: src/components/TheHomeTransactions.vue:78
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
-#: src/composables/useMiniAppHost.ts:2035
+#: src/composables/useMiniAppHost.ts:2196
 msgid "Cancel"
 msgstr ""
 
@@ -340,7 +340,7 @@ msgid "Complete"
 msgstr ""
 
 #: src/components/BricksInput.vue:18
-#: src/modals/LogOutModal/Confirm.vue:20
+#: src/modals/LogOutModal/Confirm.vue:22
 msgid "Confirm"
 msgstr ""
 
@@ -431,7 +431,7 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2638
+#: src/stores/polygon-usdt.ts:2641
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
@@ -836,7 +836,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:169
-#: src/composables/useMiniAppHost.ts:2234
+#: src/composables/useMiniAppHost.ts:2406
 msgid "Insufficient funds"
 msgstr ""
 
@@ -938,6 +938,7 @@ msgstr ""
 msgid "Invalid phone number"
 msgstr ""
 
+#: src/composables/useDecrypt.ts:101
 #: src/composables/useDecrypt.ts:45
 #: src/composables/useDecrypt.ts:63
 #: src/modals/EnableBiometricModal.vue:23
@@ -968,7 +969,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:115
-#: src/stores/polygon-usdt.ts:2531
+#: src/stores/polygon-usdt.ts:2534
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -1146,7 +1147,7 @@ msgstr ""
 msgid "NFC is not supported on this device"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:83
+#: src/stores/sync/remote-signers.ts:85
 #: src/stores/transactions.ts:405
 msgid "Nimiq network unavailable"
 msgstr ""
@@ -1170,8 +1171,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:30
 #: src/stores/local-wallet.ts:81
 #: src/stores/local-wallet.ts:90
-#: src/stores/polygon-usdt.ts:2168
-#: src/stores/polygon-usdt.ts:2471
+#: src/stores/polygon-usdt.ts:2171
+#: src/stores/polygon-usdt.ts:2474
 msgid "No account has been found"
 msgstr ""
 
@@ -1249,7 +1250,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2538
+#: src/stores/polygon-usdt.ts:2541
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1478,16 +1479,16 @@ msgstr ""
 msgid "Polygon fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2555
+#: src/stores/polygon-usdt.ts:2558
 #: src/stores/polygon-usdt.ts:620
 msgid "Polygon fee changed; review the payment again"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:2050
-#: src/stores/polygon-usdt.ts:2172
-#: src/stores/polygon-usdt.ts:2408
-#: src/stores/polygon-usdt.ts:2477
+#: src/stores/polygon-usdt.ts:2053
+#: src/stores/polygon-usdt.ts:2175
+#: src/stores/polygon-usdt.ts:2411
+#: src/stores/polygon-usdt.ts:2480
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1495,26 +1496,26 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2393
+#: src/stores/polygon-usdt.ts:2396
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2737
+#: src/stores/polygon-usdt.ts:2740
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2659
-#: src/stores/polygon-usdt.ts:2685
+#: src/stores/polygon-usdt.ts:2662
+#: src/stores/polygon-usdt.ts:2688
 msgid "Polygon swap transaction failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2580
+#: src/stores/polygon-usdt.ts:2583
 msgid "Polygon swap transaction is already pending"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2242
-#: src/stores/polygon-usdt.ts:2367
-#: src/stores/polygon-usdt.ts:2373
+#: src/stores/polygon-usdt.ts:2245
+#: src/stores/polygon-usdt.ts:2370
+#: src/stores/polygon-usdt.ts:2376
 msgid "Polygon transaction failed"
 msgstr ""
 
@@ -1526,7 +1527,7 @@ msgstr ""
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:2035
+#: src/composables/useMiniAppHost.ts:2196
 msgid "Preparing your Lightning payment"
 msgstr ""
 
@@ -1811,6 +1812,8 @@ msgstr ""
 msgid "Something went wrong claiming the cashback"
 msgstr ""
 
+#: src/lib/flows/index.ts:51
+#: src/lib/flows/index.ts:89
 #: src/lib/flows/steps.ts:173
 msgid "Something went wrong decrypting the database"
 msgstr ""
@@ -1840,7 +1843,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2235
+#: src/composables/useMiniAppHost.ts:2407
 #: src/lib/tx.ts:224
 #: src/lib/tx.ts:291
 #: src/lib/tx.ts:395
@@ -1927,7 +1930,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:468
+#: src/composables/useMiniAppHost.ts:523
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1963,7 +1966,7 @@ msgstr ""
 msgid "The exchange rate is unfavorable. Please try again later"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:2031
+#: src/composables/useMiniAppHost.ts:2192
 msgid "The Lightning payment could not be prepared in time. Please try again."
 msgstr ""
 
@@ -1992,14 +1995,14 @@ msgstr ""
 
 #: src/lib/flows/index.ts:330
 #: src/lib/flows/index.ts:493
-#: src/stores/polygon-usdt.ts:2198
-#: src/stores/polygon-usdt.ts:2210
-#: src/stores/polygon-usdt.ts:2234
-#: src/stores/polygon-usdt.ts:2311
-#: src/stores/polygon-usdt.ts:2322
-#: src/stores/polygon-usdt.ts:2332
-#: src/stores/polygon-usdt.ts:2347
-#: src/stores/polygon-usdt.ts:2364
+#: src/stores/polygon-usdt.ts:2201
+#: src/stores/polygon-usdt.ts:2213
+#: src/stores/polygon-usdt.ts:2237
+#: src/stores/polygon-usdt.ts:2314
+#: src/stores/polygon-usdt.ts:2325
+#: src/stores/polygon-usdt.ts:2335
+#: src/stores/polygon-usdt.ts:2350
+#: src/stores/polygon-usdt.ts:2367
 msgid "The transaction may have been sent and is still pending. Do not retry."
 msgstr ""
 
@@ -2043,7 +2046,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:442
+#: src/composables/useMiniAppHost.ts:497
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2231,15 +2234,15 @@ msgstr ""
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2473
-#: src/stores/polygon-usdt.ts:2493
+#: src/stores/polygon-usdt.ts:2476
+#: src/stores/polygon-usdt.ts:2496
 msgid "Wallet changed before sending"
 msgstr ""
 
 #: src/lib/swap-preimage.ts:41
 #: src/lib/swap-preimage.ts:61
-#: src/stores/sync/remote-signers.ts:102
-#: src/stores/sync/remote-signers.ts:89
+#: src/stores/sync/remote-signers.ts:104
+#: src/stores/sync/remote-signers.ts:91
 #: src/stores/transactions.ts:390
 #: src/stores/transactions.ts:409
 #: src/stores/transactions.ts:420
