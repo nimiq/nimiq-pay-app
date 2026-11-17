@@ -27,6 +27,7 @@ Steps name capabilities, not tools. Use whatever harness has:
 | Linear | `mcp__claude_ai_Linear__*` (load via ToolSearch) | Linear connector/MCP tools |
 | Run lint/typecheck/tests | repo `test-runner` agent (`.claude/agents/`) | repo `test_runner` agent (`.codex/agents/`) |
 | Fresh-context review | repo `reviewer` agent + the extra fields in `references/review.md` | repo `reviewer` agent (`.codex/agents/`) + the same fields |
+| Security review | one fresh subagent on default model + security brief in `references/review.md` | same |
 | Final review | one subagent on the strongest model (Fable, high effort) | one subagent on the strongest model at high reasoning |
 | Simplify pass | `simplify` skill | `simplify` skill if installed, else review the diff for reuse and dead code yourself |
 | PostHog | posthog plugin / skill | PostHog MCP if connected, else skip and say so |
@@ -106,9 +107,10 @@ Outside that stop, ask mid-run only for: iPhone passcode or unlock, phone-level 
 1. `pnpm lint`, `pnpm typecheck`, `pnpm vitest run`. Check exit code, not only pass counts (unhandled rejections fail CI).
 2. Simplify pass on diff.
 3. **Scope check:** every hunk must be needed for issue. Drop rest; file out-of-scope bugs found as new Linear issues (assigned to user, Todo) instead of fixing here.
-4. Fresh-context review with brief in `references/review.md`, default model, using repo `reviewer` agent. Round 1 full diff; later rounds delta since last-reviewed commit plus prior findings. Keep round count and last-reviewed commit in `state.md`. Fix `Important` findings, re-review. Report `Pre-existing` findings only.
+4. Fresh-context review with brief in `references/review.md`, default model, using repo `reviewer` agent. Round 1 full diff; later rounds delta since last-reviewed commit plus prior findings. Keep round count, last-reviewed commit and whether any round said `HUMAN REVIEW: required` in `state.md`. Fix `Important` findings, re-review. Report `Pre-existing` findings only.
    **Budget: 3 rounds.** Still `Important` after round 3 = approach problem, not one more patch. Stop looping. Simpler design removes bug class → redo fix once, count restarts. Otherwise keep finding open under **Blocked on me**, don't call PR merge-ready.
-5. One final review on strongest model, once per issue. Blockers → fix, re-check with default model. No second final review (token cost).
+5. **Security review, only if any reviewer round said `HUMAN REVIEW: required`.** Once per issue, after review loop, security brief in `references/review.md`. Not built-in `security-review` skill: reads committed diff only, empty before phase 8. Real findings block like `Important`: fix, re-run checks, re-check with same brief. Pass failed or finding still open → **Blocked on me**, no PR.
+6. One final review on strongest model, once per issue. Blockers → fix, re-check with default model. No second final review (token cost).
 
 Every finding needs: production reachability, who affected, worst case. Replaces user's "is this merge blocking? can this really happen?" round.
 

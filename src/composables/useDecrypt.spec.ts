@@ -87,6 +87,21 @@ describe('useDecrypt decrypt', () => {
     expect(mocks.conn.open).toHaveBeenCalledTimes(1)
     expect(decrypted.value).toBe(true)
   })
+
+  it('rejects a wrong PIN after an earlier success without re-running the unlock', async () => {
+    const checks = deferSecretChecks()
+    const { useDecrypt } = await import('./useDecrypt')
+    const { decrypt } = useDecrypt()
+
+    const first = decrypt('1111')
+    await vi.waitFor(() => expect(checks).toHaveLength(1))
+    checks[0](true)
+    await expect(first).resolves.toBeUndefined()
+
+    await expect(decrypt('0000')).resolves.toBe('Invalid PIN')
+    expect(mocks.conn.sqlite.checkEncryptionSecret).toHaveBeenCalledTimes(1)
+    await expect(decrypt('1111')).resolves.toBeUndefined()
+  })
 })
 
 describe('changePin', () => {

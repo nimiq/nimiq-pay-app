@@ -24,6 +24,7 @@ export enum FlowName {
   ChangePin = 'changePin',
   ComingSoon = 'comingSoon',
   AskForPin = 'askForPin',
+  Settings = 'settings',
 }
 
 interface FlowHookCbReturn {
@@ -51,6 +52,9 @@ export interface Flow {
 
   // The component that will be filled in the defeault slot of Flow.vue
   slotComponent?: Component
+
+  // Android back button goes to the previous step instead of closing the flow
+  backButtonNavigates?: boolean
 }
 
 export interface FlowInitOptions {
@@ -95,11 +99,18 @@ export enum StepName {
   ShowWords = 'showWords',
   ValidateWords = 'validateWords',
   ComingSoon = 'comingSoon',
+  Settings = 'settings',
+  SettingsGeneral = 'settingsGeneral',
+  SettingsSecurity = 'settingsSecurity',
+  SettingsPayments = 'settingsPayments',
+  SettingsSavedAddresses = 'settingsSavedAddresses',
+  SettingsMiniApps = 'settingsMiniApps',
+  SettingsAccount = 'settingsAccount',
 }
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimWithdrawalConfirmStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion, StepName.Settings, StepName.SettingsGeneral, StepName.SettingsSecurity, StepName.SettingsPayments, StepName.SettingsSavedAddresses, StepName.SettingsMiniApps, StepName.SettingsAccount] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {

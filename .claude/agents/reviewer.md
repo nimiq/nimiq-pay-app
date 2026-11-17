@@ -24,7 +24,7 @@ Steps:
    - ROUND ≥ 2 with a last-reviewed commit: `git diff <last-reviewed>..HEAD` (delta only).
    - Run it once with `--stat` to size the change and list touched paths. Remove paths `REVIEW.md` says to skip.
 3. Human-review flag and depth:
-   - `HUMAN REVIEW: required` if touched paths include auth, billing/payments, crypto/keys, CI workflows, release/deploy/installer/auto-update, DB migrations, or paths `REVIEW.md`/CODEOWNERS mark sensitive. In Nimiq Pay that includes: `src/lib/sql-queries.ts` and migrations, HTLC/cosigner code (`src/stores/remote-signer*`, `src/stores/sync/`), `src/stores/polygon-usdt.ts` and swaps, Mini Apps host/bridge (`src/composables/useMiniApp*`, `src/lib/mini-app-*`, `web3-provider/`), `.github/workflows/`, OTA/release config, and native `android/`/`ios/` config or patches.
+   - `HUMAN REVIEW: required` if touched paths include auth, billing/payments, crypto/keys, CI workflows, release/deploy/installer/auto-update, DB migrations, or paths `REVIEW.md`/CODEOWNERS mark sensitive.
    - Auto DEPTH: `deep` if HUMAN REVIEW is required; else `quick` if < ~100 changed lines; else `standard`.
 4. Hunt.
    - quick: do it yourself following the lens list below (all lenses), then go to step 6 and verify each candidate yourself by trying to disprove it.

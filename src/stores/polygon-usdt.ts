@@ -1755,16 +1755,17 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
-  async function updateBalance() {
+  // Resolves true only when `balance` was just read from the RPC; errors are logged, not thrown.
+  async function updateBalance(): Promise<boolean> {
     const { data: address, error } = useLocalWallet().getEthAddress()
     if (error || !address) {
       balance.value = 0
-      return
+      return false
     }
 
     await init()
     if (consensus.value !== 'established')
-      return
+      return false
 
     try {
       const client = await getClient()
@@ -1776,9 +1777,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         persistedBalance = newBalance
         await run(SQLQuery.UpsertKv, [getUsdtBalanceCacheKey(address), String(newBalance)])
       }
+      return true
     }
     catch (error) {
       logger.error('Failed to fetch Polygon USDT balance', error)
+      return false
     }
   }
 

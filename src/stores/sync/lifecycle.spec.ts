@@ -147,6 +147,8 @@ describe('useSyncLifecycle', () => {
         expect(state.isSyncingWallets).toBe(true)
         expect(state.isHtlcActive).toBe(true)
         state.isSendingTx = sending
+        // Startup extends the HTLC alongside verification; only the head listener's send is under test.
+        state.sendTx.mockClear()
 
         const onHead = state.client.addHeadChangedListener.mock.calls[1][0]
         await onHead()
@@ -1026,6 +1028,122 @@ describe('useSyncLifecycle', () => {
       await headListener()
 
       expect(verifyRemoteSignersDb).toHaveBeenCalledTimes(verified ? 1 : 0)
+    })
+
+    it('reclaims an expired HTLC before the remote signer verification finishes', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockReturnValue(new Promise(() => {}))
+      const checkRemoteValidity = vi.spyOn(useSyncHtlc(), 'checkRemoteValidity').mockResolvedValue(undefined)
+      const extendValidity = vi.spyOn(useSyncHtlc(), 'extendValidity').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      void useSyncLifecycle().syncWallets()
+
+      await vi.waitFor(() => expect(verifyRemoteSignersDb).toHaveBeenCalledOnce())
+      await vi.waitFor(() => expect(checkRemoteValidity).toHaveBeenCalledOnce())
+      expect(extendValidity).toHaveBeenCalledOnce()
+      expect(handleFunds).not.toHaveBeenCalled()
+    })
+
+    it('starts the remote signer verification before a startup send can make it skip', async () => {
+      state.consensus = 'established'
+      state.remoteBalance = 100_000
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      // A staged send makes a verification that hasn't started yet skip itself as "pending".
+      let verifyingWhenSent: boolean | undefined
+      vi.spyOn(useSyncHtlc(), 'extendValidity').mockImplementation(async () => {
+        verifyingWhenSent = useSyncState().isVerifyingRemoteSignersDb
+      })
+      vi.spyOn(useSyncHtlc(), 'checkRemoteValidity').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      await useSyncLifecycle().syncWallets()
+
+      expect(verifyingWhenSent).toBe(true)
+    })
+
+    it('reconciles HTLC state on height changes while the remote signer walk runs', async () => {
+      state.consensus = 'established'
+      let finishVerification!: () => void
+      state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise((resolve) => {
+        finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
+      }))
+      const { useSyncHtlc } = await import('./htlc')
+      const maybeCheckHtlcState = vi.spyOn(useSyncHtlc(), 'maybeCheckHtlcState').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      const syncing = useSyncLifecycle().syncWallets()
+      try {
+        await vi.waitFor(() => expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalled())
+        expect(state.isSyncingWallets).toBe(true)
+        maybeCheckHtlcState.mockClear()
+
+        state.height = 130
+        await nextTick()
+        await flushPromises()
+
+        expect(maybeCheckHtlcState).toHaveBeenCalledOnce()
+      }
+      finally {
+        finishVerification()
+        await syncing
+      }
+    })
+
+    it('leaves the first validity check to startup when a head arrives during sync', async () => {
+      state.consensus = 'established'
+      state.height = 1_000
+      let finishHydration!: () => void
+      state.resolveHomeBalanceState.mockReturnValue(new Promise<void>(resolve => finishHydration = resolve))
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      vi.spyOn(useSyncHtlc(), 'extendValidity').mockResolvedValue(undefined)
+      const checkRemoteValidity = vi.spyOn(useSyncHtlc(), 'checkRemoteValidity').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      const syncing = useSyncLifecycle().syncWallets()
+      await vi.waitFor(() => expect(state.resolveHomeBalanceState).toHaveBeenCalled())
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      await headListener()
+      expect(checkRemoteValidity).not.toHaveBeenCalled()
+
+      finishHydration()
+      await syncing
+      expect(checkRemoteValidity).toHaveBeenCalledOnce()
+    })
+
+    it('checks HTLC validity once a batch has passed, even off a batch boundary', async () => {
+      state.consensus = 'established'
+      state.height = 1_000
+      const { useSyncHtlc } = await import('./htlc')
+      const checkRemoteValidity = vi.spyOn(useSyncHtlc(), 'checkRemoteValidity').mockResolvedValue(undefined)
+      const extendValidity = vi.spyOn(useSyncHtlc(), 'extendValidity').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      checkRemoteValidity.mockClear()
+      extendValidity.mockClear()
+
+      // Less than a batch after the startup check.
+      state.height = 1_020
+      await headListener()
+      expect(checkRemoteValidity).not.toHaveBeenCalled()
+
+      // Over a batch later, on a height that is not a batch boundary: a busy listener skipped the ones between.
+      state.height = 1_061
+      await headListener()
+      expect(checkRemoteValidity).toHaveBeenCalledOnce()
+      expect(extendValidity).toHaveBeenCalledOnce()
+
+      state.height = 1_090
+      await headListener()
+      expect(checkRemoteValidity).toHaveBeenCalledOnce()
     })
 
     it('completes the online sync pipeline when an offline startup becomes ready', async () => {

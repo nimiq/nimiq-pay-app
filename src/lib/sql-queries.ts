@@ -128,6 +128,13 @@ export enum SQLQuery {
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
   PurgeRemoteSigners = 'DELETE FROM remote_signers',
+  // Root HTLC creations whose whole extension chain is drained and fully walked. A remote_signers
+  // row can't say this: it is written at send time and before the walk reads extensions.
+  CreateSettledHtlcCreationsTable = 'CREATE TABLE IF NOT EXISTS settled_htlc_creations (transaction_hash TEXT PRIMARY KEY)',
+  GetSettledHtlcCreations = 'SELECT transaction_hash FROM settled_htlc_creations',
+  InsertSettledHtlcCreation = 'INSERT OR IGNORE INTO settled_htlc_creations (transaction_hash) VALUES (?)',
+  DeleteSettledHtlcCreation = 'DELETE FROM settled_htlc_creations WHERE transaction_hash = ?',
+  PurgeSettledHtlcCreations = 'DELETE FROM settled_htlc_creations',
 
   // These queries are used to ensure the correct state of the remote signers
   GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
@@ -315,6 +322,12 @@ export const migrations: Migration[] = [
     statements: [
       SQLQuery.AddHtlcIdRecoveryFailedColumnToSwapHtlcs,
       SQLQuery.NormalizeLegacyPolygonSwapHtlcTimeout,
+    ],
+  },
+  {
+    toVersion: 15,
+    statements: [
+      SQLQuery.CreateSettledHtlcCreationsTable,
     ],
   },
 ]

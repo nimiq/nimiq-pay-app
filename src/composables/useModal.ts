@@ -25,7 +25,6 @@ export enum Modal {
   Points = '@/modals/PointsModal.vue',
   MiniApps = '@/modals/MiniAppsModal.vue',
   MiniAppWarning = '@/modals/MiniAppWarningModal.vue',
-  Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
@@ -89,9 +88,6 @@ function _useModal() {
         break
       case Modal.MiniAppWarning:
         component = defineAsyncComponent(() => import(Modal.MiniAppWarning))
-        break
-      case Modal.Settings:
-        component = defineAsyncComponent(() => import(Modal.Settings))
         break
       case Modal.Task:
         component = defineAsyncComponent(() => import(Modal.Task))

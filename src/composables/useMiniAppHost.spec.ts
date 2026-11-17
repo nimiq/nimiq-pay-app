@@ -1,11 +1,12 @@
 import { Buffer } from 'node:buffer'
 import { Toast } from '@capacitor/toast'
-import { Interface, parseUnits } from 'ethers'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Interface, keccak256, parseUnits } from 'ethers'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { getActiveMiniAppSession, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
+import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
+import { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp, isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost, NetworkError } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -14,6 +15,7 @@ const erc20Interface = new Interface([
 const {
   addressesEqual,
   createBirpc,
+  dismissLoading,
   getBalance,
   getLightningQuote,
   getLimits,
@@ -31,9 +33,12 @@ const {
   selectLightningAsset,
   sendTx,
   sendSwapPayment,
+  showLoading,
   run,
   signTransaction,
   syncTransactionHistory,
+  trackEvmBroadcastUnknownResolved,
+  trackLightningPrep,
   trackWeb3Request,
   updateBalance,
   useLocalWallet,
@@ -52,6 +57,7 @@ const {
     onUnsupportedChain: { asEvent: vi.fn() },
     updateRpcUrl: vi.fn(),
   })),
+  dismissLoading: vi.fn(async () => {}),
   getBalance: vi.fn(),
   getLightningQuote: vi.fn(),
   getLimits: vi.fn(),
@@ -69,9 +75,13 @@ const {
   selectLightningAsset: vi.fn(async (): Promise<Asset | undefined> => Asset.NIM),
   sendTx: vi.fn(),
   sendSwapPayment: vi.fn(),
+  showLoading: vi.fn((): Promise<{ cancelled: boolean }> => new Promise(() => {})),
   run: vi.fn(),
-  signTransaction: vi.fn(async () => '0xsigned'),
+  // Valid hex, so the host can hash it like a real signed transaction.
+  signTransaction: vi.fn(async () => '0x5161ed'),
   syncTransactionHistory: vi.fn(async () => {}),
+  trackEvmBroadcastUnknownResolved: vi.fn(),
+  trackLightningPrep: vi.fn(),
   trackWeb3Request: vi.fn(),
   updateBalance: vi.fn(async () => {}),
   useLocalWallet: vi.fn(),
@@ -83,11 +93,19 @@ const {
 
 const ethAddress = '0x1111111111111111111111111111111111111111'
 
+const inAppBrowser = vi.hoisted(() => ({
+  close: vi.fn((_options?: { id?: string }) => Promise.resolve()),
+  hide: vi.fn((_options?: { id?: string }) => Promise.resolve()),
+}))
+vi.mock('@capgo/capacitor-inappbrowser', () => ({ InAppBrowser: inAppBrowser }))
+
 vi.mock('@capacitor/toast', () => ({
   Toast: {
     show: vi.fn(),
   },
 }))
+
+vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { showLoading, dismissLoading } }))
 
 vi.mock('birpc', () => ({
   createBirpc,
@@ -101,6 +119,8 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   trackChainSwitched: vi.fn(),
+  trackEvmBroadcastUnknownResolved,
+  trackLightningPrep,
   trackWeb3Request,
 }))
 
@@ -325,8 +345,8 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    // fullscreenChange + urlChangeEvent + browserPageLoaded
-    expect(browser.removeListener).toHaveBeenCalledTimes(3)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
+    expect(browser.removeListener).toHaveBeenCalledTimes(5)
   })
 
   it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
@@ -337,8 +357,8 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    // fullscreenChange + urlChangeEvent + browserPageLoaded
-    expect(browser.removeListener).toHaveBeenCalledTimes(3)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
+    expect(browser.removeListener).toHaveBeenCalledTimes(5)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
   })
@@ -429,6 +449,92 @@ describe('bridge origin', () => {
 
     post('response')
     expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
+  })
+})
+
+describe('app-driven close and hide', () => {
+  async function createMiniApp() {
+    const { browser, host } = await createPermissionHost()
+    const emit = (event: string, payload: unknown) =>
+      (browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
+    // The launcher registers the id openWebView returns.
+    host.isMainWebview('main')
+    inAppBrowser.close.mockClear()
+    inAppBrowser.hide.mockClear()
+    return { emit, host }
+  }
+
+  it('closes open popups, newest first, before the main webview', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    emit('popupWindowOpened', { id: 'popup-2', visible: true })
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close.mock.calls).toEqual([[{ id: 'popup-2', isAnimated: false }], [{ id: 'popup-1', isAnimated: false }], [{ id: 'main' }]])
+    await host.destroy()
+  })
+
+  it('still closes the main webview when a popup close fails', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    inAppBrowser.close.mockRejectedValueOnce(new Error('WebView is not initialized'))
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenLastCalledWith({ id: 'main' })
+    await host.destroy()
+  })
+
+  it('hides the main webview only after closing its popups', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+
+    await hideActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'popup-1', isAnimated: false })
+    expect(inAppBrowser.hide).toHaveBeenCalledExactlyOnceWith({ id: 'main' })
+    expect(inAppBrowser.close.mock.invocationCallOrder[0]).toBeLessThan(inAppBrowser.hide.mock.invocationCallOrder[0])
+    await host.destroy()
+  })
+
+  it('forgets popups the user already closed', async () => {
+    const { emit, host } = await createMiniApp()
+    emit('popupWindowOpened', { id: 'popup-1', visible: true })
+    emit('closeEvent', { id: 'popup-1', url: 'https://accounts.example/' })
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'main' })
+    await host.destroy()
+  })
+
+  it('closes a webview left from before a reload once, without an id', async () => {
+    const { host } = await createMiniApp()
+    await host.destroy()
+    inAppBrowser.close.mockClear()
+
+    await closeActiveMiniApp()
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it('closes again without an id while the Mini App is still active and its id unknown', async () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const { host } = await createPermissionHost()
+    inAppBrowser.close.mockClear()
+    // The first close only reaches a popup; the second one closes the Mini App.
+    inAppBrowser.close.mockResolvedValueOnce(undefined).mockImplementationOnce(() => host.destroy())
+
+    const closing = closeActiveMiniApp()
+    await vi.advanceTimersByTimeAsync(3000)
+    await closing
+
+    expect(inAppBrowser.close.mock.calls).toEqual([[], []])
+    expect(isMiniAppActive.value).toBe(false)
   })
 })
 
@@ -688,7 +794,7 @@ describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10], 'nimiq_send_transaction'],
     ['sendBasicTransactionWithData', ['NQ22 RECIPIENT', 100000, 0, 'Payment reference'], 'nimiq_send_transaction'],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10], 'nimiq_staking_create_staker'],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000], 'nimiq_staking_create_staker'],
   ])('returns -32001 with a reconciliation hash for uncertain %s', async (name, params, requestType) => {
     sendTx.mockResolvedValue({
       outcome: 'unknown',
@@ -753,7 +859,7 @@ describe('MiniAppHost Nimiq transaction message', () => { // eslint-disable-line
       name: 'sendBasicTransactionWithData',
       params: ['NQ22 RECIPIENT', 10, 0, message],
     })).resolves.toBe('payment-hash')
-    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ message }) }))
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ message }) }), expect.any(Number))
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ message }))
   })
 })
@@ -807,6 +913,104 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(confirmationPrompt.mock.calls.map(([prompt, promptDeadline]) => [prompt.type, promptDeadline]))
       .toEqual([['lightning-access', deadline], ['lightning-payment', deadline]])
     expect(selectLightningAsset).toHaveBeenCalledWith(expect.anything(), deadline)
+  })
+
+  describe('while the quote loads', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('rejects before the provider timeout and lets a retry reach the picker', async () => {
+      vi.useFakeTimers()
+      getPaymentRequestData.mockImplementationOnce(() => new Promise(() => {}))
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+      const response = handleRequest(request).catch(error => error)
+      await vi.waitFor(() => expect(getPaymentRequestData).toHaveBeenCalledOnce())
+      await vi.advanceTimersByTimeAsync(MINI_APP_REQUEST_TIMEOUT_MS - 1_000)
+
+      await expect(Promise.race([response, 'still waiting'])).resolves.toMatchObject({ type: 'NETWORK_ERROR' })
+      expect(Toast.show).toHaveBeenCalledOnce()
+      expect(dismissLoading).toHaveBeenCalledOnce()
+      expect(trackLightningPrep).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), 'prepare', 'timeout', expect.any(Number), 'NIM')
+      expect(confirmationPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-payment' }), expect.anything())
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(selectLightningAsset).toHaveBeenCalledTimes(2)
+    })
+
+    it('shows the loading sheet after the picker and closes it before the approval sheet', async () => {
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+      await handleRequest(request)
+
+      expect(showLoading).toHaveBeenCalledTimes(2)
+      const approval = confirmationPrompt.mock.calls.findIndex(([prompt]) => prompt.type === 'lightning-payment')
+      const [picked] = selectLightningAsset.mock.invocationCallOrder
+      const [shown, shownForRecheck] = showLoading.mock.invocationCallOrder
+      const [dismissed, dismissedForRecheck] = dismissLoading.mock.invocationCallOrder
+      expect(picked).toBeLessThan(shown)
+      expect(shown).toBeLessThan(dismissed)
+      expect(dismissed).toBeLessThan(confirmationPrompt.mock.invocationCallOrder[approval])
+      expect(confirmationPrompt.mock.invocationCallOrder[approval]).toBeLessThan(shownForRecheck)
+      expect(shownForRecheck).toBeLessThan(dismissedForRecheck)
+      expect(dismissedForRecheck).toBeLessThan(sendTx.mock.invocationCallOrder[0])
+    })
+
+    it('bounds the quote recheck after approval, ignores a late quote and lets a retry pay', async () => {
+      vi.useFakeTimers()
+      const quote = await getLightningQuote()
+      let returnLateQuote: (value: typeof quote) => void = () => {}
+      getLightningQuote
+        .mockResolvedValueOnce(quote)
+        .mockImplementationOnce(() => new Promise((resolve) => {
+          returnLateQuote = resolve
+        }))
+      const { handleRequest } = await createPermissionHost()
+
+      const response = handleRequest(request).catch(error => error)
+      await vi.waitFor(() => expect(getLightningQuote).toHaveBeenCalledTimes(3))
+      await vi.advanceTimersByTimeAsync(MINI_APP_REQUEST_TIMEOUT_MS - 1_000)
+
+      await expect(Promise.race([response, 'still waiting'])).resolves.toMatchObject({ type: 'NETWORK_ERROR' })
+      expect(dismissLoading).toHaveBeenCalledTimes(2)
+      returnLateQuote(quote)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(sendTx).not.toHaveBeenCalled()
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(sendTx).toHaveBeenCalledOnce()
+    })
+
+    it('rejects like a user rejection on Cancel and releases the invoice', async () => {
+      getPaymentRequestData.mockImplementationOnce(() => new Promise(() => {}))
+      showLoading.mockResolvedValueOnce({ cancelled: true })
+      const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+      await expect(handleRequest(request)).rejects.toMatchObject({ type: 'PERMISSION_DENIED' })
+      expect(Toast.show).not.toHaveBeenCalled()
+      expect(dismissLoading).toHaveBeenCalledOnce()
+      expect(trackLightningPrep).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), 'prepare', 'cancelled', expect.any(Number), 'NIM')
+      expect(confirmationPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-payment' }), expect.anything())
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+      expect(selectLightningAsset).toHaveBeenCalledTimes(2)
+    })
+
+    it('closes the loading sheet when preparing the payment fails', async () => {
+      getPaymentRequestData.mockResolvedValueOnce({ error: 'Swap unavailable' })
+      const { handleRequest } = await createPermissionHost()
+
+      await expect(handleRequest(request)).rejects.toMatchObject({ type: 'INVALID_TRANSACTION', message: 'Swap unavailable' })
+      expect(dismissLoading).toHaveBeenCalledOnce()
+    })
+
+    it('still pays on a native build without the loading sheet', async () => {
+      showLoading.mockRejectedValueOnce(new Error('not implemented'))
+      dismissLoading.mockRejectedValueOnce(new Error('not implemented'))
+      const { handleRequest } = await createPermissionHost()
+
+      await expect(handleRequest(request)).resolves.toEqual({ hash: 'payment-hash', swapId: 'swap-id' })
+    })
   })
 
   it('lets the user choose USDT and returns when Polygon funding is submitted', async () => {
@@ -995,7 +1199,7 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
 describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line test/prefer-lowercase-title
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000]],
     ['sendStakeTransaction', [10]],
   ])('rejects %s before confirmation without an active remote signer', async (name, params) => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
@@ -1016,7 +1220,7 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
 
   it.each([
     ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000]],
     ['sendStakeTransaction', [10]],
   ])('rejects %s as insufficient balance for a synced never-funded wallet', async (name, params) => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState: 'resolved-empty' })
@@ -1071,8 +1275,8 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
 
 describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-lowercase-title
   it.each([
-    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10, fee: 7 }],
-    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10, 7]],
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 10_000_000, fee: 7 }],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10_000_000, 7]],
     ['sendStakeTransaction', { value: 10, fee: 7 }],
     ['sendStakeTransaction', [10, 7]],
     ['sendSetActiveStakeTransaction', { newActiveBalance: 10, fee: 7 }],
@@ -1091,7 +1295,7 @@ describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-l
 
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ fee: 7 }),
-    }))
+    }), expect.any(Number))
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ fee: 7 }))
   })
 
@@ -1121,6 +1325,73 @@ describe('MiniAppHost staking fee', () => { // eslint-disable-line test/prefer-l
     })
     expect(confirmationPrompt).not.toHaveBeenCalled()
     expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['sendStakeTransaction', { value: 1.5 }],
+    ['sendStakeTransaction', { value: -1 }],
+    ['sendStakeTransaction', { value: 'abc' }],
+    ['sendStakeTransaction', { value: 2 ** 64 }],
+    ['sendSetActiveStakeTransaction', { newActiveBalance: 2 ** 64 }],
+    ['sendSetActiveStakeTransaction', [1.5]],
+    ['sendRetireStakeTransaction', { retireStake: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: 2 ** 64 }],
+    ['sendBasicTransaction', { recipient: 'NQ22 RECIPIENT', value: -1 }],
+  ])('rejects a malformed amount before prompting for %s %j', async (name, params) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message: 'Transaction amount must be a non-negative integer',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('still sends a basic transaction with a fractional value', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransaction',
+      params: { recipient: 'NQ22 RECIPIENT', value: 0.07 * 1e5 },
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('MiniAppHost staking protocol rules', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendNewStakerTransaction', { delegation: 'NQ33 VALIDATOR', value: 100_000 }, 'Staker must be created with at least 100 NIM'],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 9_999_999], 'Staker must be created with at least 100 NIM'],
+    ['sendStakeTransaction', { value: 0 }, 'Added stake must be greater than zero'],
+    ['sendStakeTransaction', [0], 'Added stake must be greater than zero'],
+    ['sendRetireStakeTransaction', { retireStake: 0 }, 'Retired stake must be greater than zero'],
+    ['sendRetireStakeTransaction', [0], 'Retired stake must be greater than zero'],
+  ])('rejects %s %j before confirmation', async (name, params, message) => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).rejects.toMatchObject({
+      type: 'INVALID_TRANSACTION',
+      message,
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    // sendTx is what stages the transaction with the cosigner
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('prompts for a staker created with exactly the minimum stake', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewStakerTransaction',
+      params: { delegation: 'NQ33 VALIDATOR', value: 10_000_000 },
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: 10_000_000 }),
+    }), expect.any(Number))
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ amount: 10_000_000 }))
   })
 })
 
@@ -1371,11 +1642,129 @@ describe('miniAppHost', () => {
     })
 
     expect(txHash).toBe('0xabc123')
-    expect(trackWeb3Request).toHaveBeenCalled()
+    expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({
+      approved: true,
+      success: true,
+      broadcastResult: 'hash',
+      broadcastMs: expect.any(Number),
+    }))
 
     await vi.waitFor(() => {
       expect(updateBalance).toHaveBeenCalledOnce()
       expect(syncTransactionHistory).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('broadcast telemetry', () => {
+    const txParams = {
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      nonce: '0x7',
+      chainId: '0x89',
+    }
+    let rpcMethods: string[]
+
+    function stubBroadcast(sendRawTransaction: () => Promise<unknown>, getTransactionByHash: () => unknown) {
+      rpcMethods = []
+      vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const payload = JSON.parse(String(init?.body)) as { method: string, params: unknown[] }
+        rpcMethods.push(payload.method)
+        switch (payload.method) {
+          case 'eth_sendRawTransaction':
+            return sendRawTransaction()
+          case 'eth_getTransactionByHash':
+            expect(payload.params).toEqual([keccak256('0x5161ed')])
+            return jsonRpcResponse({ jsonrpc: '2.0', id: 2, ...getTransactionByHash() as object })
+          default:
+            throw new Error(`Unexpected RPC method: ${payload.method}`)
+        }
+      }))
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('reports a timed-out broadcast and whether its transaction landed later', async () => {
+      stubBroadcast(async () => {
+        vi.setSystemTime(Date.now() + 30_000)
+        // What AbortSignal.timeout() rejects with. The test DOM's DOMException is not an Error, unlike the WebView's.
+        throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })
+      }, () => ({ result: { hash: keccak256('0x5161ed') } }))
+
+      const error = await (createHostOnChain() as any).signEthTransaction(txParams).catch((e: unknown) => e)
+
+      // The Mini App keeps getting the same error as before.
+      expect(error).toBeInstanceOf(NetworkError)
+      expect(error.message).toBe('RPC request timed out after 30000ms')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({
+        approved: true,
+        success: false,
+        broadcastResult: 'timeout',
+        broadcastMs: 30_000,
+      }))
+
+      await vi.advanceTimersByTimeAsync(15_000)
+
+      expect(trackEvmBroadcastUnknownResolved).toHaveBeenCalledExactlyOnceWith({
+        dappUrl: 'https://app.uniswap.org',
+        dappName: 'Uniswap',
+        chainId: '0x89',
+        broadcastResult: 'timeout',
+        landed: true,
+      })
+    })
+
+    it('reports a broadcast that failed in transit as not landed when the node never sees it', async () => {
+      stubBroadcast(async () => ({ ok: false, status: 502, statusText: 'Bad Gateway' }), () => ({ result: null }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams))
+        .rejects
+        .toThrow('RPC request failed with status 502: Bad Gateway')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ broadcastResult: 'network_error' }))
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods.filter(method => method === 'eth_getTransactionByHash')).toHaveLength(10)
+      expect(trackEvmBroadcastUnknownResolved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        broadcastResult: 'network_error',
+        landed: false,
+      }))
+    })
+
+    it('skips the outcome when every lookup gets a JSON-RPC error body', async () => {
+      stubBroadcast(async () => ({ ok: false, status: 502, statusText: 'Bad Gateway' }), () => ({ error: { code: -32005, message: 'rate limit' } }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams)).rejects.toThrow('Bad Gateway')
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods.filter(method => method === 'eth_getTransactionByHash')).toHaveLength(10)
+      expect(trackEvmBroadcastUnknownResolved).not.toHaveBeenCalled()
+    })
+
+    it('reports an RPC error answer without looking the transaction up', async () => {
+      stubBroadcast(async () => jsonRpcResponse({ jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'nonce too low' } }), () => ({ result: null }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams)).rejects.toThrow('nonce too low')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({
+        approved: true,
+        success: false,
+        broadcastResult: 'rpc_error',
+        broadcastMs: expect.any(Number),
+      }))
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods).not.toContain('eth_getTransactionByHash')
+      expect(trackEvmBroadcastUnknownResolved).not.toHaveBeenCalled()
     })
   })
 
@@ -1422,6 +1811,195 @@ describe('miniAppHost', () => {
     }))
   })
 
+  it('bases the transaction sheet deadline on the request start, not the end of its RPC calls', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      vi.setSystemTime(Date.now() + 30_000)
+      return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+    }))
+    requestUserConfirmation.mockResolvedValueOnce(false)
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow()
+
+    expect(Date.now()).toBe(start + 30_000)
+    expect(requestUserConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'eth-transaction' }),
+      start + MINI_APP_REQUEST_TIMEOUT_MS,
+    )
+    expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: false, sheetWaitMs: 30_000 }))
+  })
+
+  it('reports a transaction sheet that ran out its deadline as timed out', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return false
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow()
+
+    expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ timedOut: true }))
+  })
+
+  describe('nimiq send timing', () => {
+    let start: number
+
+    beforeEach(() => {
+      start = Date.now()
+      vi.setSystemTime(start)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    async function send(confirm: (deadline: number) => boolean) {
+      const { handleRequest, requestUserConfirmation: prompt } = await createPermissionHost()
+      prompt.mockImplementationOnce(async (_request: unknown, deadline: number) => confirm(deadline))
+      return { prompt, response: handleRequest({ network: 'nimiq', name: 'sendBasicTransaction', params: ['NQ22 RECIPIENT', 10] }) }
+    }
+
+    it('reports how long the sheet stayed open before a submitted send', async () => {
+      const { response } = await send(() => {
+        vi.setSystemTime(start + 30_000)
+        return true
+      })
+
+      await expect(response).resolves.toBe('payment-hash')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: true, sheetCloseMs: 30_000, sendMs: 0, txOutcome: 'submitted', exceededProviderTimeout: false }))
+    })
+
+    it('reports a send that finished after the provider stopped waiting', async () => {
+      sendTx.mockImplementationOnce(async () => {
+        vi.setSystemTime(Date.now() + 60_000)
+        return { outcome: 'unknown', stagedHash: 'staged-hash', stagedTx: { hash: 'staged-hash' }, error: 'response lost' }
+      })
+      const { response } = await send(() => {
+        vi.setSystemTime(start + 115_000)
+        return true
+      })
+
+      await expect(response).rejects.toMatchObject({ code: -32001 })
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ sheetCloseMs: 115_000, sendMs: 60_000, txOutcome: 'unknown', exceededProviderTimeout: true }))
+    })
+
+    it('reports a sheet that ran out its deadline as timed out', async () => {
+      const { prompt, response } = await send((deadline) => {
+        vi.setSystemTime(deadline)
+        return false
+      })
+
+      await expect(response).rejects.toThrow()
+      expect(prompt).toHaveBeenCalledWith(expect.objectContaining({ type: 'transaction' }), start + MINI_APP_REQUEST_TIMEOUT_MS)
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: false, timedOut: true, sheetCloseMs: MINI_APP_REQUEST_TIMEOUT_MS }))
+    })
+
+    it('reports a send that threw as failed', async () => {
+      sendTx.mockRejectedValueOnce(new Error('send crashed'))
+      const { response } = await send(() => true)
+
+      await expect(response).rejects.toThrow()
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ approved: true, success: false, txOutcome: 'failed' }))
+    })
+  })
+
+  it('reports a transaction confirmed at the deadline before the provider stops waiting', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const rpcTimeoutMs = (MiniAppHost as any).RPC_TIMEOUT_MS as number
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+      switch (payload.method) {
+        case 'eth_sendRawTransaction':
+          // Slowest broadcast that still beats the RPC timeout.
+          vi.setSystemTime(Date.now() + rpcTimeoutMs - 1)
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0xabc123' })
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: { status: '0x1' } })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    }))
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return true
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).resolves.toBe('0xabc123')
+    await vi.waitFor(() => expect(updateBalance).toHaveBeenCalledOnce())
+
+    expect(Date.now() - start).toBeGreaterThan(MINI_APP_REQUEST_TIMEOUT_MS)
+    expect(Date.now() - start).toBeLessThan(MINI_APP_PROVIDER_TIMEOUT_MS)
+  })
+
+  it('does not broadcast once a stalled signing leaves no time to report the outcome', async () => {
+    const start = Date.now()
+    vi.setSystemTime(start)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const rpcMethods: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      rpcMethods.push((JSON.parse(String(init?.body)) as { method: string }).method)
+      return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+    }))
+    requestUserConfirmation.mockImplementationOnce(async () => {
+      vi.setSystemTime(start + MINI_APP_REQUEST_TIMEOUT_MS)
+      return true
+    })
+    signTransaction.mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 10_000)
+      return '0x5161ed'
+    })
+
+    await expect((createHostOnChain() as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x7',
+      value: '0x0',
+      chainId: '0x89',
+    })).rejects.toThrow('Request timed out before the transaction was sent')
+
+    expect(signTransaction).toHaveBeenCalledOnce()
+    expect(rpcMethods).not.toContain('eth_sendRawTransaction')
+  })
+
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
     const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const payload = JSON.parse(String(init?.body)) as { method: string }
@@ -1465,7 +2043,7 @@ describe('miniAppHost', () => {
           amount: '123.45 USDT',
         }),
       }),
-    }))
+    }), expect.any(Number))
   })
 
   it('rejects decoded Polygon USDT transfers that include a native token value', async () => {
@@ -1538,6 +2116,6 @@ describe('miniAppHost', () => {
       data: expect.not.objectContaining({
         decodedAssetTransfer: expect.anything(),
       }),
-    }))
+    }), expect.any(Number))
   })
 })

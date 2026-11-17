@@ -4,7 +4,7 @@ import type { CloseRole } from '@/composables/useModal'
 import type { flowHeightOptions } from '@/lib/flows'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
-import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar, useBackButton } from '@ionic/vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, watchEffect } from 'vue'
@@ -38,7 +38,7 @@ const props = defineProps({
 
 const logger = useLogger('Flow.vue')
 
-const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName, initialStep } = props.flow!
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName, initialStep, backButtonNavigates } = props.flow!
 const activeIndex = ref(Math.max(stepsInFlow.findIndex(s => s.step === initialStep), 0))
 const historyStack: Ref<Step[]> = ref(stepsInFlow.slice(0, activeIndex.value + 1))
 
@@ -149,6 +149,20 @@ const activeStep = computed(() => historyStack.value[activeIndex.value])
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 
 const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1 && activeStep.value?.allowGoBack !== false)
+
+// Runs before Ionic's overlay handler (100), which would dismiss the whole flow. Only acts while this flow is
+// the topmost overlay, so an open select alert or a flow stacked on top still closes first.
+if (backButtonNavigates) {
+  const { unregister } = useBackButton(101, (processNextHandler) => {
+    const modal = scroller.value?.closest('ion-modal')
+    const overlays = Array.from(document.querySelectorAll('ion-modal, ion-alert, ion-action-sheet, ion-popover, ion-picker, ion-loading'))
+      .filter(el => !el.classList.contains('overlay-hidden'))
+    if (!allowBack.value || !modal || overlays.at(-1) !== modal)
+      return processNextHandler()
+    navigateTo({ goBackBy: activeStep.value.goBackBy || 1 })
+  })
+  onBeforeUnmount(unregister)
+}
 
 type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)

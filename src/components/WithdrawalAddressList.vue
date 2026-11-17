@@ -10,16 +10,18 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
+// `manage`: Settings view, lists every saved address for editing only (no selection, no add).
+const { manage = false } = defineProps<{ manage?: boolean }>()
 const emit = defineEmits(stepEmits)
 const app = useApp()
 const { withdrawalAddressesHistory, isNimiqAsset } = storeToRefs(app)
 
-// Most-recently-saved first, filtered to the active asset.
+// Most-recently-saved first, filtered to the active asset unless managing all of them.
 const addresses = computed<SavedAddress[]>(() =>
   withdrawalAddressesHistory.value
     .slice()
     .reverse()
-    .filter(({ address }) => isNimiqAsset.value ? address.startsWith('NQ') : address.startsWith('0x')),
+    .filter(({ address }) => manage || (isNimiqAsset.value ? address.startsWith('NQ') : address.startsWith('0x'))),
 )
 
 function handleSelectAddress(address: string) {
@@ -84,8 +86,9 @@ function saveAlias() {
           <ShortAddressDisplay
             :address="entry.address"
             :alias="entry.alias"
-            class="text-lg py-3 flex-1 min-w-0 cursor-pointer"
-            @click="() => handleSelectAddress(entry.address)"
+            class="text-lg py-3 flex-1 min-w-0"
+            :class="{ 'cursor-pointer': !manage }"
+            @click="() => !manage && handleSelectAddress(entry.address)"
           />
           <button class="p-2" aria-label="Edit alias" @click="() => startEditing(entry)">
             <PenIcon class="size-5 text-space-space-600" />
@@ -99,7 +102,7 @@ function saveAlias() {
     <p v-else aria-label="No saved addresses" class="text-center text-lg text-space/60">
       {{ $t('No saved addresses') }}
     </p>
-    <IonButton aria-label="Add another address" size="small" fill="clear" class="text-base font-bold normal-case w-max" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px; --ripple-color: #1F234805" @click="handleAddAddress">
+    <IonButton v-if="!manage" aria-label="Add another address" size="small" fill="clear" class="text-base font-bold normal-case w-max" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px; --ripple-color: #1F234805" @click="handleAddAddress">
       {{ $t('Add another address') }}
     </IonButton>
   </div>

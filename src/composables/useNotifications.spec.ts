@@ -15,7 +15,7 @@ const state = vi.hoisted(() => ({
     return { remove: vi.fn() }
   }),
   tapCallback: undefined as undefined | ((e: any) => Promise<void> | void),
-  inAppBrowserClose: vi.fn(async () => {}),
+  closeActiveMiniApp: vi.fn(async () => {}),
   initializeFlow: vi.fn(),
   waitForUnlock: vi.fn(async () => undefined),
   transactions: [] as Array<{ hash: string }>,
@@ -51,10 +51,8 @@ vi.mock('@capacitor/push-notifications', () => ({
   },
 }))
 
-vi.mock('@capgo/capacitor-inappbrowser', () => ({
-  InAppBrowser: {
-    close: () => state.inAppBrowserClose(),
-  },
+vi.mock('@/composables/useMiniAppHost', () => ({
+  closeActiveMiniApp: () => state.closeActiveMiniApp(),
 }))
 
 vi.mock('@vueuse/core', () => ({
@@ -164,8 +162,8 @@ describe('useNotifications — local notifications', () => {
     state.requestPermissions.mockResolvedValue({ display: 'granted' })
     state.addListener.mockClear()
     state.tapCallback = undefined
-    state.inAppBrowserClose.mockReset()
-    state.inAppBrowserClose.mockResolvedValue(undefined)
+    state.closeActiveMiniApp.mockReset()
+    state.closeActiveMiniApp.mockResolvedValue(undefined)
     state.initializeFlow.mockReset()
     state.waitForUnlock.mockReset()
     state.waitForUnlock.mockResolvedValue(undefined)
@@ -407,7 +405,7 @@ describe('useNotifications — local notifications', () => {
       expect(state.tapCallback).toBeTypeOf('function')
       await state.tapCallback!({ notification: { extra: { hash: 'abc-123' } } })
       expect(state.waitForUnlock).toHaveBeenCalledTimes(1)
-      expect(state.inAppBrowserClose).toHaveBeenCalledTimes(1)
+      expect(state.closeActiveMiniApp).toHaveBeenCalledTimes(1)
       expect(state.initializeFlow).toHaveBeenCalledWith(
         'viewTransactionDetail',
         { initialState: { transactionList: { hash: 'abc-123' } } },
@@ -419,7 +417,7 @@ describe('useNotifications — local notifications', () => {
       await useNotifications().installLocalNotificationsTapHandler()
       await state.tapCallback!({ notification: { extra: {} } })
       expect(state.initializeFlow).not.toHaveBeenCalled()
-      expect(state.inAppBrowserClose).not.toHaveBeenCalled()
+      expect(state.closeActiveMiniApp).not.toHaveBeenCalled()
     })
 
     it('on tap: hash not found in store is a no-op (no flow opened)', async () => {
@@ -430,9 +428,9 @@ describe('useNotifications — local notifications', () => {
       expect(state.initializeFlow).not.toHaveBeenCalled()
     })
 
-    it('on tap: InAppBrowser.close throwing is swallowed', async () => {
+    it('on tap: a failing Mini App close is swallowed', async () => {
       state.transactions = [{ hash: 'abc-123' } as any]
-      state.inAppBrowserClose.mockRejectedValue(new Error('no webview'))
+      state.closeActiveMiniApp.mockRejectedValue(new Error('no webview'))
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().installLocalNotificationsTapHandler()
       await state.tapCallback!({ notification: { extra: { hash: 'abc-123' } } })

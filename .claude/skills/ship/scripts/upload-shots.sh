@@ -7,6 +7,11 @@ pr="$1"; shift
 [ $# -gt 0 ] || { echo "FAILED: no files"; exit 1; }
 for f in "$@"; do [ -f "$f" ] || { echo "FAILED: missing $f"; exit 1; }; done
 files=$(printf '%s\n' "$@")
+# The extension only connects while Google Chrome runs; Brave being open doesn't count. Start Chrome in the background and give the extension time to attach.
+if ! pgrep -xq "Google Chrome"; then
+  open -g -a "Google Chrome"
+  sleep 8
+fi
 cd /tmp
 claude -p "Using the claude-in-chrome tools, in a NEW tab (tabs_create_mcp) open https://github.com/nimiq/nimiq-pay-app/pull/${pr} . Confirm the user is signed in. Open the PR description editor (the '...' menu on the first comment, then Edit). Put the cursor at the very END of the description text, add a new line, then for EACH file below, one at a time, upload it with file_upload on the editor's file input (use find to locate it) and poll the textarea value with javascript_tool (up to 60s) until a new https://github.com/user-attachments/assets/ URL for that file appears. Files:
 ${files}

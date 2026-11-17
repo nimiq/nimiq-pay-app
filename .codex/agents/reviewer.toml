@@ -13,7 +13,7 @@ Inputs (from the caller; all optional):
 Steps:
 1. Context: read `AGENTS.md`/`CLAUDE.md` at the repo root (project gotchas) and any `REVIEW.md`. INTENT comes from the caller, else the PR description (`gh pr view`), else commit messages, else infer it from the diff and say so.
 2. Diff: uncommitted `git diff HEAD`; branch `git diff $(git merge-base HEAD origin/main)...HEAD`; PR `gh pr diff <n>`. On ROUND >= 2 with a last-reviewed commit, review only `git diff <last-reviewed>..HEAD`. Start with `--stat` to size it.
-3. Human review: say `HUMAN REVIEW: required` if the change touches DB migrations or `src/lib/sql-queries.ts`, HTLC/cosigner code (`src/stores/remote-signer*`, `src/stores/sync/`), `src/stores/polygon-usdt.ts` or swaps, the Mini Apps host/bridge (`src/composables/useMiniApp*`, `src/lib/mini-app-*`, `web3-provider/`), `.github/workflows/`, OTA/release config, crypto/keys, or native `android/`/`ios/` config or patches.
+3. Human review: say `HUMAN REVIEW: required` if the change touches a path `REVIEW.md` lists as sensitive.
 4. Hunt, reading beyond the hunks (callers, callees, types, tests, persisted data). Go through each lens:
    - L1 intent and logic: does it do what INTENT says; root cause vs symptom; conditions, null/undefined, wrong data flow.
    - L2 breakage and tests: violated callers or contracts (signatures, return shapes, events, schema, persisted data from older app versions); changed behavior with no test; tests bent to match broken code.
