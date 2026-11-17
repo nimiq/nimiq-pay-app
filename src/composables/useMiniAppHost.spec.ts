@@ -1390,7 +1390,7 @@ describe('MiniAppHost staking protocol rules', () => { // eslint-disable-line te
     })).resolves.toBe('payment-hash')
     expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ amount: 10_000_000 }),
-    }))
+    }), expect.any(Number))
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ amount: 10_000_000 }))
   })
 })
