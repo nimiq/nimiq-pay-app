@@ -50,6 +50,8 @@ const logger = useLogger('MiniAppHost')
 // Sent to the webview on `from`/`address` mismatch. Must not include the wallet
 // address: the caller may not have been granted eth_requestAccounts.
 const ETH_ADDRESS_MISMATCH_MESSAGE = 'Requested address does not match the wallet address'
+// Policy::MINIMUM_STAKE in core-rs-albatross primitives/src/policy.rs (luna); the web-client does not export it
+const MINIMUM_STAKE = 10_000_000
 const erc20TransferInterface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
 ])
@@ -1875,6 +1877,10 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for createNewStakerTransaction method')
     }
+    // Core verification always rejects these (core-rs-albatross IncomingStakingTransactionData::verify).
+    // The cosigner answers that with a 500, leaving the tx staged until it expires, so reject before the prompt.
+    if (value < MINIMUM_STAKE)
+      throw new InvalidTransactionError(`Staker must be created with at least ${MINIMUM_STAKE / 1e5} NIM`)
 
     return this.sendPayment({
       transfer: Transfer.Staking,
@@ -1902,6 +1908,9 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for createStakeTransaction method')
     }
+    // Same rule source as create-staker: add-stake with zero value fails with ZeroValue
+    if (value === 0)
+      throw new InvalidTransactionError('Added stake must be greater than zero')
 
     return this.sendPayment({
       transfer: Transfer.Staking,
@@ -1986,6 +1995,9 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
     }
+    // Same rule source as create-staker: retire-stake of zero fails with ZeroValue
+    if (retireStake === 0)
+      throw new InvalidTransactionError('Retired stake must be greater than zero')
 
     return this.sendPayment({
       transfer: Transfer.Staking,
