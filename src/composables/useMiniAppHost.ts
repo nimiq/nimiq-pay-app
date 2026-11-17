@@ -2375,6 +2375,15 @@ export class MiniAppHost {
     // BigInt() throws on fractions and NaN, and the wasm u64 wraps out-of-range values, so the signed fee could differ from the prompt
     if (!Number.isSafeInteger(txData.fee) || txData.fee < 0)
       throw new InvalidTransactionError('Transaction fee must be a non-negative integer')
+    // Same for amounts: the prompt would show a value that differs from the one signed.
+    // Basic sends are signed with Math.ceil(value) (getSignedTx), so fractional values keep working there.
+    const amounts = [txData.transfer === Transfer.UserPayment ? Math.ceil(txData.value) : txData.value]
+    if (txData.transfer === Transfer.Staking && txData.stakingData.type === 'set-active-stake')
+      amounts.push(txData.stakingData.newActiveBalance)
+    if (txData.transfer === Transfer.Staking && txData.stakingData.type === 'retire-stake')
+      amounts.push(txData.stakingData.retireStake)
+    if (amounts.some(amount => !Number.isSafeInteger(amount) || amount < 0))
+      throw new InvalidTransactionError('Transaction amount must be a non-negative integer')
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
     const remoteSigner = useRemoteSigner()
