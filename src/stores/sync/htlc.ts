@@ -5,6 +5,7 @@ import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { RecoverablePlainTransactionDetails } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
+import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -666,6 +667,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
           const account = await promiseWithTimeout(client.value!.getAccount(htlc.address), HTLC_CALL_TIMEOUT_MS) as PlainAccount
           if (!account.balance) {
+            let refundProven = false
             if (refundUnproven) {
               if (refundWindowOpen) {
                 logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
@@ -673,8 +675,24 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
               }
               // Past its window, only a complete history scan tells whether the refund drained the HTLC.
               const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
-              if (landedRefund?.executionResult === true)
+              if (landedRefund?.executionResult === true) {
                 await markSwapHtlcRefunded(htlc, refundStep, landedRefund)
+                refundProven = true
+              }
+            }
+            if (!refundProven) {
+              // Fastspot may have redeemed it while the app was closed, so the preimage was never saved.
+              const swap = await promiseWithTimeout(useFastspotApiV2().then(({ getSwap }) => getSwap(htlc.swap_id)), HTLC_CALL_TIMEOUT_MS).catch((error) => {
+                logger.warn('Swap lookup for empty HTLC failed; retrying next sweep', htlc.swap_id, error)
+                return undefined
+              })
+              if (!swap)
+                continue
+              if ('preimage' in swap && swap.preimage) {
+                const tx = await conn.query<{ hash: string }>(SQLQuery.GetSwapTxHashByHtlc, [htlc.address], { single: true })
+                if (tx)
+                  await useTransactions().setSwapPreimage(tx.hash, swap.preimage)
+              }
             }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
