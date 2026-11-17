@@ -709,9 +709,11 @@ async function stopBuild(request, buildId) {
   try {
     const result = await request(`${API_ROOT}/maestro/builds/${buildId}/stop`, { method: 'POST' })
     console.log(`🛑 Stop requested for build ${buildId}: ${JSON.stringify(result)}`)
+    return true
   }
   catch (error) {
     console.error(`::warning::Could not stop BrowserStack build ${buildId}; it may keep a parallel busy: ${error.message}`)
+    return false
   }
 }
 
@@ -937,6 +939,7 @@ async function runAttempt(client, payload, { platform, timeoutSeconds, evidenceD
 
   let build
   let waitError
+  let stopped = true
   try {
     build = await waitForBuild(client.request, buildId, timeoutSeconds)
   }
@@ -944,10 +947,15 @@ async function runAttempt(client, payload, { platform, timeoutSeconds, evidenceD
     waitError = error
     console.error(`❌ ${error.message}`)
     // Also after API errors: a retry must not run next to an orphaned build holding a parallel.
-    await stopBuild(client.request, buildId)
+    stopped = await stopBuild(client.request, buildId)
     build = await client.request(`/builds/${buildId}`).catch(() => null)
   }
-  fs.rmSync(activeBuildFile, { force: true })
+  // A failed stop can leave the build running. Keep its marker so the workflow's cleanup step
+  // retries the stop, unless BrowserStack already reports the build finished.
+  const mayStillRun = !stopped && !TERMINAL_STATUSES.has(String(build?.status).toLowerCase())
+  if (!mayStillRun) {
+    fs.rmSync(activeBuildFile, { force: true })
+  }
 
   build ??= { id: buildId, status: 'unknown' }
   let sessionsError
@@ -979,7 +987,10 @@ async function runAttempt(client, payload, { platform, timeoutSeconds, evidenceD
     }
   }
 
-  const verdict = diagnoseAttempt(summary, diagnoses, { waitError, sessionsError })
+  // FATAL, not a retry: a second build would run next to this one on the same wallet.
+  const verdict = mayStillRun
+    ? { diagnosis: 'HARNESS', disposition: 'FATAL', signal: `Could not stop build ${buildId}; it may still be running` }
+    : diagnoseAttempt(summary, diagnoses, { waitError, sessionsError })
   return { build, sessions, summary, ...verdict, failingStep: diagnoses.find(entry => entry.failingStep)?.failingStep }
 }
 

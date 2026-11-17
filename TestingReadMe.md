@@ -4,17 +4,29 @@ INITIAL SETUP
 Create a main folder ie. “Nimiq Pay App Repo”
 
 Git clone the following repositories into that folder
-- https://github.com/nimiq/nimiq-pay-app 
- 
+- https://github.com/nimiq/nimiq-pay-app (with its submodules, see below)
+
 - https://github.com/nimiq/pay-issuer-server
 
-- https://github.com/nimiq/trust-web3-provider
+Clone nimiq-pay-app with its submodules. The Mini Apps provider lives in the pinned
+`vendor/trust-web3-provider` submodule, not in a separate clone next to the app:
+git clone --recurse-submodules https://github.com/nimiq/nimiq-pay-app
+
+If you already cloned it without submodules (or after a pull that moved the pin):
+git submodule update --init --recursive
 
 Go to nimiq-pay-app folder by cd nimiq-pay-app
 
-Now install all dependencies 
-pnpm install --ignore-scripts
+Now install all dependencies. Do not pass --ignore-scripts: the postinstall step builds the
+pinned Mini Apps provider (public/web3-provider.js)
+pnpm install
 pnpm copy:nimiq
+
+Check the provider bundle is the real one (about 1.2 MB, not a few bytes):
+ls -lh public/web3-provider.js
+
+After changing provider code or moving the submodule pin, rebuild it:
+pnpm build:web3-provider
 
 
 Install Ruby dependencies (Fastlane) 
