@@ -1,12 +1,12 @@
 import { Buffer } from 'node:buffer'
 import { Toast } from '@capacitor/toast'
-import { Interface, parseUnits } from 'ethers'
+import { Interface, keccak256, parseUnits } from 'ethers'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
-import { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp, isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost } from './useMiniAppHost'
+import { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp, isMiniAppActive, MINI_APP_REQUEST_TIMEOUT_MS, MiniAppHost, NetworkError } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -37,6 +37,7 @@ const {
   run,
   signTransaction,
   syncTransactionHistory,
+  trackEvmBroadcastUnknownResolved,
   trackLightningPrep,
   trackWeb3Request,
   updateBalance,
@@ -76,8 +77,10 @@ const {
   sendSwapPayment: vi.fn(),
   showLoading: vi.fn((): Promise<{ cancelled: boolean }> => new Promise(() => {})),
   run: vi.fn(),
-  signTransaction: vi.fn(async () => '0xsigned'),
+  // Valid hex, so the host can hash it like a real signed transaction.
+  signTransaction: vi.fn(async () => '0x5161ed'),
   syncTransactionHistory: vi.fn(async () => {}),
+  trackEvmBroadcastUnknownResolved: vi.fn(),
   trackLightningPrep: vi.fn(),
   trackWeb3Request: vi.fn(),
   updateBalance: vi.fn(async () => {}),
@@ -116,6 +119,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   trackChainSwitched: vi.fn(),
+  trackEvmBroadcastUnknownResolved,
   trackLightningPrep,
   trackWeb3Request,
 }))
@@ -1571,11 +1575,129 @@ describe('miniAppHost', () => {
     })
 
     expect(txHash).toBe('0xabc123')
-    expect(trackWeb3Request).toHaveBeenCalled()
+    expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({
+      approved: true,
+      success: true,
+      broadcastResult: 'hash',
+      broadcastMs: expect.any(Number),
+    }))
 
     await vi.waitFor(() => {
       expect(updateBalance).toHaveBeenCalledOnce()
       expect(syncTransactionHistory).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('broadcast telemetry', () => {
+    const txParams = {
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      nonce: '0x7',
+      chainId: '0x89',
+    }
+    let rpcMethods: string[]
+
+    function stubBroadcast(sendRawTransaction: () => Promise<unknown>, getTransactionByHash: () => unknown) {
+      rpcMethods = []
+      vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const payload = JSON.parse(String(init?.body)) as { method: string, params: unknown[] }
+        rpcMethods.push(payload.method)
+        switch (payload.method) {
+          case 'eth_sendRawTransaction':
+            return sendRawTransaction()
+          case 'eth_getTransactionByHash':
+            expect(payload.params).toEqual([keccak256('0x5161ed')])
+            return jsonRpcResponse({ jsonrpc: '2.0', id: 2, ...getTransactionByHash() as object })
+          default:
+            throw new Error(`Unexpected RPC method: ${payload.method}`)
+        }
+      }))
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('reports a timed-out broadcast and whether its transaction landed later', async () => {
+      stubBroadcast(async () => {
+        vi.setSystemTime(Date.now() + 30_000)
+        // What AbortSignal.timeout() rejects with. The test DOM's DOMException is not an Error, unlike the WebView's.
+        throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })
+      }, () => ({ result: { hash: keccak256('0x5161ed') } }))
+
+      const error = await (createHostOnChain() as any).signEthTransaction(txParams).catch((e: unknown) => e)
+
+      // The Mini App keeps getting the same error as before.
+      expect(error).toBeInstanceOf(NetworkError)
+      expect(error.message).toBe('RPC request timed out after 30000ms')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({
+        approved: true,
+        success: false,
+        broadcastResult: 'timeout',
+        broadcastMs: 30_000,
+      }))
+
+      await vi.advanceTimersByTimeAsync(15_000)
+
+      expect(trackEvmBroadcastUnknownResolved).toHaveBeenCalledExactlyOnceWith({
+        dappUrl: 'https://app.uniswap.org',
+        dappName: 'Uniswap',
+        chainId: '0x89',
+        broadcastResult: 'timeout',
+        landed: true,
+      })
+    })
+
+    it('reports a broadcast that failed in transit as not landed when the node never sees it', async () => {
+      stubBroadcast(async () => ({ ok: false, status: 502, statusText: 'Bad Gateway' }), () => ({ result: null }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams))
+        .rejects
+        .toThrow('RPC request failed with status 502: Bad Gateway')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({ broadcastResult: 'network_error' }))
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods.filter(method => method === 'eth_getTransactionByHash')).toHaveLength(10)
+      expect(trackEvmBroadcastUnknownResolved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        broadcastResult: 'network_error',
+        landed: false,
+      }))
+    })
+
+    it('skips the outcome when every lookup gets a JSON-RPC error body', async () => {
+      stubBroadcast(async () => ({ ok: false, status: 502, statusText: 'Bad Gateway' }), () => ({ error: { code: -32005, message: 'rate limit' } }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams)).rejects.toThrow('Bad Gateway')
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods.filter(method => method === 'eth_getTransactionByHash')).toHaveLength(10)
+      expect(trackEvmBroadcastUnknownResolved).not.toHaveBeenCalled()
+    })
+
+    it('reports an RPC error answer without looking the transaction up', async () => {
+      stubBroadcast(async () => jsonRpcResponse({ jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'nonce too low' } }), () => ({ result: null }))
+
+      await expect((createHostOnChain() as any).signEthTransaction(txParams)).rejects.toThrow('nonce too low')
+      expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({
+        approved: true,
+        success: false,
+        broadcastResult: 'rpc_error',
+        broadcastMs: expect.any(Number),
+      }))
+
+      await vi.advanceTimersByTimeAsync(150_000)
+
+      expect(rpcMethods).not.toContain('eth_getTransactionByHash')
+      expect(trackEvmBroadcastUnknownResolved).not.toHaveBeenCalled()
     })
   })
 
@@ -1794,7 +1916,7 @@ describe('miniAppHost', () => {
     })
     signTransaction.mockImplementationOnce(async () => {
       vi.setSystemTime(Date.now() + 10_000)
-      return '0xsigned'
+      return '0x5161ed'
     })
 
     await expect((createHostOnChain() as any).signEthTransaction({

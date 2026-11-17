@@ -10,11 +10,11 @@ import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
 import { createBirpc } from 'birpc'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
-import { getAddress, Interface } from 'ethers'
+import { getAddress, Interface, keccak256 } from 'ethers'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { trackChainSwitched, trackLightningPrep, trackWeb3Request } from '@/lib/analytics'
+import { trackChainSwitched, trackEvmBroadcastUnknownResolved, trackLightningPrep, trackWeb3Request } from '@/lib/analytics'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
@@ -828,7 +828,7 @@ export class MiniAppHost {
     }
     catch (error) {
       if (error instanceof Error && error.name === 'TimeoutError') {
-        throw new NetworkError(`RPC request timed out after ${MiniAppHost.RPC_TIMEOUT_MS}ms`)
+        throw new NetworkError(`RPC request timed out after ${MiniAppHost.RPC_TIMEOUT_MS}ms`, { cause: error })
       }
       throw new NetworkError(`RPC request failed: ${(error as Error).message}`)
     }
@@ -1384,8 +1384,10 @@ export class MiniAppHost {
 
     // Sign the transaction
     const signedTx = await ethWallet.signTransaction(tx)
+    const signedTxHash = keccak256(signedTx)
 
     logger.log('[ETH_TX] Step 5 - Transaction signed:', {
+      signedTxHash,
       signedTxLength: signedTx.length,
       signedTxPreview: `${signedTx.slice(0, 22)}...${signedTx.slice(-20)}`,
     })
@@ -1400,36 +1402,52 @@ export class MiniAppHost {
       throw new NetworkError('Request timed out before the transaction was sent')
 
     logger.log('[ETH_TX] Step 6 - Broadcasting via RPC:', { rpcUrl, method: 'eth_sendRawTransaction' })
-
-    const rpcResponse = await this.rpcCall({
-      rpcUrl,
-      payload: {
-        jsonrpc: '2.0',
-        id: Date.now(),
-        method: 'eth_sendRawTransaction',
-        params: [signedTx],
-      },
-    })
-
-    logger.log('[ETH_TX] Step 7 - RPC response:', JSON.stringify(rpcResponse))
-
-    if (!rpcResponse || typeof rpcResponse !== 'object') {
-      throw new NetworkError('Invalid RPC response while broadcasting transaction')
-    }
-
-    if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
-      const rpcError = (rpcResponse as { error?: { message?: string, code?: number, data?: unknown } }).error
-      logger.error('[ETH_TX] Step 7 - RPC error details:', {
-        message: rpcError?.message,
-        code: rpcError?.code,
-        data: rpcError?.data,
+    const broadcastStart = Date.now()
+    let broadcastMs: number | undefined
+    let txHash: string
+    try {
+      const rpcResponse = await this.rpcCall({
+        rpcUrl,
+        payload: {
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'eth_sendRawTransaction',
+          params: [signedTx],
+        },
       })
-      throw new NetworkError(rpcError?.message || 'RPC error while broadcasting transaction')
-    }
+      broadcastMs = Date.now() - broadcastStart
 
-    const txHash = (rpcResponse as { result?: string }).result
-    if (!txHash || typeof txHash !== 'string') {
-      throw new NetworkError('RPC response missing transaction hash')
+      logger.log('[ETH_TX] Step 7 - RPC response:', JSON.stringify(rpcResponse))
+
+      if (!rpcResponse || typeof rpcResponse !== 'object') {
+        throw new NetworkError('Invalid RPC response while broadcasting transaction')
+      }
+
+      if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
+        const rpcError = (rpcResponse as { error?: { message?: string, code?: number, data?: unknown } }).error
+        logger.error('[ETH_TX] Step 7 - RPC error details:', {
+          message: rpcError?.message,
+          code: rpcError?.code,
+          data: rpcError?.data,
+        })
+        throw new NetworkError(rpcError?.message || 'RPC error while broadcasting transaction')
+      }
+
+      const result = (rpcResponse as { result?: string }).result
+      if (!result || typeof result !== 'string') {
+        throw new NetworkError('RPC response missing transaction hash')
+      }
+      txHash = result
+    }
+    catch (error) {
+      // broadcastMs is only set once the RPC answered, so a throw before that is a timeout or network failure.
+      const broadcastResult = broadcastMs !== undefined
+        ? 'rpc_error'
+        : (error as { cause?: { name?: string } }).cause?.name === 'TimeoutError' ? 'timeout' : 'network_error'
+      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: false, chainId: this.currentChainId, sheetWaitMs, broadcastMs: broadcastMs ?? Date.now() - broadcastStart, broadcastResult })
+      if (broadcastResult !== 'rpc_error')
+        this.trackUnknownBroadcastOutcome({ txHash: signedTxHash, rpcUrl, broadcastResult })
+      throw error
     }
 
     logger.log('[ETH_TX] Step 8 - Transaction broadcast success:', { txHash })
@@ -1441,8 +1459,57 @@ export class MiniAppHost {
       chainId: effectiveChainId,
     })
 
-    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId, sheetWaitMs })
+    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId, sheetWaitMs, broadcastMs, broadcastResult: 'hash' })
     return txHash
+  }
+
+  // APP-381 metrics: a broadcast that timed out or failed in transit may still have reached the node.
+  // Watch for the locally computed hash for about 2.5 minutes and report whether it showed up.
+  private trackUnknownBroadcastOutcome({
+    txHash,
+    rpcUrl,
+    broadcastResult,
+  }: {
+    txHash: string
+    rpcUrl: string
+    broadcastResult: 'timeout' | 'network_error'
+  }): void {
+    const { url, title } = this.config
+    const chainId = this.currentChainId
+
+    void (async () => {
+      let answered = false
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await sleep(15_000)
+        try {
+          const response = await this.rpcCall({
+            rpcUrl,
+            payload: {
+              jsonrpc: '2.0',
+              id: Date.now() + attempt,
+              method: 'eth_getTransactionByHash',
+              params: [txHash],
+            },
+          })
+          const result = (response as { result?: unknown } | undefined)?.result
+          // A pending tx counts: once the node knows it, a retry would pay twice.
+          if (result) {
+            trackEvmBroadcastUnknownResolved({ dappUrl: url, dappName: title, chainId, broadcastResult, landed: true })
+            return
+          }
+          // Only `result: null` means the node does not know the tx; an error body answers nothing.
+          if (result === null)
+            answered = true
+        }
+        catch (error) {
+          logger.warn('[ETH_TX] Lookup of unconfirmed broadcast failed', { txHash, error: (error as Error).message })
+        }
+      }
+
+      // Without a single answer, landed: false would be a guess.
+      if (answered)
+        trackEvmBroadcastUnknownResolved({ dappUrl: url, dappName: title, chainId, broadcastResult, landed: false })
+    })()
   }
 
   private refreshPolygonUsdtStateAfterBroadcast({
