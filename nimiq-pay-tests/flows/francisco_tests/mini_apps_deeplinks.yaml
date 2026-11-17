@@ -26,9 +26,11 @@ env:
 # Trust needs the curated list, which a new install fetches from the network: wait for it in
 # Discover first.
 - tapOn: ${output.navigation.miniAppsBtn}
-- extendedWaitUntil:
-    visible: ${output.miniApps.nimtrisEntry}
-    timeout: 20000
+# Below the fold since the Mini Apps competition banner (Nov 2026): scroll to it. Scrolling
+# also waits for the list.
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
 - tapOn: ${output.miniApps.closeBtn}
 - extendedWaitUntil:
     notVisible: ${output.miniApps.discoverTitle}

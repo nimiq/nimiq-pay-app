@@ -21,9 +21,16 @@ env:
 
 - tapOn: ${output.navigation.miniAppsBtn}
 # The list comes from the network on a new install.
-- extendedWaitUntil:
-    visible: ${output.miniApps.nimtrisEntry}
-    timeout: 20000
+# Below the fold since the Mini Apps competition banner (Nov 2026): scroll to it. Scrolling
+# also waits for the list.
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+# Back to the top: Recently Viewed and the search box sit above the list.
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
 - assertNotVisible: ${output.miniApps.recentlyViewedTitle}
 
 - runFlow: ../../subflows/tap_mini_apps_search.yaml
@@ -104,6 +111,8 @@ env:
 - extendedWaitUntil:
     notVisible: ${output.miniApps.recentlyViewedTitle}
     timeout: 10000
-- assertVisible: ${output.miniApps.nimtrisEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
 
 - stopApp

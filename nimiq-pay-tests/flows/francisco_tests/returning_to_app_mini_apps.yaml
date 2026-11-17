@@ -35,25 +35,59 @@ tags:
 - tapOn: ${output.navigation.miniAppsBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.miniApps.discoverTitle}
-- extendedWaitUntil:
-    visible: ${output.miniApps.nimtrisEntry}
-    timeout: 20000
+# Nimtris is listed under All Apps, below the fold since the Mini Apps competition banner
+# (Nov 2026): scroll to it. Scrolling also waits for the list. EVM Mini Wallet is in Featured
+# Apps, above the fold. The filters scroll away with the list, so scroll back up before each tap:
+# to the Discover title, not to the filter. Scrolled up, the filter row can sit under the sheet's
+# sticky header, where Maestro still counts it visible and the tap lands on the header. The title
+# being on screen keeps it clear.
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
 - tapOn: ${output.miniApps.filterAllBtn}
 - waitForAnimationToEnd
-- assertVisible: ${output.miniApps.nimtrisEntry}
 - assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
 - tapOn: ${output.miniApps.filterNimiqBtn}
 - waitForAnimationToEnd
-- assertVisible: ${output.miniApps.nimtrisEntry}
 - assertNotVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
 - tapOn: ${output.miniApps.filterEvmBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.miniApps.evmMiniWalletEntry}
+# Off-screen rows are not in the iOS hierarchy, so bring the All Apps rows on screen first, or
+# this passes with Nimtris still listed below the fold.
+- repeat:
+    times: 2
+    commands:
+      - scroll
 - assertNotVisible: ${output.miniApps.nimtrisEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
 - tapOn: ${output.miniApps.filterAllBtn}
 - waitForAnimationToEnd
-- assertVisible: ${output.miniApps.nimtrisEntry}
 - assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
 - tapOn: ${output.miniApps.closeBtn}
 - waitForAnimationToEnd
 - assertNotVisible: ${output.miniApps.discoverTitle}
