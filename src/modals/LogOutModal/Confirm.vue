@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonSpinner, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { isTestnet } from '@/lib'
@@ -94,10 +95,10 @@ async function handleConfirm() {
     </p>
 
     <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" :disabled="isCheckingUsdt" @click="handleConfirm">
-      <IonSpinner v-if="isCheckingUsdt" name="crescent" />
-      <template v-else>
-        {{ $t('Confirm') }}
-      </template>
+      <Transition mode="out-in" name="slide-fade">
+        <LoadingSpinner v-if="isCheckingUsdt" class="w-4 h-4 m-auto text-white" />
+        <span v-else>{{ $t('Confirm') }}</span>
+      </Transition>
     </IonButton>
   </div>
 </template>

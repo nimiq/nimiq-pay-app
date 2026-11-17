@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 
 const libState = vi.hoisted(() => ({ isTestnet: false }))
 const hasDoneBackup = ref(false)
@@ -186,7 +187,7 @@ describe('logOutModal Confirm', () => {
     const { wrapper, confirmButton, resolveRead } = await confirmWithPendingUsdtRead()
 
     expect((confirmButton.element as HTMLIonButtonElement).disabled).toBe(true)
-    expect(confirmButton.find('ion-spinner').exists()).toBe(true)
+    expect(confirmButton.findComponent(LoadingSpinner).exists()).toBe(true)
 
     resolveRead(true)
     await flushPromises()
