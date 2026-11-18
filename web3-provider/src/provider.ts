@@ -260,7 +260,9 @@ window.addEventListener('eip6963:requestProvider', () => {
 })
 
 // Host capabilities (see useMiniAppHost.ts getCapabilities). Defined here until NimiqProvider in
-// vendor/trust-web3-provider gets the method; unknown methods are forwarded to native by default.
+// vendor/trust-web3-provider gets the method. NimiqProvider.request() sends any method that is not in
+// WALLET_METHODS to the public JSON-RPC server, so the method must be registered there to reach the host.
+;(Nimiq.constructor as any).WALLET_METHODS?.add?.('getCapabilities')
 if (typeof (Nimiq as any).getCapabilities !== 'function')
   (Nimiq as any).getCapabilities = () => Nimiq.request({ method: 'getCapabilities' })
 
