@@ -201,13 +201,16 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     // or surviving hidden from before a resume-reload (pending session marker). Close
     // it and wait for its closeEvent-driven teardown, so the old host's destroy()
     // cannot clobber the session state the new MiniAppHost is about to register.
+    // Close without animation: on iOS an animated dismiss still runs after close()
+    // resolves, and UIKit ignores presenting the new webview until it ends, which
+    // leaves the new Mini App open but hidden.
     const pendingSession = hasPendingSession()
     if (isMiniAppActive.value || pendingSession) {
       if (pendingSession && options.keepCookies)
         clearPersistedSession()
       else if (pendingSession)
         await clearSession()
-      await closeActiveMiniApp().catch(err => logger.log('close before launch failed (likely no webview):', err))
+      await closeActiveMiniApp({ animated: false }).catch(err => logger.log('close before launch failed (likely no webview):', err))
       await until(isMiniAppActive).toBe(false, { timeout: 3000 })
     }
 

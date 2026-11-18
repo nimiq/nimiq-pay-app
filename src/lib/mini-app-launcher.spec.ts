@@ -596,7 +596,8 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
+    // An animated dismiss still running on iOS would hide the next webview (APP-372).
+    expect(closeActiveMiniApp).toHaveBeenCalledExactlyOnceWith({ animated: false })
     expect(openWebView).toHaveBeenCalledTimes(1)
     expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
@@ -614,7 +615,7 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledExactlyOnceWith({ animated: false })
     expect(sessionStorage.getItem('miniAppSession')).toBeNull()
     expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
