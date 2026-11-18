@@ -471,7 +471,7 @@ describe('app-driven close and hide', () => {
 
     await closeActiveMiniApp()
 
-    expect(inAppBrowser.close.mock.calls).toEqual([[{ id: 'popup-2', isAnimated: false }], [{ id: 'popup-1', isAnimated: false }], [{ id: 'main' }]])
+    expect(inAppBrowser.close.mock.calls).toEqual([[{ id: 'popup-2', isAnimated: false }], [{ id: 'popup-1', isAnimated: false }], [{ id: 'main', isAnimated: true }]])
     await host.destroy()
   })
 
@@ -482,7 +482,7 @@ describe('app-driven close and hide', () => {
 
     await closeActiveMiniApp()
 
-    expect(inAppBrowser.close).toHaveBeenLastCalledWith({ id: 'main' })
+    expect(inAppBrowser.close).toHaveBeenLastCalledWith({ id: 'main', isAnimated: true })
     await host.destroy()
   })
 
@@ -505,7 +505,16 @@ describe('app-driven close and hide', () => {
 
     await closeActiveMiniApp()
 
-    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'main' })
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'main', isAnimated: true })
+    await host.destroy()
+  })
+
+  it('closes the main webview without animation when asked', async () => {
+    const { host } = await createMiniApp()
+
+    await closeActiveMiniApp({ animated: false })
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ id: 'main', isAnimated: false })
     await host.destroy()
   })
 
@@ -516,7 +525,17 @@ describe('app-driven close and hide', () => {
 
     await closeActiveMiniApp()
 
-    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith()
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ isAnimated: true })
+  })
+
+  it('closes a webview left from before a reload without animation when asked', async () => {
+    const { host } = await createMiniApp()
+    await host.destroy()
+    inAppBrowser.close.mockClear()
+
+    await closeActiveMiniApp({ animated: false })
+
+    expect(inAppBrowser.close).toHaveBeenCalledExactlyOnceWith({ isAnimated: false })
   })
 
   it('closes again without an id while the Mini App is still active and its id unknown', async () => {
@@ -533,7 +552,7 @@ describe('app-driven close and hide', () => {
     await vi.advanceTimersByTimeAsync(3000)
     await closing
 
-    expect(inAppBrowser.close.mock.calls).toEqual([[], []])
+    expect(inAppBrowser.close.mock.calls).toEqual([[{ isAnimated: true }], [{ isAnimated: true }]])
     expect(isMiniAppActive.value).toBe(false)
   })
 })

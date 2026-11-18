@@ -536,6 +536,20 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().extendValidity()
       expect(state.logger.error).toHaveBeenCalledWith('Error while claiming funds from Remote after extending error', expect.any(Object))
     })
+
+    it('quietly retries after a busy send without the timeout claim', async () => {
+      state.remoteBalance = 250
+      state.isHtlcActive = true
+      state.htlcStart = 100_000
+      state.htlcEnd = 300_000
+      state.headTimestamp = 199_000
+      state.sendTx.mockResolvedValueOnce({ outcome: 'rejected', reason: 'busy', error: 'pending' })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().extendValidity()
+      expect(state.sendTx).toHaveBeenCalledTimes(1)
+      expect(state.setToast).not.toHaveBeenCalled()
+      expect(state.isProcessingRemote).toBe(false)
+    })
   })
 
   describe('checkRemoteValidity', () => {
@@ -581,6 +595,17 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkRemoteValidity()
       expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
+      expect(state.isProcessingRemote).toBe(false)
+    })
+
+    it('quietly retries after a busy send', async () => {
+      state.remoteBalance = 750
+      state.hasHtlcExpired = true
+      state.sendTx.mockResolvedValueOnce({ outcome: 'rejected', reason: 'busy', error: 'pending' })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkRemoteValidity()
+      expect(state.sendTx).toHaveBeenCalledTimes(1)
+      expect(state.setToast).not.toHaveBeenCalled()
       expect(state.isProcessingRemote).toBe(false)
     })
 

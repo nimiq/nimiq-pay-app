@@ -232,6 +232,10 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       const result = await sendTx({ transfer: Transfer.ExtendRemote })
       if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
+        if (result.reason === 'busy') {
+          logger.log('Delaying extendValidity until the pending transaction resolves')
+          return
+        }
         setToast({ message: i18n.t('Error while extending deposit'), type: 'error', duration: 5000 })
         logger.error('Error while extending HTLC validity', result.error)
         const claimResult = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
@@ -250,13 +254,17 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     logger.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
     if (hasHtlcExpired.value) {
       if (isSendingTx.value) {
-        logger.log('There is a pending transaction. Delaying extendValidity')
+        logger.log('There is a pending transaction. Delaying checkRemoteValidity')
         return
       }
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
+        if (result.reason === 'busy') {
+          logger.log('Delaying checkRemoteValidity until the pending transaction resolves')
+          return
+        }
         setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
         logger.error('Error while recovering funds from Remote', result.error)
       }
