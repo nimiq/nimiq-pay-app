@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRequire } from 'node:module'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Transfer } from '@/types/transactions'
 import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
 import { useFastspotApiV1 } from '../composables/useFastspotv1'
@@ -6,6 +7,8 @@ import { buildTopUpReceipt, getSignedTx } from './tx'
 
 const state = vi.hoisted(() => ({
   getAccountTransactions: vi.fn(),
+  localBalance: 100,
+  localKeyPair: undefined as any,
   remoteAddress: { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ11 OLD HTLC' } as any,
   remoteProofSize: 98,
   sendRemoteTransaction: vi.fn(),
@@ -38,10 +41,12 @@ vi.mock('@/lib/analytics', () => ({
 
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => {
+    if (state.localKeyPair)
+      return { localAddress: state.localKeyPair.toAddress(), localBalance: state.localBalance, localWallet: state.localKeyPair }
     const address = { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ00 LOCAL', toHex: () => 'local-hex' }
     return {
       localAddress: address,
-      localBalance: 100,
+      localBalance: state.localBalance,
       localWallet: { privateKey: {}, publicKey: {}, toAddress: () => address },
     }
   },
@@ -152,7 +157,7 @@ describe('getSignedTx', () => {
       SerialBuffer: FakeSerialBuffer,
       Signature: { create: () => new Uint8Array() },
       SignatureProof: { singleSig: () => ({ serialize: () => new Uint8Array(1) }) },
-      StakingDataBuilder: { addStake: () => new Uint8Array() },
+      StakingDataBuilder: { addStake: () => new Uint8Array(), setActiveStake: () => new Uint8Array(), setProof: (data: Uint8Array) => data },
       Transaction: FakeTransaction,
     })
     state.remoteAddress = address('NQ11 OLD HTLC')
@@ -207,6 +212,22 @@ describe('getSignedTx', () => {
 
     expect(result.outcome).toBe('signed')
     expect(newRemoveStake).toHaveBeenCalledWith(expect.anything(), 10n, 7n, expect.anything(), expect.anything())
+  })
+
+  it('sends a staking signal through the cosigner when the local wallet cannot pay its fee', async () => {
+    state.localBalance = 0
+    state.sendRemoteTransaction.mockImplementation(async ({ tx }: any) => ({
+      data: { details: tx.toPlain(), txSent: true },
+      error: undefined,
+      hasError: false,
+      status: 200,
+    }))
+
+    const result = await getSignedTx({ transfer: Transfer.Staking, amount: 0, fee: 7, stakingData: { type: 'set-active-stake', newActiveBalance: 0 } } as any)
+
+    expect(result.outcome).toBe('signed')
+    expect(state.sendRemoteTransaction.mock.calls[0][0].tx.senderType).toBe(2)
+    state.localBalance = 100
   })
 
   it('rejects remotely signed staking without an active signer', async () => {
@@ -423,5 +444,39 @@ describe('buildTopUpReceipt', () => {
 
     expect(receipt.sender).toBe('NQ33 FOREIGN HTLC')
     expect(receipt.senderType).toBe(2)
+  })
+})
+
+describe('staking signals with real Core', () => {
+  const core: typeof import('@nimiq/core') = createRequire(import.meta.url)('@nimiq/core')
+  beforeEach(() => {
+    vi.stubGlobal('Nimiq', core)
+    state.localKeyPair = core.KeyPair.generate()
+    state.localBalance = 0
+    state.remoteAddress = undefined
+    state.sendRemoteTransaction.mockReset()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    state.localKeyPair = undefined
+    state.localBalance = 100
+  })
+
+  // A staked-out HTLC is pruned on chain, so the signal must come from the local wallet, which holds no NIM
+  it.each([
+    ['set-active-stake', { type: 'set-active-stake', newActiveBalance: 0 }],
+    ['retire-stake', { type: 'retire-stake', retireStake: 100000 }],
+    ['update-staker', { type: 'update-staker', newDelegation: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000', reactivateAllStake: false }],
+  ])('signs %s with the empty local wallet and no cosigner', async (_label, stakingData) => {
+    const result = await getSignedTx({ transfer: Transfer.Staking, amount: 0, fee: 0, stakingData } as any)
+
+    expect(result.outcome).toBe('signed')
+    const tx = (result as { signedTx: import('@nimiq/core').Transaction }).signedTx
+    expect(tx.sender.toUserFriendlyAddress()).toBe(state.localKeyPair.toAddress().toUserFriendlyAddress())
+    expect(tx.senderType).toBe(core.AccountType.Basic)
+    expect(tx.value).toBe(0n)
+    expect(tx.flags).toBe(0b10)
+    expect(() => tx.verify(5)).not.toThrow()
+    expect(state.sendRemoteTransaction).not.toHaveBeenCalled()
   })
 })

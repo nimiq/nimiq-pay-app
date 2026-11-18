@@ -12,6 +12,7 @@ import { clearPersistedSession, clearSession, hasPendingSession } from '@/compos
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened, trackDAppPopupClosed, trackDAppSheetHeld } from '@/lib/analytics'
+import { getBundleVersion } from '@/lib/app-version'
 import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
@@ -223,14 +224,16 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       evmRpcUrls,
     })
 
-    const [baseScript] = await Promise.all([
+    const [baseScript, version] = await Promise.all([
       getWeb3ProviderScript(),
+      getBundleVersion(),
       options.keepCookies ? undefined : InAppBrowser.clearAllCookies(),
     ])
     const hostContext = JSON.stringify({
       lang: options.language ?? 'en',
       userFiat: options.userFiat ?? Fiat.USD,
       network: isTestnet ? 'testnet' : 'mainnet',
+      version,
     })
     // The plugin injects this into every frame and every navigated-to document;
     // only the Mini App's own origin gets the provider and host context.

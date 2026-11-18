@@ -13,7 +13,7 @@ import { promiseWithTimeout } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Transfer } from '@/types/transactions'
+import { isSentByLocalWallet, Transfer } from '@/types/transactions'
 import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
 import { useFastspotApiV1 } from '../composables/useFastspotv1'
 
@@ -219,13 +219,15 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: e instanceof Error ? e.message : String(e) }
     }
 
+    const localWallet = useLocalWallet()
+    const sentByLocal = isSentByLocalWallet(partialArgs.stakingData, partialArgs.fee ?? 0, localWallet.localBalance)
     // wasm-bindgen throws an opaque "expected instance of Address" for an undefined sender
-    if (!useRemoteSigner().remoteAddress)
+    if (!sentByLocal && !useRemoteSigner().remoteAddress)
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     const tx = new Nimiq.Transaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.AccountType.HTLC,
+      /* sender */ sentByLocal ? localWallet.localAddress : useRemoteSigner().remoteAddress!,
+      /* senderType */ sentByLocal ? Nimiq.AccountType.Basic : Nimiq.AccountType.HTLC,
       /* senderData */ new Uint8Array(0),
       /* recipient */ Nimiq.Address.fromString(Nimiq.Policy.STAKING_CONTRACT_ADDRESS),
       /* recipientType */ Nimiq.AccountType.Staking,
@@ -238,10 +240,16 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* networkId */ networkId.value,
     )
 
+    if (sentByLocal) {
+      // sign() also sets the staker's inner proof; setting it by hand first would make the transaction invalid
+      tx.sign(localWallet.localWallet, undefined)
+      return { outcome: 'signed', signedTx: tx }
+    }
+
     // Next, we create the inner signature and set it on the recipient data field.
     // Add-stake transactions do not have an inner signature.
     if (partialArgs.stakingData.type !== 'add-stake') {
-      const { privateKey, publicKey } = useLocalWallet().localWallet
+      const { privateKey, publicKey } = localWallet.localWallet
       const innerSig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
       const innerSigProof = Nimiq.SignatureProof.singleSig(publicKey, innerSig)
       tx.data = Nimiq.StakingDataBuilder.setProof(tx.data, innerSigProof)
