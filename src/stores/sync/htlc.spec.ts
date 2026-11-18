@@ -2184,6 +2184,51 @@ describe('useSyncHtlc', () => {
         expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
+    it('saves a late Lightning preimage before deleting an empty native swap HTLC', async () => {
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      state.query.mockImplementation(async sql => sql === SQLQuery.GetSwapTxHashByHtlc
+        ? { hash: 'swap-tx' } as any
+        : [{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-1' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      state.getSwap.mockResolvedValue({ status: 'SUCCESS', preimage: 'secret' })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.getSwap).toHaveBeenCalledWith('swap-1')
+      expect(state.query).toHaveBeenCalledWith(SQLQuery.GetSwapTxHashByHtlc, ['NQ55 SWAP HTLC ADDRESS'], { single: true })
+      expect(state.setSwapPreimage).toHaveBeenCalledWith('swap-tx', 'secret')
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+    })
+
+    it('keeps an empty native swap HTLC when Fastspot fails', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-1' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      state.getSwap.mockRejectedValue(new Error('fastspot down'))
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.setSwapPreimage).not.toHaveBeenCalled()
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(trackSwapStep).not.toHaveBeenCalled()
+    })
+
+    it('does not ask Fastspot about an empty HTLC with a proven refund', async () => {
+      state.height = 128
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-1', refund_hash: 'stored-refund', refund_block: 1 }])
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('Transaction not found'))) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      state.findTransactionInHistory.mockResolvedValue({ executionResult: true } as any)
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.setSwapHtlcRefunded).toHaveBeenCalledOnce()
+      expect(state.getSwap).not.toHaveBeenCalled()
+    })
+
     it('does not scan HTLC history for an empty HTLC', async () => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
