@@ -14,6 +14,7 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
+import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -157,7 +158,9 @@ App.addListener('resume', async () => {
   }
   // This pause is used up: a deeplink arriving later in the foreground opens right away
   lastPauseTimestamp = 0
-  const heldDeepLink = sessionStorage.getItem(DEFERRED_DEEPLINK_KEY)
+  // While locked, PinView opens the held link after unlock. Taking it here would park it in memory,
+  // and a later resume reload before unlock would lose it.
+  const heldDeepLink = useDecrypt().decrypted.value ? sessionStorage.getItem(DEFERRED_DEEPLINK_KEY) : null
   if (heldDeepLink) {
     sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
     void import('@/lib/deep-link')
