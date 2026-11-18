@@ -13,11 +13,16 @@ defineEmits(stepEmits)
 const { showModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 
-function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
-  if (event.detail.checked)
-    showModal(Modal.EnableBiometric, { isOnTop: true })
-  else
+async function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
+  if (!event.detail.checked) {
     isBiometricEnabled.value = false
+    return
+  }
+  const modal = await showModal(Modal.EnableBiometric, { isOnTop: true })
+  await modal?.onDidDismiss()
+  // The toggle flipped itself on before the modal opened. `:checked` didn't change if the user
+  // cancelled, so Vue won't re-render it; sync it to the store by hand.
+  event.target.checked = isBiometricEnabled.value
 }
 
 onBeforeMount(updateBiometryInfo)
