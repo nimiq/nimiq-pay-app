@@ -14,11 +14,12 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
+import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { trackCurrentAppOpen } from '@/lib/analytics'
-import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
+import { DEFERRED_DEEPLINK_KEY, shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { isDev } from '@/lib/index'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
@@ -79,15 +80,24 @@ onMounted(async () => {
   }
 })
 
-App.addListener('appUrlOpen', async (event) => {
-  const { handleDeepLink } = await import('@/lib/deep-link')
-  await handleDeepLink(event)
-})
-
 let lastPauseTimestamp = 0
 // Stays true until the page reloads: InAppBrowser.close() fires its own pause/resume on Android,
 // and those later resumes must not start sync on the page being torn down
 let isReloadingAfterResume = false
+
+App.addListener('appUrlOpen', async (event) => {
+  // Hold a link that wakes the app until resume decides on the reload (iOS fires appUrlOpen first). The
+  // reload drops every plugin listener (Capacitor resets the bridge on navigation), so a Mini App launched
+  // on this page never reports it loaded and gets closed. Resume opens the link if it doesn't reload;
+  // otherwise PinView opens it after unlock on the new page.
+  if (isReloadingAfterResume || lastPauseTimestamp !== 0) {
+    logger.log('Deeplink held until resume')
+    sessionStorage.setItem(DEFERRED_DEEPLINK_KEY, event.url)
+    return
+  }
+  const { handleDeepLink } = await import('@/lib/deep-link')
+  await handleDeepLink(event)
+})
 App.addListener('pause', () => {
   const { isAppInBackground } = storeToRefs(useLocks())
   lastPauseTimestamp = Date.now()
@@ -145,6 +155,17 @@ App.addListener('resume', async () => {
     // go(0) only schedules the reload; stop here so resume sync doesn't run on the dying page
     router.go(0)
     return
+  }
+  // This pause is used up: a deeplink arriving later in the foreground opens right away
+  lastPauseTimestamp = 0
+  // While locked, PinView opens the held link after unlock. Taking it here would park it in memory,
+  // and a later resume reload before unlock would lose it.
+  const heldDeepLink = useDecrypt().decrypted.value ? sessionStorage.getItem(DEFERRED_DEEPLINK_KEY) : null
+  if (heldDeepLink) {
+    sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
+    void import('@/lib/deep-link')
+      .then(({ handleDeepLink }) => handleDeepLink({ url: heldDeepLink }))
+      .catch(err => logger.error('Held deeplink failed:', err))
   }
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')

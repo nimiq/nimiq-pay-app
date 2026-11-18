@@ -6,7 +6,9 @@ import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import PinInput from '@/components/PinInput.vue'
 
 const state = vi.hoisted(() => ({
+  clearSession: vi.fn(async () => {}),
   closeActiveMiniApp: vi.fn(async () => {}),
+  handleDeepLink: vi.fn(async () => {}),
   decrypt: vi.fn(),
   launchMiniApp: vi.fn(async () => {}),
   replace: vi.fn(async () => {}),
@@ -39,9 +41,10 @@ vi.mock('@/composables/useDecrypt', () => ({
 }))
 vi.mock('@/composables/useMiniAppHost', () => ({ closeActiveMiniApp: state.closeActiveMiniApp }))
 vi.mock('@/lib/mini-app-launcher', () => ({ launchMiniApp: state.launchMiniApp }))
+vi.mock('@/lib/deep-link', () => ({ handleDeepLink: state.handleDeepLink }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en', selectedFiat: 'USD' }) }))
 vi.mock('@/composables/useMiniAppSession', () => ({
-  clearSession: vi.fn(async () => {}),
+  clearSession: state.clearSession,
   getSession: () => state.session,
   hasPendingSession: () => false,
   reconnectAndShow: vi.fn(async () => {}),
@@ -89,7 +92,10 @@ describe('pinView', () => {
     state.replace.mockClear()
     state.closeActiveMiniApp.mockClear()
     state.launchMiniApp.mockReset()
+    state.handleDeepLink.mockClear()
+    state.clearSession.mockClear()
     state.session = undefined
+    sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -162,6 +168,36 @@ describe('pinView', () => {
 
     expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
     expect(state.replace).toHaveBeenCalledWith('/app')
+  })
+
+  it('opens a deeplink held across the resume reload instead of the hidden Mini App', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    sessionStorage.setItem('deferredDeepLink', 'nimiqpay://miniapp?url=https%3A%2F%2Fother.example')
+    await mountPinView()
+    state.closeActiveMiniApp.mockClear()
+
+    await typePin()
+
+    expect(state.launchMiniApp).not.toHaveBeenCalled()
+    // Closed here, not left to the link: a Lightning link would otherwise orphan the hidden webview.
+    expect(state.clearSession).toHaveBeenCalledOnce()
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+    expect(state.replace).toHaveBeenCalledWith('/app')
+    expect(state.handleDeepLink).toHaveBeenCalledWith({ url: 'nimiqpay://miniapp?url=https%3A%2F%2Fother.example' })
+    expect(state.replace.mock.invocationCallOrder[0]).toBeLessThan(state.handleDeepLink.mock.invocationCallOrder[0])
+    expect(sessionStorage.getItem('deferredDeepLink')).toBeNull()
+  })
+
+  it('relaunches the hidden Mini App when no deeplink is held', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    await mountPinView()
+
+    await typePin()
+
+    expect(state.launchMiniApp).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://app.example', keepCookies: true }))
+    expect(state.handleDeepLink).not.toHaveBeenCalled()
   })
 
   it('clears the loading spinner when the same error repeats', async () => {

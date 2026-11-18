@@ -16,6 +16,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
+import { DEFERRED_DEEPLINK_KEY } from '@/lib/app-resume'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { installNodeGlobals } from '@/lib/node-globals'
 import { isWasmAvailable } from '@/lib/utils'
@@ -143,6 +144,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       // Check if setup is completed
       if (isWebAndNoPin || isMobileAndNoDb) {
+        // Only PinView replays a link held across the resume reload; drop it so it can't fire after onboarding
+        sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
         if (to.name === 'Setup')
           return next()
         return next({ name: 'Setup', replace: true })
