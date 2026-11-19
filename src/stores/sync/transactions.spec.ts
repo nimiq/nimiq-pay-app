@@ -838,6 +838,74 @@ describe('useSyncTransactions', () => {
       expect(state.addReceiptTransactions.mock.calls[0][0]?.map((tx: any) => tx.hash)).toEqual(['deposit-1', 'deposit-2', 'deposit-3'])
     })
 
+    it('records staking signals the local wallet sent', async () => {
+      state.query.mockImplementation(async (sql?: string) => (sql === SQLQuery.GetTransactionByHash ? undefined : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'retire-1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ_STAKING',
+        senderType: 'basic',
+        recipientType: 'staking',
+        value: 0,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { type: 'retire-stake', raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).toHaveBeenCalledWith([expect.objectContaining({ hash: 'retire-1', title: 'Retire Stake' })])
+      expect(state.addReceiptTransactions).not.toHaveBeenCalledWith([expect.objectContaining({ hash: 'retire-1' })], expect.anything())
+    })
+
+    it('keeps the staged row of a Mini App remove-stake', async () => {
+      state.query.mockImplementation(async (sql?: string, values?: unknown[]) =>
+        (sql === SQLQuery.GetTransactionByHash && values?.[0] === 'remove-1' ? { hash: 'remove-1', merchantName: 'Staking App' } : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'remove-1',
+        sender: 'NQ_STAKING',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 'staking',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        senderData: { type: 'remove-stake', raw: '' },
+        data: { raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'remove-1' })]))
+      expect(state.addReceiptTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'remove-1' })]), expect.anything())
+    })
+
+    it('keeps the staged row of a staking signal the local wallet sent', async () => {
+      state.query.mockImplementation(async (sql?: string, values?: unknown[]) =>
+        (sql === SQLQuery.GetTransactionByHash && values?.[0] === 'retire-1' ? { hash: 'retire-1', merchantName: 'Staking App', status: 'failed' } : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'retire-1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ_STAKING',
+        senderType: 'basic',
+        recipientType: 'staking',
+        value: 0,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { type: 'retire-stake', raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'retire-1' })]))
+    })
+
     it.each(['pending HTLC', 'replaced HTLC', 'replaced wallet'])('ingests the first page independently of %s and stalled older pages', async (scenario) => {
       const page = deferred<any[]>()
       const olderPage = deferred<any[]>()

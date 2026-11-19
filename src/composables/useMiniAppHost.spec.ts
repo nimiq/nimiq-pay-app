@@ -1278,6 +1278,32 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
     expect(confirmationPrompt).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['sendSetActiveStakeTransaction', [0]],
+    ['sendRetireStakeTransaction', [10]],
+    ['sendUpdateStakerTransaction', ['NQ33 VALIDATOR', false]],
+  ])('still prompts for %s without an active remote signer', async (name, params) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance: 0 })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name, params })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a staking signal whose fee the local wallet cannot pay without an active remote signer', async () => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance: 0 })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendSetActiveStakeTransaction',
+      params: [0, 7],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ type: 'NETWORK_ERROR' })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+  })
+
   it('still prompts for remove-stake without an active remote signer', async () => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
     useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })

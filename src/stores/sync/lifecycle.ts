@@ -309,10 +309,14 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     logger.log(`📬 New ${tx.state} transaction received`, tx)
 
-    if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
+    // Staking txs (signals and remove-stake the local wallet sends) only update the row the send staged.
+    // They are not Top-Ups; history sync records them when no staged row exists.
+    if (tx.senderType === 'staking' || tx.recipientType === 'staking') {
+      await updateSingleTransaction(tx.transactionHash, tx)
       return
+    }
 
-    if (tx.recipientType === 'staking' && tx.data.type === 'add-stake' && (!remoteAddress.value || tx.sender !== remoteAddress.value.toUserFriendlyAddress()))
+    if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
       return
 
     const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)

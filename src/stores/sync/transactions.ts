@@ -313,6 +313,15 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
+            // Staking signals (sent by the local wallet, the staker) and staking contract payouts.
+            // A row the send staged keeps its Mini App details and status; only missing ones are rebuilt.
+            // Check the DB: the store holds only the active asset's rows.
+            if ((tx.sender === context.owner && tx.recipientType === 'staking') || tx.senderType === 'staking') {
+              const saved = await query<{ hash: string }>(SQLQuery.GetTransactionByHash, [tx.transactionHash], { single: true })
+              if (!saved)
+                stakingTxs.push(toStakingTransaction(tx))
+              return
+            }
             if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
               return
 
@@ -338,10 +347,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             logger.log(`📬 New ${tx.state} transaction received with ${tx.value / 1e5} NIM`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
-            if (tx.senderType === 'staking')
-              stakingTxs.push(toStakingTransaction(tx))
-            else
-              receipts.push(await buildTopUpReceipt(tx))
+            receipts.push(await buildTopUpReceipt(tx))
           }))
           // Publish recent receipts before fetching older pages or reconciling HTLCs.
           // One write per page: per-tx writes queue hundreds of native calls and re-sort the list each time.

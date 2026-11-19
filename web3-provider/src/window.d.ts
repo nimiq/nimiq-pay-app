@@ -39,7 +39,7 @@ export declare global {
     /** Ethereum RPC URL injected by the host before this script runs. */
     __ETH_RPC_URL__?: string
     /** Host context seeded by Nimiq Pay before the provider script runs. */
-    __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat, network?: NimiqPayNetwork }
+    __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat, network?: NimiqPayNetwork, version?: string }
     /** Public host APIs exposed to mini apps. */
     nimiqPay?: {
       readonly language?: string
@@ -47,6 +47,8 @@ export declare global {
       readonly userFiat?: NimiqPayFiat
       /** Nimiq network Nimiq Pay is connected to. */
       readonly network?: NimiqPayNetwork
+      /** Version of the running Nimiq Pay app, including OTA updates (e.g. "2.24.1"). */
+      readonly version?: string
       /** Enter native fullscreen after the Mini App has asked the user. */
       requestFullscreen: () => Promise<void>
       exitFullscreen: () => Promise<void>

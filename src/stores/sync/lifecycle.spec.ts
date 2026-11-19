@@ -496,6 +496,19 @@ describe('useSyncLifecycle', () => {
       expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
+    it.each([
+      ['remove-stake payout', { sender: 'NQ_STAKING', senderType: 'staking', recipient: 'NQ00 TEST LOCAL ADDRESS', recipientType: 'basic', value: 100, senderData: { type: 'remove-stake' } }],
+      ['local staking signal', { sender: 'NQ00 TEST LOCAL ADDRESS', senderType: 'basic', recipient: 'NQ_STAKING', recipientType: 'staking', value: 0, data: { type: 'set-active-stake', raw: '' } }],
+    ])('reconciles a %s instead of saving a Top-Up', async (_label, partialTx) => {
+      const { useSyncTransactions } = await import('./transactions')
+      const update = vi.spyOn(useSyncTransactions(), 'updateSingleTransaction').mockResolvedValue()
+      const listener = await captureLocalTxListener()
+      const tx = { transactionHash: 'staking-hash', fee: 0, state: 'included', data: { raw: '' }, ...partialTx }
+      await listener(tx)
+      expect(update).toHaveBeenCalledWith('staking-hash', tx)
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
+    })
+
     it('ignores add-stake txs to the staking contract from non-remote senders', async () => {
       const listener = await captureLocalTxListener()
       await listener({

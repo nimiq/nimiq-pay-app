@@ -193,6 +193,8 @@ vi.mock('@/lib/mini-app-confirmation', () => ({
   selectLightningAsset: vi.fn(() => Promise.resolve('NIM')),
 }))
 
+vi.mock('@/lib/app-version', () => ({ getBundleVersion: () => Promise.resolve('2.24.1') }))
+
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription,
   getFaviconUrl,
@@ -770,7 +772,7 @@ describe('mini apps modal', () => {
     expect(wrapper.find('[data-testid="dapp-menu-https-app-uniswap-org"]').exists()).toBe(true)
   })
 
-  it('seeds selected user language, fiat and network into the mini-app preShowScript', async () => {
+  it('seeds selected user language, fiat, network and app version into the mini-app preShowScript', async () => {
     const { useApp, Fiat } = await import('@/stores/app')
     const wrapper = mountModal()
     await flushPromises()
@@ -784,7 +786,7 @@ describe('mini apps modal', () => {
 
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
-    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet"}')
+    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet","version":"2.24.1"}')
     expect(firstArg.preShowScript.startsWith('if(location.origin==="https://app.uniswap.org"){')).toBe(true)
   })
 })
