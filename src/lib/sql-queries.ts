@@ -161,6 +161,8 @@ export enum SQLQuery {
   // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
   BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  // Rows restored from chain have no Fastspot swap id; an existing row keeps its own.
+  InsertRecoveredSwapHtlc = 'INSERT OR IGNORE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, \'\', \'recovered\')',
   InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
   ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
@@ -329,6 +331,13 @@ export const migrations: Migration[] = [
     toVersion: 15,
     statements: [
       SQLQuery.CreateSettledHtlcCreationsTable,
+    ],
+  },
+  {
+    // Chains settled before swap HTLC restore existed must be walked once more to restore their swap rows.
+    toVersion: 16,
+    statements: [
+      SQLQuery.PurgeSettledHtlcCreations,
     ],
   },
 ]

@@ -345,6 +345,8 @@ describe('useRemoteSigner', () => {
     state.hasLocalWallet = true
     state.client = {
       getAccount: vi.fn(() => Promise.resolve(createLiveHtlcAccount())),
+      // Swap HTLC lookups: spent unless a test says otherwise.
+      getAccounts: vi.fn((addresses: unknown[]) => Promise.resolve(addresses.map(() => ({ type: 'basic', balance: 0 })))),
       waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
       getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
       getTransaction: vi.fn(() => Promise.resolve(undefined)),
@@ -2653,6 +2655,52 @@ describe('useRemoteSigner', () => {
     expect(result).toMatchObject({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.getRemoteSigner.mock.calls.map(call => (call as any[])[0].address.toUserFriendlyAddress())).not.toContain(swap.recipient)
     expect(state.run).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([swap.recipient]))
+  })
+
+  it.each([
+    ['funded', createLiveHtlcAccount({ balance: 500, recipient: 'NQ56 VE9K PV0Y TK4T QBMY 8E9G B85J QR6M MSHL', timeout: 1_000_500 }), true],
+    ['redeemed', { type: 'basic', balance: 0 }, false],
+  ])('restores a %s swap HTLC to Fastspot created from a signer HTLC only while funded', async (_name, swapAccount, restored) => {
+    const root = createHtlcCreation()
+    const swap = createHtlcCreation({
+      transactionHash: 'swap-hash',
+      sender: root.recipient,
+      senderType: 'htlc',
+      recipient: 'NQ15 E4X4 13N5 UMLJ 4H6V 5F3B 8FQ3 0617 TKUA',
+      value: 500,
+      data: {
+        type: 'htlc',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ56 VE9K PV0Y TK4T QBMY 8E9G B85J QR6M MSHL',
+        hashRoot: 'd0'.repeat(32),
+        timeout: 1_000_500,
+      },
+    })
+    mockAddressSpecificSignerMetadata(root, swap)
+    state.client.getTransactionsByAddress = vi.fn((address: ReturnType<typeof createAddress>) => {
+      const value = address.toUserFriendlyAddress()
+      if (value === state.localAddress.toUserFriendlyAddress())
+        return Promise.resolve([root])
+      if (value === root.recipient)
+        return Promise.resolve([swap])
+      return Promise.resolve([])
+    })
+    state.getAccount.mockResolvedValue({ data: createLiveHtlcAccount(), error: undefined })
+    state.client.getAccounts = vi.fn((addresses: unknown[]) => Promise.resolve(addresses.map(() => swapAccount)))
+
+    const { SQLQuery } = await import('@/lib/sql-queries')
+    const { useRemoteSigner } = await import('./remote-signer')
+    const remoteSigner = useRemoteSigner()
+    await remoteSigner.discoverRemoteSignersFromBlockchain()
+
+    if (restored)
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertRecoveredSwapHtlc, [swap.recipient, 500, 1_000_500])
+    else
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertRecoveredSwapHtlc, expect.anything())
+
+    // A funded signer is walked again every verify cycle; a resolved swap HTLC is not looked up twice.
+    await remoteSigner.discoverRemoteSignersFromBlockchain()
+    expect(state.client.getAccounts).toHaveBeenCalledOnce()
   })
 
   it('imports a funded parent restored by a reorg after extension history was read', async () => {

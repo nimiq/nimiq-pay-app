@@ -688,7 +688,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
                 refundProven = true
               }
             }
-            if (!refundProven) {
+            // Rows restored from chain have no swap id to look up.
+            if (!refundProven && htlc.swap_id) {
               // Fastspot may have redeemed it while the app was closed, so the preimage was never saved.
               const swap = await promiseWithTimeout(useFastspotApiV2().then(({ getSwap }) => getSwap(htlc.swap_id)), HTLC_CALL_TIMEOUT_MS).catch((error) => {
                 logger.warn('Swap lookup for empty HTLC failed; retrying next sweep', htlc.swap_id, error)
