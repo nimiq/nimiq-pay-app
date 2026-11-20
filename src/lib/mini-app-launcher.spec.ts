@@ -134,6 +134,7 @@ vi.mock('@/lib/site-metadata', () => ({
 }))
 
 vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened, trackDAppPopupClosed, trackDAppSheetHeld }))
+vi.mock('@/lib/app-version', () => ({ getBundleVersion: () => Promise.resolve('2.24.1') }))
 
 vi.mock('@/lib', () => ({
   get isDev() { return false },
@@ -205,6 +206,16 @@ describe('mini-app-launcher', () => {
 
     expect(openWebView).toHaveBeenCalledWith(expect.objectContaining({
       javascriptBridgeOrigins: ['https://example.com:8443'],
+    }))
+  })
+
+  it('seeds the running app version into the host context', async () => {
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'https://example.com', source: 'deeplink' })
+
+    expect(openWebView).toHaveBeenCalledWith(expect.objectContaining({
+      preShowScript: expect.stringContaining('"version":"2.24.1"'),
     }))
   })
 
@@ -585,7 +596,8 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
+    // An animated dismiss still running on iOS would hide the next webview (APP-372).
+    expect(closeActiveMiniApp).toHaveBeenCalledExactlyOnceWith({ animated: false })
     expect(openWebView).toHaveBeenCalledTimes(1)
     expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })
@@ -603,7 +615,7 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'featured' })
 
-    expect(closeActiveMiniApp).toHaveBeenCalledTimes(1)
+    expect(closeActiveMiniApp).toHaveBeenCalledExactlyOnceWith({ animated: false })
     expect(sessionStorage.getItem('miniAppSession')).toBeNull()
     expect(closeActiveMiniApp.mock.invocationCallOrder[0]).toBeLessThan(openWebView.mock.invocationCallOrder[0])
   })

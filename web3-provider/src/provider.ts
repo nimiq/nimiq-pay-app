@@ -267,6 +267,7 @@ window.nimiqPay = Object.freeze({
   language: window.__NIMIQ_PAY__?.lang,
   userFiat: window.__NIMIQ_PAY__?.userFiat,
   network: window.__NIMIQ_PAY__?.network,
+  version: window.__NIMIQ_PAY__?.version,
   requestFullscreen: (): Promise<void> => birpc.handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: true } }) as Promise<void>,
   exitFullscreen: (): Promise<void> => birpc.handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: false } }) as Promise<void>,
   getFullscreen: (): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'getFullscreen' }) as Promise<boolean>,

@@ -58,6 +58,7 @@ export enum SQLQuery {
   SetSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
   SetTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
   SetTxHidden = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.hidden', json(?)) WHERE hash = ?`,
+  GetSwapTxHashByHtlc = `SELECT hash FROM transactions WHERE recipient = ? AND transfer = '${Transfer.UserPaymentToAtomicSwap}' LIMIT 1`, // eslint-disable-line ts/prefer-literal-enum-member
   SetSwapTxRefundedByHtlc = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE recipient = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',

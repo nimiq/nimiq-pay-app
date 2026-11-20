@@ -31,7 +31,7 @@ import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-networ
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Rail, Transfer } from '@/types/transactions'
+import { isSentByLocalWallet, Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
 import {
@@ -103,20 +103,20 @@ export function getActiveMiniAppSession(): MiniAppSessionState | null {
  * Closes the active Mini App, popups first, newest first. close() without an id
  * hits the plugin's active webview, which is the top popup while one is open.
  */
-export async function closeActiveMiniApp(): Promise<void> {
+export async function closeActiveMiniApp({ animated = true } = {}): Promise<void> {
   const host = _activeMiniAppHost
   // Popups close without animation: iOS close() resolves while an animated dismiss
   // still runs, and UIKit ignores the main webview's dismiss started before it ends.
   for (const id of [...(host?.popupIds ?? [])].reverse())
     await InAppBrowser.close({ id, isAnimated: false }).catch(error => logger.warn('Could not close Mini App popup', error))
   if (host?.mainId !== undefined) {
-    await InAppBrowser.close({ id: host.mainId })
+    await InAppBrowser.close({ id: host.mainId, isAnimated: animated })
     return
   }
   // No main id: still opening, or a webview left from before a reload. Each close()
   // hits the top webview, so a popup can take a second close to reach the Mini App.
   for (let attempt = 0; attempt < 2; attempt++) {
-    await InAppBrowser.close()
+    await InAppBrowser.close({ isAnimated: animated })
     await until(isMiniAppActive).toBe(false, { timeout: 3000 })
     if (!isMiniAppActive.value)
       return
@@ -2396,8 +2396,8 @@ export class MiniAppHost {
       amounts.push(txData.stakingData.retireStake)
     if (amounts.some(amount => !Number.isSafeInteger(amount) || amount < 0))
       throw new InvalidTransactionError('Transaction amount must be a non-negative integer')
-    // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
-    const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
+    // Everything the local wallet does not send spends from the HTLC; fail before prompting instead of after the user confirms
+    const spendsFromRemote = !(txData.transfer === Transfer.Staking && isSentByLocalWallet(txData.stakingData, txData.fee, useLocalWallet().localBalance))
     const remoteSigner = useRemoteSigner()
     if (spendsFromRemote && !remoteSigner.remoteAddress) {
       // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.

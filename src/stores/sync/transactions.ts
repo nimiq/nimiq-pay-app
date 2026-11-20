@@ -8,13 +8,14 @@ import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { defineStore, storeToRefs } from 'pinia'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
+import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
 import { nakaBufferAddresses } from '@/lib'
-import { Asset } from '@/lib/assets'
+import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt, toAccountType } from '@/lib/tx'
-import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
+import { getLegacyTransactionValidityStartHeight, parseStoredTransaction, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -24,7 +25,7 @@ import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { isPendingAtomicSwapTransaction, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const LOCAL_HISTORY_PAGE_SIZE = 100
@@ -166,6 +167,28 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         logger.log(`Removing transaction ${hash} from pending transactions`, { state, executionResult: transaction.executionResult ?? null })
         removeCurrentPendingHash(hash, context)
       }
+
+      // The app may have been closed while the swap settled, so ask Fastspot for the preimage it missed.
+      const tx = parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
+      if (!isPendingTransactionContextCurrent(context))
+        return
+      if (!tx || !isPendingAtomicSwapTransaction(tx) || (tx.chain || Chain.Nimiq) !== Chain.Nimiq || !tx.paymentRef)
+        return
+      try {
+        const swap = await promiseWithTimeout(useFastspotApiV2().then(({ getSwap }) => getSwap(tx.paymentRef!)), TRANSACTION_LOOKUP_TIMEOUT_MS)
+        if (!isPendingTransactionContextCurrent(context) || !('preimage' in swap) || !swap.preimage)
+          return
+        // A replacement may have renamed this hash while Fastspot was answering.
+        if (!await useTransactions().setSwapPreimage(hash, swap.preimage) || !isPendingTransactionContextCurrent(context))
+          return
+        await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
+        if (!isPendingTransactionContextCurrent(context))
+          return
+        await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
+      }
+      catch (error) {
+        logger.error('Failed to recover NIM swap preimage', error, { hash })
+      }
     }
 
     // Listener events already contain execution evidence; a fresh lookup can miss it before finality.
@@ -290,6 +313,15 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
+            // Staking signals (sent by the local wallet, the staker) and staking contract payouts.
+            // A row the send staged keeps its Mini App details and status; only missing ones are rebuilt.
+            // Check the DB: the store holds only the active asset's rows.
+            if ((tx.sender === context.owner && tx.recipientType === 'staking') || tx.senderType === 'staking') {
+              const saved = await query<{ hash: string }>(SQLQuery.GetTransactionByHash, [tx.transactionHash], { single: true })
+              if (!saved)
+                stakingTxs.push(toStakingTransaction(tx))
+              return
+            }
             if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
               return
 
@@ -315,10 +347,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             logger.log(`📬 New ${tx.state} transaction received with ${tx.value / 1e5} NIM`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
-            if (tx.senderType === 'staking')
-              stakingTxs.push(toStakingTransaction(tx))
-            else
-              receipts.push(await buildTopUpReceipt(tx))
+            receipts.push(await buildTopUpReceipt(tx))
           }))
           // Publish recent receipts before fetching older pages or reconciling HTLCs.
           // One write per page: per-tx writes queue hundreds of native calls and re-sort the list each time.
@@ -544,8 +573,13 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      if (dbTx.status === 'confirmed' && dbTx.timestamp)
+      if (dbTx.status === 'confirmed' && dbTx.timestamp) {
+        // A swap that settled while the app was closed is final on chain but still lacks its preimage; reconcile asks Fastspot.
+        const stored = parseStoredTransaction({ ...dbTx } as ExternalTransaction)
+        if (stored && isPendingAtomicSwapTransaction(stored) && (dbTx.chain || Chain.Nimiq) === Chain.Nimiq && dbTx.paymentRef)
+          await updateSingleTransaction(dbTx.hash)
         return
+      }
 
       if (dbTx.hash.includes(PointsHashPrefix)) {
         if (!dbTx.paymentRef) {

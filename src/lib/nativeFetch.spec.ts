@@ -23,6 +23,18 @@ describe('nativeFetch', () => {
     state.logger.error.mockReset()
   })
 
+  it('sets connect and read timeouts so a stalled request rejects', async () => {
+    state.request.mockResolvedValue({ status: 200, headers: {}, data: {} })
+    const { nativeFetch } = await import('./nativeFetch')
+
+    await nativeFetch('https://example.test/api')
+
+    expect(state.request).toHaveBeenCalledWith(expect.objectContaining({
+      connectTimeout: 30_000,
+      readTimeout: 30_000,
+    }))
+  })
+
   it('logs rejected native HTTP requests with request context', async () => {
     const error = new Error('network down')
     state.request.mockRejectedValue(error)

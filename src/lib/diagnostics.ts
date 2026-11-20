@@ -1,30 +1,10 @@
-import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
-import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { useLogger } from '@/composables/useLogger'
+import { getBundleVersion } from '@/lib/app-version'
 import { useLocks } from '@/stores/locks'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
 const logger = useLogger('Diagnostics')
-
-export async function getBundleVersion() {
-  try {
-    const version = (await CapacitorUpdater.current()).bundle.version
-    if (version)
-      return version
-  }
-  catch (e) {
-    logger.error('Error getting bundle version:', e)
-  }
-
-  try {
-    return (await App.getInfo()).version
-  }
-  catch (e) {
-    logger.error('Error getting native version:', e)
-    return '0.0.0'
-  }
-}
 
 const LOCKS = [
   'headChangePendingDrainLock',
