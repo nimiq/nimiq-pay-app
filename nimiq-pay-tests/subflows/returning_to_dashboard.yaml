@@ -1,0 +1,63 @@
+appId: ${APP_ID}
+name: Returning to dashboard
+---
+- runFlow: require_pin.yaml
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- launchApp:
+    clearState: true
+
+# Cold start after clearState: same budget as create_account.yaml.
+- extendedWaitUntil:
+    visible: ${output.launchScreen.getStartedBtn}
+    timeout: 45000
+- tapOn: ${output.launchScreen.getStartedBtn}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.biometricTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.enableNotificationsTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+- stopApp
+- launchApp:
+    clearState: false
+
+# A cold start to the PIN screen takes ~10 s on slow devices; 10 s here was flaky.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 30000
+- assertNotVisible: ${output.home.payTitle}
+- inputText: ${PIN}
+# 2.22.0 needs 12-15 s, once 24.6 s, on the first unlock after creating the account
+# (Pixel_8); later unlocks ~1 s.
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.home.switchAssetBtn}
+- assertVisible: ${output.navigation.openMenuBtn}

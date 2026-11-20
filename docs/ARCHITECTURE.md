@@ -93,4 +93,17 @@ The service endpoints are part of the source, so a build from source can sync, p
 - OTA publishing and store releases need Nimiq's signing keys and store accounts
 - push notifications need your own Firebase project for your app ID
 
-See `.env.example` for all build variables.
+Build variables read by the app, set in `.env`:
+
+- `VITE_ARBITRUM_RPC_URL`
+- `VITE_BASE_RPC_URL`
+- `VITE_BNB_RPC_URL`
+- `VITE_ENABLE_BLUECODE`
+- `VITE_ENABLE_MINI_APPS`
+- `VITE_ETHEREUM_RPC_URL`
+- `VITE_MOCK_DATA`
+- `VITE_OPTIMISM_RPC_URL`
+- `VITE_POLYGON_RPC_URL`
+- `VITE_SEPOLIA_RPC_URL`
+- `VITE_WALKIE_TALKIE_API_KEY`
+- `VITE_WALKIE_TALKIE_URL`

@@ -1,0 +1,23 @@
+appId: ${APP_ID}
+---
+# Focuses the Mini Apps search box, ready for inputText. Android exposes it only by the id of
+# its host element; iOS exposes no HTML ids but labels the input (see the page objects).
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: ${output.miniApps.searchInputIos}
+      # Only on a device that never showed the letter keyboard.
+      - runFlow:
+          when:
+            visible: ${output.iosKeyboard.quickPathIntro}
+          commands:
+            - tapOn: ${output.iosKeyboard.continueBtn}

@@ -2,6 +2,8 @@ appId: ${APP_ID}
 ---
 # Smart launch: reuse running app when possible, only cold-start if needed.
 
+- runFlow: require_pin.yaml
+
 # 1. Already on home screen - just ensure home tab is selected
 - runFlow:
     when:
@@ -14,7 +16,7 @@ appId: ${APP_ID}
     when:
       visible: Enter PIN
     commands:
-      - inputText: '1111'
+      - inputText: ${PIN}
       - extendedWaitUntil:
           visible: Top Up
           timeout: 45000
@@ -39,7 +41,7 @@ appId: ${APP_ID}
           when:
             visible: Enter PIN
           commands:
-            - inputText: '1111'
+            - inputText: ${PIN}
       - extendedWaitUntil:
           visible: Top Up
           timeout: 45000

@@ -1,0 +1,131 @@
+appId: ${APP_ID}
+name: Returning to app mini apps
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/returning_to_dashboard.yaml
+
+# Mini Apps screen
+- assertVisible: ${output.navigation.miniAppsBtn}
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: ${output.miniApps.searchInputIos}
+- assertVisible: ${output.miniApps.closeBtn}
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
+- assertVisible: ${output.home.payTitle}
+
+# Mini Apps filters
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+# Nimtris is listed under All Apps, below the fold since the Mini Apps competition banner
+# (Nov 2026): scroll to it. Scrolling also waits for the list. EVM Mini Wallet is in Featured
+# Apps, above the fold. The filters scroll away with the list, so scroll back up before each tap:
+# to the Discover title, not to the filter. Scrolled up, the filter row can sit under the sheet's
+# sticky header, where Maestro still counts it visible and the tap lands on the header. The title
+# being on screen keeps it clear.
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
+- tapOn: ${output.miniApps.filterNimiqBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
+- tapOn: ${output.miniApps.filterEvmBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+# Off-screen rows are not in the iOS hierarchy, so bring the All Apps rows on screen first, or
+# this passes with Nimtris still listed below the fold.
+- repeat:
+    times: 2
+    commands:
+      - scroll
+- assertNotVisible: ${output.miniApps.nimtrisEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.discoverTitle}
+    direction: UP
+    timeout: 30000
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- scrollUntilVisible:
+    element: ${output.miniApps.nimtrisEntry}
+    timeout: 30000
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
+- assertVisible: ${output.home.payTitle}
+
+# Mini Apps search
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
+- inputText: Nimtris
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
+- assertVisible: ${output.home.payTitle}
+
+# Cinima Mini App
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
+- inputText: Cinima
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
+- assertVisible: ${output.miniApps.cinimaEntry}
+- tapOn: ${output.miniApps.cinimaEntry}
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.discoverTitle}
+    timeout: 60000
+- extendedWaitUntil:
+    visible: ${output.miniApps.cinimaAppTitle}
+    timeout: 60000
+
+- stopApp

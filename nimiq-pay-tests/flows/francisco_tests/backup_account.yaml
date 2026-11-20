@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- runFlow: ../../subflows/open_menu.yaml
+- extendedWaitUntil:
+    visible: ${output.navigation.backupAccountBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.backupAccountBtn}
+
+- assertVisible: ${output.backup.introTitle}
+- assertVisible: ${output.backup.introDescription}
+- assertVisible: ${output.backup.noOneCanSeeBtn}
+- tapOn: ${output.backup.noOneCanSeeBtn}
+
+- assertVisible: ${output.backup.showWordsTitle}
+- assertVisible: ${output.backup.continueBtn}
+- tapOn: ${output.backup.continueBtn}
+
+- assertVisible: ${output.backup.validateTitle}
+- assertVisible: ${output.backup.question}
+
+- stopApp

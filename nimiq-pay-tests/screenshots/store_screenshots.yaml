@@ -8,7 +8,7 @@ appId: ${APP_ID}
 #   APP_ID      bundle id (defaults from config.yaml)
 #
 # Example:
-#   maestro test -e APP_ID=com.nimiq.pay -e OUTPUT_DIR=/tmp/nimiq-pay-screens nimiq-pay-tests/screenshots/store_screenshots.yaml
+#   maestro test -e APP_ID=com.nimiq.pay -e PIN=1111 -e OUTPUT_DIR=/tmp/nimiq-pay-screens nimiq-pay-tests/screenshots/store_screenshots.yaml
 
 - runFlow: ../subflows/onboard_if_needed.yaml
 

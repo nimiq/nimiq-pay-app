@@ -24,7 +24,7 @@ For anything bigger than a small fix, open an issue first so we can agree on the
 
 ## Development setup
 
-See the [README](./README.md#development-setup). You need Node from `.nvmrc`, pnpm from `packageManager`, and the `vendor/trust-web3-provider` submodule. Copy `.env.example` to `.env` if you work on a feature that needs one of its values.
+See the [README](./README.md#development-setup). You need Node from `.nvmrc`, pnpm from `packageManager`, and the `vendor/trust-web3-provider` submodule. Create a `.env` file if you work on a feature that needs one of the build variables listed in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Branches and pull requests
 

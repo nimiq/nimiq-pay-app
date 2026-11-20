@@ -1,0 +1,86 @@
+appId: ${APP_ID}
+name: Onboarding PIN errors
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Any 4-digit PIN other than ${PIN}.
+  WRONG_PIN: "9876"
+
+---
+# Scope: creating a wallet rejects a confirmation PIN that differs from the chosen one, lets the
+# user go back and choose again, and closing setup with X after the PIN is confirmed still opens
+# the new wallet (flows/index.ts setupFlow onCancel), locked with the chosen PIN.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+- runFlow: ../../subflows/require_pin.yaml
+
+- launchApp:
+    clearState: true
+# Cold start after clearState: same budget as create_account.yaml.
+- extendedWaitUntil:
+    visible: ${output.launchScreen.getStartedBtn}
+    timeout: 45000
+- tapOn: ${output.launchScreen.getStartedBtn}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: ${WRONG_PIN}
+
+# A mismatch keeps the Confirm step up with the error; no wallet is created.
+- extendedWaitUntil:
+    visible: ${output.onboarding.pinMismatchError}
+    timeout: 10000
+- assertVisible: ${output.onboarding.confirmPinTitle}
+- assertNotVisible: ${output.home.payTitle}
+
+# Back returns to Choose a PIN. `above` skips the Android keyboard's own "Back" key, which
+# matches too (Maestro ignores case) and only hides the keyboard.
+- tapOn:
+    text: ${output.navigation.backBtn}
+    above: ${output.onboarding.confirmPinTitle}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- assertNotVisible: ${output.onboarding.confirmPinTitle}
+# Let the slide settle so no digit of the PIN is dropped.
+- waitForAnimationToEnd
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+
+# A matching PIN creates the wallet and moves on to biometrics (only with strong biometry) or
+# notifications. Close setup there instead of skipping the step.
+- extendedWaitUntil:
+    visible: ${output.onboarding.biometricTitle + '|' + output.onboarding.enableNotificationsTitle}
+    timeout: 20000
+- assertNotVisible: ${output.onboarding.pinMismatchError}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 45000
+- assertVisible: ${output.navigation.topUpBtn}
+
+# The wallet exists and is locked with the chosen PIN.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.launchScreen.getStartedBtn}
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+
+- stopApp

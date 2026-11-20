@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+# Opens Settings from home, then the category ${CATEGORY} (General, Security, Payments or
+# Mini Apps). Since #123 Settings lists categories, each a step of one flow; the rows keep
+# English aria-labels in every language. Opening Settings closes the menu, so closing Settings
+# (navigation.closeFlowModalBtn) lands on home.
+- runFlow: open_menu.yaml
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${CATEGORY}
+    timeout: 5000
+# index 0 takes the topmost match: home's footer has a "Mini Apps" button too, under the sheet.
+- tapOn:
+    text: ${CATEGORY}
+    index: 0
+- waitForAnimationToEnd
