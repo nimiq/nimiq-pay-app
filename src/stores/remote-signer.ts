@@ -1230,6 +1230,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   // Refunded non-cosigner HTLCs found by `registerOwnHtlcIfMissing`; avoids a history lookup on every refresh.
   const foreignHtlcAddresses = new Set<string>()
+  // Swap HTLCs restored to swap_htlcs or found spent; HTLC addresses are single-use, so neither needs another lookup.
+  const resolvedSwapHtlcAddresses = new Set<string>()
 
   // Self-healing: when we observe a drain whose proof.creator is our local address (verified upstream),
   // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
@@ -1718,6 +1720,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         }
         chainSettled &&= history.complete && drained && received > 0 && received === spent
 
+        const swapExtensions: PlainTransactionDetails[] = []
         for (const extension of history.transactions) {
           const extensionData = extension.data
           if (!isSuccessfulHistoricalHtlcTransaction(extension)
@@ -1732,7 +1735,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           if (!isCosignerAddress(extensionData.recipient)) {
             // Swaps land here for good, with a real hash root. An all-zero one is a deposit HTLC of
             // ours under a key this build doesn't know, so a later walk must still reach it.
-            chainSettled &&= !/^0+$/.test(extensionData.hashRoot)
+            if (/^0+$/.test(extensionData.hashRoot)) {
+              chainSettled = false
+              continue
+            }
+            if (!resolvedSwapHtlcAddresses.has(extension.recipient))
+              swapExtensions.push(extension)
             continue
           }
 
@@ -1760,6 +1768,32 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             continue
           }
           signersToScan.push(childResult.metadata)
+        }
+
+        // Logout wipes swap_htlcs, so restore funded swap HTLCs for the expiry sweep to refund.
+        // A funded signer is re-walked every verify cycle; batch lookups and skip swaps already resolved.
+        for (let offset = 0; offset < swapExtensions.length; offset += REMOTE_SIGNER_BALANCE_BATCH_SIZE) {
+          const batch = swapExtensions.slice(offset, offset + REMOTE_SIGNER_BALANCE_BATCH_SIZE)
+          let accounts: PlainAccount[]
+          try {
+            accounts = await promiseWithTimeout(context.client.getAccounts(batch.map(swap => Nimiq.Address.fromString(swap.recipient))), DISCOVER_TIMEOUT_MS)
+            if (accounts.length !== batch.length)
+              throw new Error(`Expected ${batch.length} accounts, got ${accounts.length}`)
+          }
+          catch (error) {
+            logger.error('Swap HTLC account lookup failed', error)
+            chainSettled = false
+            result.errors.push(`Swap HTLC account lookup failed: ${metadata.addressString}`)
+            continue
+          }
+          if (!isWalletContextCurrent(context))
+            return { ...result, errors: ['Wallet changed during discovery'] }
+          for (const [i, swap] of batch.entries()) {
+            const account = accounts[i]
+            if (account?.type === 'htlc' && account.balance > 0)
+              await useConn().run(SQLQuery.InsertRecoveredSwapHtlc, [swap.recipient, swap.value, account.timeout])
+            resolvedSwapHtlcAddresses.add(swap.recipient)
+          }
         }
       }
 

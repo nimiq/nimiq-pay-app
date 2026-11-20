@@ -2215,6 +2215,18 @@ describe('useSyncHtlc', () => {
       expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
+    it('deletes an empty recovered swap HTLC without asking Fastspot', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: '', swap_status: 'recovered' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.getSwap).not.toHaveBeenCalled()
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+    })
+
     it('does not ask Fastspot about an empty HTLC with a proven refund', async () => {
       state.height = 128
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-1', refund_hash: 'stored-refund', refund_block: 1 }])
