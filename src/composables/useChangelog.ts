@@ -1,11 +1,8 @@
-import { App } from '@capacitor/app'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
-import { useLogger } from '@/composables/useLogger'
 import changelogData from '@/data/changelog.json'
+import { getBundleVersion } from '@/lib/app-version'
 import { useApp } from '@/stores/app'
-
-const logger = useLogger('useChangelog')
 
 export interface ChangelogHighlight {
   title: string
@@ -28,17 +25,12 @@ const previous = entries.slice(1)
 // Auto-hide the "What's New" card after this many appearances for a given version.
 const MAX_CARD_SHOWS = 3
 
-// Installed app version, resolved once and shared across callers.
+// Running version, resolved once and shared across callers. OTA bundles have their own
+// changelog entries, so this is the bundle version, not the native one.
 const currentVersion = ref('')
 async function resolveVersion() {
-  if (currentVersion.value)
-    return currentVersion.value
-  try {
-    currentVersion.value = (await App.getInfo()).version
-  }
-  catch (e) {
-    logger.error('Error getting app version', e)
-  }
+  if (!currentVersion.value)
+    currentVersion.value = await getBundleVersion()
   return currentVersion.value
 }
 
