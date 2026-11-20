@@ -178,11 +178,16 @@ App.addListener('resume', async () => {
 
   trackCurrentAppOpen('resume')
 
-  // Show cached txs right away on resume, then refresh history in the background (APP-159)
-  const { useTransactions } = await import('@/stores/transactions')
-  const { useSync } = await import('@/stores/sync')
-  await useTransactions().refreshFromDb()
-  void useSync().updateTransactionHistory()
+  // Show cached txs right away on resume, then refresh history in the background (APP-159).
+  // Skip while locked: closing the biometric prompt resumes the app on the PIN screen, and a load
+  // there reads the wallet address before its keys are loaded, leaving the home list empty. Home
+  // loads both after unlock.
+  if (useDecrypt().decrypted.value) {
+    const { useTransactions } = await import('@/stores/transactions')
+    const { useSync } = await import('@/stores/sync')
+    await useTransactions().refreshFromDb()
+    void useSync().updateTransactionHistory()
+  }
 
   // Flags may change while backgrounded; refresh without delaying the reconnect check below
   void Posthog.reloadFeatureFlags()
