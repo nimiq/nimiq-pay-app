@@ -8,18 +8,18 @@ export const meta = {
     { title: 'Review', detail: 'repo reviewer agent, fix loop on default model' },
     { title: 'Final review', detail: 'one strongest-model pass per issue', model: 'fable' },
     { title: 'Device', detail: 'Before/After on device, one issue at a time' },
-    { title: 'Ship', detail: 'signed commit, push, PR, Linear comment' },
-    { title: 'Screenshots', detail: 'browser upload, one at a time' },
+    { title: 'Ship', detail: 'signed commit, push, PR with screenshots, Linear comment' },
   ],
 }
 
 // args: { mode: 'plan', repo, branchPrefix, issues: ['<ISSUE>', ...] }
-//    or { mode: 'run', repo, branchPrefix, issues: [{ id, approach, branchSlug, deviceTestable, devicePlan }] }
+//    or { mode: 'run', repo, branchPrefix, issues: [{ id, approach, branchSlug, deviceTestable, devicePlan, decisions, finalReviewDone?, holdShip? }] }
 if (!args || !args.repo) throw new Error('args.repo (absolute path of the main checkout) is required')
 const REPO = args.repo
 const SKILL = `${REPO}/.claude/skills/ship`
 const PREFIX = args.branchPrefix || 'ship'
-const OUT = '/tmp/ship'
+// Inside the gitignored worktrees dir so state survives reboots (/tmp doesn't).
+const OUT = `${REPO}/.claude/worktrees/.ship`
 const MAX_REVIEW_ROUNDS = 3
 
 const RULES = `
@@ -34,12 +34,11 @@ function sem(max) {
     try { return await fn() } finally { active--; const n = q.shift(); if (n) n() }
   }
 }
-// One chain per shared resource: one phone + one :8100, one signed-in browser.
+// One phone + one :8100. The lock lives in this run only: never start two runs at once.
 const chain = () => { let c = Promise.resolve(); return fn => { const r = c.then(fn, fn); c = r.catch(() => null); return r } }
 const slot = sem(3)
 const limited = (p, o) => slot(() => agent(p, o))
 const withDevice = chain()
-const withBrowser = chain()
 
 const PLAN = {
   type: 'object',
@@ -147,15 +146,12 @@ const SHIPPED = {
     prNumber: { type: 'number' },
     verified: { type: 'boolean', description: 'GitHub shows Verified on the commit' },
     ci: { type: 'string' },
+    draft: { type: 'boolean' },
+    screenshots: { type: 'number', description: 'images attached and shown in the PR body' },
+    screenshotFailure: { type: 'string' },
     notes: { type: 'string' },
   },
   required: ['notes'],
-}
-
-const EMBED = {
-  type: 'object',
-  properties: { embedded: { type: 'number' }, failed: { type: 'string' } },
-  required: ['embedded'],
 }
 
 const issues = (args && args.issues) || []
@@ -181,7 +177,7 @@ const results = await pipeline(
   // Fix
   (it) => limited(
     `Implement the fix for Linear issue ${it.id} in nimiq/nimiq-pay-app. Approved approach: ${it.approach}
-Follow phases 2 and 4 of ${SKILL}/SKILL.md. Worktree ${REPO}/.claude/worktrees/${it.id.toLowerCase()} on branch ${PREFIX}/${it.id.toLowerCase()}-${it.branchSlug} from origin/main (cp .env, submodule update, pnpm install). If that worktree already exists from an earlier attempt at this same issue, reuse it and keep what is right.
+Follow phases 2 and 4 of ${SKILL}/SKILL.md. Worktree ${REPO}/.claude/worktrees/${it.id.toLowerCase()} on branch ${PREFIX}/${it.id.toLowerCase()}-${it.branchSlug} from origin/main (the phase 2 commands: ln -s .env, never copy or read it; copy android/local.properties; submodule update; pnpm install). If that worktree already exists from an earlier attempt at this same issue, reuse it and keep what is right.
 First re-check it still happens on origin/main; if not, status already_solved with the commit.
 Minimal root-cause fix plus vitest coverage that fails on main. Run pnpm lint, pnpm typecheck, pnpm vitest run (exit codes all 0), then the simplify skill on your diff. Do NOT commit.${RULES}`,
     { label: `fix:${it.id}`, phase: 'Fix', schema: IMPL },
@@ -246,6 +242,7 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
   async (s) => {
     if (!s || !s.review) return s
     const { it, impl } = s
+    if (it.finalReviewDone) return s
     const final = await limited(
       `Final merge-blocking review for Linear issue ${it.id} (nimiq/nimiq-pay-app). Worktree ${impl.worktree}; diff: git -C ${impl.worktree} diff --merge-base origin/main plus untracked files. Intent: ${impl.summary}
 Use the brief in ${SKILL}/references/review.md. Already handled (do not repeat): ${JSON.stringify(s.prior)}. Read-only.`,
@@ -273,7 +270,7 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
     const device = await withDevice(() => limited(
       `On-device Before/After test for Linear issue ${it.id}. After = worktree ${impl.worktree} (uncommitted fix). Plan: ${it.devicePlan}
 Read ${SKILL}/references/device.md and run ${SKILL}/scripts/device-preflight.sh first. You hold the only device lock. Prefer Android (needs no user input). If the only usable device needs the user (OS PIN, iPhone unlock), don't wait: return blockedOnUser.
-Save PNGs as ${OUT}/${it.id}/<scenario>-<before|after>.png. No full addresses, balances, words or PIN in frames. Before returning, open every PNG and confirm it shows its scenario, the right asset (NIM vs USDT), and bug-on-Before / fix-on-After; retake failures. When done, restore the main-baseline server on :8100.${RULES}`,
+Use agent-device session name ship-${it.id.toLowerCase()}. App language English unless the scenario tests a language. Save PNGs as ${OUT}/${it.id}/<scenario>-<before|after>.png. No full addresses, balances, words or PIN in frames. Before returning, open every PNG and confirm it shows its scenario, the right asset (NIM vs USDT), and bug-on-Before / fix-on-After; retake failures. Finish with "When done" in device.md, except the servers: later issues need :8100, so always kill yours and leave the main-baseline server on :8100. If you return blockedOnUser, name the worktree the user must test in it; the main session serves it later.${RULES}`,
       { label: `device:${it.id}`, phase: 'Device', schema: DEVICE },
     ))
     return { ...s, device }
@@ -284,28 +281,20 @@ Save PNGs as ${OUT}/${it.id}/<scenario>-<before|after>.png. No full addresses, b
     if (!s || !s.review) return s
     const { it, impl, device } = s
     if (device && device.regression) return { ...s, stopped: `device regression: ${device.regression}` }
+    if (it.holdShip) return { ...s, stopped: `held before commit: ${it.holdShip}` }
+    const shots = (device && device.screenshots) || []
+    const draft = Boolean(device && device.blockedOnUser)
     const shipped = await limited(
-      `Ship Linear issue ${it.id}: follow phase 8 steps 1-3 and 5-7 of ${SKILL}/SKILL.md (screenshots are uploaded later, not by you). Worktree ${impl.worktree}, branch ${impl.branch}, base main.
+      `Ship Linear issue ${it.id}: follow phase 8 of ${SKILL}/SKILL.md. Worktree ${impl.worktree}, branch ${impl.branch}, base main.
 PR body from ${SKILL}/references/pr.md through the humanizer skill. Summary: ${impl.summary}
 Impact: fill the matrix yourself from the diff; query PostHog if available, else mark unconfirmed.
-Test table (put it in the body, leave image cells empty): ${device ? device.table : 'not tested'}
-Decisions: ${it.decisions || 'none'}. Rejected review findings: ${JSON.stringify(s.prior || [])}
-Stage only the fix files. One signed commit, last line "Closes ${it.id}". Push, gh pr create, link_pull_request if the t3-code tools exist, one-line Linear comment with the PR link. Watch CI and fix failures your change causes.${RULES}`,
+Test table for the body: ${device ? device.table : 'not tested'}
+Screenshots: ${shots.length ? `${JSON.stringify(shots)}. Attach them with gh --attach per "Screenshots" in ${SKILL}/references/pr.md: open each PR copy first, skip mismatches and report them in screenshotFailure, then check every cell shows its image. Return the attached count in screenshots.` : 'none, screenshots = 0.'}
+${draft ? `The device test is still blocked (${device.blockedOnUser}): open the PR as a draft (gh pr create --draft) and say so in the body.\n` : ''}Decisions: ${it.decisions || 'none'}. Rejected review findings: ${JSON.stringify(s.prior || [])}
+Stage only the fix files. One signed commit, last line "Closes ${it.id}". Push, gh pr create, link_pull_request if the t3-code tools exist, one-line Linear comment with the full PR URL. Watch CI and fix failures your change causes.${RULES}`,
       { label: `ship:${it.id}`, phase: 'Ship', schema: SHIPPED },
     )
-    return { ...s, shipped }
-  },
-
-  // Screenshots, serialized
-  async (s) => {
-    if (!s || !s.shipped || !s.shipped.prNumber || !s.device || !(s.device.screenshots || []).length) return s
-    const shots = s.device.screenshots
-    const embed = await withBrowser(() => limited(
-      `Embed device screenshots in PR #${s.shipped.prNumber} (nimiq/nimiq-pay-app, ${s.it.id}). Follow "Screenshot upload" in ${SKILL}/references/pr.md using ${SKILL}/scripts/upload-shots.sh.
-Files: ${JSON.stringify(shots)}. First open each PNG and confirm it matches its scenario, column and asset; skip mismatches and report them in failed. Put each image into its scenario row and column, then check with gh pr view. Don't touch code or git.`,
-      { label: `shots:${s.it.id}`, phase: 'Screenshots', schema: EMBED },
-    ))
-    return { ...s, embed }
+    return { ...s, shipped: shipped && { ...shipped, draft } }
   },
 )
 
@@ -322,8 +311,9 @@ return results.map((r, i) => {
     rejectedFindings: (r.prior || []).filter(f => f.handled && f.handled.rejected && f.handled.rejected.length).map(f => f.handled.rejected).flat(),
     preExisting: [r.review, r.security, r.final].filter(Boolean).flatMap(v => v.findings.filter(f => f.tag === 'Pre-existing')),
     device: r.device && { tested: r.device.tested, platform: r.device.platform, blockedOnUser: r.device.blockedOnUser },
-    screenshots: r.embed ? r.embed.embedded : 0,
-    screenshotFailure: r.embed && r.embed.failed,
+    draft: r.shipped && r.shipped.draft,
+    screenshots: (r.shipped && r.shipped.screenshots) || 0,
+    screenshotFailure: r.shipped && r.shipped.screenshotFailure,
     notes: r.shipped && r.shipped.notes,
   }
 })
