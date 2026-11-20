@@ -46,23 +46,37 @@ git log --oneline "$LAST_OTA"..origin/main -S notifyAppReady
 - New migrations: check additive (new tables/columns/indexes) so previous bundle still works against migrated DB after rollback. Destructive or renaming migrations: stop and ask.
 - Commits touching `notifyAppReady`: read them. Must still run after local init and render, without waiting for network sync or unlock.
 
-## O4. `ota.json` change, if needed
-
-`main` protected, so change goes through PR before tagging:
-
-```bash
-git switch -c chore/ota-native-<versions> origin/main
-# edit ota.json
-git add -- ota.json && git commit -S -m "chore(ota): <allow|target> native <versions>" -m "<reason>"
-git push -u origin HEAD
-gh pr create --base main --title "chore(ota): <allow|target> native <versions>" --body-file <file>
-```
-
-Then stop: user merges. After merge, rerun this mode, recheck `ota.json` on `origin/main`: squash merge once replaced entry instead of adding one (PR #60).
-
-## O5. Version
+## O4. Version
 
 Default: next patch above highest of `$LAST_OTA` and native versions in `ota.json` (native 2.22.0 → ota-v2.22.1; native 2.23.0 after ota-v2.22.1 → ota-v2.23.1). Check `ota-vX.Y.Z` unused locally and on origin (`git ls-remote --tags origin "ota-vX.Y.Z"`), and `X.Y.Z` no native tag. Ask user once with proposal first, unless they passed version. Never reuse or move OTA tags: failed version burned, fix ships under higher one.
+
+## O5. Changelog PR (plus `ota.json` if needed)
+
+Every OTA gets in-app changelog entry `X.Y.Z` (no `ota-v`), so users see what changed. `main` protected, so entry (and any `ota.json` change) goes through one PR before tagging. Skip only when user says so for this OTA; next entry then covers those commits (range below).
+
+Range starts at newest of `$PREV` and OTA tags that have entry in `src/data/changelog.json`. An OTA shipped without entry doesn't move start, so its changes land in next entry:
+
+```bash
+SINCE="$PREV"
+for T in $(git tag -l 'ota-v*' --sort=-v:refname); do
+  git merge-base --is-ancestor "$PREV" "$T" || continue
+  jq -e --arg v "${T#ota-v}" 'any(.[]; .version == $v)' src/data/changelog.json >/dev/null && { SINCE="$T"; break; }
+done
+git switch -c chore/ota-X.Y.Z origin/main
+CHANGELOG_AI=<claude|codex> node scripts/generate-changelog.mjs X.Y.Z --since="$SINCE"
+```
+
+Without `--since` script starts from last `🚀 Release v` commit and repeats changes earlier OTA entries already announced. Review entry as SKILL.md step 7 (against `git log "$SINCE"..origin/main`), edit, `humanizer`, rerun same command to regenerate `CHANGELOG.md`. `git status --porcelain` must show only `CHANGELOG.md` and `src/data/changelog.json` (plus `ota.json` if changed).
+
+```bash
+git add -- CHANGELOG.md src/data/changelog.json && git commit -S -m "chore(changelog): OTA X.Y.Z"
+# ota.json change, if needed, as own commit:
+git add -- ota.json && git commit -S -m "chore(ota): <allow|target> native <versions>" -m "<reason>"
+git push -u origin HEAD
+gh pr create --base main --title "chore(ota): X.Y.Z changelog" --body-file <file>
+```
+
+Then stop: user merges. After merge, rerun this mode with same version: preflight and O1-O3 again on new `origin/main`. Check entry `X.Y.Z` exists in `src/data/changelog.json` on `origin/main`, and recheck `ota.json`: squash merge once replaced entry instead of adding one (PR #60).
 
 ## O6. Tag and push
 
@@ -90,5 +104,5 @@ On failure, hand run log (`gh run view <id> --log-failed`) to `log-reader` agent
 ## O8. Report
 
 - **Blocked on me**: approval if pending; then manual device check: on phone with listed native version, let update download, background and reopen app, check it starts (no rollback) and changed behaviour present. To pause offers: set `enabled: false` in R2 `channels/production.json`; publishing new tag enables them again.
-- **Changed**: tag, commit, workflow run URL and result, `ota.json` PR if any.
+- **Changed**: tag, commit, workflow run URL and result, changelog PR (with `ota.json` change if any).
 - **Found**: native versions covered, commits shipped, migration and `notifyAppReady` findings.
