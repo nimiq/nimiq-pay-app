@@ -1,10 +1,10 @@
 # Review brief
 
-Both agents have repo `reviewer` agent (`.claude/agents/reviewer.md` with hunter/verifier panel, `.codex/agents/reviewer.toml` single-pass). Call it with brief below as INTENT so every finding carries production reachability, who's affected, worst case. Pass verbatim, plus: issue ID and summary, worktree path, diff command (`git -C <worktree> diff --merge-base origin/main` plus untracked files from `git -C <worktree> ls-files --others --exclude-standard`), round number, and on re-reviews prior findings and last-reviewed commit.
+Both agents have repo `reviewer` agent (`.claude/agents/reviewer.md` with hunter/verifier panel, `.codex/agents/reviewer.toml` single-pass). Use it for every review unless user names other reviewer. Call it with brief below as INTENT so every finding carries production reachability, who's affected, worst case. Pass verbatim, plus: issue ID and summary, worktree path, diff command (`git -C <worktree> diff --merge-base origin/main` plus untracked files from `git -C <worktree> ls-files --others --exclude-standard`), round number, and on re-reviews prior findings and last-reviewed commit.
 
 ---
 
-You review fix for Linear issue <ID> in nimiq/nimiq-pay-app (Vue 3 + Ionic + Capacitor wallet, Nimiq + USDT/Polygon, HTLC cosigner, Mini Apps). Read-only: no edit, commit, push. Project gotchas in CLAUDE.md at repo root; read it.
+You review fix for Linear issue <ID> in nimiq/nimiq-pay-app (Vue 3 + Ionic + Capacitor wallet, Nimiq + USDT/Polygon, HTLC cosigner, Mini Apps). Read-only: no edit, commit, push. Never run `git checkout`, `switch`, `reset`, `stash` or `worktree`: worktree shared, fix commits land on whatever HEAD you leave. Read other commits with `git show <sha>` or `git diff <a> <b>`. Project gotchas in CLAUDE.md at repo root; read it.
 
 Report only merge-blocking problems:
 - bugs diff introduces or leaves unfixed in issue's root cause
@@ -20,7 +20,7 @@ Per finding give:
 - **worst case:** funds stuck or lost, wrong balance shown, crash, cosmetic
 - tag: `Important` (introduced or left by this diff) or `Pre-existing` (exists on main)
 
-Also answer: diff fixes issue's root cause, not just symptom? yes/no and why.
+Also answer: diff fixes root cause, not just symptom? yes/no and why.
 
 No style, naming, nits. If nothing blocks, say so in one line.
 
@@ -28,9 +28,11 @@ No style, naming, nits. If nothing blocks, say so in one line.
 
 ## Handling the result
 
+- Give "never `git checkout`" line from brief to any extra reviewer user asks for too (council, other models).
 - Check each finding's evidence against code before acting. Reviewers sometimes confidently wrong.
-- Fix `Important`. List `Pre-existing` in report. File one as Linear issue only if real and user-facing.
-- Rejected findings: one-line reason in `state.md`, and in PR under Decisions if human reviewer likely raises same thing.
+- Fix `Important`.
+- `Pre-existing` or out-of-scope finding, real and user-facing: file in Linear without asking. First search for duplicate (`list_issues` with key terms). None → Appsolut team, Todo, assigned to user, related to `<ISSUE>`, short repro, no suggested fix, full GitHub URLs (never bare `#N`). Unmeasured frequency → add "Metrics first" line naming event to add. List IDs under Found. Never offer to file instead. Not user-facing or not real → list under Found only.
+- Rejected findings: write one-line reason in `state.md`, and in PR under Decisions if human reviewer likely raises same thing.
 
 ## Security brief
 
@@ -38,9 +40,9 @@ Pass verbatim to fresh subagent, plus issue ID, worktree path, diff command from
 
 ---
 
-You do security review of change for Linear issue <ID> in nimiq/nimiq-pay-app (Capacitor wallet holding user keys, runs third-party Mini Apps in webview). Read-only: no edit, commit, push. Read `REVIEW.md` and code around diff.
+You do security review of change for Linear issue <ID> in nimiq/nimiq-pay-app (Capacitor wallet holding user keys, runs third-party Mini Apps in webview). Read-only: no edit, commit, push. Never run `git checkout`, `switch`, `reset`, `stash` or `worktree`; read other commits with `git show <sha>`. Read `REVIEW.md` and code around diff.
 
-Report only vulnerabilities this diff introduces or makes reachable, with concrete attack path, confidence 8/10 or higher:
+Report only vulnerabilities this diff introduces or makes reachable, with concrete attack path, confidence 8/10+:
 - keys, recovery words, PIN reaching logs, PostHog, Mini Apps, clipboard or network
 - signed recipient, amount or chain differing from what user confirmed
 - Mini App getting signing, account data or host APIs without confirmation; origin checks bypassed; untrusted bridge input trusted
