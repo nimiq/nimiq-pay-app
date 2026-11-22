@@ -25,6 +25,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { promiseWithTimeout, sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
@@ -161,11 +162,12 @@ function scrollToFirstNotification() {
   })
 }
 
+const areWidgetsShown = isMiniAppsEnabled && canDownloadWidgets()
 const REFRESH_SPINNER_TIMEOUT = 5_000 // hide wheel even if sync still running (APP-159)
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')
-  const homeWidgets = isMiniAppsEnabled ? useMiniAppWidgets() : undefined
+  const homeWidgets = areWidgetsShown ? useMiniAppWidgets() : undefined
   // A forced widget check with no widgets on Home would still record a chain check and delay the first widget's lookups.
   const widgetWork = homeWidgets?.widgets.length
     ? homeWidgets.tick({ force: true }).catch(err => logger.error('Refresh widgets failed', err))
@@ -365,7 +367,7 @@ onMounted(() => {
         </IonRow>
       </IonGrid>
 
-      <TheHomeWidgets v-if="isMiniAppsEnabled" class="mt-2 mb-8" />
+      <TheHomeWidgets v-if="areWidgetsShown" class="mt-2 mb-8" />
 
       <TheHomeTransactions class="mt-10" />
     </IonContent>

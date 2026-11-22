@@ -8,7 +8,7 @@ import { hasPendingSession } from '@/composables/useMiniAppSession'
  */
 export const isMiniAppActive = ref(false)
 
-/** The native client shares the web views' cookie jar, which is then a Mini App's: one open, or one hidden until the PIN is in. */
-export function miniAppHoldsCookies(): boolean {
+/** Open, or hidden until the PIN is in. */
+export function hasMiniAppSession(): boolean {
   return isMiniAppActive.value || hasPendingSession()
 }

@@ -18,6 +18,7 @@ const app = await vi.hoisted(async () => {
   return reactive({ language: 'en' })
 })
 const logged = vi.hoisted(() => vi.fn())
+const downloader = vi.hoisted(() => ({ available: true }))
 const nimiqNetwork = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
   return reactive({ height: 1000 })
@@ -70,6 +71,7 @@ vi.mock('@/stores/mini-apps', () => ({
   useMiniApps: () => miniApps,
 }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => nimiqNetwork }))
+vi.mock('@/lib/mini-app-widget-download', () => ({ canDownloadWidgets: () => downloader.available }))
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 vi.mock('@/stores/polygon-usdt', () => ({}))
@@ -137,6 +139,7 @@ beforeEach(() => {
   flags.blockedWidgetOrigins = []
   nimiqNetwork.height = 1000
   storedRead.imageFetches = storedRead.images = storedRead.imageSaves = Promise.resolve()
+  downloader.available = true
   storedRead.attemptSaves = Promise.resolve()
   storedRead.reads = []
   storedRead.failingRead = storedRead.failingWrite = ''
@@ -2223,6 +2226,31 @@ describe('the remote kill switch', () => {
   })
 })
 
+describe('a build without the capped downloader', () => {
+  beforeEach(() => {
+    downloader.available = false
+    fetchWidgetImage.mockReset()
+  })
+
+  it('has no widgets: no file, search, image, refresh or record, and no adding', async () => {
+    const images = { hero: { url: `${SCOPE}hero.png`, sha256: HASH, sendToken: true as const } }
+    const content = { value: { text: 'x' }, tone: 'neutral', rows: [], background: { image: 'hero' } }
+    memory.set('miniAppWidgets', JSON.stringify([{ ...storedWidget('mainnet', 'swap'), token: 'opaque-token', definition: { ...definition({ images, refresh: { url: `${SCOPE}w`, every: 60 } }), content } }]))
+    const store = await setup()
+    await store.tick({ chain: fakeChain(), at: NOW + 2 * 3600_000, force: true })
+    store.noteLaunch(SCOPE)
+    expect(await store.discover(SCOPE)).toMatchObject({ ok: false })
+    await store.loadGallery([SCOPE])
+    await flushPromises()
+    for (const request of [fetchWidgetFile, findWidgetFile, fetchWidgetImage, fetchWidgetRefresh])
+      expect(request).not.toHaveBeenCalled()
+    expect(memory.has('miniAppWidgetChecks')).toBe(false)
+    expect(store.canAddTo(SCOPE)).toBe(false)
+    expect(store.galleryScopesFor(['https://swap.example'])).toEqual([])
+    expect(store.catalogScopes()).toEqual([])
+  })
+})
+
 describe('where widgets are stored', () => {
   it('keeps states in the database, which logout deletes', async () => {
     const store = await setup()
@@ -2435,6 +2463,46 @@ describe('catalog Mini Apps in the gallery', () => {
 })
 
 describe('a re-check of a widget file', () => {
+  it('is stored before its request, so one that ends the app is not repeated at each start', async () => {
+    const first = await setup()
+    first.add(SCOPE, definition())
+    await flushPromises()
+    let storedBefore = ''
+    fetchWidgetFile.mockImplementation(() => {
+      storedBefore = memory.get('miniAppWidgets')!
+      return new Promise(() => {})
+    })
+    const at = NOW + 2 * 3600_000
+    void first.tick({ chain: fakeChain(), at })
+    await flushPromises()
+    expect(JSON.parse(storedBefore)[0].definitionCheckedAt).toBe(at)
+    fetchWidgetFile.mockClear()
+    const second = await setup()
+    await second.tick({ chain: fakeChain(), at: at + 60_000 })
+    expect(fetchWidgetFile).not.toHaveBeenCalled()
+  })
+
+  it('is tried again a minute after it could not be stored, not an hour', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition())
+    await flushPromises()
+    storedRead.failingWrite = 'miniAppWidgets'
+    const at = NOW + 2 * 3600_000
+    await store.tick({ chain: fakeChain(), at }).catch(() => {})
+    storedRead.failingWrite = ''
+    await store.tick({ chain: fakeChain(), at: at + 60_000 })
+    expect(fetchWidgetFile).toHaveBeenCalled()
+  })
+
+  it('makes no request it could not store', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition())
+    await flushPromises()
+    storedRead.failingWrite = 'miniAppWidgets'
+    await store.tick({ chain: fakeChain(), at: NOW + 2 * 3600_000 }).catch(() => {})
+    expect(fetchWidgetFile).not.toHaveBeenCalled()
+  })
+
   it('reads a folder\'s file once for all its widgets, and applies it to all', async () => {
     const store = await setup()
     store.add(SCOPE, definition({ id: 'a' }))

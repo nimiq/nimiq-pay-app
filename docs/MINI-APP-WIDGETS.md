@@ -13,7 +13,7 @@ This page is the reference for Mini App authors. The code is the authority if th
 
 ## 2. The widget file
 
-Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 widgets (an empty list is valid, see below) and is at most 32 KB; the size is checked after the download, so keep the file small. Nimiq Pay gives the request 15 seconds. The file may redirect within your own origin (up to three times); a redirect to another host is refused.
+Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 widgets (an empty list is valid, see below) and is at most 32 KB; Nimiq Pay stops the download there, counting the bytes as decoded, as it does for images. It may be served compressed, as may images. Android takes gzip as servers write it (one member, nothing after it, at most one and a half times the limit plus 64 KB compressed) and refuses what it didn't ask for, such as Brotli or deflate; iOS takes what it negotiates itself, and images with `sendToken` what the web view takes. Nimiq Pay gives the request 15 seconds. The file may redirect within your own origin (up to three times); a redirect to another host is refused.
 
 **Where it may live.** Prefer your Mini App's own folder. Nimiq Pay reads the path of the page your Mini App was opened at (after any redirect on launch) as a folder, then tries its two nearest parent folders, then the site root, and the first valid file wins. For example `/a/b/c/d` tries `/a/b/c/d/`, `/a/b/c/`, `/a/b/` and `/` (the deeper parents are skipped), and `/my-app/index.html` tries `/my-app/index.html/`, `/my-app/` and `/`. A 404, any other 4xx answer, a body that is not JSON or an invalid file moves the search up a folder. A network error, a timeout, a 5xx answer or a 429 stops it, so a parent folder's file is never taken for your Mini App when your own folder could not be reached. The folder where the file was found is the widget's *scope*, and two Mini Apps on one site stay apart by scope.
 
@@ -59,7 +59,7 @@ Live states you send are not translated by this field: send them in your current
 "images": { "hero": { "url": "art/hero.webp", "sha256": "<64 hex characters>" } }
 ```
 
-At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB and 1024 × 1024 pixels, on your own origin. A state you push, a refresh answer and their `next` states can carry an image instead of a key, for example one for this user, at most 4 different images in a state and its later states together. The widget file takes keys only.
+At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB (Nimiq Pay stops the download there) and 1024 × 1024 pixels, on your own origin. A state you push, a refresh answer and their `next` states can carry an image instead of a key, for example one for this user, at most 4 different images in a state and its later states together. The widget file takes keys only.
 
 ```js
 background: { image: { url: '/w/7f3c9a.png', sha256: '<64 hex characters>' } }
@@ -69,7 +69,7 @@ background: { image: { url: '/w/7f3c9a.png', sha256: '<64 hex characters>' } }
 - **The hash is what identifies an image on your site.** A new image needs a new hash; a new URL with the same hash is not downloaded again while a widget uses it. Put the image online before the file or state that names it.
 - **While an image is not ready, the card keeps the one it showed before**, or stays plain if it had none. Content without a background, or with a key the widget doesn't have, is plain at once. An image the device cannot draw leaves the card plain.
 - **A failed download is retried** after 5 minutes, then 10, 20 and so on up to every 6 hours, also when the image did not match its hash. All images of your site share a budget (section 6), in which every attempt counts; at most 3 download at once, and what cards show is downloaded first.
-- Nimiq Pay checks each image against its hash and keeps it in its encrypted database while a widget uses it; it never loads one from your site to draw it. Image requests never carry the user's addresses, and cookies cannot be relied on. The gallery downloads what its previews draw, without storing it.
+- Nimiq Pay checks each image against its hash and keeps it in its encrypted database while a widget uses it; it never loads one from your site to draw it. Image and widget file requests never carry the user's addresses or any cookie, and none they answer is kept. The gallery downloads what its previews draw, without storing it.
 - **An image meant for one user: send the token with it.** Add `sendToken: true` to the image, in the file or in a state, and Nimiq Pay fetches it with the token that widget got from `setToken`, as `Authorization: Bearer <token>`; without that field an image request never carries a token. Such an image needs CORS, which plain images don't: answer the `OPTIONS` preflight with `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Headers: Authorization`, send `Access-Control-Allow-Origin: *` on the image answer too, and don't redirect. Until the widget has a token, while its refreshes are paused by a 401 or 403, or while your server asked them to wait with `Retry-After`, nothing is requested and the card keeps its previous image; after a 410 nothing is requested and the card shows "No longer available" without an image. Like every image, it is fetched once no Mini App is open, so of the states and tokens you send while yours is open only the last ones count; use a token that is still valid after your Mini App closes. After a 401 or 403 a different token doesn't wait for the back-off; after any other failure it does. `Retry-After` on the image is honoured, up to 24 hours, if the answer exposes it with `Access-Control-Expose-Headers: Retry-After`. A 401 or 403 on an image is a failed download and doesn't pause refreshes, so a widget without a refresh doesn't show "Open to reconnect" for it. Gallery previews leave these images out, as there is no token before a widget is added. Answer every per-user image with `Cache-Control: no-store`, with a token or without, so no cache on the way keeps it for someone else; without a token, also give it a URL nobody can guess.
 
 ```js
@@ -164,7 +164,7 @@ type WidgetValue
 
 ## 4. `window.nimiqPay.widgets`
 
-Nimiq Pay injects this object into your Mini App's top frame (frames your page embeds do not get it). Versions of Nimiq Pay without widgets do not have it, so check first:
+Nimiq Pay injects this object into your Mini App's top frame (frames your page embeds do not get it). Versions of Nimiq Pay without widgets do not have it, so check first. Having it does not prove support: on a Nimiq Pay too old to enforce the download limits every call fails as refused calls do, so handle a failed `add` too.
 
 ```js
 if (window.nimiqPay?.widgets) {
@@ -251,6 +251,7 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 - Nimiq Pay checks triggers and refreshes only while Home is on screen and Nimiq Pay is in the foreground; chain lookups at most every 30 seconds, at most 10 per check across all widgets. Checks rotate across widgets so each gets a turn, and a state with lookup triggers is checked only when all of its lookups fit in what is left.
 - A lookup that fails never fires a trigger.
 - Nimiq can block a Mini App's widgets remotely, if one misbehaves. They then show only "Not available" under a generic icon, open nothing and make no requests, and SDK calls fail as refused calls do (section 4), until the block is lifted. The user can still remove them.
+- An installed Nimiq Pay too old to enforce the download limits has no widgets, also after an update over the air, until it is updated from its store: no gallery or Home section shows, and calls on `window.nimiqPay.widgets`, which is still there, fail as refused calls do.
 
 ## 6. Limits and what is refused
 
@@ -275,7 +276,7 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 | Image downloads, one site (all its widgets) | 60 per hour, 120 per 24 hours |
 | Refresh interval | 60 s to 24 h |
 | Times | within 30 days of now |
-| Network timeouts | Widget file and each image without `sendToken`: 15 s in all (5 s connect, 10 s read per request). Refresh and images with `sendToken`: 15 s in all |
+| Network timeouts | Widget file and each image without `sendToken`: 15 s in all, redirects included, and 10 s without a byte. Refresh and images with `sendToken`: 15 s in all |
 
 A state that breaks a rule (a wrong type, two kinds in one value, too many rows, a bad `refresh.url`, a `path` that is not a string, an empty text) is refused whole and `update` rejects with the field named, so you can find the problem:
 

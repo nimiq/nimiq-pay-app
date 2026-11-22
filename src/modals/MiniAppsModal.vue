@@ -23,6 +23,7 @@ import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { useModal } from '@/composables/useModal'
 import { trackFeatureOpened } from '@/lib/analytics'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
+import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeOrigin } from '@/lib/url-safety'
 import { kvPreferences, useApp } from '@/stores/app'
@@ -256,6 +257,7 @@ async function openCompetitionExternal(url: string) {
                 Discover
               </p>
               <button
+                v-if="canDownloadWidgets()"
                 type="button"
                 data-testid="mini-apps-widgets-button"
                 class="relative rounded-full bg-space/[0.06] px-3 py-1.5 before:absolute before:inset-x-0 before:top-0 before:-bottom-3 before:content-[''] text-sm font-bold text-space transition-colors active:bg-space/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"

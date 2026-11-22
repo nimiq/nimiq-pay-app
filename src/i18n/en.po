@@ -55,7 +55,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:26
-#: src/views/HomeView.vue:203
+#: src/views/HomeView.vue:205
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -447,7 +447,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:127
+#: src/views/HomeView.vue:128
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:536
+#: src/stores/mini-app-widgets.ts:540
 msgid "No longer available"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:517
+#: src/stores/mini-app-widgets.ts:521
 msgid "Not available"
 msgstr ""
 
@@ -1578,7 +1578,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:204
+#: src/views/HomeView.vue:206
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -2286,7 +2286,7 @@ msgstr ""
 
 #: src/components/MiniAppWidgetGallery.vue:5
 #: src/components/TheHomeWidgets.vue:5
-#: src/modals/MiniAppsModal.vue:38
+#: src/modals/MiniAppsModal.vue:39
 msgid "Widgets"
 msgstr ""
 
@@ -2372,7 +2372,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:209
+#: src/views/HomeView.vue:211
 msgid "You have a reward to claim!"
 msgstr ""
 

@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sha256HexOfBytes } from '@/lib/crypto'
 
-const { clearAllCookies, get, isNativePlatform } = vi.hoisted(() => ({ clearAllCookies: vi.fn(), get: vi.fn(), isNativePlatform: vi.fn() }))
-vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform }, CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get }, registerPlugin: () => ({}) }))
+const { cancelled, capped, clearAllCookies, get, isNativePlatform, isPluginAvailable } = vi.hoisted(() => ({ cancelled: vi.fn(), capped: vi.fn(), clearAllCookies: vi.fn(), get: vi.fn(), isNativePlatform: vi.fn(), isPluginAvailable: vi.fn() }))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform, isPluginAvailable }, CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get }, registerPlugin: () => ({ get: capped, cancel: cancelled }) }))
 vi.mock('@/lib', () => ({ isDev: false }))
 
 const fetchMock = vi.fn()
 vi.stubGlobal('fetch', fetchMock)
 
 const { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } = await import('./mini-app-widget-sources')
-const { isMiniAppActive } = await import('./mini-app-active')
 
 const NOW = Date.UTC(2026, 9, 19, 12)
 const SCOPE = 'https://swap.example/'
@@ -35,7 +34,11 @@ const STATE = JSON.stringify({ content: { value: { text: 'Done' } } })
 beforeEach(() => {
   clearAllCookies.mockReset()
   get.mockReset()
-  isNativePlatform.mockReturnValue(true)
+  // The web path, unless a test is about the phone.
+  isNativePlatform.mockReturnValue(false)
+  isPluginAvailable.mockReturnValue(true)
+  capped.mockReset()
+  cancelled.mockReset().mockResolvedValue(undefined)
   sessionStorage.clear()
   fetchMock.mockReset()
 })
@@ -44,40 +47,152 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('native downloads', () => {
-  it('skip the HTTP cache, so a changed file or image is seen', async () => {
-    get.mockResolvedValue(respond(404, ''))
-    await fetchWidgetFile(SCOPE, NOW)
-    await fetchWidgetImage({ url: `${SCOPE}a.png`, sha256: 'a'.repeat(64) }, SCOPE)
-    expect(get).toHaveBeenCalledTimes(2)
-    for (const [options] of get.mock.calls)
-      expect(options.headers).toMatchObject({ 'Cache-Control': 'no-cache' })
+describe('downloads on a phone', () => {
+  const bytes = Uint8Array.from(atob(PNG), c => c.charCodeAt(0))
+  const IMAGE = { url: `${SCOPE}a.png`, sha256: sha256HexOfBytes(bytes) }
+  const answer = (status: number, data = '', headers: Record<string, string> = {}) => ({ status, data, headers })
+  const tooLarge = () => Object.assign(new Error('too large'), { code: 'TOO_LARGE' })
+
+  beforeEach(() => {
+    isNativePlatform.mockReturnValue(true)
   })
 
-  it('skip it on the web without a header that would need a CORS preflight', async () => {
-    isNativePlatform.mockReturnValue(false)
+  it('read a file through the downloader that stops at 32 KB', async () => {
+    capped.mockResolvedValue(answer(200, btoa(JSON.stringify(FILE))))
+    expect((await fetchWidgetFile(SCOPE, NOW)).ok).toBe(true)
+    expect(capped).toHaveBeenCalledWith({
+      id: expect.any(String),
+      responseHeaders: ['location'],
+      url: `${SCOPE}nimiq-pay-widgets.json`,
+      headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
+      maxBytes: 32 * 1024,
+      idleTimeout: 10_000,
+      timeout: expect.any(Number),
+    })
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('read a file\'s text as UTF-8', async () => {
+    const named = new TextEncoder().encode(JSON.stringify({ ...FILE, name: 'Café Krone' }))
+    capped.mockResolvedValue(answer(200, btoa(String.fromCharCode(...named))))
+    const result = await fetchWidgetFile(SCOPE, NOW)
+    expect(result.ok && result.value.widgets[0]!.appName).toBe('Café Krone')
+  })
+
+  it('read an image through it, stopping at 256 KB', async () => {
+    capped.mockResolvedValue(answer(200, PNG))
+    expect((await fetchWidgetImage(IMAGE, SCOPE)).ok).toBe(true)
+    expect(capped.mock.calls[0]![0]).toMatchObject({ maxBytes: 256 * 1024, headers: { 'Cache-Control': 'no-cache' } })
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('refuse for good what went over the limit, as a check after the download does', async () => {
+    capped.mockRejectedValue(tooLarge())
+    expect(await fetchWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('larger than 32768 bytes') })
+    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('larger than 262144 bytes') })
+  })
+
+  it('move up a folder past a file that is too large', async () => {
+    capped.mockRejectedValueOnce(tooLarge())
+    capped.mockResolvedValue(answer(200, btoa(JSON.stringify(FILE))))
+    const found = await findWidgetFile(`${SCOPE}app/`, NOW)
+    expect(found.ok && found.value.scope).toBe(SCOPE)
+  })
+
+  it('refuse for good an encoding the downloader can\'t decode', async () => {
+    capped.mockRejectedValue(Object.assign(new Error('encoded'), { code: 'ENCODED' }))
+    expect(await fetchWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('can\'t decode') })
+    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('can\'t decode') })
+  })
+
+  it('stop the transfer under way at the deadline', async () => {
+    vi.useFakeTimers()
+    capped.mockResolvedValueOnce(answer(301, '', { location: '/moved.png' }))
+    capped.mockReturnValueOnce(new Promise(() => {}))
+    const result = fetchWidgetImage(IMAGE, SCOPE)
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(await result).toMatchObject({ ok: false, transient: true })
+    const [first, second] = capped.mock.calls.map(([options]) => options.id)
+    expect(second).not.toBe(first)
+    expect(cancelled).toHaveBeenCalledExactlyOnceWith({ id: second })
+  })
+
+  it('may retry what timed out', async () => {
+    capped.mockRejectedValue(new Error('the download took too long'))
+    expect(await fetchWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: true })
+  })
+
+  it('follow a redirect on the origin by hand', async () => {
+    capped.mockResolvedValueOnce(answer(301, '', { location: '/moved.png' }))
+    capped.mockResolvedValueOnce(answer(200, PNG))
+    expect((await fetchWidgetImage(IMAGE, SCOPE)).ok).toBe(true)
+    expect(capped.mock.calls[1]![0].url).toBe(`${SCOPE}moved.png`)
+  })
+
+  it('give each hop only what is left of the 15 s', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    capped.mockImplementationOnce(async () => {
+      vi.setSystemTime(NOW + 12_000)
+      return answer(301, '', { location: '/moved.png' })
+    })
+    capped.mockResolvedValueOnce(answer(200, PNG))
+    await fetchWidgetImage(IMAGE, SCOPE)
+    expect(capped.mock.calls.map(([options]) => options.timeout)).toEqual([15_000, 3_000])
+  })
+
+  it('allow the downloader no less than a second, which it needs to give up cleanly', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    capped.mockImplementationOnce(async () => {
+      vi.setSystemTime(NOW + 14_900)
+      return answer(301, '', { location: '/moved.png' })
+    })
+    capped.mockResolvedValueOnce(answer(200, PNG))
+    await fetchWidgetImage(IMAGE, SCOPE)
+    expect(capped.mock.calls[1]![0].timeout).toBe(1_000)
+  })
+
+  it.each([
+    ['w|1[2].png?q=a|b{c}', 'w%7C1%5B2%5D.png?q=a%7Cb%7Bc%7D'],
+    ['100%.png', '100%25.png'],
+    ['a%20b.png?x=1&y=/z', 'a%20b.png?x=1&y=/z'],
+  ])('percent-encode what iOS before 17 refuses in a URL: %s', async (raw, encoded) => {
+    capped.mockResolvedValue(answer(404))
+    await fetchWidgetImage({ ...IMAGE, url: new URL(raw, SCOPE).href }, SCOPE)
+    expect(capped.mock.calls[0]![0].url).toBe(`${SCOPE}${encoded}`)
+  })
+
+  it('percent-encode a redirect\'s target too', async () => {
+    capped.mockResolvedValueOnce(answer(301, '', { location: '/m|ved.png' }))
+    capped.mockResolvedValueOnce(answer(200, PNG))
+    await fetchWidgetImage(IMAGE, SCOPE)
+    expect(capped.mock.calls[1]![0].url).toBe(`${SCOPE}m%7Cved.png`)
+  })
+
+  it('touch no cookies, as the downloader has none', async () => {
+    capped.mockResolvedValue(answer(404))
+    await fetchWidgetFile(SCOPE, NOW)
+    await fetchWidgetImage(IMAGE, SCOPE)
+    expect(clearAllCookies).not.toHaveBeenCalled()
+  })
+
+  it('make no request on a build without that downloader, rather than one without a limit', async () => {
+    isPluginAvailable.mockReturnValue(false)
+    expect(await fetchWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: true })
+    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: true })
+    expect(await findWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: true })
+    expect(capped).not.toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
+  })
+})
+
+describe('downloads on the web, for development', () => {
+  it('skip the HTTP cache without a header that would need a CORS preflight, and touch no cookies', async () => {
     get.mockResolvedValue(respond(404, ''))
     await fetchWidgetFile(SCOPE, NOW)
     expect(get.mock.calls[0]![0].headers).toEqual({ Accept: 'application/json' })
-    expect(get.mock.calls[0]![0].webFetchExtra).toMatchObject({ cache: 'no-store' })
-  })
-
-  it('follow no redirect of an image once a Mini App has opened, whose cookies it would take along', async () => {
-    get.mockImplementationOnce(async () => {
-      isMiniAppActive.value = true
-      return respond(302, '', { location: '/moved.png' })
-    })
-    get.mockResolvedValue(respond(404, ''))
-    const result = await fetchWidgetImage({ url: `${SCOPE}a.png`, sha256: 'a'.repeat(64) }, SCOPE)
-    isMiniAppActive.value = false
-    expect(get).toHaveBeenCalledTimes(1)
-    expect(result).toMatchObject({ ok: false, transient: true })
-  })
-
-  it('leave the cookies of a hidden Mini App that waits for the PIN', async () => {
-    sessionStorage.setItem('miniAppSession', JSON.stringify({ url: SCOPE, hiddenAt: Date.now() }))
-    get.mockResolvedValue(respond(404, ''))
-    await fetchWidgetFile(SCOPE, NOW)
+    expect(get.mock.calls[0]![0].webFetchExtra).toMatchObject({ credentials: 'omit', cache: 'no-store' })
     expect(clearAllCookies).not.toHaveBeenCalled()
   })
 })
@@ -191,59 +306,13 @@ describe('what a refresh tells the store', () => {
   })
 })
 
-describe('cookies around a widget file download', () => {
-  it('clears them before and after, so one a site sets never comes back', async () => {
-    const order: string[] = []
-    clearAllCookies.mockImplementation(async () => {
-      order.push('clear')
-    })
-    get.mockImplementation(async () => {
-      order.push('get')
-      return respond(200, FILE)
-    })
-    await fetchWidgetFile(SCOPE, NOW)
-    expect(order).toEqual(['clear', 'get', 'clear'])
-  })
-
-  it('clears them after a failed download too', async () => {
-    get.mockRejectedValue(new Error('offline'))
-    await fetchWidgetFile(SCOPE, NOW)
-    expect(clearAllCookies).toHaveBeenCalledTimes(2)
-  })
-
-  it('still answers when clearing fails', async () => {
-    clearAllCookies.mockRejectedValue(new Error('no plugin'))
-    get.mockResolvedValue(respond(200, FILE))
-    expect((await fetchWidgetFile(SCOPE, NOW)).ok).toBe(true)
-  })
-
-  it('leaves them alone while searching for a Mini App being opened', async () => {
-    get.mockResolvedValue(respond(200, FILE))
-    await findWidgetFile('https://swap.example/', NOW)
-    expect(clearAllCookies).not.toHaveBeenCalled()
-  })
-
-  it('does not log out a Mini App opened during the download', async () => {
-    get.mockImplementation(async () => {
-      isMiniAppActive.value = true
-      return respond(200, FILE)
-    })
-    await fetchWidgetFile(SCOPE, NOW)
-    isMiniAppActive.value = false
-    expect(clearAllCookies).toHaveBeenCalledTimes(1)
-  })
-})
-
 describe('fetchWidgetFile', () => {
   it('fetches the file in the folder with redirects off and parses it against that folder', async () => {
     get.mockResolvedValueOnce(respond(200, FILE))
     const result = await fetchWidgetFile('https://name.github.io/my-app/', NOW)
     expect(get).toHaveBeenCalledWith(expect.objectContaining({
       url: 'https://name.github.io/my-app/nimiq-pay-widgets.json',
-      disableRedirects: true,
       responseType: 'text',
-      connectTimeout: 5000,
-      readTimeout: 10000,
     }))
     expect(result.ok && result.value.widgets[0]!.content.path).toBe('https://name.github.io/my-app/status')
   })
@@ -339,11 +408,10 @@ describe('fetchWidgetFile', () => {
 describe('fetchWidgetImage', () => {
   const IMAGE = { url: 'https://swap.example/hero.png', sha256: 'a'.repeat(64) }
 
-  it('reads it with the native client, around cleared cookies, and checks it', async () => {
+  it('reads it and checks it', async () => {
     get.mockResolvedValue(respond(200, PNG))
     const result = await fetchWidgetImage(IMAGE, SCOPE)
-    expect(get).toHaveBeenCalledWith(expect.objectContaining({ url: IMAGE.url, responseType: 'arraybuffer', disableRedirects: true }))
-    expect(clearAllCookies).toHaveBeenCalledTimes(2)
+    expect(get).toHaveBeenCalledWith(expect.objectContaining({ url: IMAGE.url, responseType: 'arraybuffer' }))
     // The hash in IMAGE is made up, so this reached the check.
     expect(result).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('hash') })
   })

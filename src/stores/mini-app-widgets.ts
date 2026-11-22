@@ -21,9 +21,10 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { isMiniAppActive, miniAppHoldsCookies } from '@/lib/mini-app-active'
+import { hasMiniAppSession, isMiniAppActive } from '@/lib/mini-app-active'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { createWidgetChain, evaluateTrigger, needsLookup } from '@/lib/mini-app-widget-chain'
+import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
 import { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
 import { imageIn, imagesInState, localizeDefinition, WIDGET_LIMITS, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { safeOrigin } from '@/lib/url-safety'
@@ -122,6 +123,7 @@ const DOWNLOADS_AT_ONCE = 6
 const DOWNLOADS_AT_ONCE_PER_SITE = 3
 const IMAGE_RETRY_MS = 5 * 60_000
 const MAX_IMAGE_RETRY_MS = 6 * 60 * 60_000
+const WIDGETS_KEY = 'miniAppWidgets'
 const IMAGE_FETCHES_KEY = 'miniAppWidgetImageFetches'
 const IMAGE_FAILURES_KEY = 'miniAppWidgetImageFailures'
 const imageKey = (id: string) => `miniAppWidgetImage:${id}`
@@ -212,7 +214,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // Home waits for the first read, so the empty state never flashes for someone who has widgets.
   const ready = ref(false)
   // kv() so widgets clear on logout with the rest of the account.
-  const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, serializer: storedSerializer, onReady: () => ready.value = true })
+  const stored = useStorageAsync<HomeWidget[]>(WIDGETS_KEY, [], kv(), { writeDefaults: false, serializer: storedSerializer, onReady: () => ready.value = true })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
   // No refresh before the read: it would go past the budget, and its record would be overwritten by the read.
@@ -234,6 +236,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const widgets = computed(() => stored.value.filter(w => w.network === network))
   const canAdd = computed(() => widgets.value.length < WIDGET_LIMITS.widgetsOnHome)
   function isBlocked(scope: string): boolean {
+    if (!canDownloadWidgets())
+      return true
     const blocked = useFeatureFlags().blockedWidgetOrigins
     return blocked.includes('*') || blocked.includes(safeOrigin(scope))
   }
@@ -755,8 +759,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function mayRequest({ image, scope, token, notBefore }: ImagePin, at: number): boolean {
-    // Token images wait too, though they take no cookies: Home is hidden until the Mini App closes, and waiting turns its pushes into one download.
-    if (isBlocked(scope) || miniAppHoldsCookies())
+    // Home is hidden while a Mini App is open, and waiting for it to close turns its pushes into one download.
+    if (isBlocked(scope) || hasMiniAppSession())
       return false
     return !image.sendToken || (!!token && at >= (notBefore ?? 0))
   }
@@ -958,13 +962,22 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   async function recheckFile(scope: string, at: number) {
-    const result = await fetchWidgetFile(scope, at)
     const inFolder = (w: HomeWidget) => w.network === network && w.scope === scope
-    if (!result.ok) {
-      // Only a valid file that no longer declares a widget removes it; errors never do.
-      stored.value = stored.value.map(w => inFolder(w) ? { ...w, definitionCheckedAt: at } : w)
+    const checkedBefore = new Map(stored.value.filter(inFolder).map(w => [w.widgetId, w.definitionCheckedAt]))
+    stored.value = stored.value.map(w => inFolder(w) ? { ...w, definitionCheckedAt: at } : w)
+    try {
+      // Before the request: one that ends the app would otherwise be made again at every start.
+      await kv().setItem(WIDGETS_KEY, storedSerializer.write(stored.value))
+    }
+    catch (error) {
+      logger.warn('Could not store a widget file check', error)
+      stored.value = stored.value.map(w => inFolder(w) && w.definitionCheckedAt === at ? { ...w, definitionCheckedAt: checkedBefore.get(w.widgetId) ?? at } : w)
       return
     }
+    const result = await fetchWidgetFile(scope, at)
+    // Only a valid file that no longer declares a widget removes it; errors never do.
+    if (!result.ok)
+      return
     cacheFile(scope, result.value, at)
     const declared = new Map(result.value.widgets.map(definition => [definition.id, definition]))
     stored.value = stored.value.flatMap((w) => {

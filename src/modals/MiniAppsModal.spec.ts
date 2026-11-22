@@ -108,6 +108,7 @@ const {
   capacitorHttpGet: vi.fn((_options?: { url: string }): Promise<{ status: number, data: unknown }> => Promise.resolve({ status: 200, data: {} })),
 }))
 
+const downloader = vi.hoisted(() => ({ available: true }))
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: () => 'ios',
@@ -217,6 +218,7 @@ const { closeModal, dialogConfirm, listForOrigin, removeForOrigin } = vi.hoisted
   removeForOrigin: vi.fn(),
 }))
 vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => ({ noteLaunch: vi.fn(), listForOrigin, removeForOrigin }) }))
+vi.mock('@/lib/mini-app-widget-download', () => ({ canDownloadWidgets: () => downloader.available }))
 vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { confirm: dialogConfirm } }))
 
 vi.mock('@/stores/conn', () => ({
@@ -788,6 +790,15 @@ describe('mini apps modal', () => {
     await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
     expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
     expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('true')
+  })
+
+  it('has no Widgets button on a build without the capped downloader', async () => {
+    downloader.available = false
+    const wrapper = mountModal()
+    await flushPromises()
+    const button = wrapper.find('[data-testid="mini-apps-widgets-button"]')
+    downloader.available = true
+    expect(button.exists()).toBe(false)
   })
 
   it('extends the Widgets button\'s hit area only downward, since the scroll section clips its top', async () => {

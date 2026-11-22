@@ -1,10 +1,10 @@
 import type { HttpResponse } from '@capacitor/core'
 import type { WidgetFile, WidgetImage, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
-import { Capacitor, CapacitorCookies, CapacitorHttp } from '@capacitor/core'
+import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { encodeBase64 } from 'ethers'
 import { isDev } from '@/lib'
-import { miniAppHoldsCookies } from '@/lib/mini-app-active'
+import { canDownloadWidgets, CappedDownload } from '@/lib/mini-app-widget-download'
 import { readWidgetImage } from '@/lib/mini-app-widget-images'
 import { isAllowedWidgetOrigin, parseWidgetFile, parseWidgetState, WIDGET_FILE_NAME, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { headerValue } from '@/lib/site-metadata'
@@ -13,6 +13,11 @@ export type FetchOutcome<T> = { ok: true, value: T } | { ok: false, error: strin
 
 const MAX_REDIRECTS = 3
 const DEADLINE_MS = 15_000
+const IDLE_TIMEOUT_MS = 10_000
+// A hop started late still gets time to fail as itself.
+const MIN_HOP_MS = 1_000
+// What RFC 3986 takes raw outside a host. iOS before 17 refuses a URL with anything else, and new URL() leaves some of it.
+const NOT_URI_RE = /[^\w\-.~!$&'()*+,;=:@/?%]|%(?![0-9a-f]{2})/gi
 const IMAGE_ACCEPT = 'image/png, image/jpeg, image/webp'
 
 function transientError(error: string): FetchOutcome<never> {
@@ -62,15 +67,23 @@ function queryKey(part: string): string {
   }
 }
 
-interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', parse: (response: HttpResponse, url: string) => FetchOutcome<T>, stopsForMiniApp?: boolean }
+interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', maxBytes: number, parse: (response: Answer, url: string) => FetchOutcome<T> }
+type Answer = Pick<HttpResponse, 'status' | 'headers' | 'data'>
+interface Download { timedOut: boolean, endsAt: number, id?: string }
 
 /** Native client, so discovery needs no CORS; redirects by hand, so none leaves the origin. */
+let lastDownload = 0
+
 async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): Promise<FetchOutcome<T>> {
+  if (!canDownloadWidgets())
+    return transientError('this build of Nimiq Pay has no downloader for widgets')
   let timer: ReturnType<typeof setTimeout> | undefined
-  const state = { timedOut: false }
+  const state: Download = { timedOut: false, endsAt: Date.now() + DEADLINE_MS }
   const deadline = new Promise<FetchOutcome<never>>((resolve) => {
     timer = setTimeout(() => {
       state.timedOut = true
+      if (state.id)
+        CappedDownload.cancel({ id: state.id }).catch(() => {})
       resolve(transientError(`${url} timed out`))
     }, DEADLINE_MS)
   })
@@ -82,25 +95,21 @@ async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): P
   }
 }
 
-async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>, state: { timedOut: boolean }): Promise<FetchOutcome<T>> {
+async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>, state: Download): Promise<FetchOutcome<T>> {
   let current = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (state.timedOut)
       return transientError(`${url} timed out`)
-    let response: HttpResponse
+    let response: Answer
     try {
-      response = await CapacitorHttp.get({
-        url: current,
-        // iOS can answer from its URL cache, and a changed file or image would go unseen. On the web the header would need a CORS preflight.
-        headers: { Accept: read.accept, ...(Capacitor.isNativePlatform() ? { 'Cache-Control': 'no-cache' } : {}) },
-        responseType: read.responseType,
-        disableRedirects: true,
-        webFetchExtra: { credentials: 'omit', cache: 'no-store' },
-        connectTimeout: 5_000,
-        readTimeout: 10_000,
-      })
+      response = await getOnce(current, read, state)
     }
-    catch {
+    catch (error) {
+      const code = (error as { code?: string } | undefined)?.code
+      if (code === 'TOO_LARGE')
+        return definiteError(`${current} is larger than ${read.maxBytes} bytes`)
+      if (code === 'ENCODED')
+        return definiteError(`${current} is in an encoding Nimiq Pay can't decode`)
       return transientError(`could not reach ${current}`)
     }
     if (response.status >= 300 && response.status < 400) {
@@ -112,9 +121,6 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
       catch {}
       if (!next || next.origin !== origin || !isAllowedProtocol(next) || next.username || next.password)
         return definiteError(`redirect from ${current} to ${next ? withoutCredentials(next) : 'nowhere'} refused`)
-      // A Mini App can open during a hop, and the next would take its cookies along.
-      if (read.stopsForMiniApp && miniAppHoldsCookies())
-        return transientError(`a Mini App opened during the download of ${url}`)
       current = next.href
       continue
     }
@@ -126,9 +132,33 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
   return definiteError(`too many redirects from ${url}`)
 }
 
+async function getOnce<T>(url: string, { accept, maxBytes, responseType }: NativeRead<T>, state: Download): Promise<Answer> {
+  // The web, which Nimiq Pay uses only in development, has no such downloader, and the Cache-Control header would need a CORS preflight there.
+  if (!Capacitor.isNativePlatform())
+    return CapacitorHttp.get({ url, headers: { Accept: accept }, responseType, webFetchExtra: { credentials: 'omit', cache: 'no-store' } })
+  state.id = `${Date.now()}-${++lastDownload}`
+  const answer = await CappedDownload.get({
+    id: state.id,
+    url: percentEncoded(url),
+    // no-cache for caches on the way: the downloader itself keeps none.
+    headers: { 'Accept': accept, 'Cache-Control': 'no-cache' },
+    responseHeaders: ['location'],
+    maxBytes,
+    idleTimeout: IDLE_TIMEOUT_MS,
+    timeout: Math.max(MIN_HOP_MS, state.endsAt - Date.now()),
+  })
+  return responseType === 'text' ? { ...answer, data: new TextDecoder().decode(Uint8Array.from(atob(answer.data), c => c.charCodeAt(0))) } : answer
+}
+
+function percentEncoded(url: string): string {
+  const { origin, pathname, search } = new URL(url)
+  return origin + `${pathname}${search}`.replace(NOT_URI_RE, encodeURIComponent)
+}
+
 const WIDGET_FILE_READ: NativeRead<unknown> = {
   accept: 'application/json',
   responseType: 'text',
+  maxBytes: WIDGET_LIMITS.fileBytes,
   parse(response, url) {
     const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
     if (new TextEncoder().encode(body).length > WIDGET_LIMITS.fileBytes)
@@ -144,7 +174,7 @@ const WIDGET_FILE_READ: NativeRead<unknown> = {
   },
 }
 
-async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<WidgetFile>> {
+export async function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
   let origin: string
   try {
     origin = new URL(scope).origin
@@ -159,21 +189,6 @@ async function readWidgetFile(scope: string, now: number): Promise<FetchOutcome<
     return response
   const parsed = parseWidgetFile(response.value, { origin, base: scope, now, allowInsecure: isDev })
   return parsed.ok ? parsed : { ...parsed, transient: false }
-}
-
-/** The native client shares the web views' cookie jar, so without this a site could recognise a device across downloads. All cookies, as clearing one site's misses those with a path or a domain. Not for a search, which runs for a Mini App being opened. */
-async function withClearedCookies<T>(download: () => Promise<T>): Promise<T> {
-  await clearCookies()
-  try {
-    return await download()
-  }
-  finally {
-    await clearCookies()
-  }
-}
-
-export function fetchWidgetFile(scope: string, now = Date.now()): Promise<FetchOutcome<WidgetFile>> {
-  return withClearedCookies(() => readWidgetFile(scope, now))
 }
 
 /** A URL a widget of this folder may be served from, for a request carrying nothing of the user's beyond what its caller adds. */
@@ -201,25 +216,15 @@ export async function fetchWidgetImage(image: WidgetImage, scope: string, token?
     const read = readWidgetImage(encodeBase64(answer.value), image.sha256)
     return read.ok ? read : definiteError(`${image.url}: ${read.error}`)
   }
-  return withClearedCookies(() => nativeGet(image.url, place.origin, {
+  return nativeGet(image.url, place.origin, {
     accept: IMAGE_ACCEPT,
     responseType: 'arraybuffer',
-    stopsForMiniApp: true,
+    maxBytes: WIDGET_LIMITS.imageBytes,
     parse(response, url) {
       const read = readWidgetImage(String(response.data), image.sha256)
       return read.ok ? read : definiteError(`${url}: ${read.error}`)
     },
-  }))
-}
-
-async function clearCookies() {
-  // A download can outlast the launch of a Mini App, whose session these cookies then are; closing it clears them.
-  if (miniAppHoldsCookies())
-    return
-  try {
-    await CapacitorCookies.clearAllCookies()
-  }
-  catch {}
+  })
 }
 
 /** Only a definite miss moves up a folder: after a network error the search stops, so a parent folder's file is never taken for this Mini App's. */
@@ -229,7 +234,7 @@ export async function findWidgetFile(url: string, now = Date.now()): Promise<Fet
     return definiteError(`${url} cannot serve widgets`)
   const misses: string[] = []
   for (const scope of scopes) {
-    const result = await readWidgetFile(scope, now)
+    const result = await fetchWidgetFile(scope, now)
     if (result.ok)
       return { ok: true, value: { scope, file: result.value } }
     if (result.transient)
@@ -272,7 +277,7 @@ export async function fetchWidgetRefresh(
   return parsed.ok ? parsed : { ...parsed, transient: false }
 }
 
-/** For requests that carry something of the user's: not the native client, which sends and stores the site's cookies, can cache on disk and logs headers in debug builds. */
+/** For requests that carry something of the user's: not the native client, whose options, headers included, debug builds log. */
 async function fetchWithoutCookies(href: string, headers: Record<string, string>, maxBytes: number, now = Date.now(), signal?: AbortSignal): Promise<FetchOutcome<Uint8Array>> {
   const controller = new AbortController()
   signal?.addEventListener('abort', () => controller.abort())
