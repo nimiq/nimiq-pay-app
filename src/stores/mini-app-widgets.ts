@@ -21,14 +21,17 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
+import { sha256Hex } from '@/lib/crypto'
 import { hasMiniAppSession, isMiniAppActive } from '@/lib/mini-app-active'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { createWidgetChain, evaluateTrigger, needsLookup } from '@/lib/mini-app-widget-chain'
 import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
 import { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
 import { imageIn, imagesInState, localizeDefinition, WIDGET_LIMITS, widgetScopeCandidates } from '@/lib/mini-app-widgets'
+import { SQLQuery } from '@/lib/sql-queries'
 import { safeOrigin } from '@/lib/url-safety'
 import { kv, useApp } from '@/stores/app'
+import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { stripTrailingSlash, useMiniApps } from '@/stores/mini-apps'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -55,7 +58,7 @@ export interface HomeWidget {
   stopped?: WidgetPermission[]
   /** Sent with its refreshes and with the images that ask for it: set by the Mini App, never shown or read back. */
   token?: string
-  /** New with each different token, to tell tokens apart without storing anything made from one. */
+  /** Tells tokens apart without storing anything made from one. */
   tokenId?: number
   /** Why refreshes, and images with the token, stopped, until the Mini App sends a state or a token. */
   halted?: 'reconnect' | 'gone'
@@ -106,9 +109,10 @@ export interface WidgetView {
   background?: { kind: 'image', src: string } | { kind: 'chart', chart: WidgetChart }
 }
 
-interface ImagePin { image: WidgetImage, scope: string, token?: string, tokenId?: number, notBefore?: number }
-/** `refused`: the tokens that got a 401 or 403, when that is what the last attempt got. */
-interface ImageFailure { count: number, retryAt: number, refused?: number[] }
+/** `id` is the copy's. `token` is absent while it is withheld. */
+interface ImagePin { image: WidgetImage, id: string, scope: string, token?: string, notBefore?: number }
+/** `refused`: the copies whose token got a 401 or 403, when that is what the last attempt got. */
+interface ImageFailure { count: number, retryAt: number, refused?: string[] }
 
 interface TickOptions { chain?: WidgetChain, at?: number, force?: boolean }
 
@@ -129,6 +133,12 @@ const IMAGE_FAILURES_KEY = 'miniAppWidgetImageFailures'
 const imageKey = (id: string) => `miniAppWidgetImage:${id}`
 // Per site: by hash alone, naming another site's image would show from the missing request whether the user has it.
 const imageId = ({ url, sha256 }: WidgetImage) => `${new URL(url).origin} ${sha256}`
+// What is kept and drawn. A token's copies are its own, so that they go with it.
+function copyId(image: WidgetImage, { token, tokenId }: HomeWidget): string | undefined {
+  if (!image.sendToken)
+    return imageId(image)
+  return token ? `${imageId(image)} ${tokenId ?? 0}` : undefined
+}
 
 // Widgets stored before live values were removed: Home cannot draw them. Quotes inside texts are escaped, so only keys match.
 const REMOVED_VALUES_RE = /"live":\{"(?:nimiqBalance|nimiqStake|usdtBalance|price|priceChange)"|"priceHistory":/
@@ -160,14 +170,10 @@ function withFetch(log: Record<string, number[]>, origin: string, at: number): R
   return { ...kept, [origin]: [...(kept[origin] ?? []), at] }
 }
 
-// By URL too: anyone can copy a hash and point it at a bad URL. Not by token, or rotating one would retry a broken image each time.
-const failureKey = (image: WidgetImage) => `${imageId(image)} ${image.url}${image.sendToken ? ' token' : ''}`
-// Also by token: only one of the widgets that name an image may have one the site takes.
-const pinKey = ({ image, tokenId }: ImagePin) => `${failureKey(image)} ${tokenId ?? ''}`
-
-function uniqueImages(pinned: ImagePin[]): ImagePin[] {
-  return [...new Map(pinned.map(entry => [pinKey(entry), entry])).values()]
-}
+// By URL too: anyone can copy a hash and point it at a bad URL. All hashed, as this is stored and outlasts a token, and an image or URL can be the user's. Not by token, or rotating one would retry a broken image each time.
+const failureKey = (image: WidgetImage) => `${sha256Hex(imageId(image))} ${sha256Hex(image.url)}${image.sendToken ? ' token' : ''}`
+// Also by whether the token may be sent, so that a pause stops a request under way.
+const pinKey = ({ image, id, token }: ImagePin) => `${id} ${image.url}${image.sendToken && !token ? ' held' : ''}`
 
 async function inTurns<T>(items: T[], work: (item: T) => Promise<unknown>) {
   const waiting = [...items]
@@ -214,7 +220,31 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // Home waits for the first read, so the empty state never flashes for someone who has widgets.
   const ready = ref(false)
   // kv() so widgets clear on logout with the rest of the account.
-  const stored = useStorageAsync<HomeWidget[]>(WIDGETS_KEY, [], kv(), { writeDefaults: false, serializer: storedSerializer, onReady: () => ready.value = true })
+  let lastRevision = Date.now()
+  let widgetsUnreadable = false
+  const stored = useStorageAsync<HomeWidget[]>(WIDGETS_KEY, [], kv(), {
+    writeDefaults: false,
+    serializer: storedSerializer,
+    onError(error) {
+      widgetsUnreadable ||= !ready.value
+      logger.warn('Could not read or store widgets', error)
+    },
+    onReady(all) {
+      // Above every stored one, whatever the clock says, so that an answer under way never matches a later revision.
+      lastRevision = Math.max(lastRevision, ...all.map(w => w.revision ?? 0))
+      ready.value = true
+      // An unreadable list names no image, and would take them all.
+      if (widgetsUnreadable)
+        return
+      // A delete can fail or die with the app, and a token's id is never named again.
+      useConn().query<{ key: string }[]>(SQLQuery.SelectKvKeysLike, [imageKey('%')]).then((rows) => {
+        for (const id of (rows ?? []).map(({ key }) => key.slice(imageKey('').length))) {
+          if (!isBusy(id))
+            freeIfUnwanted(id)
+        }
+      }).catch(error => logger.warn('Could not look for widget images to free', error))
+    },
+  })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
   // No refresh before the read: it would go past the budget, and its record would be overwritten by the read.
@@ -252,7 +282,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const galleryFiles = reactive(new Map<string, WidgetFile | null | 'loading'>())
   // The gallery and `add` can use a file long after it was read.
   const filesReadAt = new Map<string, number>()
-  // By image id. Kept images are read from the encrypted database; previews only live while the gallery is open.
+  // Kept images by copy, read from the encrypted database. Previews by image id, only while the gallery is open.
   const images = reactive(new Map<string, string>())
   const previews = reactive(new Map<string, string>())
   // Not in the database, so that a failing one is not looked up again at every tick.
@@ -264,8 +294,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // Saved instead of downloaded, so that they outlast the gallery.
   const takenPreviews = new Map<string, string>()
   let previewSession = 0
-  // From the clock, so that it stays above any stored revision after a restart.
-  let lastRevision = Date.now()
   const discoveries = new Map<string, Promise<FetchOutcome<{ scope: string, file: WidgetFile }>>>()
   const inFlight = new Set<string>()
   let current: Promise<void> | undefined
@@ -340,7 +368,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     const at = Date.now()
     const hasSiblings = listForScope(scope).length > 0
     // The user has seen it, and the gallery may close before it is stored.
-    for (const id of Object.values(definition.images ?? {}).map(imageId)) {
+    for (const id of Object.values(definition.images ?? {}).filter(image => !image.sendToken).map(imageId)) {
       const preview = previews.get(id)
       if (preview)
         takenPreviews.set(id, preview)
@@ -373,11 +401,38 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return true
   }
 
-  function setToken(scope: string, widgetId: string, token: string | null): boolean {
-    if (!isOnHome(scope, widgetId))
+  /** True once stored, as until then a restart would bring the old token back, and all of it. */
+  async function setToken(scope: string, widgetId: string, token: string | null): Promise<boolean> {
+    const widget = find(scope, widgetId)
+    if (!widget)
       return false
-    patch(scope, widgetId, w => ({ token: token ?? undefined, tokenId: w.token === token ? w.tokenId : ++lastRevision, halted: undefined, refreshDueAt: w.halted ? Date.now() : w.refreshDueAt, revision: ++lastRevision }))
-    return true
+    const at = Date.now()
+    const changed = widget.token !== (token ?? undefined)
+    // Only when one leaves: there is nothing of a token before the first, so a state pushed just before that stays.
+    const tokenLeaves = changed && !!widget.token
+    // One id for a site's widgets with the same token, so that they share its images.
+    const sharing = token ? widgets.value.find(w => w.token === token && originOf(w.scope) === originOf(scope)) : undefined
+    // Not from the clock, which can go back to another token's id.
+    const tokenId = changed ? sharing?.tokenId ?? crypto.getRandomValues(new Uint32Array(1))[0] : widget.tokenId
+    if (tokenLeaves)
+      replaceState(scope, widgetId, undefined, at)
+    patch(scope, widgetId, w => ({
+      token: token ?? undefined,
+      tokenId,
+      // Plain ones too: a state's can be the user's, and would fill in while the file's loads.
+      shownImage: tokenLeaves ? undefined : w.shownImage,
+      halted: undefined,
+      refreshDueAt: changed || w.halted ? at : w.refreshDueAt,
+      revision: ++lastRevision,
+    }))
+    try {
+      await kv().setItem(WIDGETS_KEY, storedSerializer.write(stored.value))
+      return true
+    }
+    catch (error) {
+      logger.warn('Could not store a widget token', error)
+      return false
+    }
   }
 
   function remove(scope: string, widgetId: string) {
@@ -466,18 +521,20 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   /** The image it wants once that can be drawn, until then the one before. None at once when it wants none. */
-  function imageToShow(widget: Pick<HomeWidget, 'definition' | 'shownImage'>, content: WidgetContent | WidgetDemo): WidgetImage | undefined {
+  function imageToShow(widget: HomeWidget, content: WidgetContent | WidgetDemo): WidgetImage | undefined {
     const wanted = imageIn(content, widget.definition.images)
     if (!wanted)
       return undefined
-    return images.has(imageId(wanted)) ? wanted : widget.shownImage
+    const id = copyId(wanted, widget)
+    return id && images.has(id) ? wanted : widget.shownImage
   }
 
-  function backgroundView(widget: Pick<HomeWidget, 'definition' | 'shownImage'>, content: WidgetContent | WidgetDemo): WidgetView['background'] {
+  function backgroundView(widget: HomeWidget, content: WidgetContent | WidgetDemo): WidgetView['background'] {
     if (content.background && 'chart' in content.background)
       return { kind: 'chart', chart: content.background.chart }
     const image = imageToShow(widget, content)
-    const src = image && images.get(imageId(image))
+    const id = image && copyId(image, widget)
+    const src = id && images.get(id)
     return src ? { kind: 'image', src } : undefined
   }
 
@@ -590,6 +647,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return
     // An unanswered trigger stops the check, so a later trigger never wins over one that could not be checked.
     for (const transition of from.next) {
+      if (find(widget.scope, widget.widgetId)?.revision !== widget.revision)
+        return
       const fired = await evaluateTrigger(transition.on, chain, at)
       if (fired === undefined)
         return
@@ -639,7 +698,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at }))
         return
       }
-      logger.warn('Widget refresh failed', key, result.error)
+      // Not the error, which quotes the URL: it can be a secret, and the log can be shared.
+      logger.warn('Widget refresh failed', key, result.status ?? (result.transient ? 'unreachable' : 'refused'))
       // Without a token there is nothing to reconnect: it may be a firewall's passing 403, and nothing would ever resume it.
       const halted = result.status === 410 ? 'gone' : widget.token && (result.status === 401 || result.status === 403) ? 'reconnect' : undefined
       if (halted) {
@@ -711,20 +771,25 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function pinsOf(widget: HomeWidget, list: (WidgetImage | undefined)[]): ImagePin[] {
     const { scope, retryNotBefore: notBefore } = widget
     const token = widget.halted || widget.network !== network ? undefined : widget.token
-    const tokenId = token ? widget.tokenId ?? 0 : undefined
-    return list.flatMap(image => !image ? [] : [image.sendToken ? { image, scope, token, tokenId, notBefore } : { image, scope }])
+    return list.flatMap((image) => {
+      const id = image && copyId(image, widget)
+      if (!image || !id)
+        return []
+      return [image.sendToken ? { image, id, scope, token, notBefore } : { image, id, scope }]
+    })
   }
 
   // Cards that draw one first, so one widget's later states cannot take the budget of another's image on screen.
-  const pinnedImages = computed(() => uniqueImages([
+  // Every widget's own, not one per image: of two that name it, one can be told to wait.
+  const pinnedImages = computed(() => [
     ...running.value.filter(w => w.size !== 'icon').flatMap(w => pinsOf(w, [imageIn(shownContent(w, now.value), w.definition.images)])),
     ...[...widgets.value, ...stored.value].flatMap(w => pinsOf(w, imagesOf(w))),
-  ]))
-  const pinnedIds = computed(() => new Set(pinnedImages.value.map(({ image }) => imageId(image))))
+  ])
+  const pinnedIds = computed(() => new Set(pinnedImages.value.map(({ id }) => id)))
 
   async function keepImages() {
-    const unknown = new Set(pinnedImages.value.map(({ image }) => imageId(image)).filter(id => !images.has(id) && !absentImages.has(id) && !isBusy(id)))
-    await Promise.all([...unknown].map(readSavedImage))
+    const unknown = [...pinnedIds.value].filter(id => !images.has(id) && !absentImages.has(id) && !isBusy(id))
+    await Promise.all(unknown.map(readSavedImage))
     downloadMissing()
   }
 
@@ -735,7 +800,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // A busy id is freed only once it is done, so that a delete never lands on a copy that is wanted again.
   function freeIfUnwanted(id: string) {
     if (!pinnedIds.value.has(id))
-      void kv().removeItem(imageKey(id))
+      Promise.resolve(kv().removeItem(imageKey(id))).catch(error => logger.warn('Could not free a widget image', error))
   }
 
   async function readSavedImage(id: string) {
@@ -765,16 +830,15 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return !image.sendToken || (!!token && at >= (notBefore ?? 0))
   }
 
-  function mayRetry({ image, tokenId }: ImagePin, at: number): boolean {
+  function mayRetry({ image, id }: ImagePin, at: number): boolean {
     const failure = imageFailures.value[failureKey(image)]
     if (!failure || at >= failure.retryAt)
       return true
-    return tokenId !== undefined && !!failure.refused && !failure.refused.includes(tokenId)
+    return !!failure.refused && !failure.refused.includes(sha256Hex(id))
   }
 
   function mayKeep(pin: ImagePin, at: number): boolean {
-    const { image, scope } = pin
-    const id = imageId(image)
+    const { id, scope } = pin
     if (!absentImages.has(id) || images.has(id) || isBusy(id))
       return false
     if (takenPreviews.has(id))
@@ -799,8 +863,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   async function keepImage(pin: ImagePin, at: number) {
-    const { image, scope } = pin
-    const id = imageId(image)
+    const { image, id, scope } = pin
     const preview = takenPreviews.get(id)
     downloading.add(id)
     const key = failureKey(image)
@@ -815,8 +878,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
           kv().setItem(IMAGE_FAILURES_KEY, JSON.stringify(imageFailures.value)),
         ])
         // A token can be cleared, a widget removed or a Mini App opened during those writes.
-        const current = pinnedImages.value.find(other => pinKey(other) === pinKey(pin))
-        if (!current || !mayRequest(current, at)) {
+        if (!pinnedImages.value.some(other => pinKey(other) === pinKey(pin) && mayRequest(other, at))) {
           setFailure(key, failedBefore)
           return
         }
@@ -834,11 +896,11 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       }
       // The widget can be removed or change during the download.
       if (!pinnedIds.value.has(id)) {
-        forgetFailures(id)
+        setFailure(key, undefined)
         return
       }
       await kv().setItem(imageKey(id), result.value)
-      forgetFailures(id)
+      setFailure(key, undefined)
       if (!pinnedIds.value.has(id))
         return
       // Drawn only once saved, as the image before it is freed as soon as this one is drawn.
@@ -868,21 +930,22 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     imageFailures.value = failure ? { ...others, [key]: failure } : others
   }
 
-  function noteFailure({ image, tokenId }: ImagePin, result: { status?: number, retryAfterMs?: number }, at: number, failedBefore?: ImageFailure) {
+  function noteFailure({ image, id }: ImagePin, result: { status?: number, retryAfterMs?: number }, at: number, failedBefore?: ImageFailure) {
     const key = failureKey(image)
     const attempt = imageFailures.value[key]
     if (!attempt)
       return
     const retryAt = Math.max(attempt.retryAt, at + Math.min(result.retryAfterMs ?? 0, DAY_MS))
-    const refused = tokenId !== undefined && (result.status === 401 || result.status === 403)
-      ? [...(failedBefore?.refused ?? []), tokenId].slice(-WIDGET_LIMITS.widgetsOnHome)
+    const refused = image.sendToken && (result.status === 401 || result.status === 403)
+      ? [...(failedBefore?.refused ?? []), sha256Hex(id)].slice(-WIDGET_LIMITS.widgetsOnHome)
       : undefined
     setFailure(key, { count: attempt.count, retryAt, refused })
   }
 
   function forgetFailures(id: string) {
     const all = Object.entries(imageFailures.value)
-    const others = all.filter(([key]) => !key.startsWith(`${id} `))
+    const prefix = `${sha256Hex(id)} `
+    const others = all.filter(([key]) => !key.startsWith(prefix))
     if (others.length < all.length)
       imageFailures.value = Object.fromEntries(others)
   }
@@ -891,8 +954,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function removeWhere(matches: (w: HomeWidget) => boolean) {
     const removed = stored.value.filter(matches)
     stored.value = stored.value.filter(w => !matches(w))
+    const stillNamed = new Set(stored.value.flatMap(imagesOf).map(imageId))
     for (const id of removed.flatMap(imagesOf).map(imageId)) {
-      if (!pinnedIds.value.has(id))
+      if (!stillNamed.has(id))
         forgetFailures(id)
     }
   }
@@ -900,9 +964,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   watch(isMiniAppActive, active => !active && void keepImages())
 
   const imagesToShow = computed(() => stored.value.map(w => imageToShow(w, shownContent(w, now.value))))
-  // The one writer of `shownImage`, from what the view draws. It runs before Vue renders, so nothing is drawn unrecorded.
+  // Records what the view draws. It runs before Vue renders, so nothing is drawn unrecorded.
   watch(imagesToShow, (list) => {
-    if (list.some((image, i) => image?.sha256 !== stored.value[i]!.shownImage?.sha256))
+    if (stored.value.some(({ shownImage }, i) => shownImage?.sha256 !== list[i]?.sha256 || shownImage?.sendToken !== list[i]?.sendToken))
       stored.value = stored.value.map((w, i) => ({ ...w, shownImage: list[i] }))
   })
 
@@ -918,7 +982,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     }
   })
   // Not with the ids alone: a token, or the end of a reconnect, makes an image downloadable.
-  watch(() => pinnedImages.value.map(pinKey).join('\n'), (keys) => {
+  watch(() => [...new Set(pinnedImages.value.map(pinKey))].join('\n'), (keys) => {
     const current = new Set(keys.split('\n'))
     for (const [key, request] of tokenRequests) {
       if (!current.has(key))
@@ -936,14 +1000,13 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         ? []
         : file.widgets.flatMap((definition) => {
             const image = imageIn(previewContent(definition), definition.images)
-            return image && !image.sendToken && definition.sizes[0] !== 'icon' && !isOnHome(scope, definition.id) ? [{ image, scope }] : []
+            return image && !image.sendToken && definition.sizes[0] !== 'icon' && !isOnHome(scope, definition.id) ? [{ image, id: imageId(image), scope }] : []
           })
     })
-    await inTurns(uniqueImages(wanted), async ({ image, scope }) => {
-      const id = imageId(image)
+    await inTurns([...new Map(wanted.map(entry => [pinKey(entry), entry])).values()], async ({ image, id, scope }) => {
       if (session !== previewSession || images.has(id) || previews.has(id))
         return
-      const result = await downloadImage({ image, scope })
+      const result = await downloadImage({ image, id, scope })
       if (result.ok && session === previewSession)
         previews.set(id, result.value)
     })

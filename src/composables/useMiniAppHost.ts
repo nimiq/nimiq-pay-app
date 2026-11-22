@@ -19,7 +19,7 @@ import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { isMiniAppActive } from '@/lib/mini-app-active'
-import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
+import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
@@ -295,6 +295,7 @@ export class MiniAppHost {
   private widgetSheets: Promise<void> = Promise.resolve()
   private sheets: Promise<unknown> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
+  private widgetWrites: Promise<unknown> = Promise.resolve()
   private lastPageUrl: string | null = null
   /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
   private sessionUrl: string
@@ -1505,10 +1506,12 @@ export class MiniAppHost {
         const id = widgetIdParam(message.params)
         if (!this.canChangeWidgets())
           return
-        const found = await useMiniAppWidgets().discover(this.sessionUrl)
-        if (found.ok)
-          useMiniAppWidgets().remove(found.value.scope, id)
-        return
+        const url = this.sessionUrl
+        return this.inArrivalOrder(async () => {
+          const found = await useMiniAppWidgets().discover(url)
+          if (found.ok && !this.destroyed)
+            useMiniAppWidgets().remove(found.value.scope, id)
+        })
       }
       case 'widgets.list': {
         if (!this.canChangeWidgets())
@@ -1618,23 +1621,42 @@ export class MiniAppHost {
       throw new InvalidRequestError(`token must be null or at most ${WIDGET_LIMITS.tokenLength} visible ASCII characters`)
     if (!this.canChangeWidgets())
       return false
-    const found = await useMiniAppWidgets().discover(this.sessionUrl)
-    return found.ok && useMiniAppWidgets().setToken(found.value.scope, id, token as string | null)
+    const url = this.sessionUrl
+    return this.inArrivalOrder(async () => {
+      const widgets = useMiniAppWidgets()
+      if (token === null) {
+        // From what is stored, and after closing too: a sign-out must not need the network or be lost.
+        const scope = widgetScopeCandidates(url).find(candidate => widgets.isOnHome(candidate, id))
+        return !!scope && widgets.setToken(scope, id, null)
+      }
+      const found = await widgets.discover(url)
+      return found.ok && !this.destroyed && widgets.setToken(found.value.scope, id, token as string)
+    })
+  }
+
+  /** So that a call made before a sign-out can't land after it. */
+  private inArrivalOrder<T>(write: () => Promise<T>): Promise<T> {
+    const turn = this.widgetWrites.then(write)
+    this.widgetWrites = turn.catch(() => {})
+    return turn
   }
 
   private async updateWidget(params: unknown): Promise<boolean> {
     const id = widgetIdParam(params)
     if (!this.canChangeWidgets())
       return false
-    const found = await useMiniAppWidgets().discover(this.sessionUrl)
-    if (!found.ok)
-      return false
-    const raw = (params as { state?: unknown }).state ?? null
-    const { scope } = found.value
-    const parsed = parseWidgetState(raw, { origin: new URL(scope).origin, base: scope, now: Date.now(), allowInsecure: isDev })
-    if (!parsed.ok)
-      throw new InvalidRequestError(`Invalid widget state: ${parsed.error}`)
-    return useMiniAppWidgets().update(scope, id, parsed.value)
+    const url = this.sessionUrl
+    return this.inArrivalOrder(async () => {
+      const found = await useMiniAppWidgets().discover(url)
+      if (!found.ok || this.destroyed)
+        return false
+      const raw = (params as { state?: unknown }).state ?? null
+      const { scope } = found.value
+      const parsed = parseWidgetState(raw, { origin: new URL(scope).origin, base: scope, now: Date.now(), allowInsecure: isDev })
+      if (!parsed.ok)
+        throw new InvalidRequestError(`Invalid widget state: ${parsed.error}`)
+      return useMiniAppWidgets().update(scope, id, parsed.value)
+    })
   }
 
   private async requestDeviceIdentifier(params: unknown): Promise<string> {

@@ -340,11 +340,99 @@ describe('widgets.add', () => {
 
 describe('widgets.setToken', () => {
   it('stores a token for the Mini App\'s scope, and clears it with null', async () => {
+    widgets.isOnHome.mockReturnValue(true)
     const { request } = createHost()
     await request('widgets.setToken', { id: 'swap', token: 'opaque' })
     expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', 'opaque')
     await request('widgets.setToken', { id: 'swap', token: null })
     expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', null)
+  })
+
+  describe('so that a sign-out holds', () => {
+    const found = { ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } }
+    const slowSearch = () => {
+      let answer!: () => void
+      widgets.discover.mockReturnValueOnce(new Promise((resolve) => {
+        answer = () => resolve(found)
+      }))
+      return () => answer()
+    }
+
+    beforeEach(() => {
+      widgets.isOnHome.mockReturnValue(true)
+    })
+
+    it('lets no earlier token land after a clear', async () => {
+      const answer = slowSearch()
+      const { request } = createHost()
+      const calls = [request('widgets.setToken', { id: 'swap', token: 'a' }), request('widgets.setToken', { id: 'swap', token: null })]
+      await flushPromises()
+      answer()
+      await Promise.all(calls)
+      expect(widgets.setToken.mock.calls).toEqual([[SCOPE, 'swap', 'a'], [SCOPE, 'swap', null]])
+    })
+
+    it('lets no earlier state land after a switch', async () => {
+      const answer = slowSearch()
+      const { request } = createHost()
+      const calls = [request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } }), request('widgets.setToken', { id: 'swap', token: 'b' })]
+      await flushPromises()
+      answer()
+      await Promise.all(calls)
+      expect(widgets.update.mock.invocationCallOrder[0]).toBeLessThan(widgets.setToken.mock.invocationCallOrder[0]!)
+    })
+
+    it.each([
+      ['widgets.setToken', { id: 'swap', token: 'a' }],
+      ['widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } }],
+      ['widgets.remove', { id: 'swap' }],
+    ])('applies no %s whose search ends after the Mini App closed', async (name, params) => {
+      const answer = slowSearch()
+      const { host, request } = createHost()
+      const call = request(name, params)
+      await flushPromises()
+      await host.destroy()
+      answer()
+      await call
+      expect(widgets.setToken).not.toHaveBeenCalled()
+      expect(widgets.update).not.toHaveBeenCalled()
+      expect(widgets.remove).not.toHaveBeenCalled()
+    })
+
+    it('never loses a clear to closing right after it', async () => {
+      const answer = slowSearch()
+      const { host, request } = createHost()
+      const earlier = request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } })
+      const clear = request('widgets.setToken', { id: 'swap', token: null })
+      await flushPromises()
+      await host.destroy()
+      answer()
+      await Promise.all([earlier, clear])
+      expect(widgets.update).not.toHaveBeenCalled()
+      expect(widgets.setToken).toHaveBeenCalledWith(SCOPE, 'swap', null)
+    })
+
+    it('needs no widget file to clear, so neither the network nor a block stops one', async () => {
+      widgets.discover.mockResolvedValue({ ok: false, error: 'offline', transient: true })
+      const { request } = createHost()
+      await expect(request('widgets.setToken', { id: 'swap', token: null })).resolves.toBe(true)
+      expect(widgets.setToken).toHaveBeenCalledWith(SCOPE, 'swap', null)
+      expect(widgets.discover).not.toHaveBeenCalled()
+    })
+
+    it('clears only a widget on Home in the folders above the page', async () => {
+      widgets.isOnHome.mockReturnValue(false)
+      const { request } = createHost()
+      await expect(request('widgets.setToken', { id: 'swap', token: null })).resolves.toBe(false)
+      expect(widgets.setToken).not.toHaveBeenCalled()
+    })
+
+    it('carries on after a call that was invalid', async () => {
+      const { request } = createHost()
+      const invalid = request('widgets.update', { id: 'swap', state: { content: { value: { text: 'x' }, path: 42 } } }).catch(() => {})
+      await expect(request('widgets.setToken', { id: 'swap', token: 'b' })).resolves.toBe(true)
+      await invalid
+    })
   })
 
   it('keeps the token out of the logs, also for a refused one', async () => {

@@ -35,6 +35,7 @@ export enum SQLQuery {
   // Key-Value Store
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
   SelectKv = 'SELECT value FROM kv WHERE key = ?',
+  SelectKvKeysLike = 'SELECT key FROM kv WHERE key LIKE ?',
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 

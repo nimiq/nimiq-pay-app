@@ -38,6 +38,8 @@ vi.mock('@/lib/mini-app-widget-sources', () => ({ fetchWidgetFile, fetchWidgetIm
 vi.mock('@/stores/app', () => ({
   kv: () => ({
     getItem: async (key: string) => {
+      if (key === 'miniAppWidgets' && key === storedRead.failingRead)
+        throw new Error('read failed')
       if (key === 'miniAppWidgetFetches')
         await storedRead.fetches
       if (key === 'miniAppWidgetImageFetches')
@@ -65,6 +67,9 @@ vi.mock('@/stores/app', () => ({
     removeItem: async (key: string) => { memory.delete(key) },
   }),
   useApp: () => app,
+}))
+vi.mock('@/stores/conn', () => ({
+  useConn: () => ({ query: async (_statement: string, [like]: [string]) => [...memory.keys()].filter(key => key.startsWith(like.slice(0, -1))).map(key => ({ key })) }),
 }))
 vi.mock('@/stores/mini-apps', () => ({
   stripTrailingSlash: (url: string) => url.replace(/\/$/, ''),
@@ -691,7 +696,7 @@ describe('what a refresh server answers', () => {
     await store.tick({ chain: fakeChain(), at: NEXT, force: true })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
     fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
-    expect(store.setToken(SCOPE, 'swap', 'fresh')).toBe(true)
+    expect(await store.setToken(SCOPE, 'swap', 'fresh')).toBe(true)
     expect(store.views[0]!.reconnect).toBe(false)
     await store.tick({ chain: fakeChain(), at: NEXT + 60_000 })
     expect(fetchWidgetRefresh.mock.calls[0]![4].token).toBe('fresh')
@@ -759,7 +764,7 @@ describe('what a refresh server answers', () => {
   })
 
   it('answers false for a token on a widget not on Home', async () => {
-    expect((await setup()).setToken(SCOPE, 'swap', 'x')).toBe(false)
+    expect(await (await setup()).setToken(SCOPE, 'swap', 'x')).toBe(false)
   })
 
   it('treats a 401 without a token as an ordinary failure, since there is nothing to reconnect', async () => {
@@ -928,6 +933,8 @@ describe('images', () => {
   const IMAGE_KEY = (hash: string, origin = 'https://swap.example') => `miniAppWidgetImage:${origin} ${hash}`
   const drawn = (hash: string) => ({ kind: 'image', src: `data:image/png;base64,${hash}` })
   const image = (name: string, sha256: string) => ({ url: url(name), sha256 })
+  const asking = (name: string, sha256: string) => ({ ...image(name, sha256), sendToken: true as const })
+  const tokensSent = () => fetchWidgetImage.mock.calls.map(([asked, , token]) => [asked.url, token])
   const showing = (background: object, extra: Partial<WidgetState> = {}) => ({ content: { value: { text: 'y' }, tone: 'neutral', rows: [], background }, next: [], ...extra }) as WidgetState
   const settle = async () => {
     for (let i = 0; i < 3; i++)
@@ -1579,7 +1586,7 @@ describe('images', () => {
     store.add(SCOPE, old)
     await settle()
     expect(storedBefore[0]).toContain(String(NOW))
-    expect(storedBefore[1]).toContain(OLD)
+    expect(storedBefore[1]).toContain(sha256Hex(`https://swap.example ${OLD}`))
   })
 
   it('makes no attempt it could not store', async () => {
@@ -1665,9 +1672,6 @@ describe('images', () => {
   })
 
   describe('an image that asks for the token', () => {
-    const asking = (name: string, sha256: string) => ({ ...image(name, sha256), sendToken: true as const })
-    const tokensSent = () => fetchWidgetImage.mock.calls.map(([asked, , token]) => [asked.url, token])
-
     it('gets the token of its own widget, and no sibling\'s', async () => {
       const store = await setup()
       store.add(SCOPE, pictured({ hero: asking('waits', OLD) }, 'waits'))
@@ -1949,6 +1953,430 @@ describe('images', () => {
       await store.loadGallery([SCOPE])
       await store.loadPreviewImages([SCOPE])
       expect(fetchWidgetImage).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('a token\'s images', () => {
+    const copies = (hash: string) => [...memory.keys()].filter(key => key.startsWith(IMAGE_KEY(hash)))
+    const signedIn = async (resting: WidgetDefinition = definition()) => {
+      const store = await setup()
+      store.add(SCOPE, resting)
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      await settle()
+      expect(store.views[0]!.background).toEqual(drawn(OLD))
+      fetchWidgetImage.mockClear()
+      return store
+    }
+
+    it('go at once when the token is cleared, also while the Mini App is open, and stay gone after a restart', async () => {
+      const store = await signedIn()
+      isMiniAppActive.value = true
+      store.setToken(SCOPE, 'swap', null)
+      expect(store.views[0]!.background).toBeUndefined()
+      await settle()
+      expect(copies(OLD)).toEqual([])
+      const restarted = await setup()
+      await settle()
+      expect(restarted.views[0]!.background).toBeUndefined()
+    })
+
+    it('never stand in for the next account\'s while that one loads or keeps failing', async () => {
+      const store = await signedIn()
+      fetchWidgetImage.mockResolvedValue({ ok: false, error: 'down', transient: true })
+      store.setToken(SCOPE, 'swap', 'token-b')
+      store.update(SCOPE, 'swap', showing({ image: asking('b', NEW) }))
+      expect(store.views[0]!.background).toBeUndefined()
+      await settle()
+      expect(store.views[0]!.background).toBeUndefined()
+      expect(copies(OLD)).toEqual([])
+      expect(tokensSent()).toEqual([[url('b'), 'token-b']])
+    })
+
+    it('are fetched again, not reused, when another token shows the same one', async () => {
+      const store = await signedIn(pictured({ hero: asking('a', OLD) }))
+      fetchWidgetImage.mockReturnValue(new Promise(() => {}))
+      store.setToken(SCOPE, 'swap', 'token-b')
+      await settle()
+      expect(store.views[0]!.background).toBeUndefined()
+      expect(tokensSent()).toEqual([[url('a'), 'token-b']])
+    })
+
+    it('stay, with no request, when the same token is set again', async () => {
+      const store = await signedIn()
+      store.setToken(SCOPE, 'swap', 'token-a')
+      await settle()
+      expect(store.views[0]!.background).toEqual(drawn(OLD))
+      expect(fetchWidgetImage).not.toHaveBeenCalled()
+    })
+
+    it('leave the widget\'s plain images alone', async () => {
+      const store = await signedIn(pictured({ hero: image('plain', NEW) }))
+      store.update(SCOPE, 'swap', null)
+      await settle()
+      store.setToken(SCOPE, 'swap', null)
+      await settle()
+      expect(store.views[0]!.background).toEqual(drawn(NEW))
+      expect(copies(NEW)).toHaveLength(1)
+    })
+
+    it('are not drawn by a widget that has another token or none', async () => {
+      const store = await signedIn()
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }, 'other'))
+      await settle()
+      expect(store.views.find(view => view.widgetId === 'other')!.background).toBeUndefined()
+    })
+
+    it('are shared by a site\'s widgets with the same token, and kept while one of them has it', async () => {
+      const store = await signedIn()
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }, 'other'))
+      store.setToken(SCOPE, 'other', 'token-a')
+      await settle()
+      expect(fetchWidgetImage).not.toHaveBeenCalled()
+      store.setToken(SCOPE, 'swap', null)
+      await settle()
+      expect(store.views.find(view => view.widgetId === 'swap')!.background).toBeUndefined()
+      expect(store.views.find(view => view.widgetId === 'other')!.background).toEqual(drawn(OLD))
+      expect(copies(OLD)).toHaveLength(1)
+    })
+
+    it('are not saved when their download ends after the token went', async () => {
+      const store = await setup()
+      const download = deferred<object>()
+      fetchWidgetImage.mockReturnValueOnce(download.promise)
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      await settle()
+      store.setToken(SCOPE, 'swap', null)
+      download.resolve({ ok: true, value: drawn(OLD).src })
+      await settle()
+      expect(store.views[0]!.background).toBeUndefined()
+      expect(copies(OLD)).toEqual([])
+    })
+
+    it('go when the token is cleared before the stored images were read', async () => {
+      await signedIn()
+      const read = deferred<void>()
+      storedRead.images = read.promise
+      const restarted = await setup()
+      restarted.setToken(SCOPE, 'swap', null)
+      read.resolve()
+      await settle()
+      expect(restarted.views[0]!.background).toBeUndefined()
+      expect(copies(OLD)).toEqual([])
+    })
+
+    it('are not drawn in the gallery from a copy on Home', async () => {
+      const store = await signedIn()
+      expect(store.previewView(SCOPE, pictured({ hero: asking('a', OLD) }, 'other')).background).toBeUndefined()
+    })
+
+    it('leave a plain copy of the same bytes alone', async () => {
+      const store = await signedIn(pictured({ hero: image('a', OLD) }))
+      store.setToken(SCOPE, 'swap', null)
+      await settle()
+      expect(store.views[0]!.background).toEqual(drawn(OLD))
+    })
+
+    it('still download for a widget whose sibling with the same token is paused', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ id: 'other' }))
+      store.add(SCOPE, definition())
+      store.setToken(SCOPE, 'other', 'token-a')
+      store.setToken(SCOPE, 'swap', 'token-a')
+      isMiniAppActive.value = true
+      store.update(SCOPE, 'other', showing({ image: asking('a', OLD) }))
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }, { refresh: { url: `${SCOPE}w`, every: 60 } }))
+      fetchWidgetRefresh.mockResolvedValue({ ok: false, error: '401', transient: false, status: 401 })
+      await tickAt(store, NOW + 120_000)
+      fetchWidgetImage.mockClear()
+      isMiniAppActive.value = false
+      await settle()
+      expect(tokensSent()).toEqual([[url('a'), 'token-a']])
+    })
+
+    it('keep their back-off when the widget with the token goes but another still names them', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockResolvedValue({ ok: false, error: 'down', transient: true })
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      await settle()
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }, 'other'))
+      store.remove(SCOPE, 'swap')
+      await settle()
+      fetchWidgetImage.mockClear()
+      store.setToken(SCOPE, 'other', 'token-b')
+      await settle()
+      expect(fetchWidgetImage).not.toHaveBeenCalled()
+    })
+
+    it('still download for a widget whose sibling with the same token was told to wait', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ id: 'other' }))
+      store.add(SCOPE, definition())
+      store.setToken(SCOPE, 'other', 'token-a')
+      store.setToken(SCOPE, 'swap', 'token-a')
+      isMiniAppActive.value = true
+      store.update(SCOPE, 'other', showing({ image: asking('a', OLD) }))
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }, { refresh: { url: `${SCOPE}w`, every: 60 } }))
+      fetchWidgetRefresh.mockResolvedValue({ ok: false, error: '429', transient: true, status: 429, retryAfterMs: 3600_000 })
+      await tickAt(store, NOW + 120_000)
+      fetchWidgetImage.mockClear()
+      isMiniAppActive.value = false
+      await settle()
+      expect(tokensSent()).toEqual([[url('a'), 'token-a']])
+    })
+
+    it('stay when a refresh is refused, as the token is still there', async () => {
+      const store = await signedIn()
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }, { refresh: { url: `${SCOPE}w`, every: 60 } }))
+      fetchWidgetRefresh.mockResolvedValue({ ok: false, error: '401', transient: false, status: 401 })
+      await tickAt(store, NOW + 120_000)
+      expect(store.views[0]!.reconnect).toBe(true)
+      expect(store.views[0]!.background).toEqual(drawn(OLD))
+    })
+  })
+
+  describe('what else is linked to a token', () => {
+    const connected = async (resting: WidgetDefinition = definition()) => {
+      const store = await setup()
+      store.add(SCOPE, resting)
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', live('Balance of A', { next: [{ on: { at: NOW + 60_000 }, state: live('Later, of A') }] }))
+      await settle()
+      return store
+    }
+
+    it.each([['cleared', null], ['replaced', 'token-b']])('goes at once when it is %s, text and later states included, and stays gone after a restart', async (_, token) => {
+      const store = await connected()
+      store.setToken(SCOPE, 'swap', token)
+      expect(store.views[0]).toMatchObject({ label: undefined, value: { text: 'Start a swap' } })
+      await settle()
+      expect(memory.get('miniAppWidgets')).not.toContain('of A')
+      const restarted = await setup()
+      await tickAt(restarted, NOW + 120_000)
+      expect(restarted.views[0]).toMatchObject({ label: undefined, value: { text: 'Start a swap' } })
+    })
+
+    it('stays with the same token', async () => {
+      const store = await connected()
+      store.setToken(SCOPE, 'swap', 'token-a')
+      expect(store.views[0]!.label).toBe('Balance of A')
+    })
+
+    it('is nothing before a first token, so the first state can be pushed before it', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition())
+      store.update(SCOPE, 'swap', live('Order A-42'))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      expect(store.views[0]!.label).toBe('Order A-42')
+    })
+
+    it('never comes back with an answer to the token before', async () => {
+      const store = await connected()
+      store.update(SCOPE, 'swap', live('Balance of A', { refresh: { url: `${SCOPE}w`, every: 60 } }))
+      const answer = deferred<object>()
+      fetchWidgetRefresh.mockReturnValueOnce(answer.promise)
+      vi.setSystemTime(NOW + 120_000)
+      const ticked = store.tick({ chain: fakeChain(), at: NOW + 120_000 })
+      await flushPromises()
+      store.setToken(SCOPE, 'swap', 'token-b')
+      answer.resolve({ ok: true, value: live('Newer, of A') })
+      await ticked
+      expect(store.views[0]!.label).toBeUndefined()
+    })
+
+    it('makes way for the file\'s refresh at the next check, with the new token', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 3600 } }))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      fetchWidgetRefresh.mockResolvedValue({ ok: true, value: live('Balance of A') })
+      await tickAt(store, NOW)
+      fetchWidgetRefresh.mockClear()
+      store.setToken(SCOPE, 'swap', 'token-b')
+      await tickAt(store, NOW + 15_000)
+      expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+      expect(fetchWidgetRefresh.mock.calls[0]![4]).toMatchObject({ token: 'token-b' })
+    })
+
+    it('takes a plain image the state showed, also while the file\'s loads', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockImplementation(async (asked: { sha256: string }) => asked.sha256 === NEW ? { ok: false, error: 'down', transient: true } : { ok: true, value: drawn(asked.sha256).src })
+      store.add(SCOPE, pictured({ hero: image('rest', NEW) }))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', showing({ image: image('secret-of-a', OLD) }))
+      await settle()
+      expect(store.views[0]!.background).toEqual(drawn(OLD))
+      store.setToken(SCOPE, 'swap', null)
+      expect(store.views[0]!.background).toBeUndefined()
+      await settle()
+      expect(store.views[0]!.background).toBeUndefined()
+    })
+
+    it('leaves no image URL in the back-off records, as one can be a secret', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockResolvedValue({ ok: false, error: 'down', transient: true })
+      store.add(SCOPE, pictured({ hero: image('secret-of-a', OLD) }))
+      await settle()
+      expect(memory.get('miniAppWidgetImageFailures')).not.toContain('secret-of-a')
+    })
+
+    it('is reported gone only once that is stored', async () => {
+      const store = await connected()
+      storedRead.failingWrite = 'miniAppWidgets'
+      expect(await store.setToken(SCOPE, 'swap', null)).toBe(false)
+      expect(store.views[0]!.label).toBeUndefined()
+      storedRead.failingWrite = ''
+      expect(await store.setToken(SCOPE, 'swap', null)).toBe(true)
+      expect(memory.get('miniAppWidgets')).not.toContain('of A')
+    })
+
+    it('leaves no image behind a delete that never happened', async () => {
+      const first = await setup()
+      first.add(SCOPE, pictured({ hero: image('rest', NEW) }))
+      await settle()
+      const left = `${IMAGE_KEY(OLD)} 12345`
+      memory.set(left, drawn(OLD).src)
+      const second = await setup()
+      await settle()
+      expect(memory.has(left)).toBe(false)
+      expect(memory.has(IMAGE_KEY(NEW))).toBe(true)
+      expect(second.views[0]!.background).toEqual(drawn(NEW))
+    })
+
+    it.each(['unreadable', 'garbled'])('takes no image on the strength of widgets that are %s', async (how) => {
+      memory.set('miniAppWidgets', how === 'garbled' ? '[{' : '[]')
+      if (how === 'unreadable')
+        storedRead.failingRead = 'miniAppWidgets'
+      memory.set(IMAGE_KEY(OLD), drawn(OLD).src)
+      await setup()
+      await settle()
+      expect(memory.has(IMAGE_KEY(OLD))).toBe(true)
+    })
+
+    it('doesn\'t keep the next account waiting for the refresh after a clear', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 86_400 } }))
+      store.setToken(SCOPE, 'swap', 'token-a')
+      fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+      await tickAt(store, NOW)
+      store.setToken(SCOPE, 'swap', null)
+      await tickAt(store, NOW + 15_000)
+      fetchWidgetRefresh.mockClear()
+      store.setToken(SCOPE, 'swap', 'token-b')
+      await tickAt(store, NOW + 30_000)
+      expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+      expect(fetchWidgetRefresh.mock.calls[0]![4]).toMatchObject({ token: 'token-b' })
+    })
+
+    it('asks a failing server about renewed tokens no more than the budget allows', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }))
+      fetchWidgetRefresh.mockResolvedValue({ ok: false, error: '500', transient: true, status: 500 })
+      for (let i = 0; i < 100; i++) {
+        store.setToken(SCOPE, 'swap', `token-${i}`)
+        await tickAt(store, NOW + i * 15_000)
+      }
+      const { windowMs, max } = WIDGET_LIMITS.refreshBudgets[0]!
+      expect(fetchWidgetRefresh.mock.calls.length).toBeLessThanOrEqual(max * Math.ceil(100 * 15_000 / windowMs) + 1)
+    })
+
+    it('never takes an answer back after a restart, even with the clock where it was', async () => {
+      const first = await setup()
+      first.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }))
+      first.setToken(SCOPE, 'swap', 'token-a')
+      await settle()
+      const second = await setup()
+      const answer = deferred<object>()
+      fetchWidgetRefresh.mockReturnValueOnce(answer.promise)
+      const ticked = second.tick({ chain: fakeChain(), at: NOW })
+      await flushPromises()
+      expect(fetchWidgetRefresh).toHaveBeenCalled()
+      second.setToken(SCOPE, 'swap', null)
+      answer.resolve({ ok: true, value: live('Newer, of A') })
+      await ticked
+      expect(second.views[0]!.label).toBeUndefined()
+    })
+
+    it('is not looked up on the chain any more', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition())
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', live('Of A', { next: triggers(2, 7) }))
+      await settle()
+      const first = deferred<'pending'>()
+      const lookup = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue('pending')
+      const ticked = store.tick({ chain: fakeChain({ nimiqTransaction: lookup }), at: NOW + 1000 })
+      await flushPromises()
+      store.setToken(SCOPE, 'swap', null)
+      first.resolve('pending')
+      await ticked
+      expect(lookup).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves nothing legible of its images in the back-off records', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockResolvedValue({ ok: false, error: '401', transient: false, status: 401 })
+      store.add(SCOPE, definition())
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      await settle()
+      const records = memory.get('miniAppWidgetImageFailures')!
+      expect(records).toContain('refused')
+      expect(records).not.toContain(OLD)
+    })
+
+    it('leaves a server\'s Retry-After in place for the next token', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockResolvedValue({ ok: false, error: '503', transient: true, status: 503, retryAfterMs: 20 * 3600_000 })
+      store.add(SCOPE, definition())
+      store.setToken(SCOPE, 'swap', 'token-a')
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      await settle()
+      expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+      store.setToken(SCOPE, 'swap', 'token-b')
+      await settle()
+      store.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      await settle()
+      expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
+    })
+
+    it('resets no other copy\'s back-off when a token\'s image arrives', async () => {
+      const store = await setup()
+      fetchWidgetImage.mockImplementation(async (asked: { sendToken?: boolean }) => asked.sendToken ? { ok: true, value: drawn(OLD).src } : { ok: false, error: '404', transient: false, status: 404 })
+      store.add(SCOPE, pictured({ hero: image('plain', OLD) }))
+      await settle()
+      store.add(SCOPE, pictured({ hero: asking('a', OLD) }, 'other'))
+      for (const token of ['t1', 't2', 't3']) {
+        store.setToken(SCOPE, 'other', token)
+        await settle()
+      }
+      expect(fetchWidgetImage.mock.calls.filter(([asked]) => !asked.sendToken)).toHaveLength(1)
+    })
+
+    it('never reaches the log through a refresh URL, as the log can be shared', async () => {
+      const store = await setup()
+      store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w?id=secret-of-a`, every: 60 } }))
+      fetchWidgetRefresh.mockResolvedValue({ ok: false, error: `${SCOPE}w?id=secret-of-a answered 500`, transient: true, status: 500 })
+      await tickAt(store, NOW)
+      expect(logged).toHaveBeenCalled()
+      expect(JSON.stringify(logged.mock.calls)).not.toContain('secret-of-a')
+    })
+
+    it('is told apart after a restart, even with the clock where it was', async () => {
+      const first = await setup()
+      first.add(SCOPE, definition())
+      first.setToken(SCOPE, 'swap', 'token-a')
+      first.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      await settle()
+      expect(first.views[0]!.background).toEqual(drawn(OLD))
+      const second = await setup()
+      await settle()
+      fetchWidgetImage.mockReturnValue(new Promise(() => {}))
+      second.update(SCOPE, 'swap', null)
+      second.setToken(SCOPE, 'swap', 'token-b')
+      second.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
+      expect(second.views[0]!.background).toBeUndefined()
     })
   })
 

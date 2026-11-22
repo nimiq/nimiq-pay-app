@@ -128,6 +128,7 @@ describe('migration of the HTLC history check', () => {
     applyMigrations('INSERT INTO remote_signers (address, balance, active) VALUES (\'NQ11 TEST\', 1, 1)')
 
     expect(db.prepare(SQLQuery.SelectKv).get(HTLC_HISTORY_CHECKED_KV_KEY)).toEqual({ value: '1' })
+    expect(db.prepare(SQLQuery.SelectKvKeysLike).all(`${HTLC_HISTORY_CHECKED_KV_KEY}%`)).toEqual([{ key: HTLC_HISTORY_CHECKED_KV_KEY }])
   })
 
   it('leaves a fresh database unchecked', () => {
