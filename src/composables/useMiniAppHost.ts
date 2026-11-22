@@ -1564,13 +1564,10 @@ export class MiniAppHost {
       const widgetName = widgets.widgetName(scope, id)
       const name = widgets.pendingName(scope)
       if (name)
-        await this.offerWidgetChange('name', 'widget_name', () => this.config.requestUserConfirmation!({ url, type: 'widgetName', address: name.address, to: name.to }), () => widgets.approveName(scope, name.to))
+        await this.offerWidgetChange('name', 'widget_name', { url, type: 'widgetName', address: name.address, to: name.to }, () => widgets.approveName(scope, name.to))
       const permissions = widgets.missingPermissions(scope, id)
       if (permissions.length)
-        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', () => this.config.requestUserConfirmation!({ url, type: 'widgetPermissions', widgetName }), () => widgets.grantPermissions(scope, id, permissions))
-      // The review takes the images itself, as it is the user's own answer in Nimiq Pay.
-      if (widgets.hasPendingImages(scope, id))
-        await this.offerWidgetChange(`images:${id}`, 'widget_images', () => this.inTurn(() => this.reviewWidgetImages(scope, id)))
+        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', { url, type: 'widgetPermissions', widgetName }, () => widgets.grantPermissions(scope, id, permissions))
       return true
     }
     if (this.declinedWidgetOffers.has(`add:${id}`))
@@ -1591,18 +1588,15 @@ export class MiniAppHost {
   }
 
   /** A change the file made waits for the user. This is where a Mini App can ask, once per session. */
-  /** `ask` answers undefined when it could not ask, which is not a no. */
-  private async offerWidgetChange(key: string, requestType: Web3RequestType, ask: () => Promise<boolean | undefined>, apply?: () => void) {
+  private async offerWidgetChange(key: string, requestType: Web3RequestType, request: UserConfirmationRequest, apply: () => void) {
     if (this.declinedWidgetOffers.has(key) || !this.config.requestUserConfirmation || !this.mayAskAboutWidgets())
       return
-    const confirmed = await ask()
-    if (confirmed === undefined)
-      return
+    const confirmed = await this.config.requestUserConfirmation(request)
     trackWeb3Request({ requestType, blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
     if (!confirmed)
       this.declinedWidgetOffers.add(key)
     else if (this.mayAskAboutWidgets())
-      apply?.()
+      apply()
   }
 
   private inTurn<T>(show: () => Promise<T>): Promise<T> {
@@ -1615,26 +1609,6 @@ export class MiniAppHost {
     // A sheet closed without an answer (an iOS swipe does that) must not hold back every later one, so the next waits a minute at most.
     this.sheets = Promise.race([turn.catch(() => {}), this.sheets.then(() => sleep(SHEET_TURN_MS))])
     return turn
-  }
-
-  /** Nimiq Pay draws the review under the in-app browser, so the Mini App steps aside while it shows. */
-  private async reviewWidgetImages(scope: string, id: string): Promise<boolean | undefined> {
-    const browser = this.inAppBrowser
-    if (!browser)
-      return undefined
-    try {
-      await browser.hide()
-    }
-    catch (error) {
-      logger.warn('Could not hide the Mini App to show new widget images', error)
-      return undefined
-    }
-    try {
-      return await useMiniAppWidgets().openImageReview(scope, id)
-    }
-    finally {
-      await browser.show().catch(error => logger.error('Could not show the Mini App again', error))
-    }
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {

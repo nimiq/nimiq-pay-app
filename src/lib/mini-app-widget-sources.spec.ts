@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { clearAllCookies, get } = vi.hoisted(() => ({ clearAllCookies: vi.fn(), get: vi.fn() }))
-vi.mock('@capacitor/core', () => ({ CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get } }))
+const { clearAllCookies, get, isNativePlatform } = vi.hoisted(() => ({ clearAllCookies: vi.fn(), get: vi.fn(), isNativePlatform: vi.fn() }))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform }, CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get }, registerPlugin: () => ({}) }))
 vi.mock('@/lib', () => ({ isDev: false }))
 
 const fetchMock = vi.fn()
@@ -33,11 +33,51 @@ const STATE = JSON.stringify({ content: { value: { text: 'Done' } } })
 beforeEach(() => {
   clearAllCookies.mockReset()
   get.mockReset()
+  isNativePlatform.mockReturnValue(true)
+  sessionStorage.clear()
   fetchMock.mockReset()
 })
 
 afterEach(() => {
   vi.useRealTimers()
+})
+
+describe('native downloads', () => {
+  it('skip the HTTP cache, so a changed file or image is seen', async () => {
+    get.mockResolvedValue(respond(404, ''))
+    await fetchWidgetFile(SCOPE, NOW)
+    await fetchWidgetImage({ url: `${SCOPE}a.png`, sha256: 'a'.repeat(64) }, SCOPE)
+    expect(get).toHaveBeenCalledTimes(2)
+    for (const [options] of get.mock.calls)
+      expect(options.headers).toMatchObject({ 'Cache-Control': 'no-cache' })
+  })
+
+  it('skip it on the web without a header that would need a CORS preflight', async () => {
+    isNativePlatform.mockReturnValue(false)
+    get.mockResolvedValue(respond(404, ''))
+    await fetchWidgetFile(SCOPE, NOW)
+    expect(get.mock.calls[0]![0].headers).toEqual({ Accept: 'application/json' })
+    expect(get.mock.calls[0]![0].webFetchExtra).toMatchObject({ cache: 'no-store' })
+  })
+
+  it('follow no redirect of an image once a Mini App has opened, whose cookies it would take along', async () => {
+    get.mockImplementationOnce(async () => {
+      isMiniAppActive.value = true
+      return respond(302, '', { location: '/moved.png' })
+    })
+    get.mockResolvedValue(respond(404, ''))
+    const result = await fetchWidgetImage({ url: `${SCOPE}a.png`, sha256: 'a'.repeat(64) }, SCOPE)
+    isMiniAppActive.value = false
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({ ok: false, transient: true })
+  })
+
+  it('leave the cookies of a hidden Mini App that waits for the PIN', async () => {
+    sessionStorage.setItem('miniAppSession', JSON.stringify({ url: SCOPE, hiddenAt: Date.now() }))
+    get.mockResolvedValue(respond(404, ''))
+    await fetchWidgetFile(SCOPE, NOW)
+    expect(clearAllCookies).not.toHaveBeenCalled()
+  })
 })
 
 describe('what a refresh tells the store', () => {

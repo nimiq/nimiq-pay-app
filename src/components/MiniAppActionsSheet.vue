@@ -28,7 +28,6 @@ const emit = defineEmits<{
   (e: 'removeWidget'): void
   (e: 'useNewName'): void
   (e: 'stopSharing'): void
-  (e: 'useNewImages'): void
   (e: 'usePermissions'): void
 }>()
 
@@ -82,11 +81,6 @@ function onUseNewName() {
   close()
 }
 
-function onUseNewImages() {
-  emit('useNewImages')
-  close()
-}
-
 function onUsePermissions() {
   emit('usePermissions')
   close()
@@ -137,9 +131,6 @@ const updates = computed(() => {
   return [
     ...(context.newName
       ? [{ testid: 'mini-app-use-new-name-action', label: i18n.t('Use the new name: {name}', { name: context.newName }), icon: PenIcon, onClick: onUseNewName }]
-      : []),
-    ...(context.newImages
-      ? [{ testid: 'mini-app-new-images-action', label: i18n.t('Review its new images'), icon: PenIcon, onClick: onUseNewImages }]
       : []),
     ...(context.newPermissions
       ? [{ testid: 'mini-app-new-permissions-action', label: i18n.t('Allow sending your addresses'), icon: PenIcon, onClick: onUsePermissions }]

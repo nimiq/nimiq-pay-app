@@ -32,10 +32,6 @@ export async function selectLightningAsset(app: { url: string, name: string, des
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
 
-/**
- * Request user confirmation for sensitive mini-app operations.
- * Extracted from MiniAppsModal so it can be reused during session reconnection.
- */
 async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string): Promise<boolean> {
   const result = await ExtendedDialog.sheet({
     title,
@@ -48,6 +44,10 @@ async function confirmWidgetChange(url: string, title: string, rows: string[], c
   return result.confirmed
 }
 
+/**
+ * Request user confirmation for sensitive mini-app operations.
+ * Extracted from MiniAppsModal so it can be reused during session reconnection.
+ */
 export async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
   switch (request.type) {
     case 'accounts': {
@@ -392,20 +392,11 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         '• Stop any time from its menu',
       ], 'Allow')
 
-    case 'widgetName': {
-      const result = await ExtendedDialog.sheet({
-        title: `Show ${request.address} as ${request.to}?`,
-        headerLogo: resolveMiniAppLogo(request.url),
-        headerLogoCornerRadius: -1,
-        rows: [
-          { title: '• Shown on its widgets on Home' },
-          { title: '• The address stays in each widget\'s menu' },
-        ],
-        confirmButtonTitle: 'Use this name',
-        cancelButtonTitle: 'Not now',
-      })
-      return result.confirmed
-    }
+    case 'widgetName':
+      return confirmWidgetChange(request.url, `Show ${request.address} as ${request.to}?`, [
+        '• Shown on its widgets on Home',
+        '• The address stays in each widget\'s menu',
+      ], 'Use this name')
 
     default:
       logger.error('Unknown confirmation request type:', request)

@@ -37,12 +37,17 @@ export const WIDGET_LIMITS = {
   refreshJitterS: 30,
   tokenLength: 2048,
   images: 8,
+  stateImages: 4,
   imageBytes: 256 * 1024,
   imagePixels: 1024,
   refreshBudgets: [
     { windowMs: 60 * 60_000, max: 30 },
     { windowMs: 3 * 60 * 60_000, max: 60 },
     { windowMs: 24 * 60 * 60_000, max: 180 },
+  ],
+  imageBudgets: [
+    { windowMs: 60 * 60_000, max: 60 },
+    { windowMs: 24 * 60 * 60_000, max: 120 },
   ],
   horizonMs: 30 * 24 * 60 * 60 * 1000,
 } as const
@@ -57,13 +62,14 @@ export interface WidgetRow {
 
 export interface WidgetChart { kind: 'line' | 'bars', points: number[] }
 
-export type WidgetBackground = { image: string } | { chart: WidgetChart }
+/** An image's key, or, in a state, the image itself. */
+export type WidgetBackground = { image: string | WidgetImage } | { chart: WidgetChart }
 
 export type WidgetCountdown = { label: string, until: number } | { label: string, untilNimiqHeight: number }
 
 export interface WidgetImage {
   url: string
-  /** Lower-case hex: the bytes this widget was approved with. */
+  /** Lower-case hex, of the image's bytes. */
   sha256: string
 }
 
@@ -342,11 +348,13 @@ function chart(raw: unknown, path: string): WidgetChart {
   return { kind, points: points as number[] }
 }
 
-function background(raw: unknown, path: string): WidgetBackground {
+function background(raw: unknown, ctx: ParseContext, path: string, inlineImages: boolean): WidgetBackground {
   const r = record(raw, path)
   atMostOne(r, ['image', 'chart'], path)
   if (r.chart !== undefined)
     return { chart: chart(r.chart, `${path}.chart`) }
+  if (inlineImages && isRecord(r.image))
+    return { image: imageSource(r.image, ctx, `${path}.image`) }
   if (typeof r.image !== 'string' || !WIDGET_ID_RE.test(r.image))
     fail(path, 'expected an image\'s key or a chart')
   return { image: r.image }
@@ -359,13 +367,17 @@ function images(raw: unknown, ctx: ParseContext, path: string): Record<string, W
   return Object.fromEntries(entries.map(([key, entry]) => {
     if (!WIDGET_ID_RE.test(key))
       fail(path, `"${key}" cannot be an image's key`)
-    const image = record(entry, `${path}.${key}`)
-    const url = sameOrigin(image.url, ctx, `${path}.${key}.url`)
-    return [key, { url, sha256: hex(image.sha256, HASH_RE, 'a SHA-256 in hex', `${path}.${key}.sha256`) }]
+    return [key, imageSource(entry, ctx, `${path}.${key}`)]
   }))
 }
 
-function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
+function imageSource(raw: unknown, ctx: ParseContext, path: string): WidgetImage {
+  const r = record(raw, path)
+  const url = sameOrigin(r.url, ctx, `${path}.url`)
+  return { url, sha256: hex(r.sha256, HASH_RE, 'a SHA-256 in hex', `${path}.sha256`) }
+}
+
+function content(raw: unknown, ctx: ParseContext, path: string, inlineImages = false): WidgetContent {
   const r = record(raw, path)
   const result: WidgetContent = {
     value: value(r.value, `${path}.value`),
@@ -407,7 +419,7 @@ function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
   if (r.chart !== undefined)
     result.chart = chart(r.chart, `${path}.chart`)
   if (r.background !== undefined)
-    result.background = background(r.background, `${path}.background`)
+    result.background = background(r.background, ctx, `${path}.background`, inlineImages)
   const link = r.path !== undefined ? linkOnOrigin(r.path, ctx, `${path}.path`) : undefined
   if (link)
     result.path = link
@@ -462,7 +474,7 @@ function trigger(raw: unknown, ctx: ParseContext, path: string): WidgetTrigger {
 
 function state(raw: unknown, ctx: ParseContext, path: string, depth: number): WidgetState {
   const r = record(raw, path)
-  const result: WidgetState = { content: content(r.content, ctx, `${path}.content`), next: [] }
+  const result: WidgetState = { content: content(r.content, ctx, `${path}.content`, true), next: [] }
   if (r.expiresAt !== undefined)
     result.expiresAt = time(r.expiresAt, ctx, `${path}.expiresAt`)
   if (r.refresh !== undefined)
@@ -509,8 +521,26 @@ export function parseWidgetState(raw: unknown, ctx: ParseContext): ParseResult<W
     }
     if (size > L.stateBytes)
       fail('state', `is larger than ${L.stateBytes} bytes`)
-    return state(raw, ctx, 'state', 0)
+    const parsed = state(raw, ctx, 'state', 0)
+    if (new Set(imagesInState(parsed).map(image => image.sha256)).size > L.stateImages)
+      fail('state', `at most ${L.stateImages} images`)
+    return parsed
   })
+}
+
+/** The image a content's background names: one of `declared` by its key, or one a state carries itself. */
+export function imageIn({ background }: WidgetContent | WidgetDemo, declared: WidgetDefinition['images'] = {}): WidgetImage | undefined {
+  if (!background || !('image' in background))
+    return undefined
+  const { image } = background
+  // Own keys only: "constructor" is a valid key, and every object has one.
+  return typeof image === 'string' ? Object.entries(declared).find(([key]) => key === image)?.[1] : image
+}
+
+/** The images a state carries itself, its later states' included. */
+export function imagesInState({ content, next }: WidgetState): WidgetImage[] {
+  const own = imageIn(content)
+  return [...(own ? [own] : []), ...next.flatMap(transition => transition.state ? imagesInState(transition.state) : [])]
 }
 
 /** An empty widget list is valid: a file that declares nothing withdraws every widget of its scope. */

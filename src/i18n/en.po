@@ -81,7 +81,7 @@ msgstr ""
 msgid "Add to address book"
 msgstr ""
 
-#: src/components/TheHomeWidgets.vue:41
+#: src/components/TheHomeWidgets.vue:40
 msgid "Add widgets"
 msgstr ""
 
@@ -118,7 +118,7 @@ msgstr ""
 msgid "All"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:145
+#: src/components/MiniAppActionsSheet.vue:136
 msgid "Allow sending your addresses"
 msgstr ""
 
@@ -759,7 +759,7 @@ msgstr ""
 msgid "I have turned it off"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:37
+#: src/components/MiniAppActionsSheet.vue:36
 #: src/components/MiniAppWidgetGallery.vue:46
 msgid "Icon"
 msgstr ""
@@ -798,7 +798,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2365
+#: src/composables/useMiniAppHost.ts:2339
 msgid "Insufficient funds"
 msgstr ""
 
@@ -989,7 +989,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:37
+#: src/components/MiniAppActionsSheet.vue:36
 #: src/components/MiniAppWidgetGallery.vue:46
 msgid "Large"
 msgstr ""
@@ -1050,7 +1050,7 @@ msgstr ""
 msgid "Matching submissions: {count}"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:37
+#: src/components/MiniAppActionsSheet.vue:36
 #: src/components/MiniAppWidgetGallery.vue:46
 msgid "Medium"
 msgstr ""
@@ -1103,10 +1103,6 @@ msgstr ""
 
 #: src/types/transactions.ts:164
 msgid "New"
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:22
-msgid "New images for {name}"
 msgstr ""
 
 #: src/components/HoldCardToReader.vue:61
@@ -1166,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:482
+#: src/stores/mini-app-widgets.ts:524
 msgid "No longer available"
 msgstr ""
 
@@ -1224,12 +1220,8 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:462
+#: src/stores/mini-app-widgets.ts:505
 msgid "Not available"
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:63
-msgid "Not now"
 msgstr ""
 
 #: src/components/MiniAppWidget.vue:104
@@ -1564,7 +1556,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:124
+#: src/components/MiniAppActionsSheet.vue:118
 msgid "Remove from Home"
 msgstr ""
 
@@ -1597,10 +1589,6 @@ msgstr ""
 #: src/lib/mini-app-confirmation.ts:130
 #: src/types/transactions.ts:151
 msgid "Retire Stake"
-msgstr ""
-
-#: src/components/MiniAppActionsSheet.vue:142
-msgid "Review its new images"
 msgstr ""
 
 #: src/composables/useNotifications.ts:149
@@ -1715,16 +1703,8 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:118
+#: src/components/MiniAppActionsSheet.vue:112
 msgid "Share your addresses again"
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:55
-msgid "Show these images"
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:55
-msgid "Show this image"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:57
@@ -1737,7 +1717,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:37
+#: src/components/MiniAppActionsSheet.vue:36
 #: src/components/MiniAppWidgetGallery.vue:46
 msgid "Small"
 msgstr ""
@@ -1798,7 +1778,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2366
+#: src/composables/useMiniAppHost.ts:2340
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1845,7 +1825,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:121
+#: src/components/MiniAppActionsSheet.vue:115
 msgid "Stop sharing your addresses"
 msgstr ""
 
@@ -1975,10 +1955,6 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:63
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:41
-msgid "This image could not be checked, so the card stays plain with it."
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:69
@@ -2136,7 +2112,7 @@ msgstr ""
 msgid "Use {amount}"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:139
+#: src/components/MiniAppActionsSheet.vue:133
 msgid "Use the new name: {name}"
 msgstr ""
 
@@ -2442,10 +2418,6 @@ msgstr ""
 
 #: src/components/TheHomeTransactions.vue:58
 msgid "Your testnet account is empty."
-msgstr ""
-
-#: src/components/MiniAppWidgetImagesReview.vue:30
-msgid "Your widget keeps its current images until you choose. Each new image is shown here in the widget's example state."
 msgstr ""
 
 #: src/modals/MiniAppWarningModal.vue:82

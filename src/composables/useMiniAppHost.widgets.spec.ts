@@ -22,8 +22,6 @@ const { logged, createBirpc, toastShow, trackWeb3Request, widgets } = vi.hoisted
     setToken: vi.fn(() => true),
     consentFor: vi.fn((_scope: string, definition: { name: string, description?: string, permissions?: string[] }) => ({ widgetName: definition.name, description: definition.description, appName: undefined, permissions: definition.permissions })),
     missingPermissions: vi.fn((): string[] => []),
-    hasPendingImages: vi.fn(() => false),
-    openImageReview: vi.fn(async (): Promise<boolean | undefined> => true),
     widgetName: vi.fn(() => 'Swap status'),
     grantPermissions: vi.fn(),
     pendingName: vi.fn((): { to: string, address: string } | undefined => undefined),
@@ -101,8 +99,6 @@ beforeEach(() => {
   widgets.canAddTo.mockReturnValue(true)
   widgets.pendingName.mockReturnValue(undefined)
   widgets.missingPermissions.mockReturnValue([])
-  widgets.hasPendingImages.mockReturnValue(false)
-  widgets.openImageReview.mockReset().mockResolvedValue(true)
   widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } })
   vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
@@ -266,41 +262,14 @@ describe('widgets.add', () => {
     expect(widgets.add).not.toHaveBeenCalled()
   })
 
-  it('steps the Mini App aside to review new images when it calls add, once if declined', async () => {
+  it('asks nothing about images, and leaves the Mini App in front, when it calls add for a widget on Home', async () => {
     widgets.isOnHome.mockReturnValue(true)
-    widgets.hasPendingImages.mockReturnValue(true)
-    const steps: string[] = []
-    widgets.openImageReview.mockImplementation(async () => {
-      steps.push('review')
-      return false
-    })
+    const images = { hero: { url: 'https://swap.example/app/hero.png', sha256: 'b'.repeat(64) } }
+    widgets.discover.mockResolvedValue({ ok: true, value: { scope: SCOPE, file: { widgets: [{ ...DEFINITION, images }] } } })
     const { browser, confirm, request } = createHost()
-    browser.hide.mockImplementation(async () => {
-      steps.push('hide')
-    })
-    browser.show.mockImplementation(async () => {
-      steps.push('show')
-    })
-    await request('widgets.add', { id: 'swap' })
-    await request('widgets.add', { id: 'swap' })
-    expect(steps).toEqual(['hide', 'review', 'show'])
-    expect(widgets.openImageReview).toHaveBeenCalledWith(SCOPE, 'swap')
+    await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
     expect(confirm).not.toHaveBeenCalled()
-  })
-
-  it('does not count a review that could not be shown as a no', async () => {
-    widgets.isOnHome.mockReturnValue(true)
-    widgets.hasPendingImages.mockReturnValue(true)
-    const { browser, request } = createHost()
-    browser.hide.mockRejectedValueOnce(new Error('no'))
-    await request('widgets.add', { id: 'swap' })
-    expect(widgets.openImageReview).not.toHaveBeenCalled()
-    widgets.openImageReview.mockResolvedValueOnce(undefined)
-    await request('widgets.add', { id: 'swap' })
-    widgets.openImageReview.mockResolvedValueOnce(true)
-    await request('widgets.add', { id: 'swap' })
-    expect(widgets.openImageReview).toHaveBeenCalledTimes(2)
-    expect(trackWeb3Request).not.toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_images', approved: false }))
+    expect(browser.hide).not.toHaveBeenCalled()
   })
 
   it('stops waiting for a sheet that never answers, so a sheet closed without a reply cannot hold back the next', async () => {

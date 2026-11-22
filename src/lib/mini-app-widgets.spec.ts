@@ -121,6 +121,40 @@ describe('a widget\'s images and backgrounds', () => {
     expect(withChart.ok && withChart.value.widgets[0]!.content.background).toEqual({ chart: { kind: 'bars', points: [1, 2] } })
   })
 
+  it('reads an image a state carries itself, in later states too, on the origin', () => {
+    const carried = { image: { ...image, sha256: 'B'.repeat(64) } }
+    const read = parseWidgetState(state({ next: [{ on: { at: NOW }, state: state({}, { background: carried }) }] }, { background: carried }), ctx)
+    const expected = { image: { url: new URL(image.url, ctx.base).href, sha256: 'b'.repeat(64) } }
+    expect(read.ok && read.value!.content.background).toEqual(expected)
+    expect(read.ok && read.value!.next[0]!.state!.content.background).toEqual(expected)
+  })
+
+  it('takes no image itself from a file, which has keys', () => {
+    const carrying = { value: { text: 'x' }, background: { image } }
+    for (const widget of [{ content: carrying }, { demo: carrying }, { translations: { de: { content: carrying } } }, { translations: { de: { demo: carrying } } }])
+      expectError(parseWidgetFile(file(widget), ctx), 'expected an image\'s key or a chart')
+  })
+
+  it.each([
+    ['on another site', { ...image, url: 'https://cdn.example/hero.png' }, 'url'],
+    ['without a hash', { url: 'hero.png' }, 'sha256'],
+  ])('refuses a state with an image %s', (_, carried, field) => {
+    expectError(parseWidgetState(state({}, { background: { image: carried } }), ctx), `state.content.background.image.${field}`)
+  })
+
+  it('refuses a state tree with more than 4 different images', () => {
+    const showing = (i: number) => state({}, { background: { image: { url: 'a.png', sha256: String(i).repeat(64) } } })
+    const tree = (...later: number[]) => ({ ...showing(1), next: later.map(i => ({ on: { at: NOW }, state: showing(i) })) })
+    expect(parseWidgetState(tree(1, 2, 2, 3, 4), ctx).ok).toBe(true)
+    expectError(parseWidgetState(tree(2, 3, 4, 5), ctx), 'state: at most 4 images')
+  })
+
+  it('counts one image once, whatever its URLs', () => {
+    const showing = (i: number) => state({}, { background: { image: { url: `a.png?${i}`, sha256: HASH } } })
+    const tree = { ...showing(0), next: [1, 2, 3, 4].map(i => ({ on: { at: NOW }, state: showing(i) })) }
+    expect(parseWidgetState(tree, ctx).ok).toBe(true)
+  })
+
   it('refuses a background that is both, or neither', () => {
     expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: { image: 'hero', chart: { kind: 'bars', points: [1, 2] } } } }), ctx), 'file.widgets[0].content.background')
     expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: {} } }), ctx), 'file.widgets[0].content.background')

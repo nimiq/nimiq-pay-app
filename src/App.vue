@@ -20,8 +20,6 @@ import { Modal, useModal } from '@/composables/useModal'
 import { trackCurrentAppOpen } from '@/lib/analytics'
 import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { isDev } from '@/lib/index'
-import { isImageReviewOpen } from '@/lib/mini-app-active'
-import { MiniAppWidgetImagesReview } from '@/lib/mini-app-widget-review-sheet'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -180,7 +178,6 @@ App.addListener('resume', async () => {
   <IonApp>
     <IonRouterOutlet />
     <NetworkOverrideBadge />
-    <MiniAppWidgetImagesReview v-if="isImageReviewOpen" />
     <!-- DEV -->
     <!-- Hidden in mock mode (clean screenshots); DevModal stays reachable via the menu header long-press -->
     <IonFab v-if="isDev && !isDevFabHidden && !isMockEnabled" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">

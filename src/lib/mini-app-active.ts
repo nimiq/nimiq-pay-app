@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { hasPendingSession } from '@/composables/useMiniAppSession'
 
 /**
  * Reactive flag mirroring whether a MiniAppHost session is currently active.
@@ -7,5 +8,7 @@ import { ref } from 'vue'
  */
 export const isMiniAppActive = ref(false)
 
-/** Lets App.vue mount the review without creating the widget store, whose storage needs the unlocked wallet. */
-export const isImageReviewOpen = ref(false)
+/** The native client shares the web views' cookie jar, which is then a Mini App's: one open, or one hidden until the PIN is in. */
+export function miniAppHoldsCookies(): boolean {
+  return isMiniAppActive.value || hasPendingSession()
+}

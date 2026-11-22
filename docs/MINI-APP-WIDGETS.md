@@ -6,7 +6,7 @@ This page is the reference for Mini App authors. The code is the authority if th
 
 ## 1. What a widget is
 
-- Nimiq Pay draws every widget itself, so it always looks like Nimiq Pay and can be restyled in one place. You send meaning (text, numbers, a tone), never layout, colours, fonts or images.
+- Nimiq Pay draws every widget itself, so it always looks like Nimiq Pay and can be restyled in one place. You send meaning (text, numbers, a tone) and, if you like, a background image, never layout, colours or fonts.
 - The user picks the size of each widget: `icon`, `small`, `medium` or `large`. You list the sizes your widget supports; the first one is the default.
 - The card header (your Mini App's icon and name, and the "⋯" menu) belongs to Nimiq Pay. It shows the catalog name when the widget's folder equals the catalog entry's URL, otherwise the name your widget file declares (see `name` below), otherwise the host and folder (`name.github.io/my-app`). The address always appears in the widget's menu and in the gallery. A widget has no buttons or inputs: tapping the card opens your Mini App.
 - A Mini App only runs while it is open, so a widget changes in three ways: your Mini App sends a new state while it is open, Nimiq Pay follows scheduled and on-chain triggers you described earlier, or Nimiq Pay polls a URL on your server (section 5).
@@ -33,7 +33,7 @@ Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 wi
 | `widgets[].sizes` | Non-empty subset of `icon`, `small`, `medium`, `large`. The first is the default. |
 | `widgets[].content` | The widget's *resting state*: what it shows when nothing else was sent, and its preview in the gallery (section 3). |
 | `widgets[].demo` | Optional. What the gallery shows instead of the resting state, so people see the widget at its best before adding it. Never shown on Home. See below. |
-| `widgets[].images` | Optional images a background can use (see below). |
+| `widgets[].images` | Optional images a background can use by key (see below). |
 | `widgets[].permissions` | Optional list of what the widget asks to send with its refreshes. Today only `"addresses"`; others are dropped. See below. |
 | `widgets[].refresh` | Optional `{ "url", "every" }` so the resting state updates from your server (section 5). |
 | `widgets[].translations` | Optional, keyed by two-letter language (`"es"`). Each entry may repeat `name`, `description`, `content` and `demo`. Nimiq Pay picks the user's language and falls back to the top-level fields. |
@@ -53,21 +53,31 @@ Live states you send are not translated by this field: send them in your current
 }
 ```
 
-**Backgrounds.** `content.background`, also in states and demos, is `{ "image": "<key>" }` or `{ "chart": … }` (a chart as in `content.chart`). Icon-sized cards draw none. Screen readers skip it, so it must not carry anything the text doesn't say. Images sit under a white scrim of 70%, charts are drawn faintly in the text colour. Declare images in the widget:
+**Backgrounds.** `content.background`, also in states and demos, is `{ "image": "<key>" }` or `{ "chart": … }` (a chart as in `content.chart`); a state can also carry the image itself. Icon-sized cards draw none. Screen readers skip it, so it must not carry anything the text doesn't say. Images sit under a white scrim of 70%, charts are drawn faintly in the text colour. Declare images in the widget:
 
 ```json
 "images": { "hero": { "url": "art/hero.webp", "sha256": "<64 hex characters>" } }
 ```
 
-At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB and 1024 × 1024 pixels, on your own origin. Nimiq Pay downloads an image once, checks it against the hash and keeps it in its encrypted database; it never loads one from your site to draw it. A state picks an image by key, so a key the widget doesn't have, or an image that failed the check, shows a plain card. To change images, change their files and hashes: the card keeps the approved images until the user accepts the change. The widget's menu then offers "Review its new images", which downloads them and shows your widget in its demo state (or its resting state) once with each new image, so a widget that switches images with its state can have several approved at once. Calling `add` for that widget opens the same review: Nimiq Pay hides your Mini App while it shows, and brings it back afterwards. Nothing is stored before the user accepts, and accepting keeps exactly the bytes shown; an image that could not be shown stays waiting. Dropping an image needs no approval. The gallery downloads what its previews draw, without storing it.
+At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB and 1024 × 1024 pixels, on your own origin. A state you push, a refresh answer and their `next` states can carry an image instead of a key, for example one for this user, at most 4 different images in a state and its later states together. The widget file takes keys only.
+
+```js
+background: { image: { url: '/w/7f3c9a.png', sha256: '<64 hex characters>' } }
+```
+
+- **You change images whenever you want, and nobody approves them.** The images of a state, its later states' included, are downloaded when it arrives, or as soon as no Mini App is open if one is, so a trigger switches without waiting for the network. An image changed in the file is found when Nimiq Pay re-reads it (see below), without your Mini App being opened.
+- **The hash is what identifies an image on your site.** A new image needs a new hash; a new URL with the same hash is not downloaded again while a widget uses it. Put the image online before the file or state that names it.
+- **While an image is not ready, the card keeps the one it showed before**, or stays plain if it had none. Content without a background, or with a key the widget doesn't have, is plain at once. An image the device cannot draw leaves the card plain.
+- **A failed download is retried** after 5 minutes, then 10, 20 and so on up to every 6 hours, also when the image did not match its hash. All images of your site share a budget (section 6), in which every attempt counts; at most 3 download at once, and what cards show is downloaded first.
+- Nimiq Pay checks each image against its hash and keeps it in its encrypted database while a widget uses it; it never loads one from your site to draw it. Image requests carry neither your token nor the user's addresses, and cookies cannot be relied on: give an image meant for one user a URL nobody can guess, and answer it with `Cache-Control: no-store`. The gallery downloads what its previews draw, without storing it.
 
 **Permissions.** With `"permissions": ["addresses"]`, the user's addresses (what `listAccounts` and `eth_requestAccounts` would give you, read at each request) go out with each refresh in a `Nimiq-Pay-Accounts` header, comma-separated, once the user has granted it. Nimiq Pay asks when the widget is added, from your Mini App or the gallery; saying no adds nothing. Adding the permission to a file later grants nothing: the widget's menu offers it, and Nimiq Pay also asks when your Mini App calls `add` for that widget. Nothing is sent until the user allows it. The user can stop sharing from the widget's menu, and removing the widget ends it. Once stopped, the menu offers to share again, but neither the menu's updates nor your `add` call ask about it. Your endpoint must answer the CORS preflight with `Access-Control-Allow-Headers: Nimiq-Pay-Accounts`. Without a grant, the widget works as usual without the header.
 
 **Re-reading and withdrawal.**
 
-- Nimiq Pay reads the file when the gallery opens, and when your Mini App opens unless the folder it opened in was checked in the last day (then on your Mini App's first widget call instead), and keeps the result until Nimiq Pay is restarted. For widgets that are already on Home it re-checks the file about once a day.
-- An edit to the file therefore reaches a widget on Home at the next daily re-check, up to a day later, not when the user reopens the Mini App. To see an edit at once while testing, restart Nimiq Pay, then remove the widget and add it again.
-- **A new `name` waits for approval.** Once the re-check finds it, all your widgets in that folder keep the name the user approved until they accept the new one from a widget's menu, or your Mini App calls `add` for a widget on Home, which asks them once while the Mini App stays open. Dropping `name`, or setting it to your address, applies at once, since that only shows your address. Everything else in the file applies with the re-check.
+- Nimiq Pay reads the file when the gallery opens, and when your Mini App opens unless the folder it opened in was checked in the last day (then on your Mini App's first widget call instead), and keeps the result until Nimiq Pay is restarted or re-checks that folder. For widgets that are already on Home it re-checks the file, once for all of a folder's widgets, while Home is on screen once the last check is an hour old, and on pull to refresh once it is a minute old.
+- An edit to the file therefore reaches a widget on Home up to an hour later, or when the user next looks at Home if that is later, or at once when they pull to refresh, not when they reopen the Mini App. To see an edit at once while testing, pull to refresh; with none of that folder's widgets on Home, or after `add` or `update` found no valid file, restart Nimiq Pay instead. The gallery and `add` use the re-checked file too; a widget added from a copy read over an hour ago is re-checked right away.
+- **A new `name` waits for approval.** Once the re-check finds it, all your widgets in that folder keep the name the user approved until they accept the new one from a widget's menu, or your Mini App calls `add` for a widget on Home, which asks them once while the Mini App stays open. Dropping `name`, or setting it to your address, applies at once, since that only shows your address. Everything else in the file, images included, applies with the re-check; only a new permission also waits (see above).
 - A widget is removed from Home only when a valid file no longer declares it. An empty list, `{ "v": 1, "widgets": [] }`, withdraws every widget of that folder; `add` then fails with "declares no widget".
 - A missing or broken file (404, invalid, a network or server error) keeps the widgets on Home as they are.
 - **Do not move the file to another folder** once users have added widgets: those widgets stay tied to the old folder, so your Mini App can no longer update or remove them (the user still can, from the "⋯" menu). Adding the widget again picks up the new folder.
@@ -166,7 +176,7 @@ if (window.nimiqPay?.widgets) {
 | `remove(id)` | Removes the widget from Home. |
 | `list()` | The ids of your Mini App's widgets that are on Home. |
 
-The sheet says the name your widget will appear under (your `name`, or your catalog name), and tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay (until it is restarted). The gallery is the other way to add a widget: choosing "Add" there is the consent.
+The sheet says the name your widget will appear under (your `name`, or your catalog name), and tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay, and again when it re-checks a folder with widgets on Home (section 2). The gallery is the other way to add a widget: choosing "Add" there is the consent.
 
 Nimiq Pay shows your Mini App one sheet at a time, connection and signing sheets included: a request that needs a sheet waits until the one before is answered, for a minute at most.
 
@@ -226,7 +236,7 @@ export default {
 }
 ```
 
-All widgets of your Mini App share one refresh budget (section 6), so more widgets do not buy more requests. A refresh over budget waits until the budget allows it. Each is due up to 30 seconds after its interval, at random, so that devices do not all ask at once. Your first refresh after an add and pull to refresh do not wait, though they count. A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets right away, but never more than once a minute per widget.
+All widgets of your Mini App share one refresh budget (section 6), so more widgets do not buy more requests. A refresh over budget waits until the budget allows it. Each is due up to 30 seconds after its interval, at random, so that devices do not all ask at once. Your first refresh after an add and pull to refresh do not wait, though they count. A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets and re-checks their files right away, but each at most once a minute.
 
 **Rules.**
 
@@ -254,9 +264,13 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 | Chain lookups per check, all widgets | 10 |
 | Chain lookups per check, one Mini App | 8 |
 | Refreshes, one Mini App (all its widgets) | 30 per hour, 60 per 3 hours, 180 per 24 hours |
+| Images in a widget file | 8 per widget |
+| Images a state carries, its later states' included | 4 different |
+| One image | 256 KB, 1024 × 1024 pixels |
+| Image downloads, one site (all its widgets) | 60 per hour, 120 per 24 hours |
 | Refresh interval | 60 s to 24 h |
 | Times | within 30 days of now |
-| Network timeouts | Widget file: 15 s in all (5 s connect, 10 s read per request). Refresh: 15 s in all |
+| Network timeouts | Widget file and each image: 15 s in all (5 s connect, 10 s read per request). Refresh: 15 s in all |
 
 A state that breaks a rule (a wrong type, two kinds in one value, too many rows, a bad `refresh.url`, a `path` that is not a string, an empty text) is refused whole and `update` rejects with the field named, so you can find the problem:
 

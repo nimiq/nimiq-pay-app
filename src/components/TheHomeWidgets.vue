@@ -47,7 +47,6 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
     widget: { size: view.size, sizes: view.sizes },
     newName: view.pendingAppName,
     sharesAddresses: view.sharesAddresses,
-    newImages: view.pendingImages,
     newPermissions: view.pendingPermissions,
     stoppedPermissions: view.stoppedPermissions,
   }
@@ -105,7 +104,6 @@ function open(view: WidgetView, url: string) {
       :context="menuContext"
       @size="size => menuView && widgets.setSize(menuView.scope, menuView.widgetId, size)"
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
-      @use-new-images="menuView && widgets.openImageReview(menuView.scope, menuView.widgetId)"
       @use-permissions="menuView && allowPermissions(menuView)"
       @stop-sharing="menuView && widgets.revokePermissions(menuView.scope, menuView.widgetId)"
       @use-new-name="menuView?.pendingAppName && widgets.approveName(menuView.scope, menuView.pendingAppName)"

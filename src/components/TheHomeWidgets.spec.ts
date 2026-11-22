@@ -11,7 +11,7 @@ const { background, confirm, launchMiniApp, showModal, store, visible } = await 
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), openImageReview: vi.fn(), grantPermissions: vi.fn(), askablePermissions: vi.fn(() => ['addresses']), widgetName: vi.fn(() => 'Swap status'), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), approveName: vi.fn(), revokePermissions: vi.fn(), grantPermissions: vi.fn(), askablePermissions: vi.fn(() => ['addresses']), widgetName: vi.fn(() => 'Swap status'), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 
@@ -162,16 +162,6 @@ describe('theHomeWidgets', () => {
     expect(sheet.props('context')).toMatchObject({ sharesAddresses: true })
     sheet.vm.$emit('stopSharing')
     expect(store.revokePermissions).toHaveBeenCalledWith('https://swap.example/', 'swap')
-  })
-
-  it('offers new images in the menu', async () => {
-    store.views.value = [{ ...view('small', 'swap'), pendingImages: true }]
-    const wrapper = render()
-    await wrapper.find('[data-testid="widget-menu"]').trigger('click')
-    const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
-    expect(sheet.props('context')).toMatchObject({ newImages: true })
-    sheet.vm.$emit('useNewImages')
-    expect(store.openImageReview).toHaveBeenCalledWith('https://swap.example/', 'swap')
   })
 
   it('asks before granting a permission from the menu', async () => {

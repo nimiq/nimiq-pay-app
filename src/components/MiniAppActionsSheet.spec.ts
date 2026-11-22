@@ -150,12 +150,6 @@ describe('miniAppActionsSheet', () => {
     expect(wrapper!.emitted('stopSharing')).toHaveLength(1)
   })
 
-  it('offers new images when the widget has some waiting, and emits when chosen', async () => {
-    await mountSheet({ app, removable: false, newImages: true, widget: { size: 'small', sizes: ['small'] } })
-    action('mini-app-new-images-action')!.click()
-    expect(wrapper!.emitted('useNewImages')).toHaveLength(1)
-  })
-
   it('offers a permission waiting for the user, and emits when chosen', async () => {
     await mountSheet({ app, removable: false, newPermissions: true, widget: { size: 'small', sizes: ['small'] } })
     action('mini-app-new-permissions-action')!.click()
@@ -163,9 +157,9 @@ describe('miniAppActionsSheet', () => {
   })
 
   it('groups what waits for the user apart from the usual actions', async () => {
-    await mountSheet({ app, removable: false, shareable: true, newName: 'New', newImages: true, newPermissions: true, sharesAddresses: true, widget: { size: 'small', sizes: ['small'] } })
+    await mountSheet({ app, removable: false, shareable: true, newName: 'New', newPermissions: true, sharesAddresses: true, widget: { size: 'small', sizes: ['small'] } })
     const updates = action('mini-app-updates')!
-    for (const testid of ['mini-app-use-new-name-action', 'mini-app-new-images-action', 'mini-app-new-permissions-action'])
+    for (const testid of ['mini-app-use-new-name-action', 'mini-app-new-permissions-action'])
       expect(updates.querySelector(`[data-testid="${testid}"]`)).not.toBeNull()
     for (const testid of ['mini-app-share-action', 'mini-app-stop-sharing-action', 'mini-app-remove-widget-action'])
       expect(updates.querySelector(`[data-testid="${testid}"]`)).toBeNull()

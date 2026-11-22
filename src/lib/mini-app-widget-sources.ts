@@ -1,9 +1,9 @@
 import type { HttpResponse } from '@capacitor/core'
 import type { WidgetFile, WidgetImage, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
-import { CapacitorCookies, CapacitorHttp } from '@capacitor/core'
+import { Capacitor, CapacitorCookies, CapacitorHttp } from '@capacitor/core'
 import { isDev } from '@/lib'
-import { isMiniAppActive } from '@/lib/mini-app-active'
+import { miniAppHoldsCookies } from '@/lib/mini-app-active'
 import { readWidgetImage } from '@/lib/mini-app-widget-images'
 import { isAllowedWidgetOrigin, parseWidgetFile, parseWidgetState, WIDGET_FILE_NAME, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { headerValue } from '@/lib/site-metadata'
@@ -60,7 +60,7 @@ function queryKey(part: string): string {
   }
 }
 
-interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', parse: (response: HttpResponse, url: string) => FetchOutcome<T> }
+interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', parse: (response: HttpResponse, url: string) => FetchOutcome<T>, stopsForMiniApp?: boolean }
 
 /** Native client, so discovery needs no CORS; redirects by hand, so none leaves the origin. */
 async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): Promise<FetchOutcome<T>> {
@@ -89,10 +89,11 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
     try {
       response = await CapacitorHttp.get({
         url: current,
-        headers: { Accept: read.accept },
+        // iOS can answer from its URL cache, and a changed file or image would go unseen. On the web the header would need a CORS preflight.
+        headers: { Accept: read.accept, ...(Capacitor.isNativePlatform() ? { 'Cache-Control': 'no-cache' } : {}) },
         responseType: read.responseType,
         disableRedirects: true,
-        webFetchExtra: { credentials: 'omit' },
+        webFetchExtra: { credentials: 'omit', cache: 'no-store' },
         connectTimeout: 5_000,
         readTimeout: 10_000,
       })
@@ -109,6 +110,9 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
       catch {}
       if (!next || next.origin !== origin || !isAllowedProtocol(next) || next.username || next.password)
         return definiteError(`redirect from ${current} to ${next ? withoutCredentials(next) : 'nowhere'} refused`)
+      // A Mini App can open during a hop, and the next would take its cookies along.
+      if (read.stopsForMiniApp && miniAppHoldsCookies())
+        return transientError(`a Mini App opened during the download of ${url}`)
       current = next.href
       continue
     }
@@ -189,6 +193,7 @@ export async function fetchWidgetImage(image: WidgetImage, scope: string): Promi
   return withClearedCookies(() => nativeGet(image.url, place.origin, {
     accept: 'image/png, image/jpeg, image/webp',
     responseType: 'arraybuffer',
+    stopsForMiniApp: true,
     parse(response, url) {
       const read = readWidgetImage(String(response.data), image.sha256)
       return read.ok ? read : definiteError(`${url}: ${read.error}`)
@@ -198,7 +203,7 @@ export async function fetchWidgetImage(image: WidgetImage, scope: string): Promi
 
 async function clearCookies() {
   // A download can outlast the launch of a Mini App, whose session these cookies then are; closing it clears them.
-  if (isMiniAppActive.value)
+  if (miniAppHoldsCookies())
     return
   try {
     await CapacitorCookies.clearAllCookies()
