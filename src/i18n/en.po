@@ -798,7 +798,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
-#: src/composables/useMiniAppHost.ts:2361
+#: src/composables/useMiniAppHost.ts:2370
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:597
+#: src/stores/mini-app-widgets.ts:623
 msgid "No longer available"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:578
+#: src/stores/mini-app-widgets.ts:604
 msgid "Not available"
 msgstr ""
 
@@ -1778,7 +1778,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2362
+#: src/composables/useMiniAppHost.ts:2371
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1853,7 +1853,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:533
+#: src/composables/useMiniAppHost.ts:540
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1961,7 +1961,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:507
+#: src/composables/useMiniAppHost.ts:514
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 

@@ -66,9 +66,9 @@ export declare global {
       readonly widgets?: {
         /** Asks the user once per session; true when the widget is on Home. */
         add: (id: string) => Promise<boolean>
-        /** Replaces the widget's state; null returns it to its resting state. False when not applied, e.g. not on Home. */
+        /** Replaces the widget's state; false when not applied, e.g. not on Home. null clears its data and images on the whole site, but keeps the token and what the file shows with it: true once stored, also when not on Home. */
         update: (id: string, state: Record<string, unknown> | null) => Promise<boolean>
-        /** Sent as a bearer token with this widget's refreshes; null clears it. False when not applied, e.g. not on Home. */
+        /** Sent as a bearer token with this widget's refreshes and images; a different one clears what was linked to the one before. null clears as update(id, null) does, and the token with what came with it. True once stored. */
         setToken: (id: string, token: string | null) => Promise<boolean>
         remove: (id: string) => Promise<void>
         /** Ids of this Mini App's widgets on Home. */

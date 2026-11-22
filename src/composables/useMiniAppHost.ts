@@ -19,7 +19,7 @@ import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { isMiniAppActive } from '@/lib/mini-app-active'
-import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl, widgetScopeCandidates } from '@/lib/mini-app-widgets'
+import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
@@ -296,6 +296,12 @@ export class MiniAppHost {
   private sheets: Promise<unknown> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
   private widgetWrites: Promise<unknown> = Promise.resolve()
+  private markClosed!: () => void
+
+  private readonly closed = new Promise<void>((resolve) => {
+    this.markClosed = resolve
+  })
+
   private lastPageUrl: string | null = null
   /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
   private sessionUrl: string
@@ -379,6 +385,7 @@ export class MiniAppHost {
       return
     }
     this.destroyed = true
+    this.markClosed()
     this.stopRemoteAddressWatcher?.()
     this.stopRemoteAddressWatcher = null
     // A late destroy of an old host must not clobber the session a newer host
@@ -1624,19 +1631,17 @@ export class MiniAppHost {
     const url = this.sessionUrl
     return this.inArrivalOrder(async () => {
       const widgets = useMiniAppWidgets()
-      if (token === null) {
-        // From what is stored, and after closing too: a sign-out must not need the network or be lost.
-        const scope = widgetScopeCandidates(url).find(candidate => widgets.isOnHome(candidate, id))
-        return !!scope && widgets.setToken(scope, id, null)
-      }
+      // A clear goes by the site and what is stored, and lands after closing too: a sign-out must not need the network or be lost.
+      if (token === null)
+        return widgets.setToken(url, id, null)
       const found = await widgets.discover(url)
       return found.ok && !this.destroyed && widgets.setToken(found.value.scope, id, token as string)
     })
   }
 
-  /** So that a call made before a sign-out can't land after it. */
+  /** So that a call made before a sign-out can't land after it. Closed, none waits: only clears still land, and not on a later session's writes. */
   private inArrivalOrder<T>(write: () => Promise<T>): Promise<T> {
-    const turn = this.widgetWrites.then(write)
+    const turn = Promise.race([this.widgetWrites, this.closed]).then(write)
     this.widgetWrites = turn.catch(() => {})
     return turn
   }
@@ -1646,16 +1651,20 @@ export class MiniAppHost {
     if (!this.canChangeWidgets())
       return false
     const url = this.sessionUrl
+    const raw = (params as { state?: unknown }).state ?? null
     return this.inArrivalOrder(async () => {
-      const found = await useMiniAppWidgets().discover(url)
+      const widgets = useMiniAppWidgets()
+      // As setToken(id, null): by the site and what is stored, and after closing too.
+      if (raw === null)
+        return widgets.update(url, id, null)
+      const found = await widgets.discover(url)
       if (!found.ok || this.destroyed)
         return false
-      const raw = (params as { state?: unknown }).state ?? null
       const { scope } = found.value
       const parsed = parseWidgetState(raw, { origin: new URL(scope).origin, base: scope, now: Date.now(), allowInsecure: isDev })
       if (!parsed.ok)
         throw new InvalidRequestError(`Invalid widget state: ${parsed.error}`)
-      return useMiniAppWidgets().update(scope, id, parsed.value)
+      return widgets.update(scope, id, parsed.value)
     })
   }
 

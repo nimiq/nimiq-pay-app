@@ -52,6 +52,8 @@ vi.mock('./useLogger', () => ({ useLogger: () => ({ error: logged, log: logged, 
 
 const DEFINITION = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['medium'], content: { value: { text: 'Start' }, tone: 'neutral', rows: [] }, translations: {} }
 const SCOPE = 'https://swap.example/app/'
+// A clear goes by the site, so any URL of it.
+const PAGE = 'https://Swap.Example/app'
 
 function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = false } = {}) {
   const listeners: Record<string, Array<(event: object) => void>> = {}
@@ -340,12 +342,11 @@ describe('widgets.add', () => {
 
 describe('widgets.setToken', () => {
   it('stores a token for the Mini App\'s scope, and clears it with null', async () => {
-    widgets.isOnHome.mockReturnValue(true)
     const { request } = createHost()
     await request('widgets.setToken', { id: 'swap', token: 'opaque' })
     expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', 'opaque')
     await request('widgets.setToken', { id: 'swap', token: null })
-    expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', null)
+    expect(widgets.setToken).toHaveBeenLastCalledWith(PAGE, 'swap', null)
   })
 
   describe('so that a sign-out holds', () => {
@@ -358,10 +359,6 @@ describe('widgets.setToken', () => {
       return () => answer()
     }
 
-    beforeEach(() => {
-      widgets.isOnHome.mockReturnValue(true)
-    })
-
     it('lets no earlier token land after a clear', async () => {
       const answer = slowSearch()
       const { request } = createHost()
@@ -369,7 +366,7 @@ describe('widgets.setToken', () => {
       await flushPromises()
       answer()
       await Promise.all(calls)
-      expect(widgets.setToken.mock.calls).toEqual([[SCOPE, 'swap', 'a'], [SCOPE, 'swap', null]])
+      expect(widgets.setToken.mock.calls).toEqual([[SCOPE, 'swap', 'a'], [PAGE, 'swap', null]])
     })
 
     it('lets no earlier state land after a switch', async () => {
@@ -399,32 +396,41 @@ describe('widgets.setToken', () => {
       expect(widgets.remove).not.toHaveBeenCalled()
     })
 
-    it('never loses a clear to closing right after it', async () => {
-      const answer = slowSearch()
-      const { host, request } = createHost()
-      const earlier = request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } })
-      const clear = request('widgets.setToken', { id: 'swap', token: null })
-      await flushPromises()
-      await host.destroy()
-      answer()
-      await Promise.all([earlier, clear])
-      expect(widgets.update).not.toHaveBeenCalled()
-      expect(widgets.setToken).toHaveBeenCalledWith(SCOPE, 'swap', null)
-    })
+    describe.each([
+      ['widgets.setToken', { token: null }, widgets.setToken],
+      ['widgets.update', { state: null }, widgets.update],
+    ] as const)('clearing with %s', (name, nothing, applied) => {
+      it('is never lost to closing right after it, and no earlier state lands after it', async () => {
+        const answer = slowSearch()
+        const { host, request } = createHost()
+        const calls = [request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } }), request(name, { id: 'swap', ...nothing })]
+        await flushPromises()
+        await host.destroy()
+        answer()
+        await Promise.all(calls)
+        expect(applied.mock.calls).toEqual([[PAGE, 'swap', null]])
+        expect(widgets.update).not.toHaveBeenCalledWith(SCOPE, 'swap', expect.anything())
+      })
 
-    it('needs no widget file to clear, so neither the network nor a block stops one', async () => {
-      widgets.discover.mockResolvedValue({ ok: false, error: 'offline', transient: true })
-      const { request } = createHost()
-      await expect(request('widgets.setToken', { id: 'swap', token: null })).resolves.toBe(true)
-      expect(widgets.setToken).toHaveBeenCalledWith(SCOPE, 'swap', null)
-      expect(widgets.discover).not.toHaveBeenCalled()
-    })
+      it('lands as the Mini App closes, so it can\'t land on what the next person\'s session wrote', async () => {
+        slowSearch()
+        const { host, request } = createHost()
+        void request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Of A' } } } })
+        void request(name, { id: 'swap', ...nothing })
+        await flushPromises()
+        expect(applied).not.toHaveBeenCalled()
+        await host.destroy()
+        await flushPromises()
+        expect(applied).toHaveBeenCalledWith(PAGE, 'swap', null)
+      })
 
-    it('clears only a widget on Home in the folders above the page', async () => {
-      widgets.isOnHome.mockReturnValue(false)
-      const { request } = createHost()
-      await expect(request('widgets.setToken', { id: 'swap', token: null })).resolves.toBe(false)
-      expect(widgets.setToken).not.toHaveBeenCalled()
+      it('needs no widget file, so neither the network nor a block stops it', async () => {
+        widgets.discover.mockResolvedValue({ ok: false, error: 'offline', transient: true })
+        const { request } = createHost()
+        await expect(request(name, { id: 'swap', ...nothing })).resolves.toBe(true)
+        expect(applied).toHaveBeenCalledWith(PAGE, 'swap', null)
+        expect(widgets.discover).not.toHaveBeenCalled()
+      })
     })
 
     it('carries on after a call that was invalid', async () => {
@@ -460,13 +466,13 @@ describe('widgets.update, remove and list', () => {
   it('treats a missing state as "back to the resting state"', async () => {
     const { request } = createHost()
     await request('widgets.update', { id: 'swap' })
-    expect(widgets.update).toHaveBeenCalledWith(SCOPE, 'swap', null)
+    expect(widgets.update).toHaveBeenCalledWith(PAGE, 'swap', null)
   })
 
   it('answers false and an empty list when the Mini App has no widget file', async () => {
     widgets.discover.mockResolvedValue({ ok: false, error: 'no valid file', transient: false })
     const { request } = createHost()
-    await expect(request('widgets.update', { id: 'swap', state: null })).resolves.toBe(false)
+    await expect(request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Done' } } } })).resolves.toBe(false)
     await expect(request('widgets.list')).resolves.toEqual([])
     expect(widgets.update).not.toHaveBeenCalled()
   })
@@ -711,11 +717,13 @@ describe('after a reconnect', () => {
 })
 
 async function expectRefused(request: (name: string, params?: unknown) => Promise<unknown>) {
-  const calls = { add: widgets.add.mock.calls.length, update: widgets.update.mock.calls.length, remove: widgets.remove.mock.calls.length, list: widgets.listForScope.mock.calls.length }
+  const calls = { add: widgets.add.mock.calls.length, setToken: widgets.setToken.mock.calls.length, update: widgets.update.mock.calls.length, remove: widgets.remove.mock.calls.length, list: widgets.listForScope.mock.calls.length }
   await expect(request('widgets.add', { id: 'swap' })).rejects.toMatchObject({ message: 'This page cannot change Home widgets' })
   await expect(request('widgets.update', { id: 'swap', state: null })).resolves.toBe(false)
+  await expect(request('widgets.setToken', { id: 'swap', token: null })).resolves.toBe(false)
   await expect(request('widgets.remove', { id: 'swap' })).resolves.toBeUndefined()
   await expect(request('widgets.list')).resolves.toEqual([])
+  expect(widgets.setToken.mock.calls.length).toBe(calls.setToken)
   expect(widgets.add.mock.calls.length).toBe(calls.add)
   expect(widgets.update.mock.calls.length).toBe(calls.update)
   expect(widgets.remove.mock.calls.length).toBe(calls.remove)

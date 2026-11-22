@@ -393,31 +393,64 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return true
   }
 
-  function update(scope: string, widgetId: string, state: WidgetState | null): boolean {
+  async function update(scope: string, widgetId: string, state: WidgetState | null): Promise<boolean> {
+    if (!state)
+      return clear(scope, widgetId)
     if (!isOnHome(scope, widgetId))
       return false
-    replaceState(scope, widgetId, state ?? undefined, Date.now())
+    replaceState(scope, widgetId, state, Date.now())
     patch(scope, widgetId, () => ({ halted: undefined }))
     return true
   }
 
-  /** True once stored, as until then a restart would bring the old token back, and all of it. */
+  /**
+   * Takes any URL of the site, and that id in all its folders: no path tells a moved Mini App from a nested one, and a guess would answer true with data left.
+   * True with none on Home too, as offline a Mini App signing out can't ask list().
+   */
+  async function clear(url: string, widgetId: string, change: Partial<HomeWidget> = {}): Promise<boolean> {
+    // An unreadable list names nothing to clear, and writing it would lose them all.
+    if (!ready.value || widgetsUnreadable)
+      return false
+    const at = Date.now()
+    const site = originOf(url)
+    for (const { scope } of widgets.value.filter(w => w.widgetId === widgetId && originOf(w.scope) === site)) {
+      replaceState(scope, widgetId, undefined, at)
+      // As if just asked: else a countdown that ran out would fetch it straight back, with the user's addresses.
+      patch(scope, widgetId, () => ({ ...change, halted: undefined, shownImage: undefined, lastAttemptAt: at }))
+    }
+    return saveWidgets()
+  }
+
+  /** True once stored: until then a restart would bring back what was cleared. */
+  async function saveWidgets(): Promise<boolean> {
+    try {
+      await kv().setItem(WIDGETS_KEY, storedSerializer.write(stored.value))
+      return true
+    }
+    catch (error) {
+      logger.warn('Could not store the widgets', error)
+      return false
+    }
+  }
+
   async function setToken(scope: string, widgetId: string, token: string | null): Promise<boolean> {
+    if (token === null)
+      return clear(scope, widgetId, { token: undefined, tokenId: undefined })
     const widget = find(scope, widgetId)
     if (!widget)
       return false
     const at = Date.now()
-    const changed = widget.token !== (token ?? undefined)
-    // Only when one leaves: there is nothing of a token before the first, so a state pushed just before that stays.
+    const changed = widget.token !== token
+    // A first token clears nothing, so a state pushed just before it stays.
     const tokenLeaves = changed && !!widget.token
     // One id for a site's widgets with the same token, so that they share its images.
-    const sharing = token ? widgets.value.find(w => w.token === token && originOf(w.scope) === originOf(scope)) : undefined
+    const sharing = widgets.value.find(w => w.token === token && originOf(w.scope) === originOf(scope))
     // Not from the clock, which can go back to another token's id.
     const tokenId = changed ? sharing?.tokenId ?? crypto.getRandomValues(new Uint32Array(1))[0] : widget.tokenId
     if (tokenLeaves)
       replaceState(scope, widgetId, undefined, at)
     patch(scope, widgetId, w => ({
-      token: token ?? undefined,
+      token,
       tokenId,
       // Plain ones too: a state's can be the user's, and would fill in while the file's loads.
       shownImage: tokenLeaves ? undefined : w.shownImage,
@@ -425,14 +458,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       refreshDueAt: changed || w.halted ? at : w.refreshDueAt,
       revision: ++lastRevision,
     }))
-    try {
-      await kv().setItem(WIDGETS_KEY, storedSerializer.write(stored.value))
-      return true
-    }
-    catch (error) {
-      logger.warn('Could not store a widget token', error)
-      return false
-    }
+    return saveWidgets()
   }
 
   function remove(scope: string, widgetId: string) {
@@ -689,8 +715,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       // A Mini App may have pushed a newer state or token while the request ran.
       const latest = find(widget.scope, widget.widgetId)
       if (latest?.revision !== widget.revision) {
-        // Still an attempt, so a forced tick right after does not ask the Mini App again.
-        patch(widget.scope, widget.widgetId, () => ({ lastAttemptAt: at }))
+        // Still an attempt, so a forced tick right after does not ask the Mini App again. Never back past a clear, which counts as one.
+        patch(widget.scope, widget.widgetId, w => ({ lastAttemptAt: Math.max(w.lastAttemptAt ?? 0, at) }))
         return
       }
       if (result.ok) {
@@ -1028,12 +1054,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     const inFolder = (w: HomeWidget) => w.network === network && w.scope === scope
     const checkedBefore = new Map(stored.value.filter(inFolder).map(w => [w.widgetId, w.definitionCheckedAt]))
     stored.value = stored.value.map(w => inFolder(w) ? { ...w, definitionCheckedAt: at } : w)
-    try {
-      // Before the request: one that ends the app would otherwise be made again at every start.
-      await kv().setItem(WIDGETS_KEY, storedSerializer.write(stored.value))
-    }
-    catch (error) {
-      logger.warn('Could not store a widget file check', error)
+    // Before the request: one that ends the app would otherwise be made again at every start.
+    if (!await saveWidgets()) {
       stored.value = stored.value.map(w => inFolder(w) && w.definitionCheckedAt === at ? { ...w, definitionCheckedAt: checkedBefore.get(w.widgetId) ?? at } : w)
       return
     }

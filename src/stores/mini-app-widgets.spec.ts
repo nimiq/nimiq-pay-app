@@ -207,9 +207,9 @@ describe('adding, updating, removing', () => {
 
   it('updates only widgets on Home, and null returns to the resting state', async () => {
     const store = await setup()
-    expect(store.update(SCOPE, 'swap', live('Waiting'))).toBe(false)
+    expect(await store.update(SCOPE, 'swap', live('Waiting'))).toBe(false)
     store.add(SCOPE, definition())
-    expect(store.update(SCOPE, 'swap', live('Waiting'))).toBe(true)
+    expect(await store.update(SCOPE, 'swap', live('Waiting'))).toBe(true)
     expect(store.views[0]!.label).toBe('Waiting')
     store.update(SCOPE, 'swap', null)
     expect(store.views[0]!.value).toEqual({ text: 'Start a swap' })
@@ -2147,9 +2147,9 @@ describe('images', () => {
       return store
     }
 
-    it.each([['cleared', null], ['replaced', 'token-b']])('goes at once when it is %s, text and later states included, and stays gone after a restart', async (_, token) => {
+    it('goes at once when it is replaced, text and later states included, and stays gone after a restart', async () => {
       const store = await connected()
-      store.setToken(SCOPE, 'swap', token)
+      store.setToken(SCOPE, 'swap', 'token-b')
       expect(store.views[0]).toMatchObject({ label: undefined, value: { text: 'Start a swap' } })
       await settle()
       expect(memory.get('miniAppWidgets')).not.toContain('of A')
@@ -2199,36 +2199,12 @@ describe('images', () => {
       expect(fetchWidgetRefresh.mock.calls[0]![4]).toMatchObject({ token: 'token-b' })
     })
 
-    it('takes a plain image the state showed, also while the file\'s loads', async () => {
-      const store = await setup()
-      fetchWidgetImage.mockImplementation(async (asked: { sha256: string }) => asked.sha256 === NEW ? { ok: false, error: 'down', transient: true } : { ok: true, value: drawn(asked.sha256).src })
-      store.add(SCOPE, pictured({ hero: image('rest', NEW) }))
-      store.setToken(SCOPE, 'swap', 'token-a')
-      store.update(SCOPE, 'swap', showing({ image: image('secret-of-a', OLD) }))
-      await settle()
-      expect(store.views[0]!.background).toEqual(drawn(OLD))
-      store.setToken(SCOPE, 'swap', null)
-      expect(store.views[0]!.background).toBeUndefined()
-      await settle()
-      expect(store.views[0]!.background).toBeUndefined()
-    })
-
     it('leaves no image URL in the back-off records, as one can be a secret', async () => {
       const store = await setup()
       fetchWidgetImage.mockResolvedValue({ ok: false, error: 'down', transient: true })
       store.add(SCOPE, pictured({ hero: image('secret-of-a', OLD) }))
       await settle()
       expect(memory.get('miniAppWidgetImageFailures')).not.toContain('secret-of-a')
-    })
-
-    it('is reported gone only once that is stored', async () => {
-      const store = await connected()
-      storedRead.failingWrite = 'miniAppWidgets'
-      expect(await store.setToken(SCOPE, 'swap', null)).toBe(false)
-      expect(store.views[0]!.label).toBeUndefined()
-      storedRead.failingWrite = ''
-      expect(await store.setToken(SCOPE, 'swap', null)).toBe(true)
-      expect(memory.get('miniAppWidgets')).not.toContain('of A')
     })
 
     it('leaves no image behind a delete that never happened', async () => {
@@ -2377,6 +2353,168 @@ describe('images', () => {
       second.setToken(SCOPE, 'swap', 'token-b')
       second.update(SCOPE, 'swap', showing({ image: asking('a', OLD) }))
       expect(second.views[0]!.background).toBeUndefined()
+    })
+  })
+
+  describe('a Mini App clearing its widget, linked to a token or not', () => {
+    type Store = Awaited<ReturnType<typeof setup>>
+    const ways = [
+      ['update(id, null)', (store: Store) => store.update(SCOPE, 'swap', null)],
+      ['setToken(id, null)', (store: Store) => store.setToken(SCOPE, 'swap', null)],
+    ] as const
+    const pushed = async (token?: string) => {
+      const store = await setup()
+      fetchWidgetImage.mockImplementation(async (asked: { sha256: string }) => asked.sha256 === NEW ? { ok: false, error: 'down', transient: true } : { ok: true, value: drawn(asked.sha256).src })
+      store.add(SCOPE, pictured({ hero: image('rest', NEW) }))
+      if (token)
+        await store.setToken(SCOPE, 'swap', token)
+      store.update(SCOPE, 'swap', showing({ image: image('of-a', OLD) }, { next: [{ on: { at: NOW + 60_000 }, state: live('Later, of A') }] }))
+      await settle()
+      expect(store.views[0]).toMatchObject({ value: { text: 'y' }, background: drawn(OLD) })
+      return store
+    }
+
+    describe.each(ways)('with %s', (_, clear) => {
+      it.each([['no token', undefined], ['a token', 'token-a']])('takes text and image at once and from the database, with %s, also while the file\'s image fails', async (__, token) => {
+        const store = await pushed(token)
+        const cleared = clear(store)
+        expect(store.views[0]).toMatchObject({ value: { text: 'x' }, background: undefined })
+        expect(await cleared).toBe(true)
+        await settle()
+        expect(store.views[0]!.background).toBeUndefined()
+        expect(memory.get('miniAppWidgets')).not.toContain('of A')
+        expect(memory.get('miniAppWidgets')).not.toContain('of-a')
+        expect(memory.has(IMAGE_KEY(OLD))).toBe(false)
+        const restarted = await setup()
+        await tickAt(restarted, NOW + 120_000)
+        expect(restarted.views[0]).toMatchObject({ value: { text: 'x' }, background: undefined })
+      })
+
+      it('answers true only once that is stored', async () => {
+        const store = await pushed()
+        storedRead.failingWrite = 'miniAppWidgets'
+        expect(await clear(store)).toBe(false)
+        expect(store.views[0]!.value).toEqual({ text: 'x' })
+        storedRead.failingWrite = ''
+        expect(await clear(store)).toBe(true)
+        expect(memory.get('miniAppWidgets')).not.toContain('of A')
+      })
+
+      it('answers true with nothing on Home to clear, as a sign-out can\'t list offline', async () => {
+        expect(await clear(await setup())).toBe(true)
+      })
+
+      it('answers false before the stored widgets are read', async () => {
+        setActivePinia(createPinia())
+        const store = (await import('./mini-app-widgets')).useMiniAppWidgets()
+        running.push(store)
+        expect(store.ready).toBe(false)
+        expect(await clear(store)).toBe(false)
+      })
+
+      it('fetches nothing back at once', async () => {
+        const store = await setup()
+        store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 86_400 } }), ['addresses'])
+        store.setToken(SCOPE, 'swap', 'token-a')
+        fetchWidgetRefresh.mockResolvedValue({ ok: true, value: live('Balance of A') })
+        await tickAt(store, NOW)
+        fetchWidgetRefresh.mockClear()
+        await clear(store)
+        await tickAt(store, NOW + 15_000)
+        expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+        expect(store.views[0]!.label).toBeUndefined()
+      })
+    })
+
+    it('keeps the token with update(id, null), and drops it with setToken(id, null)', async () => {
+      const store = await pushed('token-a')
+      await store.update(SCOPE, 'swap', null)
+      expect(store.widgets[0]!.token).toBe('token-a')
+      await store.setToken(SCOPE, 'swap', null)
+      expect(store.widgets[0]!.token).toBeUndefined()
+    })
+
+    describe.each([
+      ['update(id, null)', (store: Store, page: string) => store.update(page, 'swap', null)],
+      ['setToken(id, null)', (store: Store, page: string) => store.setToken(page, 'swap', null)],
+    ] as const)('%s takes that id on the whole site, as no path tells a moved Mini App from a nested one', (_, clear) => {
+      it.each([
+        ['it is on Home in two folders', ['games/', ''], 'games/chess/'],
+        ['the page is deeper than a search goes', ['app/'], 'app/a/b/c/d'],
+        ['the page is above it', ['app/'], ''],
+        ['its file moved below it', [''], 'app/'],
+      ])('also when %s', async (__, folders, page) => {
+        const store = await setup()
+        for (const folder of folders) {
+          store.add(`${SCOPE}${folder}`, definition())
+          store.update(`${SCOPE}${folder}`, 'swap', live('Balance of A'))
+        }
+        findWidgetFile.mockResolvedValue({ ok: true, value: { scope: `${SCOPE}${page}`, file: { widgets: [definition()] } } })
+        if (page.endsWith('/'))
+          await store.discover(`${SCOPE}${page}`)
+        expect(await clear(store, `${SCOPE}${page}`)).toBe(true)
+        expect(store.views.map(view => view.label)).toEqual(folders.map(() => undefined))
+        expect(memory.get('miniAppWidgets')).not.toContain('of A')
+      })
+
+      it('and nothing of another id or another site', async () => {
+        const store = await setup()
+        store.add(SCOPE, definition({ id: 'other' }))
+        store.add(SUBFOLDER, definition())
+        store.update(SCOPE, 'other', live('Another id'))
+        store.update(SUBFOLDER, 'swap', live('Another site'))
+        await clear(store, `${SCOPE}app/`)
+        expect(store.views.map(view => view.label)).toEqual(['Another id', 'Another site'])
+      })
+    })
+
+    describe.each(ways)('with %s and nothing known to be left', (_, clear) => {
+      it.each(['unreadable', 'garbled'])('answers false and writes nothing when the stored widgets are %s', async (how) => {
+        const stored = how === 'garbled' ? '[{"widgetId":"swap' : JSON.stringify([{ ...storedWidget('mainnet', 'swap'), state: live('Balance of A') }])
+        memory.set('miniAppWidgets', stored)
+        if (how === 'unreadable')
+          storedRead.failingRead = 'miniAppWidgets'
+        expect(await clear(await setup())).toBe(false)
+        await settle()
+        expect(memory.get('miniAppWidgets')).toBe(stored)
+      })
+
+      it('answers false when the widget left Home and that could not be stored', async () => {
+        const store = await pushed('token-a')
+        storedRead.failingWrite = 'miniAppWidgets'
+        store.remove(SCOPE, 'swap')
+        expect(await clear(store)).toBe(false)
+      })
+
+      it('fetches nothing back when an answer from before it arrives late', async () => {
+        const store = await setup()
+        store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 86_400 }, content: { value: { text: 'x' }, tone: 'neutral', rows: [], countdown: { label: 'Sale ends', until: NOW + 5000 } } }), ['addresses'])
+        const answer = deferred<object>()
+        fetchWidgetRefresh.mockReturnValueOnce(answer.promise)
+        const ticked = store.tick({ chain: fakeChain(), at: NOW })
+        await flushPromises()
+        expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+        vi.setSystemTime(NOW + 10_000)
+        await clear(store)
+        answer.resolve({ ok: true, value: live('Balance of A') })
+        await ticked
+        fetchWidgetRefresh.mockResolvedValue({ ok: true, value: live('Balance of A') })
+        await tickAt(store, NOW + 75_000)
+        expect(fetchWidgetRefresh).toHaveBeenCalledTimes(1)
+        expect(store.views[0]!.label).toBeUndefined()
+      })
+
+      it('fetches nothing back at once for a countdown of the file that has ended', async () => {
+        const store = await setup()
+        store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 86_400 }, content: { value: { text: 'x' }, tone: 'neutral', rows: [], countdown: { label: 'Sale ends', until: NOW + 60_000 } } }), ['addresses'])
+        fetchWidgetRefresh.mockResolvedValue({ ok: true, value: live('Balance of A') })
+        await tickAt(store, NOW)
+        fetchWidgetRefresh.mockClear()
+        vi.setSystemTime(NOW + 120_000)
+        await clear(store)
+        await tickAt(store, NOW + 135_000)
+        expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+      })
     })
   })
 

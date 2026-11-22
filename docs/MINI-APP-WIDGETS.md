@@ -67,7 +67,7 @@ background: { image: { url: '/w/7f3c9a.png', sha256: '<64 hex characters>' } }
 
 - **You change images whenever you want, and nobody approves them.** The images of a state, its later states' included, are downloaded when it arrives, or as soon as no Mini App is open if one is, so a trigger switches without waiting for the network. An image changed in the file is found when Nimiq Pay re-reads it (see below), without your Mini App being opened.
 - **The hash is what identifies an image on your site.** A new image needs a new hash; a new URL with the same hash is not downloaded again while a widget uses it. Put the image online before the file or state that names it.
-- **While an image is not ready, the card keeps the one it showed before**, or stays plain if it had none. Content without a background, or with a key the widget doesn't have, is plain at once. An image the device cannot draw leaves the card plain.
+- **While an image is not ready, the card keeps the one it showed before**, or stays plain if it had none or your Mini App cleared the widget (section 4). Content without a background, or with a key the widget doesn't have, is plain at once. An image the device cannot draw leaves the card plain.
 - **A failed download is retried** after 5 minutes, then 10, 20 and so on up to every 6 hours, also when the image did not match its hash. All images of your site share a budget (section 6), in which every attempt counts; at most 3 download at once, and what cards show is downloaded first.
 - Nimiq Pay checks each image against its hash and keeps it in its encrypted database while a widget uses it; it never loads one from your site to draw it. Image and widget file requests never carry the user's addresses or any cookie, and none they answer is kept. The gallery downloads what its previews draw, without storing it.
 - **An image meant for one user: send the token with it.** Add `sendToken: true` to the image, in the file or in a state, and Nimiq Pay fetches it with the token that widget got from `setToken`, as `Authorization: Bearer <token>`; without that field an image request never carries a token. Such an image needs CORS, which plain images don't: answer the `OPTIONS` preflight with `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Headers: Authorization`, send `Access-Control-Allow-Origin: *` on the image answer too, and don't redirect. Until the widget has a token, while its refreshes are paused by a 401 or 403, or while your server asked them to wait with `Retry-After`, nothing is requested and the card keeps the image it had (never one of an earlier token); after a 410 nothing is requested and the card shows "No longer available" without an image. Like every image, it is fetched once no Mini App is open, so of the states and tokens you send while yours is open only the last ones count; use a token that is still valid after your Mini App closes. After a 401 or 403 a different token doesn't wait for the back-off; after any other failure it does. `Retry-After` on the image is honoured, up to 24 hours, if the answer exposes it with `Access-Control-Expose-Headers: Retry-After`. A 401 or 403 on an image is a failed download and doesn't pause refreshes, so a widget without a refresh doesn't show "Open to reconnect" for it. Gallery previews leave these images out, as there is no token before a widget is added. Answer every per-user image with `Cache-Control: no-store`, with a token or without, so no cache on the way keeps it for someone else; without a token, also give it a URL nobody can guess.
@@ -166,7 +166,7 @@ type WidgetValue
 
 ## 4. `window.nimiqPay.widgets`
 
-Nimiq Pay injects this object into your Mini App's top frame (frames your page embeds do not get it). Versions of Nimiq Pay without widgets do not have it, so check first. Having it does not prove support: on a Nimiq Pay too old to enforce the download limits every call fails as refused calls do, so handle a failed `add` too.
+Nimiq Pay injects this object into your Mini App's top frame (frames your page embeds do not get it). Versions of Nimiq Pay without widgets do not have it, so check first. Having it does not prove support: on a Nimiq Pay too old to enforce the download limits every call but the two that clear fails as refused calls do, so handle a failed `add` too.
 
 ```js
 if (window.nimiqPay?.widgets) {
@@ -178,22 +178,42 @@ if (window.nimiqPay?.widgets) {
 | --- | --- |
 | `add(id)` | Asks the user (a native sheet: "Add Swap status to Home?"). Resolves `true` if the widget is on Home afterwards, `false` if the user said no. Rejects when the file cannot be read or declares no such widget, when your Mini App already has 6 widgets on Home, or when Home already holds 10. |
 | `update(id, state)` | Replaces the widget's state. No prompt, and only for a widget already on Home. Resolves `true` when applied, `false` when it was not (not on Home, the request was refused, or the widget file could not be found). Rejects with `Invalid widget state: <field>: <problem>` when the state is invalid; the widget keeps its last good state. |
-| `update(id, null)` | Back to the resting state from the widget file. |
-| `setToken(id, token)` | Stores a token for this widget, sent as `Authorization: Bearer <token>` with its refreshes and with its images marked `sendToken`, and resumes refreshes paused by a 401 or 403. At most 2048 visible ASCII characters; `null` clears it. Clearing it, or replacing it with a different one, clears what was linked to it (below the table). Resolves `true` once stored, `false` when not applied or not stored. Nothing reads it back. |
+| `update(id, null)` | Clears the widget back to its resting state and keeps its token (see "Clearing a widget" below). |
+| `setToken(id, token)` | Stores a token for this widget, sent as `Authorization: Bearer <token>` with its refreshes and with its images marked `sendToken`, and resumes refreshes paused by a 401 or 403. At most 2048 visible ASCII characters; `null` clears the widget and its token. A different token clears what was linked to the one before (both below the table). Resolves `true` once stored, `false` when not applied or not stored. Nothing reads it back. |
 | `remove(id)` | Removes the widget from Home. |
 | `list()` | The ids of your Mini App's widgets that are on Home. |
 
-**What goes with a token.** `setToken(id, null)`, or `setToken` with a different token, puts that widget back in its resting state at once, also while your Mini App is open. Everything linked to the old token goes, off the card and out of the database: the state with its texts and later states, that state's images, the images fetched with the token, and any answer still under way. A first token, or the same one again, clears nothing. So:
+**Clearing a widget.** Any widget can be cleared, whether you ever set a token or not:
+
+- `setToken(id, null)` clears everything. Use it when someone signs out.
+- `update(id, null)` clears the same but keeps the token, for "nothing to show right now". So it also keeps what your widget file shows with that token (its images with `sendToken`), and the next refresh can fill the card again for that account.
+
+Either takes the state with its texts, rows and later states, the images it showed and any answer still under way off the card at once, also while your Mini App is open. The widget stays on Home as your widget file describes it, with that file's content and plain images, its size and what the user allowed. Neither refreshes at once; a later refresh from your widget file still runs, with the user's addresses if they allowed that.
+
+**For both, an id is per site:** every widget with that id on your origin is cleared, whichever folder it was added from, so a moved Mini App or a page in another folder can still sign someone out. Give the widgets of different Mini Apps on one origin different ids.
+
+Both work without a network or a widget file, while Nimiq blocks the widget, and when your Mini App closes right after the call. They answer `true` once the cleared widget is stored, also when none with that id is on Home, so you can clear every id of your file without `list()`. Its stored images are deleted right after, or when Nimiq Pay next starts.
+
+```js
+// On sign-out, before you open a popup or leave your site
+const cleared = await Promise.all(['points', 'order'].map(id => widgets.setToken(id, null)))
+if (cleared.includes(false)) {
+  // try again, and don't push anyone else's state before every answer is true
+}
+```
+
+They answer `false` where requests are refused, clearing nothing (end of this section), or when it could not be stored or the stored widgets could not be read.
+
+**What goes with a token.** `setToken` with a different token clears as above what was linked to the one before: the state, its images and the images fetched with that token. A first token, or the same one again, clears nothing: what was pushed without a token stays until you clear it. So:
 
 - Set the token, wait for `true`, then push the state. The other way round loses the state as soon as a token was set before.
-- Keep the same token while it is valid. After a different one the card rests until your `update`, or until the refresh in your widget file answers (any change of token makes the refresh due at once). A `refresh` that was only in the pushed state is gone with it.
-- On sign-out, clear the token of each of your widgets and wait for `true`, which means it is gone from the database too. A clear needs no network and is kept if your Mini App closes right after the call. It answers `false` where requests are refused (end of this section), so clear before you open a sign-out popup or leave your site. After a `false`, clear again and don't show the next account's state until it is `true`.
+- Keep the same token while it is valid. After a different one the card rests until your `update`, or until the refresh in your widget file answers (a new token makes it due at once). A `refresh` that was only in the pushed state is gone with it.
 
 The sheet says the name your widget will appear under (your `name`, or your catalog name), and tells the user that the widget shows what your site sends, may contact your site regularly, cannot see their balance or move funds, and can be removed from its menu. `add` asks the user once per widget while the Mini App stays open; concurrent calls share one sheet, and after a "no" it answers `false` straight away until the Mini App is closed. Nimiq Pay reads the widget file once per run of Nimiq Pay, and again when it re-checks a folder with widgets on Home (section 2). The gallery is the other way to add a widget: choosing "Add" there is the consent.
 
 Nimiq Pay shows your Mini App one sheet at a time, connection and signing sheets included: a request that needs a sheet waits until the one before is answered, for a minute at most.
 
-Requests are accepted only from the site the Mini App session belongs to. They are refused while the in-app browser shows another site, while it navigates between sites, while a popup your page opened is open, and after Nimiq Pay reloads behind an open Mini App until the page has loaded again. Refused calls fail quietly: `add` rejects, `update` and `setToken` answer `false` (also `setToken(id, null)`, which then clears nothing), `remove` does nothing and `list` answers `[]`. `update`, `setToken` and `remove` apply in the order you made them.
+Requests are accepted only from the site the Mini App session belongs to. They are refused while the in-app browser shows another site, while it navigates between sites, while a popup your page opened is open, and after Nimiq Pay reloads behind an open Mini App until the page has loaded again. Refused calls fail quietly: `add` rejects, `update` and `setToken` answer `false`, `remove` does nothing and `list` answers `[]`. `update`, `setToken` and `remove` apply in the order you made them.
 
 ## 5. Keeping a widget current
 
@@ -217,7 +237,7 @@ type Trigger
 
 **Path 2: after it closes, without a server.** Nimiq Pay follows `next`. The first trigger that fires wins and its `state` replaces the current one (`null` returns to the resting state); that state may carry its own `next`. A `nimiqPayment` fires on one transaction to `to` that is executed successfully, has a value of at least `minValue` NIM (rounded up to the next luna) and a timestamp of `since` or later, found among the address's newest 25 transactions. Split payments do not add up, and on a busy address an older payment can fall out of that window. Chain triggers use Nimiq Pay's own Nimiq client and Polygon connection, and nothing they look up goes back to your Mini App.
 
-**Path 3: after it closes, with a server.** Nimiq Pay calls `refresh.url`, no more often than `every` seconds (clamped to 60 s through 24 h), apart from pull to refresh on Home, the one refresh when an `until` countdown ends, the first fetch as soon as Home shows after a widget with a resting-state `refresh` is added, and one fetch when its token changes, within your site's budget. Pull to refresh and the countdown refresh still wait until a minute has passed since the last request. The answer is a state: JSON `null` returns the widget to its resting state, and an answer without `refresh` stops the polling. Nimiq Pay adds `lang` and `network` (`mainnet` or `testnet`) to the query, replacing any you wrote yourself, and keeps the rest of your query exactly as written. It sends nothing else: no cookies, no wallet data.
+**Path 3: after it closes, with a server.** Nimiq Pay calls `refresh.url`, no more often than `every` seconds (clamped to 60 s through 24 h), apart from pull to refresh on Home, the one refresh when an `until` countdown ends, the first fetch as soon as Home shows after a widget with a resting-state `refresh` is added, and one fetch when it gets a new token, within your site's budget. Pull to refresh and the countdown refresh still wait until a minute has passed since the last request or clear, and a countdown that ended before a clear brings no refresh. The answer is a state: JSON `null` returns the widget to its resting state, and an answer without `refresh` stops the polling. Nimiq Pay adds `lang` and `network` (`mainnet` or `testnet`) to the query, replacing any you wrote yourself, and keeps the rest of your query exactly as written. It sends nothing else: no cookies, no wallet data.
 
 The refresh endpoint must:
 
@@ -258,8 +278,8 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 - A passed `expiresAt` returns the widget to its resting state and ends that state's triggers and refreshes.
 - Nimiq Pay checks triggers and refreshes only while Home is on screen and Nimiq Pay is in the foreground; chain lookups at most every 30 seconds, at most 10 per check across all widgets. Checks rotate across widgets so each gets a turn, and a state with lookup triggers is checked only when all of its lookups fit in what is left.
 - A lookup that fails never fires a trigger.
-- Nimiq can block a Mini App's widgets remotely, if one misbehaves. They then show only "Not available" under a generic icon, open nothing and make no requests, and SDK calls fail as refused calls do (section 4), except `setToken(id, null)`, which still clears, until the block is lifted. The user can still remove them.
-- An installed Nimiq Pay too old to enforce the download limits has no widgets, also after an update over the air, until it is updated from its store: no gallery or Home section shows, and calls on `window.nimiqPay.widgets`, which is still there, fail as refused calls do, except `setToken(id, null)`, which still clears.
+- Nimiq can block a Mini App's widgets remotely, if one misbehaves. They then show only "Not available" under a generic icon, open nothing and make no requests, and SDK calls other than the two that clear fail as refused calls do (section 4) until the block is lifted. The user can still remove them.
+- An installed Nimiq Pay too old to enforce the download limits has no widgets, also after an update over the air, until it is updated from its store: no gallery or Home section shows, and calls on `window.nimiqPay.widgets`, which is still there, fail as section 4 describes.
 
 ## 6. Limits and what is refused
 
