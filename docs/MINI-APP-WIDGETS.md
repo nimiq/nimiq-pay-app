@@ -112,30 +112,19 @@ Content describes meaning. Every text is trimmed, cut to its cap counted in whol
 interface WidgetContent {
   label?: string // small heading, at most 24 characters
   value: WidgetValue // the big line
-  info?: string | { live: LiveValue } // the line under the value, at most 40 characters
+  info?: string // the line under the value, at most 40 characters
   tone?: 'neutral' | 'positive' | 'attention' | 'negative' // default 'neutral'
   progress?: number // 0 to 1, a bar on medium and large
   countdown?: { label: string, until: number } // a time in ms; see the rules below
     | { label: string, untilNimiqHeight: number } // a Nimiq block height (one block per second)
   rows?: { label: string, value: WidgetValue, path?: string }[] // at most 3, large only
   chart?: { kind: 'line' | 'bars', points: number[] } // 2 to 48 points, large only
-    | { kind: 'line', priceHistory: { asset: Asset, range: '24h' | '7d' | '30d' } }
   path?: string // where a tap opens the Mini App
 }
 
 type WidgetValue
   = | { text: string } // at most 28 characters
     | { amount: string, currency: string } // "0.05" + "ETH", shown in the user's language ("0,05 ETH"); ISO 4217 codes (EUR, USD) format as money
-    | { live: LiveValue } // filled in by Nimiq Pay
-
-type LiveValue
-  = | { nimiqBalance: string } // a Nimiq address
-    | { nimiqStake: { address: string, part: 'active' | 'inactive' } }
-    | { usdtBalance: string } // a Polygon address
-    | { price: Asset } // in the user's currency
-    | { priceChange: { asset: Asset, range: '24h' | '7d' | '30d' } } // coloured by Nimiq Pay
-
-type Asset = 'NIM' | 'BTC' | 'ETH' | 'USDT'
 ```
 
 **What each size shows.**
@@ -149,16 +138,14 @@ type Asset = 'NIM' | 'BTC' | 'ETH' | 'USDT'
 
 **Rules the parser enforces.**
 
-- A value, countdown, chart or trigger that carries two kinds at once (for example `text` and `amount`) is refused.
+- A value, countdown, background or trigger that carries two kinds at once (for example `text` and `amount`) is refused.
 - `amount` matches `^\d{1,18}(\.\d{1,18})?$`; `currency` matches `^[A-Z0-9]{2,8}$`.
 - Chart points are finite numbers within plus or minus 1e15.
-- Nimiq addresses must have a valid checksum. Polygon addresses are `0x` plus 40 hex digits, transaction hashes 64 hex digits (Nimiq) or `0x` plus 64 (Polygon).
+- Nimiq addresses must have a valid checksum. Transaction hashes are 64 hex digits (Nimiq) or `0x` plus 64 (Polygon).
 - A `path` (also on a row) that is not a string refuses the state. A `path` that leaves your site's origin, is not https, carries a user name or password, or does not parse is dropped: the tap then opens the widget's folder.
 - Times (`until`, `at`, `since`, `expiresAt`) must be within 30 days of now. Unknown fields are dropped.
 - A `countdown` with `until` makes Nimiq Pay refresh once when it reaches 0, but only for a state that has a `refresh`. A countdown with `untilNimiqHeight` does not.
 - A `path` keeps its URL fragment (`#...`), so a hash-routed Mini App opens at the right route; only the fragment of `refresh.url` is dropped. Relative URLs in states you push and in refresh answers resolve against the folder where the file was found.
-
-**Live values.** Nimiq Pay looks them up with its own Nimiq and Polygon clients and its own price service (cached at 10-minute checkpoints). Your Mini App never sees the results. A widget whose content uses only live values needs no code (see the example in section 7).
 
 ## 4. `window.nimiqPay.widgets`
 
@@ -246,7 +233,7 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 - A fired trigger or a refresh answer replaces the whole state, including its own `next` and `refresh`.
 - Triggers are evaluated in order and the first that fires wins. A trigger whose lookup cannot answer yet (no consensus right after Nimiq Pay starts, a lookup error or timeout) holds back every trigger after it until it can, so a deadline (`at`) never wins over a payment that could not be checked. A Nimiq transaction (`nimiqTx`) is different: while Nimiq Pay has consensus, any lookup failure counts as not confirmed yet, so a hash that was never sent does not hold back the triggers after it and a later `at` can fire. Only a lookup without consensus, or one that times out, holds them back. Give states with lookup triggers an `expiresAt`.
 - A passed `expiresAt` returns the widget to its resting state and ends that state's triggers and refreshes.
-- Nimiq Pay checks triggers and refreshes only while Home is on screen and Nimiq Pay is in the foreground; chain lookups at most every 30 seconds, at most 10 per check across all widgets (live balance values count as lookups too). Checks rotate across widgets so each gets a turn, and a state with lookup triggers is checked only when all of its lookups fit in what is left.
+- Nimiq Pay checks triggers and refreshes only while Home is on screen and Nimiq Pay is in the foreground; chain lookups at most every 30 seconds, at most 10 per check across all widgets. Checks rotate across widgets so each gets a turn, and a state with lookup triggers is checked only when all of its lookups fit in what is left.
 - A lookup that fails never fires a trigger.
 - Nimiq can block a Mini App's widgets remotely, if one misbehaves. They then show only "Not available" under a generic icon, open nothing and make no requests, and SDK calls fail as refused calls do (section 4), until the block is lifted. The user can still remove them.
 
@@ -263,7 +250,6 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 | State size, widget file size | 8 KB, 32 KB |
 | Rows | 3 |
 | Chart points | 2 to 48 |
-| Price history ranges | 24h, 7d, 30d |
 | Triggers per state, depth of `next` | 8, 3 levels |
 | Chain lookups per check, all widgets | 10 |
 | Chain lookups per check, one Mini App | 8 |
@@ -276,32 +262,13 @@ A state that breaks a rule (a wrong type, two kinds in one value, too many rows,
 
 ```text
 Invalid widget state: state.refresh.url: must stay on https://swap.example over https, without credentials
-Invalid widget state: state.content.value: expected only one of text, amount, live
+Invalid widget state: state.content.value: expected only one of text, amount
 Invalid widget state: state.content.rows: at most 3 rows
 ```
 
 An invalid widget file keeps the Mini App out of the gallery, and `add` rejects with a message that names the problem.
 
 ## 7. Examples
-
-**A price widget with no code.** The file alone is the whole integration; Nimiq Pay keeps the price and its change current.
-
-```json
-{
-  "v": 1,
-  "widgets": [{
-    "id": "nim-price",
-    "name": "NIM price",
-    "sizes": ["small", "large"],
-    "content": {
-      "label": "NIM",
-      "value": { "live": { "price": "NIM" } },
-      "info": { "live": { "priceChange": { "asset": "NIM", "range": "24h" } } },
-      "chart": { "kind": "line", "priceHistory": { "asset": "NIM", "range": "24h" } }
-    }
-  }]
-}
-```
 
 **Swap status, with all three paths.** The widget file is the one in section 2. When a swap starts, the Mini App pushes its state; the deadline is a trigger, and a server answer keeps it current after the Mini App closes. Times must be within 30 days of now, so build them from the clock:
 
@@ -339,9 +306,9 @@ Response.json({
 
 ## 8. Trying it
 
-The demo Mini App in `mini-app-sdk/dapp` ships two widgets (`nim-price` and `lab`) in `public/nimiq-pay-widgets.json` and a Widgets tab. Open the demo in a Nimiq Pay build with widgets (a demo served over plain http or from a LAN IP address works only in development builds of Nimiq Pay), then either:
+The demo Mini App in `mini-app-sdk/dapp` ships a widget (`lab`) in `public/nimiq-pay-widgets.json` and a Widgets tab. Open the demo in a Nimiq Pay build with widgets (a demo served over plain http or from a LAN IP address works only in development builds of Nimiq Pay), then either:
 
-- open the Mini Apps modal, tap Widgets at the top and add them from the gallery (it lists Nimiq Pay's own NIM price widget first, then the Mini Apps you have opened), or
-- use the demo's Widgets tab: it adds each widget, pushes a scheduled state that turns green after two minutes, a bar chart, a chain trigger that waits for a 0.00001 NIM payment to yourself (and gives up after 30 minutes), a button that calls `remove`, and a deliberately invalid state to see the error message. The buttons that need your account stay disabled until the demo's provider is ready.
+- open the Mini Apps modal, tap Widgets at the top and add them from the gallery (it lists the Mini Apps you have opened), or
+- use the demo's Widgets tab: it adds the widget, pushes a scheduled state that turns green after two minutes, a bar chart, a chain trigger that sends 0.00001 NIM to yourself and watches that transaction (for up to 30 minutes), a button that calls `remove`, and a deliberately invalid state to see the error message. The buttons that need your account stay disabled until the demo's provider is ready.
 
 The tab shows the result of every call in its status line. Remove a widget from its "⋯" menu.

@@ -229,7 +229,6 @@ describe('parseWidgetState', () => {
     const bad = parseWidgetState(state({}, { path: 'http://[bad' }), ctx)
     expect(bad.ok && bad.value!.content.path).toBeUndefined()
     expectError(parseWidgetState(state({ refresh: { url: 'http://[bad', every: 60 } }), ctx), 'state.refresh.url')
-    expectError(parseWidgetState(state({}, { value: { live: { price: 'NIM' }, text: 'x' } }), ctx), 'state.content.value')
   })
 
   it('still rejects a path of the wrong type', () => {
@@ -299,27 +298,25 @@ describe('parseWidgetState', () => {
     expectError(parseWidgetState(state({ padding: 'x'.repeat(9000) }), ctx), 'larger than 8192 bytes')
   })
 
-  it('parses live values, charts and height countdowns', () => {
-    const result = parseWidgetState(state({}, {
-      value: { live: { price: 'NIM' } },
-      info: { live: { priceChange: { asset: 'NIM', range: '24h' } } },
-      rows: [{ label: 'Staked', value: { live: { nimiqStake: { address: ADDRESS, part: 'active' } } } }],
-      chart: { priceHistory: { asset: 'NIM', range: '7d' } },
-      countdown: { label: 'Unlocks', untilNimiqHeight: 5000 },
-    }), ctx)
-    expect(result.ok).toBe(true)
-    expect(result.ok && result.value!.content.chart).toEqual({ kind: 'line', priceHistory: { asset: 'NIM', range: '7d' } })
-    expectError(parseWidgetState(state({}, { value: { live: { price: 'DOGE' } } }), ctx), 'state.content.value.live.price')
+  it('refuses what only Nimiq Pay could fill in: live values and price histories', () => {
+    const priceHistory = { asset: 'NIM', range: '7d' }
+    expectError(parseWidgetState(state({}, { value: { live: { price: 'NIM' } } }), ctx), 'state.content.value.text: expected a string')
+    expectError(parseWidgetState(state({}, { info: { live: { priceChange: priceHistory } } }), ctx), 'state.content.info: expected a string')
+    expectError(parseWidgetState(state({}, { chart: { kind: 'line', priceHistory } }), ctx), 'state.content.chart.points: expected a list')
+    expectError(parseWidgetState(state({}, { background: { chart: { kind: 'line', priceHistory } } }), ctx), 'state.content.background.chart.points: expected a list')
+    expectError(parseWidgetFile(file({ content: { value: { live: { nimiqBalance: ADDRESS } } } }), ctx), 'content.value.text: expected a string')
   })
 
-  it('drops unknown keys in a live value and refuses two kinds at once', () => {
-    const result = parseWidgetState(state({}, { value: { live: { price: 'NIM', tracker: 'x' } } }), ctx)
-    expect(result.ok && result.value!.content.value).toEqual({ live: { price: 'NIM' } })
-    expectError(parseWidgetState(state({}, { value: { live: { price: 'NIM', usdtBalance: `0x${'1'.repeat(40)}` } } }), ctx), 'exactly one of')
+  it('parses charts of points and height countdowns', () => {
+    const chart = { kind: 'line', points: [1, 3, 2] }
+    const countdown = { label: 'Unlocks', untilNimiqHeight: 5000 }
+    const result = parseWidgetState(state({}, { chart, background: { chart }, countdown }), ctx)
+    expect(result.ok && result.value!.content).toMatchObject({ chart, background: { chart }, countdown })
   })
 
   it('refuses a Nimiq address whose checksum does not match', () => {
-    expectError(parseWidgetState(state({}, { value: { live: { nimiqBalance: ADDRESS.replace('NQ07', 'NQ08') } } }), ctx), 'state.content.value.live.nimiqBalance')
+    const nimiqPayment = { to: ADDRESS.replace('NQ07', 'NQ08'), minValue: '1', since: NOW }
+    expectError(parseWidgetState(state({ next: [{ on: { nimiqPayment }, state: null }] }), ctx), 'state.next[0].on.nimiqPayment.to')
   })
 
   it('refuses a chart with too many points', () => {
@@ -442,10 +439,9 @@ describe('hostile text', () => {
 })
 
 describe('ambiguous input', () => {
-  it('refuses two kinds in one value, countdown, chart or trigger', () => {
+  it('refuses two kinds in one value, countdown or trigger', () => {
     expectError(parseWidgetState(state({}, { value: { text: 'x', amount: '1', currency: 'NIM' } }), ctx), 'state.content.value')
     expectError(parseWidgetState(state({}, { countdown: { label: 'a', until: NOW, untilNimiqHeight: 5 } }), ctx), 'state.content.countdown')
-    expectError(parseWidgetState(state({}, { chart: { kind: 'line', points: [1, 2], priceHistory: { asset: 'NIM', range: '7d' } } }), ctx), 'state.content.chart')
     expectError(parseWidgetState(state({ next: [{ on: { at: NOW, nimiqHeight: 5 }, state: null }] }), ctx), 'state.next[0].on')
   })
 

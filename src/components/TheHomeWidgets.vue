@@ -103,7 +103,7 @@ function open(view: WidgetView, url: string) {
     <MiniAppActionsSheet
       v-model:open="menuOpen"
       :context="menuContext"
-      @size="size => { if (menuView) { widgets.setSize(menuView.scope, menuView.widgetId, size); void widgets.tick({ force: true }) } }"
+      @size="size => menuView && widgets.setSize(menuView.scope, menuView.widgetId, size)"
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
       @use-new-images="menuView && widgets.openImageReview(menuView.scope, menuView.widgetId)"
       @use-permissions="menuView && allowPermissions(menuView)"

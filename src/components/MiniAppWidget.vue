@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { DisplayValue, WidgetView } from '@/stores/mini-app-widgets'
+import type { WidgetValue } from '@/lib/mini-app-widgets'
+import type { WidgetView } from '@/stores/mini-app-widgets'
 import { FormattableNumber } from '@nimiq/utils'
 import { onLongPress, useNow } from '@vueuse/core'
 import { computed, ref, useTemplateRef } from 'vue'
@@ -26,15 +27,9 @@ const TONE_DOT = { neutral: '', positive: 'bg-mint', attention: 'bg-pumpkin', ne
 const SPAN = { icon: 'col-span-1', small: 'col-span-2 row-span-2', medium: 'col-span-4', large: 'col-span-4' } as const
 
 // Not useCurrencyFormatter: its crypto path takes luna and its fiat path shows sub-cent prices as "~€0.00"; widget amounts are decimal strings.
-function formatValue(value: DisplayValue): string {
-  if (value.kind === 'text')
+function formatValue(value: WidgetValue): string {
+  if ('text' in value)
     return value.text
-  if (value.kind === 'pending')
-    return '…'
-  if (value.kind === 'change') {
-    const digits = new Intl.NumberFormat(app.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(value.percent))
-    return isFlat(value.percent) ? `${digits} %` : `${value.percent < 0 ? '−' : '+'}${digits} %`
-  }
   const amount = Number(value.amount)
   if (FIAT_CODES.has(value.currency)) {
     const digits = amount !== 0 && Math.abs(amount) < 1 ? { minimumSignificantDigits: 2, maximumSignificantDigits: 3 } : {}
@@ -44,14 +39,6 @@ function formatValue(value: DisplayValue): string {
   // FormattableNumber keeps every digit, which Intl may not, but it only writes a dot.
   const decimal = new Intl.NumberFormat(app.language).formatToParts(0.5).find(part => part.type === 'decimal')?.value ?? '.'
   return `${new FormattableNumber(value.amount).toString({ maxDecimals, useGrouping: true }).replace('.', decimal)} ${value.currency}`
-}
-
-function isFlat(percent: number): boolean {
-  return Number(Math.abs(percent).toFixed(1)) === 0
-}
-
-function changeClass(value: DisplayValue | undefined): string {
-  return value?.kind === 'change' && !isFlat(value.percent) ? (value.percent < 0 ? 'text-cherry' : 'text-mint') : ''
 }
 
 const dot = computed(() => TONE_DOT[view.tone])
@@ -98,7 +85,7 @@ const staleTime = computed(() => {
   return new Intl.DateTimeFormat(app.language, { ...day, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(view.staleSince)
 })
 
-const ariaLabel = computed(() => `${view.appName}: ${[view.label, formatValue(view.value), view.info && formatValue(view.info)].filter(Boolean).join(', ')}`)
+const ariaLabel = computed(() => `${view.appName}: ${[view.label, formatValue(view.value), view.info].filter(Boolean).join(', ')}`)
 
 // A long press opens the menu, the only touch route to it on icon widgets; the click its release may still fire must not also open the Mini App.
 let longPressed = false
@@ -175,7 +162,7 @@ function onClickCapture(event: MouseEvent) {
       <span class="pointer-events-none relative flex min-w-0 items-end justify-between gap-3">
         <span class="flex min-w-0 items-center gap-2">
           <span v-if="dot && !view.label" class="size-2.5 shrink-0 rounded-full" :class="dot" />
-          <span data-testid="widget-value" class="min-w-0 truncate font-bold leading-tight" :class="[changeClass(view.value), isSmall && view.value.kind === 'text' ? 'text-xl' : 'text-2xl']">{{ formatValue(view.value) }}</span>
+          <span data-testid="widget-value" class="min-w-0 truncate font-bold leading-tight" :class="isSmall && 'text' in view.value ? 'text-xl' : 'text-2xl'">{{ formatValue(view.value) }}</span>
         </span>
         <span v-if="showExtras && timeLeft" class="shrink-0 text-right text-sm leading-tight">
           <span class="block text-xs text-space/50">{{ view.countdown!.label }}</span>
@@ -183,7 +170,7 @@ function onClickCapture(event: MouseEvent) {
         </span>
       </span>
 
-      <span v-if="view.info" class="pointer-events-none relative min-w-0 truncate text-sm" :class="changeClass(view.info) || 'text-space/60'">{{ formatValue(view.info) }}</span>
+      <span v-if="view.info" class="pointer-events-none relative min-w-0 truncate text-sm text-space/60">{{ view.info }}</span>
 
       <span v-if="showExtras && view.progress !== undefined" class="pointer-events-none relative mt-2 h-1 w-full overflow-hidden rounded-full bg-space/10">
         <span data-testid="widget-progress" class="block h-full rounded-full bg-sky" :style="{ width: `${view.progress * 100}%` }" />
@@ -200,11 +187,11 @@ function onClickCapture(event: MouseEvent) {
               @click="emit('open', row.url)"
             >
               <span class="min-w-0 truncate text-space/60">{{ row.label }}</span>
-              <span class="shrink-0 font-semibold" :class="changeClass(row.value)">{{ formatValue(row.value) }} ›</span>
+              <span class="shrink-0 font-semibold">{{ formatValue(row.value) }} ›</span>
             </button>
             <span v-else class="pointer-events-none flex min-w-0 items-center justify-between gap-3 py-2 text-sm">
               <span class="min-w-0 truncate text-space/60">{{ row.label }}</span>
-              <span class="shrink-0 font-semibold" :class="changeClass(row.value)">{{ formatValue(row.value) }}</span>
+              <span class="shrink-0 font-semibold">{{ formatValue(row.value) }}</span>
             </span>
           </template>
         </span>

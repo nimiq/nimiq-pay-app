@@ -10,12 +10,6 @@ export type WidgetPermission = (typeof WIDGET_PERMISSIONS)[number]
 export const WIDGET_GRID_CLASS = 'grid auto-rows-[minmax(4.75rem,auto)] grid-cols-4 gap-3'
 export type WidgetSize = (typeof WIDGET_SIZES)[number]
 
-export const WIDGET_ASSETS = ['NIM', 'BTC', 'ETH', 'USDT'] as const
-export type WidgetAsset = (typeof WIDGET_ASSETS)[number]
-
-export const PRICE_RANGES = ['24h', '7d', '30d'] as const
-export type PriceRange = (typeof PRICE_RANGES)[number]
-
 const TONES = ['neutral', 'positive', 'attention', 'negative'] as const
 export type WidgetTone = (typeof TONES)[number]
 
@@ -53,14 +47,7 @@ export const WIDGET_LIMITS = {
   horizonMs: 30 * 24 * 60 * 60 * 1000,
 } as const
 
-export type LiveValue
-  = | { nimiqBalance: string }
-    | { nimiqStake: { address: string, part: 'active' | 'inactive' } }
-    | { usdtBalance: string }
-    | { price: WidgetAsset }
-    | { priceChange: { asset: WidgetAsset, range: PriceRange } }
-
-export type WidgetValue = { text: string } | { amount: string, currency: string } | { live: LiveValue }
+export type WidgetValue = { text: string } | { amount: string, currency: string }
 
 export interface WidgetRow {
   label: string
@@ -68,9 +55,7 @@ export interface WidgetRow {
   path?: string
 }
 
-export type WidgetChart
-  = | { kind: 'line' | 'bars', points: number[] }
-    | { kind: 'line', priceHistory: { asset: WidgetAsset, range: PriceRange } }
+export interface WidgetChart { kind: 'line' | 'bars', points: number[] }
 
 export type WidgetBackground = { image: string } | { chart: WidgetChart }
 
@@ -85,7 +70,7 @@ export interface WidgetImage {
 export interface WidgetContent {
   label?: string
   value: WidgetValue
-  info?: string | { live: LiveValue }
+  info?: string
   tone: WidgetTone
   progress?: number
   countdown?: WidgetCountdown
@@ -165,7 +150,6 @@ const L = WIDGET_LIMITS
 const AMOUNT_RE = /^\d{1,18}(?:\.\d{1,18})?$/
 const CURRENCY_RE = /^[A-Z0-9]{2,8}$/
 const HASH_RE = /^[0-9a-f]{64}$/
-const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/
 const EVM_HASH_RE = /^0x[0-9a-f]{64}$/
 export const WIDGET_ID_RE = /^[a-z0-9][a-z0-9-]{0,31}$/
 const LANGUAGE_RE = /^[a-z]{2}$/
@@ -178,7 +162,6 @@ const DEV_ONLY_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.
 const MAX_CHART_VALUE = 1e15
 const IP_HOST_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i
 const TX_STATUSES = ['confirmed', 'failed'] as const
-const LIVE_KINDS = ['nimiqBalance', 'nimiqStake', 'usdtBalance', 'price', 'priceChange'] as const
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
 class InvalidField extends Error {}
@@ -276,8 +259,7 @@ export function isAllowedWidgetOrigin(origin: string, allowInsecure: boolean): b
   catch {
     return false
   }
-  // `.invalid` is reserved for Nimiq Pay's own widgets, in development builds too.
-  if (url.origin !== origin || url.hostname.endsWith('.invalid'))
+  if (url.origin !== origin)
     return false
   if (allowInsecure)
     return url.protocol === 'https:' || url.protocol === 'http:'
@@ -340,38 +322,9 @@ function atMostOne(r: Record<string, unknown>, keys: readonly string[], path: st
     fail(path, `expected only one of ${keys.join(', ')}`)
 }
 
-function priceSeries(raw: unknown, path: string): { asset: WidgetAsset, range: PriceRange } {
-  const r = record(raw, path)
-  return { asset: oneOf(r.asset, WIDGET_ASSETS, `${path}.asset`), range: oneOf(r.range, PRICE_RANGES, `${path}.range`) }
-}
-
-function liveValue(raw: unknown, path: string): LiveValue {
-  const r = record(raw, path)
-  if (LIVE_KINDS.filter(kind => kind in r).length !== 1)
-    fail(path, `expected exactly one of ${LIVE_KINDS.join(', ')}`)
-  if ('nimiqBalance' in r)
-    return { nimiqBalance: nimiqAddress(r.nimiqBalance, `${path}.nimiqBalance`) }
-  if ('nimiqStake' in r) {
-    const stake = record(r.nimiqStake, `${path}.nimiqStake`)
-    return {
-      nimiqStake: {
-        address: nimiqAddress(stake.address, `${path}.nimiqStake.address`),
-        part: oneOf(stake.part, ['active', 'inactive'] as const, `${path}.nimiqStake.part`),
-      },
-    }
-  }
-  if ('usdtBalance' in r)
-    return { usdtBalance: hex(r.usdtBalance, EVM_ADDRESS_RE, 'a Polygon address', `${path}.usdtBalance`) }
-  if ('price' in r)
-    return { price: oneOf(r.price, WIDGET_ASSETS, `${path}.price`) }
-  return { priceChange: priceSeries(r.priceChange, `${path}.priceChange`) }
-}
-
 function value(raw: unknown, path: string): WidgetValue {
   const r = record(raw, path)
-  atMostOne(r, ['text', 'amount', 'live'], path)
-  if ('live' in r)
-    return { live: liveValue(r.live, `${path}.live`) }
+  atMostOne(r, ['text', 'amount'], path)
   if ('amount' in r) {
     if (typeof r.currency !== 'string' || !CURRENCY_RE.test(r.currency))
       fail(`${path}.currency`, 'expected a currency code such as "NIM" or "EUR"')
@@ -382,12 +335,6 @@ function value(raw: unknown, path: string): WidgetValue {
 
 function chart(raw: unknown, path: string): WidgetChart {
   const r = record(raw, path)
-  atMostOne(r, ['priceHistory', 'points'], path)
-  if (r.priceHistory !== undefined) {
-    if (r.kind !== undefined && r.kind !== 'line')
-      fail(`${path}.kind`, 'a price history is drawn as a line')
-    return { kind: 'line', priceHistory: priceSeries(r.priceHistory, `${path}.priceHistory`) }
-  }
   const kind = oneOf(r.kind, ['line', 'bars'] as const, `${path}.kind`)
   const points = list(r.points, `${path}.points`)
   if (points.length < 2 || points.length > L.chartPoints || !points.every(p => typeof p === 'number' && Number.isFinite(p) && Math.abs(p) <= MAX_CHART_VALUE))
@@ -427,11 +374,8 @@ function content(raw: unknown, ctx: ParseContext, path: string): WidgetContent {
   }
   if (r.label !== undefined)
     result.label = text(r.label, L.label, `${path}.label`)
-  if (r.info !== undefined) {
-    result.info = isRecord(r.info)
-      ? { live: liveValue(r.info.live, `${path}.info.live`) }
-      : text(r.info, L.info, `${path}.info`)
-  }
+  if (r.info !== undefined)
+    result.info = text(r.info, L.info, `${path}.info`)
   if (r.progress !== undefined) {
     if (typeof r.progress !== 'number' || !Number.isFinite(r.progress))
       fail(`${path}.progress`, 'expected a number from 0 to 1')

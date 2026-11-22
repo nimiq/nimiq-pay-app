@@ -27,7 +27,7 @@ vi.mock('@/composables/useModal', () => ({ Modal: { MiniApps: 'MiniApps' }, useM
 const { default: TheHomeWidgets } = await import('./TheHomeWidgets.vue')
 
 function view(size: WidgetView['size'], widgetId: string = size): WidgetView {
-  return { key: `https://swap.example/#${widgetId}`, scope: 'https://swap.example/', widgetId, appName: 'Swap', appIcon: '', size, sizes: ['small', 'medium'], value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: 'https://swap.example/?swap=1', appAddress: 'swap.example', launchTitle: 'Swap' }
+  return { key: `https://swap.example/#${widgetId}`, scope: 'https://swap.example/', widgetId, appName: 'Swap', appIcon: '', size, sizes: ['small', 'medium'], value: { text: 'Start a swap' }, tone: 'neutral', rows: [], url: 'https://swap.example/?swap=1', appAddress: 'swap.example', launchTitle: 'Swap' }
 }
 
 const mounted: Array<{ unmount: () => void }> = []
@@ -138,7 +138,7 @@ describe('theHomeWidgets', () => {
     const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
     expect(sheet.props('context')).toMatchObject({ app: { name: 'Swap', url: 'https://swap.example/' }, address: 'swap.example', widget: { size: 'small', sizes: ['small', 'medium'] } })
     sheet.vm.$emit('size', 'medium')
-    expect(store.tick).toHaveBeenLastCalledWith({ force: true })
+    expect(store.tick).not.toHaveBeenCalledWith({ force: true })
     sheet.vm.$emit('removeWidget')
     expect(store.setSize).toHaveBeenCalledWith('https://swap.example/', 'swap', 'medium')
     expect(store.remove).toHaveBeenCalledWith('https://swap.example/', 'swap')

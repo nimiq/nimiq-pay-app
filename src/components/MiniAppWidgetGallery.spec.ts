@@ -18,10 +18,9 @@ const { confirm, recents, setToast, store } = await vi.hoisted(async () => {
       galleryFiles: reactive(new Map()),
       galleryScopesFor: vi.fn((origins: string[]) => origins.flatMap(origin => origin === 'https://swap.example' ? [`${origin}/`, `${origin}/app/`] : [`${origin}/`])),
       loadGallery: vi.fn(),
-      resolvePreviews: vi.fn(),
       isOnHome: vi.fn(() => false),
       add: vi.fn(() => true),
-      previewView: vi.fn((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: 'Swap', appAddress: scope === 'https://swap.example/' ? 'swap.example' : undefined, appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope })),
+      previewView: vi.fn((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: 'Swap', appAddress: scope === 'https://swap.example/' ? 'swap.example' : undefined, appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope })),
     },
   }
 })
@@ -34,7 +33,6 @@ vi.mock('@/lib/mini-app-confirmation', () => ({ requestUserConfirmation: confirm
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (m: string) => ({ Small: 'Klein', Large: 'Groß' } as Record<string, string>)[m] ?? m } }))
 
 const { default: MiniAppWidgetGallery } = await import('./MiniAppWidgetGallery.vue')
-const { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } = await import('@/lib/mini-app-widget-builtins')
 
 const DEFINITION: WidgetDefinition = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['large', 'small'], content: { value: { text: 'Start a swap' }, tone: 'neutral', rows: [] }, translations: {} }
 
@@ -74,23 +72,6 @@ describe('miniAppWidgetGallery', () => {
     expect(wrapper.find('[data-testid="gallery-app-https://none.example/"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mini-app-widget-large"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Mini Apps appear here once you\'ve opened them.')
-  })
-
-  it('lists Nimiq Pay\'s own widgets first, even before any Mini App was opened', async () => {
-    recents.value = []
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.find('[data-testid^="gallery-app-"]').attributes('data-testid')).toBe(`gallery-app-${BUILTIN_WIDGET_SCOPE}`)
-    expect(wrapper.text()).toContain('NIM price')
-    expect(store.resolvePreviews).toHaveBeenCalledWith(builtinWidgetFile().widgets)
-  })
-
-  it('adds Nimiq Pay\'s own widget under its own scope', async () => {
-    recents.value = []
-    const wrapper = render()
-    await flushPromises()
-    await wrapper.find('[data-testid="gallery-add-nim-price"]').trigger('click')
-    expect(store.add).toHaveBeenCalledWith(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0], [])
   })
 
   it('shows a Mini App\'s address under its name', async () => {

@@ -2,10 +2,9 @@ import type { WidgetChain } from './mini-app-widget-chain'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 
-const { network, polygon, prices, signer } = vi.hoisted(() => ({
+const { network, polygon, signer } = vi.hoisted(() => ({
   network: { consensus: 'established', height: 1000, client: undefined as Record<string, ReturnType<typeof vi.fn>> | undefined },
-  polygon: { provider: { getTransactionReceipt: vi.fn(), getBlockNumber: vi.fn(), getBlock: vi.fn() }, tokenContract: { balanceOf: vi.fn() } },
-  prices: { getPriceNow: vi.fn(), getPriceAt: vi.fn() },
+  polygon: { provider: { getTransactionReceipt: vi.fn(), getBlockNumber: vi.fn(), getBlock: vi.fn() } },
   signer: { getTransactionsForAddress: vi.fn() },
 }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => network }))
@@ -31,9 +30,8 @@ vi.mock('@/stores/polygon-usdt', () => ({
 }))
 vi.mock('@/stores/remote-signer', () => ({ useRemoteSigner: () => signer }))
 vi.stubGlobal('Nimiq', { Address: { fromString: (address: string) => ({ address }) } })
-vi.mock('@/composables/useApi', () => ({ useCurrencyPriceApi: () => prices }))
 
-const { createWidgetChain, decimalToUnits, evaluateTrigger, resolveLiveValue, resolvePriceHistory, unitsToDecimal } = await import('./mini-app-widget-chain')
+const { createWidgetChain, evaluateTrigger } = await import('./mini-app-widget-chain')
 
 const NOW = Date.UTC(2026, 9, 19, 12)
 const ADDRESS = 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000'
@@ -44,24 +42,10 @@ function fakeChain(overrides: Partial<WidgetChain> = {}): WidgetChain {
     nimiqHeight: () => 1000,
     nimiqTransaction: async () => 'pending',
     nimiqReceived: async () => false,
-    nimiqBalance: async () => 1234500,
-    nimiqStake: async () => 500000,
     polygonTransaction: async () => 'pending',
-    usdtBalance: async () => 2500000,
-    price: async (_asset, _fiat, at) => (at === undefined ? 0.0004 : 0.0002),
     ...overrides,
   }
 }
-
-describe('decimals', () => {
-  it('converts between decimal strings and units', () => {
-    expect(decimalToUnits('12.5', 5)).toBe(1250000)
-    expect(decimalToUnits('0.000001', 5)).toBe(0)
-    expect(decimalToUnits('0.000001', 5, true)).toBe(1)
-    expect(unitsToDecimal(1250000, 5)).toBe('12.5')
-    expect(unitsToDecimal(5, 6)).toBe('0.000005')
-  })
-})
 
 describe('evaluateTrigger', () => {
   it('fires time and height triggers locally', async () => {
@@ -110,38 +94,6 @@ describe('evaluateTrigger', () => {
     expect(await evaluateTrigger({ polygonTx: hash, status: 'confirmed' }, fakeChain(), NOW)).toBe(false)
     expect(await evaluateTrigger({ nimiqPayment: { to: ADDRESS, minValue: '1', since: NOW } }, fakeChain(), NOW)).toBe(false)
     expect(await evaluateTrigger({ nimiqHeight: 2000 }, fakeChain(), NOW)).toBe(false)
-  })
-})
-
-describe('resolveLiveValue', () => {
-  it('formats balances as decimal amounts', async () => {
-    expect(await resolveLiveValue({ nimiqBalance: ADDRESS }, fakeChain(), 'EUR', NOW)).toEqual({ kind: 'amount', amount: '12.345', currency: 'NIM' })
-    expect(await resolveLiveValue({ usdtBalance: `0x${'1'.repeat(40)}` }, fakeChain(), 'EUR', NOW)).toEqual({ kind: 'amount', amount: '2.5', currency: 'USDT' })
-  })
-
-  it('gives prices in the fiat currency and changes in percent', async () => {
-    expect(await resolveLiveValue({ price: 'NIM' }, fakeChain(), 'EUR', NOW)).toEqual({ kind: 'amount', amount: '0.0004', currency: 'EUR' })
-    expect(await resolveLiveValue({ priceChange: { asset: 'NIM', range: '24h' } }, fakeChain(), 'EUR', NOW)).toEqual({ kind: 'change', percent: 100 })
-  })
-
-  it('samples price history on a fixed grid', async () => {
-    const seen: Array<number | undefined> = []
-    const price = vi.fn(async (_asset: string, _fiat: string, at?: number) => {
-      seen.push(at)
-      return 1
-    })
-    await resolvePriceHistory('NIM', '24h', fakeChain({ price }), 'EUR', NOW)
-    const later = [...seen]
-    seen.length = 0
-    await resolvePriceHistory('NIM', '24h', fakeChain({ price }), 'EUR', NOW + 60_000)
-    expect(seen).toEqual(later)
-  })
-
-  it('samples a price history ending now', async () => {
-    const price = vi.fn(async () => 1)
-    const points = await resolvePriceHistory('NIM', '24h', fakeChain({ price }), 'EUR', NOW)
-    expect(points).toHaveLength(25)
-    expect(price).toHaveBeenLastCalledWith('NIM', 'EUR', undefined)
   })
 })
 
@@ -226,43 +178,11 @@ describe('createWidgetChain', () => {
     vi.useRealTimers()
   })
 
-  it('reads NIM balance and both stake parts', async () => {
-    network.client = {
-      getAccount: vi.fn(async () => ({ balance: 42 })),
-      getStaker: vi.fn(async () => ({ balance: 7, inactiveBalance: 3 })),
-    }
-    const chain = createWidgetChain()
-    expect(await chain.nimiqBalance(ADDRESS)).toBe(42)
-    expect(await chain.nimiqStake(ADDRESS, 'active')).toBe(7)
-    expect(await chain.nimiqStake(ADDRESS, 'inactive')).toBe(3)
-    network.client.getStaker = vi.fn(async () => undefined)
-    expect(await chain.nimiqStake(ADDRESS, 'active')).toBe(0)
-  })
-
-  it('reads the USDT balance in micro-units', async () => {
-    polygon.tokenContract.balanceOf.mockResolvedValue(2500000n)
-    expect(await createWidgetChain().usdtBalance(`0x${'1'.repeat(40)}`)).toBe(2500000)
-  })
-
   it('answers nothing without consensus', async () => {
     network.consensus = 'syncing'
-    expect(await createWidgetChain().nimiqBalance(ADDRESS)).toBeUndefined()
+    expect(await createWidgetChain().nimiqTransaction('a'.repeat(64))).toBeUndefined()
     expect(createWidgetChain().nimiqHeight()).toBeUndefined()
     network.consensus = 'established'
-  })
-
-  it('looks up the fiat rate once for a whole history', async () => {
-    prices.getPriceNow.mockClear()
-    prices.getPriceAt.mockImplementation(async () => ({ data: { price: 1 } }))
-    prices.getPriceNow.mockImplementation(async () => ({ data: { price: 2 } }))
-    const points = await resolvePriceHistory('BTC', '24h', createWidgetChain(), 'CHF', NOW)
-    expect(points).toHaveLength(25)
-    expect(prices.getPriceNow.mock.calls.filter(([arg]) => arg.currency === 'CHF')).toHaveLength(1)
-  })
-
-  it('converts USD prices with the fiat rate (fiat units per dollar)', async () => {
-    prices.getPriceNow.mockImplementation(async ({ currency }: { currency: string }) => ({ data: { price: currency === 'NIM' ? 0.0004 : 0.9 } }))
-    expect(await createWidgetChain().price('NIM', 'EUR')).toBeCloseTo(0.00036)
   })
 })
 

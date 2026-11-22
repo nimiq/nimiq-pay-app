@@ -9,7 +9,6 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { applyIconFallback } from '@/lib/mini-app-icons'
-import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { localizeDefinition, WIDGET_GRID_CLASS, WIDGET_LIMITS, WIDGET_SIZES } from '@/lib/mini-app-widgets'
 import { safeOrigin } from '@/lib/url-safety'
 import { useApp } from '@/stores/app'
@@ -36,16 +35,9 @@ watch([() => active, scopes], async ([isActive, list]) => {
     widgets.clearPreviewImages()
     return
   }
-  void widgets.resolvePreviews(builtinWidgetFile().widgets)
   await widgets.loadGallery(list)
   if (active)
     void widgets.loadPreviewImages(list)
-  const definitions = list.flatMap((scope) => {
-    const file = widgets.galleryFiles.get(scope)
-    return file && file !== 'loading' ? file.widgets : []
-  })
-  if (definitions.length)
-    void widgets.resolvePreviews(definitions)
 }, { immediate: true })
 
 const isLoading = computed(() => scopes.value.some(scope => widgets.galleryFiles.get(scope) === 'loading'))
@@ -53,28 +45,23 @@ const isLoading = computed(() => scopes.value.some(scope => widgets.galleryFiles
 // Literal calls, so the i18n extraction finds every size name.
 const sizeLabels = computed<Record<WidgetSize, string>>(() => ({ icon: i18n.t('Icon'), small: i18n.t('Small'), medium: i18n.t('Medium'), large: i18n.t('Large') }))
 
-function toSection(scope: string, definitions: WidgetDefinition[]) {
-  return {
-    scope,
-    items: definitions.map((definition) => {
-      const { name, description } = localizeDefinition(definition, app.language)
-      return {
-        definition,
-        name,
-        description,
-        sizes: WIDGET_SIZES.filter(size => definition.sizes.includes(size)).map(size => sizeLabels.value[size]).join(' · '),
-        view: widgets.previewView(scope, definition),
-        onHome: widgets.isOnHome(scope, definition.id),
-      }
-    }),
-  }
-}
-
-const appSections = computed(() => scopes.value.flatMap((scope) => {
+const sections = computed(() => scopes.value.flatMap((scope) => {
   const file = widgets.galleryFiles.get(scope)
-  return file && file !== 'loading' && file.widgets.length ? [toSection(scope, file.widgets)] : []
+  if (!file || file === 'loading' || !file.widgets.length)
+    return []
+  const items = file.widgets.map((definition) => {
+    const { name, description } = localizeDefinition(definition, app.language)
+    return {
+      definition,
+      name,
+      description,
+      sizes: WIDGET_SIZES.filter(size => definition.sizes.includes(size)).map(size => sizeLabels.value[size]).join(' · '),
+      view: widgets.previewView(scope, definition),
+      onHome: widgets.isOnHome(scope, definition.id),
+    }
+  })
+  return [{ scope, items }]
 }))
-const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
 
 // Closing the modal unmounts this without `active` turning false.
 onUnmounted(() => widgets.clearPreviewImages())
@@ -108,7 +95,7 @@ async function add(scope: string, definition: WidgetDefinition) {
       <p class="text-2xl font-bold">
         {{ $t('Widgets') }}
       </p>
-      <p v-if="appSections.length" data-testid="gallery-contact-notice" class="text-sm text-space/60">
+      <p v-if="sections.length" data-testid="gallery-contact-notice" class="text-sm text-space/60">
         {{ $t('Widgets from Mini Apps may contact their site regularly to stay up to date.') }}
       </p>
     </div>
@@ -171,7 +158,7 @@ async function add(scope: string, definition: WidgetDefinition) {
       {{ $t('Find widgets from more Mini Apps') }}
     </AddWidgetsPill>
 
-    <AddWidgetsPill v-if="!isLoading && !appSections.length" data-testid="gallery-browse" @click="emit('browse')">
+    <AddWidgetsPill v-if="!isLoading && !sections.length" data-testid="gallery-browse" @click="emit('browse')">
       {{ $t('Browse Mini Apps') }}
     </AddWidgetsPill>
   </div>

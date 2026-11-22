@@ -37,7 +37,7 @@ export interface MiniAppMenuContext {
   app: Pick<RowDApp, 'name' | 'url' | 'icon'>
   reportUrl?: string
   removable: boolean
-  /** Unset means shareable; false for a widget with no Mini App behind it. */
+  /** Unset means shareable; false for a blocked widget. */
   shareable?: boolean
   /** The site a widget comes from, shown under its name. */
   address?: string

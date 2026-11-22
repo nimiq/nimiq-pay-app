@@ -1,9 +1,6 @@
-import type { ResolvedLive, WidgetChain } from '@/lib/mini-app-widget-chain'
+import type { WidgetChain } from '@/lib/mini-app-widget-chain'
 import type { FetchOutcome } from '@/lib/mini-app-widget-sources'
 import type {
-  LiveValue,
-  PriceRange,
-  WidgetAsset,
   WidgetChart,
   WidgetContent,
   WidgetDefinition,
@@ -21,14 +18,12 @@ import type { NetworkMode } from '@/lib/network'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
-import nimiqPayIcon from '@/assets/graphics/nimiq-pay.png'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
 import { isImageReviewOpen } from '@/lib/mini-app-active'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
-import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
-import { createWidgetChain, evaluateTrigger, isBalanceLive, needsLookup, resolveLiveValue, resolvePriceHistory } from '@/lib/mini-app-widget-chain'
+import { createWidgetChain, evaluateTrigger, needsLookup } from '@/lib/mini-app-widget-chain'
 import { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
 import { localizeDefinition, WIDGET_LIMITS, widgetScopeCandidates } from '@/lib/mini-app-widgets'
 import { safeOrigin } from '@/lib/url-safety'
@@ -76,18 +71,12 @@ interface FolderCheck {
   checkedAt: number
 }
 
-export type DisplayValue
-  = | { kind: 'text', text: string }
-    | { kind: 'amount', amount: string, currency: string }
-    | { kind: 'change', percent: number }
-    | { kind: 'pending' }
-
 export interface WidgetView {
   key: string
   scope: string
   widgetId: string
   appName: string
-  /** The site the widget comes from, when the name does not already say it; unset for Nimiq Pay's own widgets. */
+  /** The site the widget comes from, when the name does not already say it. */
   appAddress?: string
   /** The catalog name or the address: a declared name never reaches the signing sheets of the launched Mini App. */
   launchTitle: string
@@ -96,14 +85,14 @@ export interface WidgetView {
   size: WidgetSize
   sizes: WidgetSize[]
   label?: string
-  value: DisplayValue
-  info?: DisplayValue
+  value: WidgetValue
+  info?: string
   tone: WidgetTone
   progress?: number
   /** `left` is a demo's, which holds still. */
   countdown?: { label: string, until: number } | { label: string, left: number }
-  rows: { label: string, value: DisplayValue, url?: string }[]
-  chart?: { kind: 'line' | 'bars', points: number[] }
+  rows: { label: string, value: WidgetValue, url?: string }[]
+  chart?: WidgetChart
   url?: string
   /** After repeated refresh failures: when the content last updated. */
   staleSince?: number
@@ -112,23 +101,31 @@ export interface WidgetView {
   pendingImages?: boolean
   pendingPermissions?: boolean
   stoppedPermissions?: boolean
-  background?: { kind: 'image', src: string } | { kind: 'chart', chart: NonNullable<WidgetView['chart']> }
+  background?: { kind: 'image', src: string } | { kind: 'chart', chart: WidgetChart }
 }
 
 interface TickOptions { chain?: WidgetChain, at?: number, force?: boolean }
 
-type LiveSpec = { live: LiveValue } | { priceHistory: { asset: WidgetAsset, range: PriceRange } }
-
 export const TICK_MS = 15_000
 export const STALE_AFTER_FAILURES = 3
 const CHAIN_CHECK_MS = 30_000
-const PRICE_MAX_AGE_MS = 5 * 60_000
 const DAY_MS = 24 * 60 * 60_000
 const MAX_BACKOFF_MS = 30 * 60_000
 const MIN_FORCED_REFRESH_GAP_MS = 60_000
 const DOWNLOADS_AT_ONCE = 6
 const IMAGE_RETRY_MS = 5 * 60_000
 const imageKey = (hash: string) => `miniAppWidgetImage:${hash}`
+
+// Widgets stored before live values were removed: Home cannot draw them. Quotes inside texts are escaped, so only keys match.
+const REMOVED_VALUES_RE = /"live":\{"(?:nimiqBalance|nimiqStake|usdtBalance|price|priceChange)"|"priceHistory":/
+// Dropped while reading, as Home draws whatever the read returns, before `onReady` runs.
+const storedSerializer = {
+  read(raw: string): HomeWidget[] {
+    const all: HomeWidget[] = JSON.parse(raw)
+    return REMOVED_VALUES_RE.test(raw) ? all.filter(widget => !REMOVED_VALUES_RE.test(JSON.stringify(widget))) : all
+  },
+  write: (all: HomeWidget[]) => JSON.stringify(all),
+}
 
 function ungranted(widget: HomeWidget): WidgetPermission[] {
   return (widget.definition.permissions ?? []).filter(permission => !widget.grants?.includes(permission))
@@ -168,19 +165,6 @@ function originOf(scope: string): string {
   return new URL(scope).origin
 }
 
-function liveSpecs(content: WidgetContent | WidgetDemo, size: WidgetSize): LiveSpec[] {
-  // Only the large size draws rows and a chart, so smaller sizes skip their lookups and leave the budget to what is shown.
-  const values: unknown[] = [content.value, content.info, ...(size === 'large' ? content.rows.map(row => row.value) : [])]
-  const specs: LiveSpec[] = values
-    .filter((value): value is { live: LiveValue } => typeof value === 'object' && value !== null && 'live' in value)
-    .map(value => ({ live: value.live }))
-  if (size === 'large' && content.chart && 'priceHistory' in content.chart)
-    specs.push({ priceHistory: content.chart.priceHistory })
-  if (size !== 'icon' && content.background && 'chart' in content.background && 'priceHistory' in content.background.chart)
-    specs.push({ priceHistory: content.background.chart.priceHistory })
-  return specs
-}
-
 function refreshOf(state: WidgetState | undefined, definition: WidgetDefinition): WidgetRefresh | undefined {
   return state ? state.refresh : definition.refresh
 }
@@ -205,7 +189,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // Home waits for the first read, so the empty state never flashes for someone who has widgets.
   const ready = ref(false)
   // kv() so widgets clear on logout with the rest of the account.
-  const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, onReady: () => ready.value = true })
+  const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, serializer: storedSerializer, onReady: () => ready.value = true })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
   // No refresh before the read: it would go past the budget, and its record would be overwritten by the read.
@@ -216,7 +200,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const canAdd = computed(() => widgets.value.length < WIDGET_LIMITS.widgetsOnHome)
   function isBlocked(scope: string): boolean {
     const blocked = useFeatureFlags().blockedWidgetOrigins
-    return scope !== BUILTIN_WIDGET_SCOPE && (blocked.includes('*') || blocked.includes(safeOrigin(scope)))
+    return blocked.includes('*') || blocked.includes(safeOrigin(scope))
   }
   const running = computed(() => widgets.value.filter(w => !isBlocked(w.scope) && w.halted !== 'gone'))
 
@@ -226,7 +210,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const now = ref(Date.now())
   // Block-height countdowns count from the head seen at the last tick, so they do not jump when the head moves between ticks.
   const head = ref({ height: useNimiqNetwork().height, at: now.value })
-  const live = reactive(new Map<string, { value?: ResolvedLive | number[], checkedAt: number }>())
   const galleryFiles = reactive(new Map<string, WidgetFile | null | 'loading'>())
   // By hash. Approved images are read from the encrypted database; previews only live while the gallery is open.
   const images = reactive(new Map<string, string>())
@@ -253,6 +236,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     now.value = at
     head.value = { height: useNimiqNetwork().height, at }
   }
+  // Nothing ticks while Home has no widgets, and a gallery preview's countdown needs the height.
+  watch(() => useNimiqNetwork().height > 0, known => known && observe(Date.now()))
 
   function isWidget(w: HomeWidget, scope: string, widgetId: string): boolean {
     return w.network === network && w.scope === scope && w.widgetId === widgetId
@@ -408,21 +393,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     ]))].filter(scope => !isBlocked(scope))
   }
 
-  function liveKey(spec: LiveSpec): string {
-    return 'live' in spec && isBalanceLive(spec.live) ? JSON.stringify(spec) : `${useApp().selectedFiat}|${JSON.stringify(spec)}`
-  }
-
-  function resolved(spec: LiveSpec): DisplayValue {
-    const value = live.get(liveKey(spec))?.value
-    return value && !Array.isArray(value) ? value : { kind: 'pending' }
-  }
-
-  function display(value: WidgetValue): DisplayValue {
-    if ('live' in value)
-      return resolved({ live: value.live })
-    return 'text' in value ? { kind: 'text', text: value.text } : { kind: 'amount', amount: value.amount, currency: value.currency }
-  }
-
   function shownContent(widget: HomeWidget, at: number): WidgetContent {
     return shownState(widget, at)?.content ?? localizeDefinition(widget.definition, useApp().language).content
   }
@@ -432,23 +402,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   function identity(widget: Pick<HomeWidget, 'scope' | 'definition'>): Pick<WidgetView, 'appName' | 'appAddress' | 'launchTitle'> {
-    if (widget.scope === BUILTIN_WIDGET_SCOPE)
-      return { appName: 'Nimiq Pay', launchTitle: 'Nimiq Pay' }
     const address = addressOf(widget.scope)
     const listed = catalogEntry(widget.scope)
     if (listed)
       return { appName: listed.name, appAddress: listed.name === address ? undefined : address, launchTitle: listed.name }
     const declared = widget.definition.appName
     return { appName: declared ?? address, appAddress: declared && declared !== address ? address : undefined, launchTitle: address }
-  }
-
-  function chartView(chart: WidgetChart | undefined): WidgetView['chart'] {
-    if (!chart)
-      return undefined
-    if ('points' in chart)
-      return { kind: chart.kind, points: chart.points }
-    const history = live.get(liveKey({ priceHistory: chart.priceHistory }))?.value
-    return Array.isArray(history) ? { kind: 'line', points: history } : undefined
   }
 
   function backgroundView(widget: Pick<HomeWidget, 'definition'>, { background }: WidgetContent | WidgetDemo): WidgetView['background'] {
@@ -459,24 +418,22 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       const src = images.get(hash) ?? previews.get(hash) ?? reviews.get(hash)
       return src ? { kind: 'image', src } : undefined
     }
-    const chart = chartView(background.chart)
-    return chart && { kind: 'chart', chart }
+    return { kind: 'chart', chart: background.chart }
   }
 
   function toView(widget: HomeWidget, at: number, content: WidgetContent | WidgetDemo = shownContent(widget, at)): WidgetView {
     const { countdown } = content
-    const builtin = widget.scope === BUILTIN_WIDGET_SCOPE
     return {
       key: widgetKey(widget.scope, widget.widgetId),
       scope: widget.scope,
       widgetId: widget.widgetId,
       ...identity(widget),
-      appIcon: builtin ? nimiqPayIcon : useMiniApps().iconForUrl(widget.scope),
+      appIcon: useMiniApps().iconForUrl(widget.scope),
       size: widget.size,
       sizes: widget.definition.sizes,
       label: content.label,
-      value: display(content.value),
-      info: content.info === undefined ? undefined : typeof content.info === 'string' ? { kind: 'text', text: content.info } : resolved({ live: content.info.live }),
+      value: content.value,
+      info: content.info,
       tone: content.tone,
       progress: content.progress,
       countdown: !countdown
@@ -486,10 +443,10 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
           : 'until' in countdown
             ? { label: countdown.label, until: countdown.until }
             : head.value.height > 0 ? { label: countdown.label, until: head.value.at + (countdown.untilNimiqHeight - head.value.height) * 1000 } : undefined,
-      rows: content.rows.map(row => ({ label: row.label, value: display(row.value), url: row.path })),
-      chart: chartView(content.chart),
+      rows: content.rows.map(row => ({ label: row.label, value: row.value, url: row.path })),
+      chart: content.chart,
       background: backgroundView(widget, content),
-      url: content.path ?? (builtin ? undefined : widget.scope),
+      url: content.path ?? widget.scope,
       pendingAppName: widget.pendingAppName && !catalogEntry(widget.scope) ? widget.pendingAppName : undefined,
       staleSince: !widget.halted && widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
       reconnect: widget.halted === 'reconnect',
@@ -544,13 +501,12 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     let left = enabled ? WIDGET_LIMITS.chainLookups : 0
     const leftPerOrigin = new Map<string, number>()
     return {
-      take(count: number, origin?: string): boolean {
-        const leftForOrigin = origin === undefined ? left : leftPerOrigin.get(origin) ?? WIDGET_LIMITS.chainLookupsPerMiniApp
+      take(count: number, origin: string): boolean {
+        const leftForOrigin = leftPerOrigin.get(origin) ?? WIDGET_LIMITS.chainLookupsPerMiniApp
         if (count > left || count > leftForOrigin)
           return false
         left -= count
-        if (origin !== undefined)
-          leftPerOrigin.set(origin, leftForOrigin - count)
+        leftPerOrigin.set(origin, leftForOrigin - count)
         return true
       },
     }
@@ -559,7 +515,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   type Budget = ReturnType<typeof lookupBudget>
 
   // A state with a payment or transaction trigger is checked whole or not at all, so a time trigger never wins over a payment that was not looked up.
-  async function applyExpiryAndTriggers(widget: HomeWidget, at: number, chain: WidgetChain, checkChain: boolean, budget: Budget) {
+  async function applyExpiryAndTriggers(widget: HomeWidget, at: number, chain: WidgetChain, budget: Budget) {
     const from = widget.state
     if (!from)
       return
@@ -568,7 +524,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return
     }
     const lookups = from.next.filter(transition => needsLookup(transition.on)).length
-    if (lookups > 0 && (!checkChain || !budget.take(lookups, originOf(widget.scope))))
+    if (lookups > 0 && !budget.take(lookups, originOf(widget.scope)))
       return
     // An unanswered trigger stops the check, so a later trigger never wins over one that could not be checked.
     for (const transition of from.next) {
@@ -872,7 +828,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   async function recheckDefinition(widget: HomeWidget, at: number, files: Map<string, Promise<FetchOutcome<WidgetFile>>>) {
     if (!files.has(widget.scope))
-      files.set(widget.scope, widget.scope === BUILTIN_WIDGET_SCOPE ? Promise.resolve({ ok: true, value: builtinWidgetFile() }) : fetchWidgetFile(widget.scope, at))
+      files.set(widget.scope, fetchWidgetFile(widget.scope, at))
     const result = await files.get(widget.scope)!
     if (!result.ok) {
       // Only a valid file that no longer declares the widget removes it; errors never do.
@@ -889,30 +845,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       return { definition: { ...definition, appName: w.definition.appName, images: kept }, pendingImages, grants: grantable(definition, w.grants), definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }
     })
     offerName(widget.scope, definition.appName)
-  }
-
-  async function resolveLive(shown: { content: WidgetContent | WidgetDemo, size: WidgetSize, origin?: string }[], chain: WidgetChain, at: number, budget: Budget) {
-    const seen = new Set<string>()
-    for (const { content, size, origin } of shown) {
-      for (const spec of liveSpecs(content, size)) {
-        const key = liveKey(spec)
-        if (seen.has(key))
-          continue
-        seen.add(key)
-        const entry = live.get(key)
-        const balance = 'live' in spec && isBalanceLive(spec.live)
-        // A price that has never answered is retried at the chain check pace.
-        if (entry && at - entry.checkedAt < (balance || entry.value === undefined ? CHAIN_CHECK_MS : PRICE_MAX_AGE_MS))
-          continue
-        if (balance && !budget.take(1, origin))
-          continue
-        const fiat = useApp().selectedFiat
-        const value = await ('priceHistory' in spec
-          ? resolvePriceHistory(spec.priceHistory.asset, spec.priceHistory.range, chain, fiat, at)
-          : resolveLiveValue(spec.live, chain, fiat, at)).catch(() => undefined)
-        live.set(key, { value: value ?? entry?.value, checkedAt: at })
-      }
-    }
   }
 
   async function step({ chain = createWidgetChain(), at = Date.now(), force = false }: TickOptions) {
@@ -934,9 +866,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       const widget = find(listed.scope, listed.widgetId)
       if (!widget)
         continue
-      await applyExpiryAndTriggers(widget, at, chain, checkChain, budget)
-      const current = find(widget.scope, widget.widgetId) ?? widget
-      await resolveLive([{ content: shownContent(current, at), size: current.size, origin: originOf(current.scope) }], chain, at, budget)
+      await applyExpiryAndTriggers(widget, at, chain, budget)
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
     // The longest waiting first, so a Mini App's fast widget cannot keep taking the budget from its slow one.
@@ -952,7 +882,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       lastImageRetryAt = at
       queueKeepImages()
     }
-    await resolveLive(running.value.map(w => ({ content: shownContent(w, at), size: w.size, origin: originOf(w.scope) })), chain, at, budget)
   }
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
@@ -997,12 +926,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       else
         galleryFiles.set(scope, result.ok ? result.value : null)
     })
-  }
-
-  function resolvePreviews(definitions: WidgetDefinition[], chain = createWidgetChain()) {
-    const at = Date.now()
-    observe(at)
-    return resolveLive(definitions.map(d => ({ content: previewContent(d), size: d.sizes[0]! })), chain, at, lookupBudget(true))
+    // A height known before the sync finished can be far behind.
+    observe(Date.now())
   }
 
   return {
@@ -1047,6 +972,5 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     galleryFiles,
     loadGallery,
     previewView,
-    resolvePreviews,
   }
 })

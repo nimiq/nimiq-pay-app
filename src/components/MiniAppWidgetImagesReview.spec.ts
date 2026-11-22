@@ -41,7 +41,7 @@ function view(key: string, src?: string): WidgetView {
     appIcon: '',
     size: 'medium',
     sizes: ['medium'],
-    value: { kind: 'text', text: 'Demo' },
+    value: { text: 'Demo' },
     tone: 'neutral',
     rows: [],
     background: src ? { kind: 'image', src } : undefined,

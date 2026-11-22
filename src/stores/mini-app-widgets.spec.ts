@@ -3,6 +3,7 @@ import type { WidgetDefinition, WidgetState } from '@/lib/mini-app-widgets'
 import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { watch } from 'vue'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { WIDGET_LIMITS } from '@/lib/mini-app-widgets'
 
@@ -10,16 +11,19 @@ const flags = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
   return reactive({ blockedWidgetOrigins: [] as string[], refreshBlockedWidgetOrigins: () => {} })
 })
-const { app, fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile, memory, miniApps, nimiqNetwork, storedRead } = vi.hoisted(() => ({
+const nimiqNetwork = await vi.hoisted(async () => {
+  const { reactive } = await import('vue')
+  return reactive({ height: 1000 })
+})
+const { app, fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile, memory, miniApps, storedRead } = vi.hoisted(() => ({
   storedRead: { fetches: Promise.resolve() as Promise<unknown> },
   miniApps: { popularDApps: [{ name: 'Swap', url: 'https://swap.example' }], iconForUrl: (url: string) => `${url}icon.png` },
-  app: { language: 'en', selectedFiat: 'EUR' },
+  app: { language: 'en' },
   fetchWidgetFile: vi.fn(),
   fetchWidgetRefresh: vi.fn(),
   fetchWidgetImage: vi.fn(),
   findWidgetFile: vi.fn(),
   memory: new Map<string, string>(),
-  nimiqNetwork: { height: 1000 },
 }))
 
 vi.mock('@/lib', () => ({ isTestnet: false, isDev: false }))
@@ -45,7 +49,6 @@ vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 vi.mock('@/stores/polygon-usdt', () => ({}))
 vi.mock('@/stores/remote-signer', () => ({}))
-vi.mock('@/composables/useApi', () => ({}))
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ log: vi.fn(), warn: vi.fn(), error: vi.fn() }) }))
 
 const NOW = Date.UTC(2026, 9, 19, 12)
@@ -71,11 +74,7 @@ function fakeChain(overrides: Partial<WidgetChain> = {}): WidgetChain {
     nimiqHeight: () => 1000,
     nimiqTransaction: async () => 'pending',
     nimiqReceived: async () => false,
-    nimiqBalance: async () => 0,
-    nimiqStake: async () => 0,
     polygonTransaction: async () => 'pending',
-    usdtBalance: async () => 0,
-    price: async () => 1,
     accounts: () => ['NQ07 MINE', '0xmine'],
     ...overrides,
   }
@@ -107,7 +106,6 @@ beforeEach(() => {
   vi.setSystemTime(NOW)
   memory.clear()
   flags.blockedWidgetOrigins = []
-  app.selectedFiat = 'EUR'
   nimiqNetwork.height = 1000
   fetchWidgetFile.mockReset()
   fetchWidgetRefresh.mockReset()
@@ -122,7 +120,7 @@ describe('adding, updating, removing', () => {
   it('adds a widget at its first size, named from the catalog, and refuses an eleventh', async () => {
     const store = await setup()
     expect(store.add(SCOPE, definition())).toBe(true)
-    expect(store.views[0]).toMatchObject({ appName: 'Swap', appIcon: 'https://swap.example/icon.png', size: 'medium', value: { kind: 'text', text: 'Start a swap' }, url: 'https://swap.example/' })
+    expect(store.views[0]).toMatchObject({ appName: 'Swap', appIcon: 'https://swap.example/icon.png', size: 'medium', value: { text: 'Start a swap' }, url: 'https://swap.example/' })
     for (let i = 1; i < 10; i++)
       store.add(`https://app${i}.example/`, definition())
     expect(store.views[1]!.appName).toBe('app1.example')
@@ -166,7 +164,7 @@ describe('adding, updating, removing', () => {
     expect(store.update(SCOPE, 'swap', live('Waiting'))).toBe(true)
     expect(store.views[0]!.label).toBe('Waiting')
     store.update(SCOPE, 'swap', null)
-    expect(store.views[0]!.value).toEqual({ kind: 'text', text: 'Start a swap' })
+    expect(store.views[0]!.value).toEqual({ text: 'Start a swap' })
   })
 
   it('sets a size only among the supported sizes', async () => {
@@ -191,7 +189,7 @@ describe('tick', () => {
     store.add(SCOPE, definition())
     store.update(SCOPE, 'swap', live('Waiting', { expiresAt: NOW - 1 }))
     await store.tick({ chain: fakeChain(), at: NOW })
-    expect(store.views[0]!.value).toEqual({ kind: 'text', text: 'Start a swap' })
+    expect(store.views[0]!.value).toEqual({ text: 'Start a swap' })
     expect(store.widgets[0]!.state).toBeUndefined()
   })
 
@@ -246,43 +244,6 @@ describe('tick', () => {
     for (let i = 0; i < 3; i++)
       await store.tick({ chain, at: NOW + i * 30_000 })
     expect([...seen].sort()).toEqual([...triggers(8, 1), ...triggers(8, 2)].map(t => t.on.nimiqTx).sort())
-  })
-
-  it('does not starve a balance behind two widgets with 5 triggers each', async () => {
-    const store = await setup()
-    const seen = new Set<string>()
-    const nimiqBalance = vi.fn(async () => 5e5)
-    const nimiqTransaction = async (hash: string) => {
-      seen.add(hash)
-      return 'pending' as const
-    }
-    const chain = fakeChain({ nimiqTransaction, nimiqBalance })
-    for (const [i, scope] of ['https://one.example/', 'https://two.example/'].entries()) {
-      store.add(scope, definition())
-      store.update(scope, 'swap', live('Waiting', { next: triggers(5, i + 1) }))
-    }
-    store.add('https://balance.example/', definition({ content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
-    for (let i = 0; i < 3; i++)
-      await store.tick({ chain, at: NOW + i * 30_000 })
-    expect(seen.size).toBe(10)
-    expect(nimiqBalance).toHaveBeenCalled()
-  })
-
-  it('looks up a widget\'s payment triggers before its own balances', async () => {
-    const store = await setup()
-    const seen = new Set<string>()
-    const nimiqTransaction = async (hash: string) => {
-      seen.add(hash)
-      return 'pending' as const
-    }
-    store.add(SCOPE, definition())
-    const balance = (address: string) => ({ live: { nimiqBalance: address } })
-    store.update(SCOPE, 'swap', {
-      content: { label: 'Waiting', value: balance('A'), info: balance('B'), tone: 'neutral', rows: [{ label: 'C', value: balance('C') }] },
-      next: triggers(8, 1),
-    })
-    await store.tick({ chain: fakeChain({ nimiqTransaction }), at: NOW })
-    expect(seen.size).toBe(8)
   })
 
   it('evaluates no trigger of a state whose payment trigger cannot be looked up, so a time trigger never wins first', async () => {
@@ -478,67 +439,6 @@ describe('tick', () => {
     expect(store.widgets).toHaveLength(0)
   })
 
-  it('re-resolves live prices when the fiat currency changes', async () => {
-    const store = await setup()
-    store.add(SCOPE, definition({ content: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } }))
-    const price = vi.fn(async (_asset: string, fiat: string) => (fiat === 'EUR' ? 0.0004 : 0.0005))
-    await store.tick({ chain: fakeChain({ price }), at: NOW })
-    expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '0.0004', currency: 'EUR' })
-    app.selectedFiat = 'USD'
-    await store.tick({ chain: fakeChain({ price }), at: NOW + 1000 })
-    expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '0.0005', currency: 'USD' })
-  })
-
-  it('looks up rows only at the large size, which draws them', async () => {
-    const store = await setup()
-    store.add(SCOPE, definition({ sizes: ['medium', 'large'], content: { value: { text: 'Staked' }, tone: 'neutral', rows: [{ label: 'Wallet', value: { live: { nimiqBalance: ADDRESS } } }] } }))
-    const nimiqBalance = vi.fn(async () => 1e5)
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
-    expect(nimiqBalance).not.toHaveBeenCalled()
-    store.setSize(SCOPE, 'swap', 'large')
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 30_000 })
-    expect(nimiqBalance).toHaveBeenCalledTimes(1)
-  })
-
-  it('looks up a chart\'s price history only at the large size, which draws it', async () => {
-    const store = await setup()
-    const chart = definition({ sizes: ['small', 'large'], content: { value: { live: { price: 'NIM' } }, chart: { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } }, tone: 'neutral', rows: [] } })
-    store.add(SCOPE, chart)
-    const price = vi.fn(async () => 0.0004)
-    await store.tick({ chain: fakeChain({ price }), at: NOW })
-    expect(price).toHaveBeenCalledTimes(1)
-    store.setSize(SCOPE, 'swap', 'large')
-    await store.tick({ chain: fakeChain({ price }), at: NOW + 1000 })
-    expect(store.views[0]!.chart?.points).toHaveLength(25)
-  })
-
-  it('retries a failed price and price history lookup at the next chain check, not after five minutes', async () => {
-    const store = await setup()
-    store.add(SCOPE, definition({ sizes: ['large'], content: { value: { live: { price: 'NIM' } }, chart: { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } }, tone: 'neutral', rows: [] } }))
-    let answers = false
-    const price = vi.fn(async () => (answers ? 0.0004 : undefined))
-    await store.tick({ chain: fakeChain({ price }), at: NOW })
-    expect(store.views[0]!.value).toEqual({ kind: 'pending' })
-    answers = true
-    await store.tick({ chain: fakeChain({ price }), at: NOW + 15_000 })
-    expect(store.views[0]!.value).toEqual({ kind: 'pending' })
-    await store.tick({ chain: fakeChain({ price }), at: NOW + 30_000 })
-    expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '0.0004', currency: 'EUR' })
-    expect(store.views[0]!.chart?.points).toHaveLength(25)
-  })
-
-  it('keeps showing a balance when the fiat currency changes', async () => {
-    const store = await setup()
-    store.add(SCOPE, definition({ content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
-    const nimiqBalance = vi.fn(async () => 1234500)
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
-    expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '12.345', currency: 'NIM' })
-    app.selectedFiat = 'USD'
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 1000 })
-    expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '12.345', currency: 'NIM' })
-    expect(nimiqBalance).toHaveBeenCalledTimes(1)
-  })
-
   it('runs a forced tick asked for during a running tick right after it, with its own options, and resolves when done', async () => {
     const store = await setup()
     store.add(SCOPE, definition())
@@ -681,23 +581,13 @@ describe('removing and previewing', () => {
     expect(store.isOnHome(SCOPE, 'swap')).toBe(false)
   })
 
-  it('draws Nimiq Pay\'s own widget under its name, opening nothing, and re-checks it without a download', async () => {
-    const { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } = await import('@/lib/mini-app-widget-builtins')
-    const store = await setup()
-    store.add(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0]!)
-    expect(store.views[0]).toMatchObject({ appName: 'Nimiq Pay', url: undefined })
-    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
-    expect(fetchWidgetFile).not.toHaveBeenCalled()
-    expect(store.widgets).toHaveLength(1)
-  })
-
   it('is ready once the stored widgets have been read', async () => {
     expect((await setup()).ready).toBe(true)
   })
 
   it('builds a preview view of a definition without adding it', async () => {
     const store = await setup()
-    expect(store.previewView(SCOPE, definition())).toMatchObject({ appName: 'Swap', size: 'medium', value: { kind: 'text', text: 'Start a swap' }, key: `${SCOPE}#swap` })
+    expect(store.previewView(SCOPE, definition())).toMatchObject({ appName: 'Swap', size: 'medium', value: { text: 'Start a swap' }, key: `${SCOPE}#swap` })
     expect(store.widgets).toHaveLength(0)
   })
 })
@@ -710,7 +600,7 @@ describe('a widget\'s demo', () => {
     expect(store.previewView(SCOPE, definition({ demo }))).toMatchObject({
       label: 'Waiting',
       tone: 'attention',
-      value: { kind: 'amount', amount: '0.05', currency: 'ETH' },
+      value: { amount: '0.05', currency: 'ETH' },
       countdown: { label: 'Deposit window', left: 1_740_000 },
     })
   })
@@ -718,15 +608,8 @@ describe('a widget\'s demo', () => {
   it('never reaches Home: an added widget starts on its resting state', async () => {
     const store = await setup()
     store.add(SCOPE, definition({ demo }))
-    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral' })
+    expect(store.views[0]).toMatchObject({ value: { text: 'Start a swap' }, tone: 'neutral' })
     expect(store.views[0]!.countdown).toBeUndefined()
-  })
-
-  it('has its live values looked up for the gallery, in place of the resting state\'s', async () => {
-    const store = await setup()
-    const price = vi.fn<WidgetChain['price']>(async () => 0.0004)
-    await store.resolvePreviews([definition({ content: { value: { live: { price: 'BTC' } }, tone: 'neutral', rows: [] }, demo: { value: { live: { price: 'NIM' } }, tone: 'neutral', rows: [] } })], fakeChain({ price }))
-    expect(price.mock.calls.map(([asset]) => asset)).toEqual(['NIM'])
   })
 })
 
@@ -745,7 +628,7 @@ describe('what a refresh server answers', () => {
 
   it('410: says it is no longer available, stops refreshing, and can still be removed', async () => {
     const store = await answered({ status: 410 })
-    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'No longer available' }, tone: 'neutral' })
+    expect(store.views[0]).toMatchObject({ value: { text: 'No longer available' }, tone: 'neutral' })
     expect(store.views[0]!.staleSince).toBeUndefined()
     await store.tick({ chain: fakeChain(), at: NEXT, force: true })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
@@ -761,7 +644,7 @@ describe('what a refresh server answers', () => {
 
   it.each([[401], [403]])('%i: keeps the content, asks to reconnect, and pauses until a new token', async (status) => {
     const store = await answered({ status })
-    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Start a swap' }, reconnect: true })
+    expect(store.views[0]).toMatchObject({ value: { text: 'Start a swap' }, reconnect: true })
     await store.tick({ chain: fakeChain(), at: NEXT, force: true })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
     fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
@@ -888,13 +771,14 @@ describe('what a refresh server answers', () => {
 
   it('looks up nothing for a widget that is no longer available', async () => {
     const store = await setup()
-    const nimiqBalance = vi.fn(async () => 1e5)
-    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 }, content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
+    const nimiqTransaction = vi.fn(async () => 'pending' as const)
+    store.add(SCOPE, definition())
+    store.update(SCOPE, 'swap', live('Waiting', { refresh: { url: `${SCOPE}w`, every: 60 }, next: triggers(1, 1) }))
     fetchWidgetRefresh.mockResolvedValue({ ok: false, error: 'gone', transient: false, status: 410 })
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
-    nimiqBalance.mockClear()
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 120_000 })
-    expect(nimiqBalance).not.toHaveBeenCalled()
+    await store.tick({ chain: fakeChain({ nimiqTransaction }), at: NOW + 60_000 })
+    expect(nimiqTransaction).toHaveBeenCalledTimes(1)
+    await store.tick({ chain: fakeChain({ nimiqTransaction }), at: NOW + 120_000 })
+    expect(nimiqTransaction).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -1130,6 +1014,31 @@ describe('images', () => {
     expect(fetchWidgetImage).not.toHaveBeenCalled()
   })
 
+  it.each(['before the gallery opens', 'while it is open'])('counts a preview\'s block-height countdown from a height first known %s', async (arrives) => {
+    nimiqNetwork.height = -1
+    const store = await setup()
+    const counting = definition({ content: { value: { text: 'Next draw' }, tone: 'neutral', rows: [], countdown: { label: 'Draw', untilNimiqHeight: 1060 } } })
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [counting] } })
+    if (arrives === 'before the gallery opens')
+      nimiqNetwork.height = 1000
+    await store.loadGallery([SCOPE])
+    nimiqNetwork.height = 1000
+    await flushPromises()
+    expect(store.previewView(SCOPE, counting).countdown).toEqual({ label: 'Draw', until: NOW + 60_000 })
+  })
+
+  it('counts a preview\'s block-height countdown from a head that moved on while the chain synced', async () => {
+    nimiqNetwork.height = 10
+    const store = await setup()
+    const counting = definition({ content: { value: { text: 'Next draw' }, tone: 'neutral', rows: [], countdown: { label: 'Draw', untilNimiqHeight: 1060 } } })
+    fetchWidgetFile.mockImplementation(async () => {
+      nimiqNetwork.height = 1000
+      return { ok: true, value: { widgets: [counting] } }
+    })
+    await store.loadGallery([SCOPE])
+    expect(store.previewView(SCOPE, counting).countdown).toEqual({ label: 'Draw', until: NOW + 60_000 })
+  })
+
   it('shows a gallery preview without storing it', async () => {
     const store = await setup()
     fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [old] } })
@@ -1153,18 +1062,6 @@ describe('images', () => {
     expect(fetchWidgetImage).not.toHaveBeenCalled()
     await store.loadPreviewImages([SCOPE])
     expect(fetchWidgetImage).toHaveBeenCalledTimes(1)
-  })
-
-  it('looks up the price history of a chart background on a small card, not on an icon', async () => {
-    const price = vi.fn(async () => 0.0004)
-    const store = await setup()
-    store.add(SCOPE, definition({ sizes: ['icon', 'small'], content: { value: { text: 'x' }, tone: 'neutral', rows: [], background: { chart: { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } } } } }))
-    await store.tick({ chain: fakeChain({ price }), at: NOW })
-    expect(price).not.toHaveBeenCalled()
-    store.setSize(SCOPE, 'swap', 'small')
-    await store.tick({ chain: fakeChain({ price }), at: NOW + 30_000 })
-    const background = store.views[0]!.background
-    expect(background?.kind === 'chart' && background.chart.points).toHaveLength(25)
   })
 
   it('forgets previews when the gallery closes, also one still downloading', async () => {
@@ -1352,7 +1249,7 @@ describe('images', () => {
       void store.openImageReview(SCOPE, 'swap')
       await store.loadReviewImages()
       const side = store.reviewView('side')!
-      expect(side.value).toEqual({ kind: 'text', text: 'Demo' })
+      expect(side.value).toEqual({ text: 'Demo' })
       expect(side.size).toBe(store.views[0]!.size)
       expect(side.background).toEqual({ kind: 'image', src: `data:image/png;base64,${THIRD}` })
     })
@@ -1598,7 +1495,7 @@ describe('the remote kill switch', () => {
     store.add(SCOPE, definition({ content: { label: 'Secret', value: { text: 'Start a swap' }, tone: 'attention', rows: [], path: `${SCOPE}x` } }))
     blockSwap()
     expect(store.isBlocked(SCOPE)).toBe(true)
-    expect(store.views[0]).toMatchObject({ value: { kind: 'text', text: 'Not available' }, tone: 'neutral' })
+    expect(store.views[0]).toMatchObject({ value: { text: 'Not available' }, tone: 'neutral' })
     expect(store.views[0]!.label).toBeUndefined()
     expect(store.views[0]!.url).toBeUndefined()
     expect(store.views[0]!.appIcon).toBe(MINI_APP_FALLBACK_ICON)
@@ -1608,13 +1505,14 @@ describe('the remote kill switch', () => {
 
   it('asks nothing for a blocked widget: no refresh, no file, no chain', async () => {
     const store = await setup()
-    const nimiqBalance = vi.fn(async () => 1e5)
-    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 }, content: { value: { live: { nimiqBalance: ADDRESS } }, tone: 'neutral', rows: [] } }))
+    const nimiqTransaction = vi.fn(async () => 'pending' as const)
+    store.add(SCOPE, definition())
+    store.update(SCOPE, 'swap', live('Waiting', { refresh: { url: `${SCOPE}w`, every: 60 }, next: triggers(1, 1) }))
     blockSwap()
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 25 * 3600_000 })
+    await store.tick({ chain: fakeChain({ nimiqTransaction }), at: NOW + 25 * 3600_000 })
     expect(fetchWidgetRefresh).not.toHaveBeenCalled()
     expect(fetchWidgetFile).not.toHaveBeenCalled()
-    expect(nimiqBalance).not.toHaveBeenCalled()
+    expect(nimiqTransaction).not.toHaveBeenCalled()
     expect(store.widgets).toHaveLength(1)
   })
 
@@ -1641,11 +1539,11 @@ describe('the remote kill switch', () => {
     const store = await setup()
     store.add('https://named.example/', definition({ appName: 'Bad name', sizes: ['medium', 'icon'] }))
     flags.blockedWidgetOrigins = ['https://named.example']
-    expect(store.views[0]).toMatchObject({ appName: 'named.example', value: { kind: 'text', text: 'Not available' } })
+    expect(store.views[0]).toMatchObject({ appName: 'named.example', value: { text: 'Not available' } })
     expect(store.views[0]!.appAddress).toBeUndefined()
     expect(store.views[0]!.staleSince).toBeUndefined()
     store.setSize('https://named.example/', 'swap', 'icon')
-    expect(store.views[0]).toMatchObject({ appName: 'Not available', appAddress: 'named.example', value: { kind: 'text', text: 'named.example' } })
+    expect(store.views[0]).toMatchObject({ appName: 'Not available', appAddress: 'named.example', value: { text: 'named.example' } })
   })
 
   it('reads the block on each chain check, so it lands without a restart', async () => {
@@ -1668,12 +1566,10 @@ describe('the remote kill switch', () => {
     expect(store.widgets).toHaveLength(0)
   })
 
-  it('blocks every Mini App with *, but not Nimiq Pay\'s own widgets', async () => {
-    const { BUILTIN_WIDGET_SCOPE } = await import('@/lib/mini-app-widget-builtins')
+  it('blocks every widget with *', async () => {
     const store = await setup()
     flags.blockedWidgetOrigins = ['*']
     expect(store.isBlocked(SCOPE)).toBe(true)
-    expect(store.isBlocked(BUILTIN_WIDGET_SCOPE)).toBe(false)
   })
 })
 
@@ -1684,6 +1580,43 @@ describe('where widgets are stored', () => {
     store.update(SCOPE, 'swap', live('Invoice 4821'))
     await flushPromises()
     expect(memory.get('miniAppWidgets')).toContain('Invoice 4821')
+  })
+})
+
+describe('widgets stored by a build that had live values', () => {
+  const content = (extra: object) => ({ value: { text: 'x' }, tone: 'neutral', rows: [], ...extra })
+  const priceHistory = { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } }
+
+  it.each([
+    ['a live value', content({ value: { live: { price: 'NIM' } } })],
+    ['a live info', content({ info: { live: { priceChange: { asset: 'NIM', range: '24h' } } } })],
+    ['a live row', content({ rows: [{ label: 'Balance', value: { live: { nimiqBalance: ADDRESS } } }] })],
+    ['a price history', content({ chart: priceHistory })],
+    ['a price history behind it', content({ background: { chart: priceHistory } })],
+  ])('drops one with %s, in its declaration or its state, as Home could not draw it', async (_, removed) => {
+    memory.set('miniAppWidgets', JSON.stringify([
+      { ...storedWidget('mainnet', 'declared'), definition: { ...definition({ id: 'declared' }), content: removed } },
+      { ...storedWidget('mainnet', 'pushed'), state: { content: content({}), next: [{ on: { at: NOW }, state: { content: removed, next: [] } }] } },
+      storedWidget('mainnet', 'kept'),
+    ]))
+    setActivePinia(createPinia())
+    const { useMiniAppWidgets } = await import('./mini-app-widgets')
+    const store = useMiniAppWidgets()
+    // Home draws whatever the store holds, so the state between the read and `ready` counts too.
+    const drawn: string[][] = []
+    watch(() => store.widgets.map(w => w.widgetId), ids => drawn.push(ids), { flush: 'sync' })
+    await flushPromises()
+    expect(drawn).toEqual([['kept']])
+    expect(JSON.parse(memory.get('miniAppWidgets')!)).toEqual([storedWidget('mainnet', 'kept')])
+  })
+
+  it('keeps one that only uses those words for an image\'s key and a text', async () => {
+    const images = { live: { url: `${SCOPE}live.png`, sha256: HASH } }
+    memory.set('miniAppWidgets', JSON.stringify([
+      { ...storedWidget('mainnet', 'keyed'), definition: { ...definition({ id: 'keyed', images }), content: content({ value: { text: '"priceHistory":' }, info: '"live":{"price"' }) } },
+    ]))
+    const store = await setup()
+    expect(store.widgets.map(w => w.widgetId)).toEqual(['keyed'])
   })
 })
 
@@ -1705,11 +1638,19 @@ describe('limits per Mini App', () => {
     expect(WIDGET_LIMITS.chainLookupsPerMiniApp).toBeGreaterThanOrEqual(WIDGET_LIMITS.triggersPerState)
     expect(WIDGET_LIMITS.chainLookupsPerMiniApp).toBeLessThan(WIDGET_LIMITS.chainLookups)
     const store = await setup()
-    const nimiqBalance = vi.fn(async () => 1e5)
-    const rows = Array.from({ length: 10 }, (_, i) => ({ label: `r${i}`, value: { live: { nimiqBalance: `${ADDRESS}${i}` } } }))
-    store.add(SCOPE, definition({ sizes: ['large'], content: { value: { text: 'x' }, tone: 'neutral', rows } }))
-    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
-    expect(nimiqBalance).toHaveBeenCalledTimes(WIDGET_LIMITS.chainLookupsPerMiniApp)
+    const seen = new Set<string>()
+    const nimiqTransaction = async (hash: string) => {
+      seen.add(hash[0]!)
+      return 'pending' as const
+    }
+    for (const [id, tag, count] of [['first', 1, 5], ['second', 2, 5]] as const) {
+      store.add(SCOPE, definition({ id }))
+      store.update(SCOPE, id, live('Waiting', { next: triggers(count, tag) }))
+    }
+    store.add('https://other.example/', definition())
+    store.update('https://other.example/', 'swap', live('Waiting', { next: triggers(5, 3) }))
+    await store.tick({ chain: fakeChain({ nimiqTransaction }), at: NOW })
+    expect([...seen]).toEqual(['1', '3'])
   })
 
   it('holds a Mini App\'s refreshes at its hourly budget, across its widgets, and catches up later', async () => {

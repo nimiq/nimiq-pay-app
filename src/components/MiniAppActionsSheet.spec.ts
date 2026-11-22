@@ -125,7 +125,7 @@ describe('miniAppActionsSheet', () => {
     expect(action('mini-app-address')!.textContent!.trim()).toBe('swapspace.example')
   })
 
-  it('offers no Share for Nimiq Pay\'s own widget', async () => {
+  it('offers no Share for a blocked widget', async () => {
     await mountSheet({ app, removable: false, shareable: false, widget: { size: 'small', sizes: ['small', 'large'] } })
     expect(action('mini-app-share-action')).toBeNull()
     expect(action('mini-app-remove-widget-action')).not.toBeNull()

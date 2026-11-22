@@ -92,7 +92,6 @@ onMounted(async () => {
     <p data-testid="widgets-on-home">
       On Home: {{ onHome.join(', ') || 'none' }}
     </p>
-    <button type="button" @click="run('add nim-price', () => widgets()!.add('nim-price'))">Add NIM price (no code)</button>
     <button type="button" @click="run('add lab', () => widgets()!.add('lab'))">Add widget lab</button>
     <button type="button" @click="run('lab scheduled', pushScheduled)">Lab: scheduled state</button>
     <button type="button" @click="run('lab chart', pushChart)">Lab: bar chart</button>

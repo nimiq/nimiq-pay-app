@@ -16,12 +16,12 @@ function view(extra: Partial<WidgetView> = {}): WidgetView {
     size: 'small',
     sizes: ['small', 'medium', 'large', 'icon'],
     label: 'Waiting for your deposit',
-    value: { kind: 'amount', amount: '0.05', currency: 'ETH' },
-    info: { kind: 'text', text: 'for about 1,234 NIM' },
+    value: { amount: '0.05', currency: 'ETH' },
+    info: 'for about 1,234 NIM',
     tone: 'attention',
     progress: 0.25,
     countdown: { label: 'Deposit window', until: Date.now() + 23.5 * 60_000 },
-    rows: [{ label: 'You send', value: { kind: 'amount', amount: '0.05', currency: 'ETH' } }, { label: 'Order', value: { kind: 'text', text: '#12' }, url: 'https://swap.example/orders/12' }],
+    rows: [{ label: 'You send', value: { amount: '0.05', currency: 'ETH' } }, { label: 'Order', value: { text: '#12' }, url: 'https://swap.example/orders/12' }],
     chart: { kind: 'line', points: [1, 3, 2] },
     url: 'https://swap.example/?swap=abc',
     launchTitle: 'Swap',
@@ -109,15 +109,9 @@ describe('miniAppWidget', () => {
     expect(wrapper.find('.bg-pumpkin').exists()).toBe(true)
   })
 
-  it('formats fiat as money, crypto with its ticker, and changes with a sign and colour', () => {
-    expect(render({ view: view({ value: { kind: 'amount', amount: '0.000317', currency: 'EUR' } }) }).text()).toContain('€0.000317')
-    expect(render({ view: view({ value: { kind: 'amount', amount: '12500.5', currency: 'NIM' } }) }).text()).toContain('12\u202F500.5 NIM')
-    const change = render({ view: view({ info: { kind: 'change', percent: -3.21 } }) })
-    expect(change.text()).toContain('−3.2 %')
-    expect(change.find('.text-cherry').exists()).toBe(true)
-    // Two text colours on one element: whichever the stylesheet lists later wins, so the muted one must go.
-    expect(change.find('.text-cherry').classes()).not.toContain('text-space/60')
-    expect(render({ view: view({ value: { kind: 'pending' } }) }).text()).toContain('…')
+  it('formats fiat as money and crypto with its ticker', () => {
+    expect(render({ view: view({ value: { amount: '0.000317', currency: 'EUR' } }) }).text()).toContain('€0.000317')
+    expect(render({ view: view({ value: { amount: '12500.5', currency: 'NIM' } }) }).text()).toContain('12\u202F500.5 NIM')
   })
 
   it('opens the widget URL on tap and the menu from ⋯', async () => {
@@ -148,23 +142,15 @@ describe('miniAppWidget', () => {
   })
 
   it('formats fiat by its own fraction digits, and small amounts by significant digits', () => {
-    const text = (amount: string, currency: string) => render({ view: view({ value: { kind: 'amount', amount, currency } }) }).text()
+    const text = (amount: string, currency: string) => render({ view: view({ value: { amount, currency } }) }).text()
     expect(text('0.5', 'EUR')).toContain('€0.50')
     expect(text('1234.5', 'EUR')).toContain('€1,234.50')
     expect(text('1234', 'JPY')).toMatch(/¥1,234(?![.\d])/)
     expect(text('0.00123', 'EUR')).toContain('€0.00123')
   })
 
-  it('shows a change that rounds to zero without sign or colour', () => {
-    const flat = render({ view: view({ info: { kind: 'change', percent: -0.04 } }) })
-    expect(flat.text()).toContain('0.0 %')
-    expect(flat.text()).not.toContain('−0.0')
-    expect(flat.find('.text-cherry').exists()).toBe(false)
-    expect(flat.find('.text-mint').exists()).toBe(false)
-  })
-
   it('writes a crypto amount\'s decimals the way the user\'s language does, keeping Nimiq Pay\'s grouping and every digit', () => {
-    const text = (amount: string, currency: string) => render({ view: view({ value: { kind: 'amount', amount, currency } }) }).text()
+    const text = (amount: string, currency: string) => render({ view: view({ value: { amount, currency } }) }).text()
     app.language = 'de'
     try {
       expect(text('0.05', 'ETH')).toContain('0,05 ETH')
@@ -179,7 +165,7 @@ describe('miniAppWidget', () => {
   })
 
   it('keeps every digit of a tiny crypto amount', () => {
-    expect(render({ view: view({ value: { kind: 'amount', amount: '0.000000001', currency: 'ETH' } }) }).text()).toContain('0.000000001 ETH')
+    expect(render({ view: view({ value: { amount: '0.000000001', currency: 'ETH' } }) }).text()).toContain('0.000000001 ETH')
   })
 
   it('shows the tone dot before the value when there is no label', () => {
@@ -307,11 +293,11 @@ describe('miniAppWidget', () => {
   })
 
   it('spreads a small card\'s lines over its height, with text values a size smaller', () => {
-    const small = render({ view: view({ size: 'small', value: { kind: 'text', text: 'Start a swap' } }) })
+    const small = render({ view: view({ size: 'small', value: { text: 'Start a swap' } }) })
     expect(small.classes()).toContain('justify-between')
     expect(small.find('[data-testid="widget-value"]').classes()).toContain('text-xl')
     expect(render({ view: view({ size: 'small' }) }).find('[data-testid="widget-value"]').classes()).toContain('text-2xl')
-    expect(render({ view: view({ size: 'medium', value: { kind: 'text', text: 'Start a swap' } }) }).classes()).not.toContain('justify-between')
+    expect(render({ view: view({ size: 'medium', value: { text: 'Start a swap' } }) }).classes()).not.toContain('justify-between')
   })
 
   it('spans its size in the four-column grid', () => {
