@@ -11,6 +11,8 @@ function _useToast() {
   const toast = ref<HTMLIonToastElement | null>(null)
   const toastMessage = ref('')
   let presentPromise: Promise<void> | null = null
+  // Bumped by every setToast/clearToast so in-flight setToast calls know they were superseded
+  let toastId = 0
 
   // FIXME: animation not working
   // const enterAnimation = (baseEl: HTMLElement) => {
@@ -27,12 +29,17 @@ function _useToast() {
     // Prevent showing the same toast multiple times
     if (message === toastMessage.value)
       return
-    await clearToast()
+    // Claim ownership before awaiting: otherwise overlapping calls each create a toast and
+    // the one that loses the assignment (possibly a keepOpen spinner) is never dismissed.
+    const previousCleared = clearToast()
+    const id = ++toastId
+    toastMessage.value = message
 
     if (type === 'error')
       logger.error(message)
     else logger.log(message)
 
+    await previousCleared
     const newToast = await toastController.create({
       message,
       duration: keepOpen ? undefined : duration,
@@ -48,8 +55,12 @@ function _useToast() {
       // animated: true,
       // enterAnimation,
     })
+    if (id !== toastId) {
+      // Never presented, so dismiss() would be a no-op and leave the element in the DOM
+      newToast.remove()
+      return
+    }
     toast.value = newToast
-    toastMessage.value = message
     presentPromise = newToast.present()
 
     const hapticType = {
@@ -64,12 +75,18 @@ function _useToast() {
     await newToast.onDidDismiss()
     if (toast.value === newToast) {
       toast.value = null
-      toastMessage.value = ''
       presentPromise = null
     }
+    if (id === toastId)
+      toastMessage.value = ''
   }
 
-  async function clearToast() {
+  // With `message`, only clears if that toast is still the current one (shown or pending)
+  async function clearToast(message?: string) {
+    if (message !== undefined && message !== toastMessage.value)
+      return
+    toastId++
+    toastMessage.value = ''
     const t = toast.value
     if (!t)
       return

@@ -20,16 +20,34 @@ describe('github release credentials', () => {
     expect(result.stderr).toContain('GITHUB_TOKEN is required')
   })
 
-  it('allows initialization with a token without printing it', () => {
+  const credentials = {
+    GITHUB_TOKEN: 'release-test-token',
+    BROWSERSTACK_USERNAME: 'release-test-user',
+    BROWSERSTACK_ACCESS_KEY: 'release-test-key',
+    APP_IDENTIFIER: 'release.test.app',
+    GOOGLE_PLAY_JSON_KEY_FILE: 'release-test.json',
+  }
+
+  it('allows initialization with all credentials without printing them', () => {
     const result = spawnSync(releaseConfig.hooks['before:init'], {
       shell: true,
       encoding: 'utf8',
-      env: { ...process.env, GITHUB_TOKEN: 'release-test-token' },
+      env: { ...process.env, ...credentials },
     })
 
     expect(result.status).toBe(0)
     expect(result.stdout).toBe('')
     expect(result.stderr).toBe('')
+  })
+
+  it.each(Object.keys(credentials))('stops before initialization without %s, naming only it', (name) => {
+    const env = { ...process.env, ...credentials }
+    delete env[name]
+
+    const result = spawnSync(releaseConfig.hooks['before:init'], { shell: true, encoding: 'utf8', env })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr.trim()).toBe(`${name} is required for the release. Set it in .env or the environment.`)
   })
 })
 

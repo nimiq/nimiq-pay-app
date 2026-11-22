@@ -72,6 +72,60 @@ describe('useSyncTransactions', () => {
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 12 })
     })
 
+    describe('late NIM swap preimage', () => {
+      const swapRow = {
+        hash: 'h1',
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        status: 'confirmed',
+        recipient: 'NQ55 SWAP HTLC ADDRESS',
+        paymentRef: 'swap-1',
+        meta: '{}',
+      }
+
+      beforeEach(() => {
+        state.client.getTransaction.mockResolvedValue({ state: 'confirmed', executionResult: true, timestamp: 12 })
+      })
+
+      it('saves the preimage Fastspot reports after the app missed settlement', async () => {
+        state.query.mockImplementation(async sql => sql === SQLQuery.GetTransactionByHash ? swapRow as any : [])
+        state.getSwap.mockResolvedValue({ status: 'SUCCESS', preimage: 'secret' })
+        const { useSyncTransactions } = await import('./transactions')
+
+        await useSyncTransactions().updateSingleTransaction('h1')
+
+        expect(state.getSwap).toHaveBeenCalledWith('swap-1')
+        expect(state.setSwapPreimage).toHaveBeenCalledWith('h1', 'secret')
+        expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+        expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, ['swap-1'])
+      })
+
+      it('keeps swap bookkeeping when Fastspot fails', async () => {
+        state.query.mockImplementation(async sql => sql === SQLQuery.GetTransactionByHash ? swapRow as any : [])
+        state.getSwap.mockRejectedValue(new Error('fastspot down'))
+        const { useSyncTransactions } = await import('./transactions')
+
+        await useSyncTransactions().updateSingleTransaction('h1')
+
+        expect(state.logger.error).toHaveBeenCalledWith('Failed to recover NIM swap preimage', expect.any(Error), { hash: 'h1' })
+        expect(state.setSwapPreimage).not.toHaveBeenCalled()
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      })
+
+      it.each([
+        { chain: 'Polygon' },
+        { meta: '{"secret":"known"}' },
+        { meta: '{"refunded":true}' },
+        { paymentRef: null },
+      ])('does not ask Fastspot for a settled or non-NIM swap (%o)', async (override) => {
+        state.query.mockImplementation(async sql => sql === SQLQuery.GetTransactionByHash ? { ...swapRow, ...override } as any : [])
+        const { useSyncTransactions } = await import('./transactions')
+
+        await useSyncTransactions().updateSingleTransaction('h1')
+
+        expect(state.getSwap).not.toHaveBeenCalled()
+      })
+    })
+
     it.each(['client', 'cosigner'])('resolves pending transactions when the %s lookup stalls', async (source) => {
       vi.useFakeTimers()
       try {
@@ -782,6 +836,74 @@ describe('useSyncTransactions', () => {
 
       expect(state.addReceiptTransactions).toHaveBeenCalledOnce()
       expect(state.addReceiptTransactions.mock.calls[0][0]?.map((tx: any) => tx.hash)).toEqual(['deposit-1', 'deposit-2', 'deposit-3'])
+    })
+
+    it('records staking signals the local wallet sent', async () => {
+      state.query.mockImplementation(async (sql?: string) => (sql === SQLQuery.GetTransactionByHash ? undefined : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'retire-1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ_STAKING',
+        senderType: 'basic',
+        recipientType: 'staking',
+        value: 0,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { type: 'retire-stake', raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).toHaveBeenCalledWith([expect.objectContaining({ hash: 'retire-1', title: 'Retire Stake' })])
+      expect(state.addReceiptTransactions).not.toHaveBeenCalledWith([expect.objectContaining({ hash: 'retire-1' })], expect.anything())
+    })
+
+    it('keeps the staged row of a Mini App remove-stake', async () => {
+      state.query.mockImplementation(async (sql?: string, values?: unknown[]) =>
+        (sql === SQLQuery.GetTransactionByHash && values?.[0] === 'remove-1' ? { hash: 'remove-1', merchantName: 'Staking App' } : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'remove-1',
+        sender: 'NQ_STAKING',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 'staking',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        senderData: { type: 'remove-stake', raw: '' },
+        data: { raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'remove-1' })]))
+      expect(state.addReceiptTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'remove-1' })]), expect.anything())
+    })
+
+    it('keeps the staged row of a staking signal the local wallet sent', async () => {
+      state.query.mockImplementation(async (sql?: string, values?: unknown[]) =>
+        (sql === SQLQuery.GetTransactionByHash && values?.[0] === 'retire-1' ? { hash: 'retire-1', merchantName: 'Staking App', status: 'failed' } : []) as any)
+      state.getLocalTransactions.mockResolvedValueOnce([{
+        transactionHash: 'retire-1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ_STAKING',
+        senderType: 'basic',
+        recipientType: 'staking',
+        value: 0,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { type: 'retire-stake', raw: '' },
+        proof: { raw: '' },
+      }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.saveTransactions).not.toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ hash: 'retire-1' })]))
     })
 
     it.each(['pending HTLC', 'replaced HTLC', 'replaced wallet'])('ingests the first page independently of %s and stalled older pages', async (scenario) => {
@@ -1558,6 +1680,29 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateTransactionsInDb()
 
       expect(state.updateTransactionStatus).toHaveBeenCalledWith([{ hash: 'h1', status: 'failed', timestamp: 5, executionResult: false }])
+    })
+
+    it('recovers the preimage of a confirmed NIM swap that settled while the app was closed', async () => {
+      const swapRow = { hash: 'h1', transfer: Transfer.UserPaymentToAtomicSwap, status: 'confirmed', timestamp: 12, recipient: 'NQ55 SWAP HTLC ADDRESS', paymentRef: 'swap-1', meta: '{}' }
+      state.query.mockImplementation(async sql => sql === SQLQuery.SelectAllTransactions ? [swapRow] as any : { ...swapRow } as any)
+      state.client.getTransaction.mockResolvedValue({ state: 'confirmed', executionResult: true, timestamp: 12 })
+      state.getSwap.mockResolvedValue({ status: 'SUCCESS', preimage: 'secret' })
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionsInDb()
+
+      expect(state.getSwap).toHaveBeenCalledWith('swap-1')
+      expect(state.setSwapPreimage).toHaveBeenCalledWith('h1', 'secret')
+    })
+
+    it('does not recheck confirmed swaps that already settled', async () => {
+      state.query.mockResolvedValue([{ hash: 'h1', transfer: Transfer.UserPaymentToAtomicSwap, status: 'confirmed', timestamp: 12, paymentRef: 'swap-1', meta: '{"secret":"known"}' }])
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionsInDb()
+
+      expect(state.client.getTransaction).not.toHaveBeenCalled()
+      expect(state.getSwap).not.toHaveBeenCalled()
     })
 
     it('ignores USDT rows', async () => {

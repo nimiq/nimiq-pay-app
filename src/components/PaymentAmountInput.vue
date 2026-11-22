@@ -28,6 +28,7 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
   errorMsg: { type: String },
   canSkip: { type: Boolean },
+  isActive: { type: Boolean, default: false },
   state: { type: Object as PropType<State>, required: true },
 })
 
@@ -183,14 +184,24 @@ function handlePay() {
   if (loading.value)
     return
 
+  // Flow keeps this step mounted on later steps; pausing here stops the USDT quote poller from
+  // refilling the shared fee snapshot the payment re-reads at submit time.
+  loading.value = true
   emit('done', amountUnits.value)
 }
 
 watch(errorMessage, (value) => {
-  if (value) {
+  // The payment debits the balance while later steps are shown; that error must not resume quoting.
+  if (value && props.isActive) {
     loading.value = false
     logger.error('Error in payment amount input:', value)
   }
+})
+
+// Reset the spinner and resume quoting when the user comes back from a later step.
+watch(() => props.isActive, (active) => {
+  if (active)
+    loading.value = false
 })
 </script>
 

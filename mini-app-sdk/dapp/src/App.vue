@@ -27,6 +27,9 @@ const hostFiat = computed((): string => window.nimiqPay?.userFiat ?? 'USD')
 // Nimiq network Nimiq Pay runs on. Falls back to mainnet outside of Nimiq Pay.
 const hostNetwork = computed((): string => window.nimiqPay?.network ?? 'mainnet')
 
+// Running Nimiq Pay version. Missing outside Nimiq Pay and on older hosts.
+const hostVersion = computed((): string => window.nimiqPay?.version ?? 'unknown')
+
 interface I18nEntry { greeting: string, tagline: string }
 const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay mini-app starter' }
 const I18N: Record<string, I18nEntry> = {
@@ -122,6 +125,9 @@ onBeforeUnmount(() => stopFullscreenChanges?.())
   </p>
   <p data-testid="host-network" style="opacity: 0.7; margin: 0 0 8px;">
     Network: {{ hostNetwork }}
+  </p>
+  <p data-testid="host-version" style="opacity: 0.7; margin: 0 0 8px;">
+    Nimiq Pay version: {{ hostVersion }}
   </p>
   <p data-testid="device-identifier" style="opacity: 0.7; margin: 0 0 8px;">
     Device Identifier: {{ deviceIdentifier ?? 'not requested' }}

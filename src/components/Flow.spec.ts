@@ -1,3 +1,4 @@
+import type { Ref } from 'vue'
 import type { Flow } from '@/lib/flows/steps.types'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +7,8 @@ import { FlowName, StepName } from '@/lib/flows/steps.types'
 
 const state = vi.hoisted(() => ({
   closeModal: vi.fn(async () => {}),
+  // Resolves the slide animation waits in performNavigation; replace with a pending promise to hold a navigation
+  scrollDone: Promise.resolve(),
   setToast: vi.fn(),
   logger: {
     error: vi.fn(),
@@ -41,7 +44,7 @@ vi.mock('@vueuse/core', async () => {
   return {
     ...actual,
     until: () => ({
-      toBe: vi.fn(async () => {}),
+      toBe: vi.fn(() => state.scrollDone),
       toBeTruthy: vi.fn(async () => {}),
     }),
     useIntersectionObserver: vi.fn(),
@@ -53,8 +56,9 @@ vi.mock('ionicons/icons', () => ({
 }))
 
 vi.mock('@/composables/useCarousel', () => ({
-  useCarousel: () => ({
-    goToSlide: vi.fn(),
+  // Like the real goToSlide, switch the active slide synchronously before the scroll animation
+  useCarousel: (_scroller: unknown, { activeIndex }: { activeIndex: Ref<number> }) => ({
+    goToSlide: vi.fn((index: number) => activeIndex.value = index),
     isScrolling: ref(false),
   }),
 }))
@@ -79,6 +83,7 @@ vi.mock('@/composables/useToast', () => ({
 
 describe('flow', () => {
   beforeEach(() => {
+    state.scrollDone = Promise.resolve()
     state.closeModal.mockClear()
     state.setToast.mockClear()
     state.logger.error.mockClear()
@@ -431,6 +436,136 @@ describe('flow', () => {
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PaymentPreview)
   })
 
+  it.each<{ skipped: (StepName.EnableBiometric | StepName.GetNotified)[] }>([
+    { skipped: [StepName.EnableBiometric] },
+    { skipped: [StepName.EnableBiometric, StepName.GetNotified] },
+  ])('prev() returns to the previous step after skipping $skipped', async ({ skipped }) => {
+    const PinConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="pin-confirm-done" @click="$emit(\'done\', \'1111\')">Pin confirm</button>',
+    }))
+    const PhoneStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-done" @click="$emit(\'done\', \'+15550100\')">Phone</button>',
+    }))
+    const PhoneConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-confirm-resend" @click="$emit(\'done\', \'back\')">Resend</button>',
+    }))
+    const SkippedStep = markRaw(defineComponent({ template: '<div>Skipped</div>' }))
+
+    const flow: Flow = {
+      flowName: FlowName.SetupWithPromoCode,
+      steps: [
+        {
+          step: StepName.PinCodeConfirm,
+          main: PinConfirmStep,
+          beforeNext: async (_state, { navigateTo }) => navigateTo({ skipAheadBy: skipped.length + 1 }),
+        },
+        ...skipped.map(step => ({ step, main: SkippedStep })),
+        {
+          step: StepName.PhoneNumber,
+          main: PhoneStep,
+        },
+        {
+          step: StepName.PhoneNumberConfirm,
+          main: PhoneConfirmStep,
+          beforeNext: async ({ phoneNumberConfirm }, { prev }) => {
+            if (phoneNumberConfirm === 'back')
+              prev()
+          },
+        },
+      ],
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="pin-confirm-done"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="phone-done"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PhoneNumberConfirm)
+
+    await wrapper.get('[data-testid="phone-confirm-resend"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PhoneNumber)
+    expect(wrapper.find('[data-testid="phone-confirm-resend"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="phone-done"]')).toHaveLength(1)
+  })
+
+  it('prev() does not reopen a step that was skipped', async () => {
+    const PinConfirmStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="pin-confirm-done" @click="$emit(\'done\', \'1111\')">Pin confirm</button>',
+    }))
+    const PhoneStep = markRaw(defineComponent({
+      emits: ['done'],
+      template: '<button data-testid="phone-prev" @click="$emit(\'done\', \'+15550100\')">Phone</button>',
+    }))
+    const BiometricStep = markRaw(defineComponent({ template: '<div data-testid="biometric-step">Biometric</div>' }))
+
+    const flow: Flow = {
+      flowName: FlowName.SetupWithPromoCode,
+      steps: [
+        {
+          step: StepName.PinCodeConfirm,
+          main: PinConfirmStep,
+          beforeNext: async (_state, { navigateTo }) => navigateTo({ skipAheadBy: 2 }),
+        },
+        { step: StepName.EnableBiometric, main: BiometricStep },
+        {
+          step: StepName.PhoneNumber,
+          main: PhoneStep,
+          beforeNext: async (_state, { prev }) => prev(),
+        },
+      ],
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="pin-confirm-done"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="phone-prev"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PinCodeConfirm)
+    expect(wrapper.find('[data-testid="biometric-step"]').exists()).toBe(false)
+  })
+
   it('allows retrying when beforeNext returns without navigation', async () => {
     const AmountStep = markRaw(defineComponent({
       emits: ['done'],
@@ -751,5 +886,112 @@ describe('flow', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PinCode)
+  })
+
+  it('ignores step completion while a back navigation is animating', async () => {
+    let finishScroll!: () => void
+    const QrStep = markRaw(defineComponent({
+      props: { isVisible: Boolean },
+      emits: ['done'],
+      template: `
+        <div :data-visible="isVisible" data-testid="qr-step">
+          <button data-testid="qr-scan" @click="$emit('done', 'scanned-request')">Scan</button>
+          <button data-testid="qr-manual" @click="$emit('done')">Enter manually</button>
+        </div>
+      `,
+    }))
+    const ManualStep = markRaw(defineComponent({
+      template: '<div data-testid="manual-step">Manual</div>',
+    }))
+    const PreviewStep = markRaw(defineComponent({
+      emits: ['back', 'done'],
+      template: `
+        <div>
+          <button data-testid="preview-done" @click="$emit('done')">Preview next</button>
+          <button data-testid="preview-back" @click="$emit('back', 'qrCodeScanner')">Preview back</button>
+        </div>
+      `,
+    }))
+    const PinStep = markRaw(defineComponent({
+      template: '<div data-testid="pin-step">Pin</div>',
+    }))
+
+    const flow: Flow = {
+      flowName: FlowName.Payment,
+      steps: [
+        {
+          step: StepName.QRCodeScanner,
+          main: QrStep,
+          beforeNext: async (flowState, { navigateTo }) => navigateTo({
+            step: flowState[StepName.QRCodeScanner] === undefined ? StepName.PaymentRequestManualInput : StepName.PaymentPreview,
+          }),
+        },
+        {
+          step: StepName.PaymentRequestManualInput,
+          main: ManualStep,
+        },
+        {
+          step: StepName.PaymentPreview,
+          main: PreviewStep,
+          beforeNext: async (_state, { navigateTo }) => navigateTo({ step: StepName.PinCode }),
+        },
+        {
+          step: StepName.PinCode,
+          main: PinStep,
+        },
+      ],
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="qr-scan"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="preview-done"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PinCode)
+
+    // The inactive preview rolls back to the scanner, and the scroll animation is still running
+    state.scrollDone = new Promise(resolve => finishScroll = resolve)
+    await wrapper.get('[data-testid="preview-back"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
+    // Hidden until the slide settles, so the scanner can't start and emit a scan that would be dropped
+    expect(wrapper.get('[data-testid="qr-step"]').attributes('data-visible')).toBe('false')
+
+    await wrapper.get('[data-testid="qr-manual"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
+    expect(wrapper.find('[data-testid="manual-step"]').exists()).toBe(false)
+
+    finishScroll()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
+    expect(wrapper.find('[data-testid="pin-step"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="qr-step"]').attributes('data-visible')).toBe('true')
+
+    await wrapper.get('[data-testid="qr-manual"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PaymentRequestManualInput)
   })
 })

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Keyboard } from '@capacitor/keyboard'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -10,9 +9,12 @@ import PinInput from '@/components/PinInput.vue'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
-import { clearSession, hasPendingSession, reconnectAndShow } from '@/composables/useMiniAppSession'
+import { closeActiveMiniApp } from '@/composables/useMiniAppHost'
+import { clearSession, getSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { i18n } from '@/i18n/i18n-setup'
+import { DEFERRED_DEEPLINK_KEY } from '@/lib/app-resume'
 import { promiseWithTimeout } from '@/lib/utils'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 
 const logger = useLogger('PinView')
@@ -25,6 +27,9 @@ const errorMsg = ref('')
 // instead of a silently stuck PIN screen. Generous so slow devices / DB migrations don't trip it.
 const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
 
+// Biometric and manual entry can both emit done, so a second submit must not start while one runs.
+let isSubmitting = false
+
 // Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
 // title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
 // stealing the pointermove — can't cancel it (the old 3s + default threshold was unreliable).
@@ -32,8 +37,11 @@ const titleRef = ref<HTMLElement | null>(null)
 onLongPress(titleRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
 async function handleSubmit(pin: string) {
-  if (pin.length < 4)
+  if (pin.length < 4 || isSubmitting)
     return false
+  isSubmitting = true
+  // Reset so a repeated identical error still reaches PinInput's watcher and clears its spinner.
+  errorMsg.value = ''
 
   logger.log('🔓 handleSubmit: PIN submitted', { length: pin.length })
   // Anything that throws OR hangs here (decrypt, mini-app reconnect, navigation) must surface as a
@@ -51,26 +59,53 @@ async function handleSubmit(pin: string) {
       return
     }
 
-    // If a mini-app webview was hidden before the reload, reconnect and show it
-    if (hasPendingSession()) {
-      logger.log('🔓 handleSubmit: reconnectAndShow start')
+    // A Mini App hidden before the reload is relaunched, not reattached: its page may
+    // have navigated off origin while no host was listening, and the plugin can't
+    // report the current URL. Cookies stay so the user remains logged in.
+    const deferredDeepLink = sessionStorage.getItem(DEFERRED_DEEPLINK_KEY)
+    sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
+    const session = getSession()
+    if (session && deferredDeepLink) {
+      // A deeplink held across the resume reload replaces the hidden Mini App. Close it here
+      // rather than in the link's launch: the link may not open a Mini App (Lightning, declined prompt).
+      await clearSession()
+      await closeActiveMiniApp().catch(() => {})
+    }
+    else if (session) {
+      logger.log('🔓 handleSubmit: Mini App relaunch start')
       try {
-        await promiseWithTimeout(reconnectAndShow(), UNLOCK_PHASE_TIMEOUT)
-        logger.log('🔓 handleSubmit: reconnectAndShow done')
+        const { launchMiniApp } = await import('@/lib/mini-app-launcher')
+        const app = useApp()
+        await promiseWithTimeout(launchMiniApp({
+          url: session.url,
+          title: session.title,
+          source: 'resume',
+          language: app.language,
+          userFiat: app.selectedFiat,
+          keepCookies: true,
+        }), UNLOCK_PHASE_TIMEOUT)
+        logger.log('🔓 handleSubmit: Mini App relaunch done')
       }
       catch (err) {
-        logger.error('Failed to reconnect mini-app session:', err)
+        logger.error('Failed to relaunch Mini App session:', err)
         await clearSession()
         try {
-          await InAppBrowser.close()
+          await closeActiveMiniApp()
         }
         catch {}
       }
     }
 
     logger.log('🔓 handleSubmit: router.replace(/app) start')
-    await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    const navigationFailure = await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    // A failed navigation resolves instead of throwing; surface it, or PinInput's spinner never clears.
+    if (navigationFailure)
+      throw navigationFailure
     logger.log('🔓 handleSubmit: router.replace(/app) done')
+    if (deferredDeepLink) {
+      const { handleDeepLink } = await import('@/lib/deep-link')
+      void handleDeepLink({ url: deferredDeepLink }).catch(err => logger.error('Deferred deeplink failed:', err))
+    }
   }
   catch (err) {
     logger.error('Login failed after PIN entry', err)
@@ -78,6 +113,9 @@ async function handleSubmit(pin: string) {
     window.setTimeout(() => {
       errorMsg.value = ''
     }, 4000)
+  }
+  finally {
+    isSubmitting = false
   }
 }
 
@@ -99,10 +137,7 @@ onMounted(async () => {
   if (!dbExists.value) {
     // No wallet — clear any stale session and close orphaned webview
     await clearSession()
-    try {
-      InAppBrowser.close()
-    }
-    catch {}
+    void closeActiveMiniApp().catch(() => {})
     router.replace('/setup')
   }
   else if (decrypted.value) {
@@ -110,12 +145,8 @@ onMounted(async () => {
   }
   else {
     // PIN screen shown — only close webview if there's no pending session to preserve
-    if (!hasPendingSession()) {
-      try {
-        InAppBrowser.close()
-      }
-      catch {}
-    }
+    if (!hasPendingSession())
+      void closeActiveMiniApp().catch(() => {})
   }
   shown()
 })
@@ -131,7 +162,7 @@ onMounted(async () => {
         <h1 ref="titleRef" class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>
-        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" @done="handleSubmit" />
+        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" show-loading @done="handleSubmit" />
       </IonGrid>
     </IonContent>
   </IonPage>

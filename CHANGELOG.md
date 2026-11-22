@@ -2,6 +2,56 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.24.2 — 2026-11-20
+
+### Lightning payments recover
+If a Lightning payment with NIM was cut short because you closed the app, or because you logged out and back in, the app now finishes it or refunds your NIM. Payments no longer stay stuck as Pending.
+
+### Smoother staking in Mini Apps
+Staking actions started from a Mini App now go through properly. You no longer see an unknown result or a signal stuck as Pending in your history.
+
+### Mini App links open reliably
+A link to a Mini App now opens correctly even when the app was in the background or locked. It waits until you unlock, then opens the right Mini App.
+
+### See what's new after every update
+The What's New card now shows up after every app update, so you won't miss new features.
+
+### Fewer hiccups
+Turning on biometrics and then canceling now resets the switch correctly. Slow connections no longer leave the app waiting forever, and you see fewer unnecessary error messages.
+
+## 2.24.0 — 2026-11-17
+
+### Redesigned Settings
+Settings are now grouped into categories: General, Security, Payments, Mini Apps and Account. There are new options too: show hidden transactions, pick your default withdrawal unit, manage saved addresses, and revoke device ID access for Mini Apps.
+
+_How to use:_ Open Settings and tap a category to see its options. Tap back to return to the main list.
+
+### Safer logout
+If your wallet isn't backed up and still holds USDT, the app now warns you before you log out. This helps you avoid losing access to your funds by accident.
+
+### Smoother Mini Apps
+Mini Apps open and close more reliably, and their content stays clear of the navigation bar. Payment and staking requests with a problem are now stopped before you're asked to confirm, and Lightning payments no longer leave you waiting with nothing on screen.
+
+### Fewer interruptions
+On iPhone, the app no longer asks to paste from your clipboard every time you open it. On Android, you can take screenshots of your recovery words again. Startup is more reliable, PIN checks are stricter, and many smaller fixes make the app more dependable.
+
+## 2.23.0 — 2026-10-30
+
+### Better support chat
+When our support team closes a chat, you can still read their last reply, even after restarting the app. To ask something else, just type a new message and a new chat starts.
+
+### Correct USDT balances
+Some USDT amounts were shown 10 times higher than they really were. They now show the right value.
+
+### Faster for busy wallets
+Wallets with a long transaction history load and sync much faster. The home screen also stays smooth right after you unlock the app.
+
+### Safer payments and funds
+You're never charged a higher fee than the one you approved. Funds that got stuck or split after a reinstall or restore are now recovered automatically. We also fixed several issues with swaps, refunds and payment requests.
+
+### Smoother everyday use
+Unlocking with your PIN, scanning QR codes and moving between screens are more reliable. Mini Apps also get stronger security protections.
+
 ## 2.22.0 — 2026-10-06
 
 ### Safer swap fees and refunds

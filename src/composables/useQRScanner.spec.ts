@@ -1,3 +1,4 @@
+import { ready } from 'qr-scanner-wechat'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { useQRScanner } from './useQRScanner'
@@ -20,10 +21,26 @@ const state = vi.hoisted(() => ({
     setToast: vi.fn(),
     clearToast: vi.fn(),
   },
+  setUpCameraFeed: vi.fn(),
+  tearDownCameraFeed: vi.fn(),
+  interval: {
+    pause: vi.fn(),
+    resume: vi.fn(),
+  },
+  device: { isWeb: true },
+  cameraPreview: {
+    start: vi.fn(),
+    stop: vi.fn(),
+  },
+}))
+
+vi.mock('@vueuse/core', async importOriginal => ({
+  ...await importOriginal<typeof import('@vueuse/core')>(),
+  useIntervalFn: () => state.interval,
 }))
 
 vi.mock('@capgo/camera-preview', () => ({
-  CameraPreview: {},
+  CameraPreview: state.cameraPreview,
 }))
 
 vi.mock('qr-scanner-wechat', () => ({
@@ -47,16 +64,14 @@ vi.mock('../lib', () => ({
 
 vi.mock('./useCameraFeed', () => ({
   useCameraFeed: () => ({
-    setUpCameraFeed: vi.fn(),
-    tearDownCameraFeed: vi.fn(),
+    setUpCameraFeed: state.setUpCameraFeed,
+    tearDownCameraFeed: state.tearDownCameraFeed,
     hasPermission: ref(true),
   }),
 }))
 
 vi.mock('./useDevice', () => ({
-  useDevice: () => ({
-    isWeb: true,
-  }),
+  useDevice: () => state.device,
 }))
 
 vi.mock('./useStringParser', () => ({
@@ -108,6 +123,13 @@ describe('useQRScanner', () => {
     state.logger.error.mockReset()
     state.toast.setToast.mockReset()
     state.toast.clearToast.mockReset()
+    state.setUpCameraFeed.mockReset()
+    state.tearDownCameraFeed.mockReset()
+    state.interval.pause.mockReset()
+    state.interval.resume.mockReset()
+    state.device.isWeb = true
+    state.cameraPreview.start.mockReset()
+    state.cameraPreview.stop.mockReset()
 
     state.getPaymentRequestData.mockImplementation(async (request: string) => {
       if (request === 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=1&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y') {
@@ -265,5 +287,86 @@ describe('useQRScanner', () => {
     expect(onError).toHaveBeenCalledTimes(1)
 
     vi.useRealTimers()
+  })
+
+  it('releases the camera and scan loop when stopped before start() finishes', async () => {
+    let finishCameraSetup!: () => void
+    state.setUpCameraFeed.mockReturnValue(new Promise<void>(resolve => finishCameraSetup = resolve))
+
+    const { start, stop, state: scannerState } = useQRScanner({
+      expect: 'paymentRequest' as any,
+      onData: vi.fn(),
+      onError: vi.fn(),
+      cameraFeedContainer: ref(document.createElement('div')),
+    })
+
+    const starting = start()
+    const stopping = stop()
+    finishCameraSetup()
+    await Promise.all([starting, stopping])
+
+    expect(state.tearDownCameraFeed).toHaveBeenCalledTimes(1)
+    expect(state.interval.pause).toHaveBeenCalledTimes(1)
+    expect(scannerState.value).toBe('idle')
+  })
+
+  it('starts again when start() follows a stop queued behind a pending start', async () => {
+    let finishCameraSetup!: () => void
+    state.setUpCameraFeed.mockReturnValueOnce(new Promise<void>(resolve => finishCameraSetup = resolve))
+
+    const { start, stop, state: scannerState } = useQRScanner({
+      expect: 'paymentRequest' as any,
+      onData: vi.fn(),
+      onError: vi.fn(),
+      cameraFeedContainer: ref(document.createElement('div')),
+    })
+
+    const operations = [start(), stop(), start()]
+    finishCameraSetup()
+    await Promise.all(operations)
+
+    expect(state.interval.pause).toHaveBeenCalledTimes(1)
+    expect(state.interval.resume).toHaveBeenCalledTimes(1)
+    expect(scannerState.value).toBe('scanning')
+  })
+
+  it('does not stop the next scanner\'s native camera when a closed scanner finishes starting late', async () => {
+    state.device.isWeb = false
+    let finishCameraSetup!: () => void
+    state.setUpCameraFeed.mockReturnValueOnce(new Promise<void>(resolve => finishCameraSetup = resolve))
+    const options = {
+      expect: 'paymentRequest' as any,
+      onData: vi.fn(),
+      onError: vi.fn(),
+      cameraFeedContainer: ref(document.createElement('div')),
+    }
+    const closed = useQRScanner(options)
+    const next = useQRScanner(options)
+
+    const operations = [closed.start(), closed.stop(), next.start()]
+    finishCameraSetup()
+    await Promise.all(operations)
+
+    const [firstStart, secondStart] = state.cameraPreview.start.mock.invocationCallOrder
+    const [stop] = state.cameraPreview.stop.mock.invocationCallOrder
+    expect(state.cameraPreview.stop).toHaveBeenCalledTimes(1)
+    expect(firstStart).toBeLessThan(stop)
+    expect(stop).toBeLessThan(secondStart)
+    expect(next.state.value).toBe('scanning')
+  })
+
+  it('releases the camera when start() fails after the camera feed was set up', async () => {
+    vi.mocked(ready).mockRejectedValueOnce(new Error('model download failed'))
+
+    const { start, state: scannerState } = useQRScanner({
+      expect: 'paymentRequest' as any,
+      onData: vi.fn(),
+      onError: vi.fn(),
+      cameraFeedContainer: ref(document.createElement('div')),
+    })
+
+    await expect(start()).rejects.toThrow('model download failed')
+    expect(state.tearDownCameraFeed).toHaveBeenCalledTimes(1)
+    expect(scannerState.value).toBe('idle')
   })
 })

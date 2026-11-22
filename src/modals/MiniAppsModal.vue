@@ -4,7 +4,7 @@ import type { DAppOpenSource } from '@/lib/analytics'
 import type { CompetitionMiniApp } from '@/stores/competition-mini-apps'
 import type { MiniAppMenuContext, MiniAppType } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
-import { IonBackButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
 import { useStorageAsync } from '@vueuse/core'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { AnimatePresence, motion } from 'motion-v'
@@ -39,8 +39,8 @@ const props = defineProps<{
 }>()
 
 const store = useMiniApps()
-const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
-const { searchedDescriptions, ensureDescription } = store
+const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, hasLoadError, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
+const { searchedDescriptions, ensureDescription, loadRemoteApps } = store
 const competitionStore = useCompetitionMiniApps()
 const {
   newestCycle: competitionNewestCycle,
@@ -87,16 +87,26 @@ const flowOffset = computed(() => ({
 const isOpeningSelectedCompetitionApp = computed(() => !!selectedCompetitionApp.value
   && isOpeningUrl(selectedCompetitionApp.value.url))
 
-// Keep native webview and nested competition navigation ahead of Ionic's modal dismissal.
-const { unregister: unregisterHardwareBack } = useBackButton(101, () => {
+const menuOpen = ref(false)
+
+// Keep native webview, action sheet and nested competition navigation ahead of Ionic's modal dismissal.
+const { unregister: unregisterHardwareBack } = useBackButton(101, (processNextHandler) => {
   if (isMiniAppActive.value)
     return
-  if (flowStep.value !== 'apps')
+  if (menuOpen.value)
+    menuOpen.value = false
+  else if (flowStep.value !== 'apps')
     backInMiniAppsFlow()
+  else
+    processNextHandler()
 })
 onBeforeUnmount(unregisterHardwareBack)
 
-onMounted(() => warmUpWeb3ProviderScript())
+onMounted(() => {
+  warmUpWeb3ProviderScript()
+  // Retries when the launch fetch failed; no-op once the catalog loaded this session.
+  void loadRemoteApps()
+})
 
 const searchQuery = ref('')
 const isSearching = computed(() => !!searchQuery.value.trim())
@@ -169,7 +179,6 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
   })
 }
 
-const menuOpen = ref(false)
 const menuContext = ref<MiniAppMenuContext | null>(null)
 
 function openMenu(context: MiniAppMenuContext) {
@@ -351,6 +360,17 @@ async function openCompetitionExternal(url: string) {
               </div>
             </template>
 
+            <template v-else-if="hasLoadError && !isSearching">
+              <div data-testid="mini-apps-load-error" class="flex flex-col items-center py-6 text-center">
+                <p class="text-sm text-space/60">
+                  {{ $t('Check your connection and try again.') }}
+                </p>
+                <IonButton class="mt-4" @click="loadRemoteApps()">
+                  {{ $t('Try again') }}
+                </IonButton>
+              </div>
+            </template>
+
             <!-- When searching: single "Matching Apps" list -->
             <template v-else-if="isSearching">
               <p class="text-lg font-bold text-space text-left">
@@ -484,7 +504,8 @@ async function openCompetitionExternal(url: string) {
 
 <style scoped>
 .mini-apps-flow {
-  height: calc(100dvh - 5.5rem - var(--ion-safe-area-top, 0px) - var(--ion-safe-area-bottom, 0px));
+  /* Inside a sheet modal Ionic zeroes --ion-safe-area-top and keeps the root value in --ion-modal-offset-top */
+  height: calc(100dvh - 5.5rem - var(--ion-modal-offset-top, var(--ion-safe-area-top, 0px)) - var(--ion-safe-area-bottom, 0px));
 }
 
 .mini-app-searchbar {

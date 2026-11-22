@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import { openingMiniAppUrl } from '@/lib/mini-app-launcher'
 import MiniAppsModal from './MiniAppsModal.vue'
 
@@ -88,7 +89,7 @@ const {
   trackFeatureOpened,
   trackDAppOpened,
 } = vi.hoisted(() => ({
-  openWebView: vi.fn(() => Promise.resolve()),
+  openWebView: vi.fn(() => Promise.resolve({ id: 'main-webview' })),
   browserOpen: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
   clearAllCookies: vi.fn(() => Promise.resolve()),
@@ -156,7 +157,6 @@ vi.mock('@capgo/capacitor-inappbrowser', () => ({
     openWebView,
     addListener,
     clearAllCookies,
-    close: vi.fn(() => Promise.resolve()),
   },
   ToolBarType: {
     NAVIGATION: 'navigation',
@@ -180,9 +180,11 @@ vi.mock('@/composables/useToast', () => ({
 
 vi.mock('@/composables/useMiniAppHost', async () => {
   return {
+    closeActiveMiniApp: vi.fn(() => Promise.resolve()),
     isMiniAppActive: miniAppActiveState,
     MiniAppHost: class {
       destroy = hostDestroy
+      isMainWebview = vi.fn()
     },
   }
 })
@@ -191,6 +193,8 @@ vi.mock('@/lib/mini-app-confirmation', () => ({
   requestUserConfirmation: vi.fn(() => Promise.resolve(true)),
   selectLightningAsset: vi.fn(() => Promise.resolve('NIM')),
 }))
+
+vi.mock('@/lib/app-version', () => ({ getBundleVersion: () => Promise.resolve('2.24.1') }))
 
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription,
@@ -344,7 +348,7 @@ describe('mini apps modal', () => {
     openingMiniAppUrl.value = null
 
     openWebView.mockReset()
-    openWebView.mockImplementation(() => Promise.resolve())
+    openWebView.mockImplementation(() => Promise.resolve({ id: 'main-webview' }))
     browserOpen.mockReset()
     browserOpen.mockImplementation(() => Promise.resolve())
     addListener.mockReset()
@@ -395,7 +399,7 @@ describe('mini apps modal', () => {
     wrapper.unmount()
   })
 
-  it('keeps the Mini Apps modal open on hardware back from the Apps list', () => {
+  it('passes hardware back to Ionic modal dismissal from the Apps list', () => {
     const wrapper = mountModal()
     const processNextHandler = vi.fn()
     const hardwareBackHandler = getHardwareBackHandler()
@@ -403,6 +407,23 @@ describe('mini apps modal', () => {
     expect(hardwareBackHandler).toBeDefined()
     hardwareBackHandler!(processNextHandler)
 
+    expect(processNextHandler).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('closes the action sheet before the Mini Apps modal on hardware back', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const processNextHandler = vi.fn()
+    const hardwareBackHandler = getHardwareBackHandler()
+
+    await wrapper.find('[data-testid="dapp-menu-https-app-uniswap-org"]').trigger('click')
+    expect(wrapper.findComponent(MiniAppActionsSheet).props('open')).toBe(true)
+
+    hardwareBackHandler!(processNextHandler)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(MiniAppActionsSheet).props('open')).toBe(false)
     expect(processNextHandler).not.toHaveBeenCalled()
     wrapper.unmount()
   })
@@ -562,7 +583,7 @@ describe('mini apps modal', () => {
   })
 
   it('blocks repeated taps while first open is pending', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -577,12 +598,12 @@ describe('mini apps modal', () => {
 
     expect(openWebView).toHaveBeenCalledTimes(1)
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 
   it('locks all app rows while opening', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -597,12 +618,12 @@ describe('mini apps modal', () => {
       expect(button.attributes('disabled')).toBeDefined()
     }
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 
   it('shows loading indicator in clicked dapp icon while opening', async () => {
-    const deferred = createDeferred<void>()
+    const deferred = createDeferred<{ id: string }>()
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
@@ -616,7 +637,7 @@ describe('mini apps modal', () => {
     expect(wrapper.find('[data-testid="dapp-icon-loading-https-app-uniswap-org"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="dapp-icon-loading-https-polymarket-com"]').exists()).toBe(false)
 
-    deferred.resolve()
+    deferred.resolve({ id: 'main-webview' })
     await flushPromises()
   })
 
@@ -742,6 +763,26 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
+  it('shows a retry after the catalog fetch fails and loads the list on retry', async () => {
+    const defaultResponse = capacitorHttpGet.getMockImplementation()!
+    capacitorHttpGet.mockImplementation(options => options?.url.includes('nimiq-mini-apps.json')
+      ? Promise.reject(new Error('offline'))
+      : defaultResponse(options))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    expect(wrapper.find('.skeleton').exists()).toBe(false)
+    const error = wrapper.find('[data-testid="mini-apps-load-error"]')
+    expect(error.exists()).toBe(true)
+
+    capacitorHttpGet.mockImplementation(defaultResponse)
+    await error.find('ion-button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
+  })
+
   it('builds the report url only for awesome-list apps', async () => {
     mountModal()
     await flushPromises()
@@ -763,7 +804,7 @@ describe('mini apps modal', () => {
     expect(wrapper.find('[data-testid="dapp-menu-https-app-uniswap-org"]').exists()).toBe(true)
   })
 
-  it('seeds selected user language, fiat and network into the mini-app preShowScript', async () => {
+  it('seeds selected user language, fiat, network and app version into the mini-app preShowScript', async () => {
     const { useApp, Fiat } = await import('@/stores/app')
     const wrapper = mountModal()
     await flushPromises()
@@ -777,7 +818,8 @@ describe('mini apps modal', () => {
 
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
-    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet"}')
+    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet","version":"2.24.1"}')
+    expect(firstArg.preShowScript.startsWith('if(location.origin==="https://app.uniswap.org"){')).toBe(true)
   })
 
   it('opens the widget gallery from the Widgets button and goes back to Discover', async () => {

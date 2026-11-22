@@ -1,19 +1,21 @@
 import type { PluginListenerHandle } from '@capacitor/core'
-import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import type { Address } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { WidgetFile, WidgetPermission } from '@/lib/mini-app-widgets'
-import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
+import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData, TransactionSendResult } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
+import { until } from '@vueuse/core'
 import { createBirpc } from 'birpc'
-import { getAddress, Interface } from 'ethers'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
+import { getAddress, Interface, keccak256 } from 'ethers'
 import { watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, isTestnet } from '@/lib'
-import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
+import { trackChainSwitched, trackEvmBroadcastUnknownResolved, trackLightningPrep, trackWeb3Request } from '@/lib/analytics'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
@@ -22,6 +24,7 @@ import { isMiniAppActive } from '@/lib/mini-app-active'
 import { parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { safeOrigin } from '@/lib/url-safety'
 import { sleep } from '@/lib/utils'
 import { nimiqAddresses } from '@/lib/wallet-addresses'
 import { useConn } from '@/stores/conn'
@@ -33,8 +36,9 @@ import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-networ
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Rail, Transfer } from '@/types/transactions'
+import { isSentByLocalWallet, Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
+import { MINI_APP_PROVIDER_TIMEOUT_MS } from '../../web3-provider/src/birpc-types'
 import {
   TRANSACTION_OUTCOME_UNKNOWN_CODE,
   TRANSACTION_OUTCOME_UNKNOWN_MESSAGE,
@@ -51,6 +55,8 @@ const logger = useLogger('MiniAppHost')
 // Sent to the webview on `from`/`address` mismatch. Must not include the wallet
 // address: the caller may not have been granted eth_requestAccounts.
 const ETH_ADDRESS_MISMATCH_MESSAGE = 'Requested address does not match the wallet address'
+// Policy::MINIMUM_STAKE in core-rs-albatross primitives/src/policy.rs (luna); the web-client does not export it
+const MINIMUM_STAKE = 10_000_000
 const erc20TransferInterface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
 ])
@@ -66,8 +72,22 @@ export interface MiniAppSessionState {
   evmRpcUrls?: Record<string, string>
 }
 
+/**
+ * Origin gate of the main webview. Popups share the plugin's event stream and
+ * inherit the bridge, so events are keyed by webview id and only `mainId` counts.
+ * `open` is what the bridge honors; `urlOk` is whether the latest reported URL is
+ * on the Mini App origin.
+ */
+interface BridgeGate {
+  mainId?: string
+  urlOk: boolean
+  open: boolean
+}
+
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
 let _activeMiniAppSession: MiniAppSessionState | null = null
+/** The host that owns `_activeMiniAppSession`; its webview ids scope app-driven close/hide. */
+let _activeMiniAppHost: MiniAppHost | null = null
 
 export { isMiniAppActive }
 
@@ -77,6 +97,43 @@ export { isMiniAppActive }
  */
 export function getActiveMiniAppSession(): MiniAppSessionState | null {
   return _activeMiniAppSession ? { ..._activeMiniAppSession } : null
+}
+
+/**
+ * Closes the active Mini App, popups first, newest first. close() without an id
+ * hits the plugin's active webview, which is the top popup while one is open.
+ */
+export async function closeActiveMiniApp({ animated = true } = {}): Promise<void> {
+  const host = _activeMiniAppHost
+  // Popups close without animation: iOS close() resolves while an animated dismiss
+  // still runs, and UIKit ignores the main webview's dismiss started before it ends.
+  for (const id of [...(host?.popupIds ?? [])].reverse())
+    await InAppBrowser.close({ id, isAnimated: false }).catch(error => logger.warn('Could not close Mini App popup', error))
+  if (host?.mainId !== undefined) {
+    await InAppBrowser.close({ id: host.mainId, isAnimated: animated })
+    return
+  }
+  // No main id: still opening, or a webview left from before a reload. Each close()
+  // hits the top webview, so a popup can take a second close to reach the Mini App.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await InAppBrowser.close({ isAnimated: animated })
+    await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+    if (!isMiniAppActive.value)
+      return
+  }
+}
+
+/**
+ * Hides the active Mini App's main webview after closing its popups, which
+ * hide() without an id would hit instead. A popup can't outlive the reload that
+ * follows a hide anyway: the relaunch closes the old webview.
+ */
+export async function hideActiveMiniApp(): Promise<void> {
+  const host = _activeMiniAppHost
+  // Not animated, like in closeActiveMiniApp().
+  for (const id of [...(host?.popupIds ?? [])].reverse())
+    await InAppBrowser.close({ id, isAnimated: false }).catch(error => logger.warn('Could not close Mini App popup', error))
+  await InAppBrowser.hide({ id: host?.mainId })
 }
 
 export interface SignatureResult {
@@ -135,6 +192,18 @@ interface MiniAppBase {
 }
 
 type Network = 'ethereum' | 'nimiq'
+
+// How long the sheets of one Mini App request stay open. The provider waits
+// longer (MINI_APP_PROVIDER_TIMEOUT_MS) so a transaction confirmed at this
+// deadline can still broadcast and report its outcome to the Mini App.
+export const MINI_APP_REQUEST_TIMEOUT_MS = 120_000
+// Leaves time for the host's error to reach the Mini App before that timeout.
+const LIGHTNING_QUOTE_TIMEOUT_MARGIN_MS = 2_000
+
+// The native timeout fires at about the deadline, so a false this close to it is the timeout, not a decline.
+function timedOutBy(deadline: number): boolean {
+  return deadline - Date.now() < 1_000
+}
 
 export type UserConfirmationRequest
   = | (MiniAppBase & { type: 'accounts', network: Network })
@@ -196,7 +265,7 @@ export type UserConfirmationRequest
     })
     | (MiniAppBase & {
       type: 'deviceIdentifier'
-      /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
+      /** Mini App supplied human-readable explanation. Truncated to 200 characters in the prompt. */
       reason: string
     })
     | {
@@ -233,7 +302,6 @@ export interface MiniAppHostConfig {
   /**
    * Map of hex chain IDs to their JSON-RPC endpoints.
    * Used for nonce fetching, gas estimation, and transaction broadcasting.
-   * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
    */
   evmRpcUrls?: Record<string, string>
 
@@ -242,19 +310,9 @@ export interface MiniAppHostConfig {
    * @param request - Confirmation request to show to the user
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
-  requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
-  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
-}
-
-const SHEET_TURN_MS = 60_000
-
-function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin
-  }
-  catch {
-    return null
-  }
+  /** `deadline` (ms timestamp) closes the dialog as a rejection; defaults to the Mini App request timeout. */
+  requestUserConfirmation?: (request: UserConfirmationRequest, deadline?: number) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }, deadline?: number) => Promise<Asset | undefined>
 }
 
 function widgetIdParam(params: unknown): string {
@@ -275,6 +333,12 @@ export class MiniAppHost {
   private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
   private fullscreenChangeListener: PluginListenerHandle | null = null
+  private urlChangeListener: PluginListenerHandle | null = null
+  private pageLoadedListener: PluginListenerHandle | null = null
+  private popupOpenedListener: PluginListenerHandle | null = null
+  private closeListener: PluginListenerHandle | null = null
+  /** Open popup webviews in opening order, so app-driven close/hide can reach the main webview. */
+  readonly popupIds = new Set<string>()
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
@@ -288,12 +352,18 @@ export class MiniAppHost {
   private readonly evmRpcUrls: Record<string, string>
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
+  /**
+   * The injected bridge survives navigation and reaches popups, so only the main
+   * webview, while on `origin`, may talk to the host.
+   */
+  private bridgeGate: BridgeGate = { urlOk: true, open: true }
+  /** Last Nimiq accounts the page received; unset until the user approves sharing them. */
+  private sharedNimiqAccounts?: string
   private readonly pendingLightningInvoices = new Set<string>()
   /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
   private readonly declinedWidgetOffers = new Set<string>()
   /** Whole asks in order, so each sees what the one before changed, and two cannot both take Home's last slot. */
   private widgetSheets: Promise<void> = Promise.resolve()
-  private sheets: Promise<unknown> = Promise.resolve()
   private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
   private widgetWrites: Promise<unknown> = Promise.resolve()
   private markClosed!: () => void
@@ -302,20 +372,9 @@ export class MiniAppHost {
     this.markClosed = resolve
   })
 
-  private lastPageUrl: string | null = null
-  /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
+  /** Fixed at the first page load on the launch origin, so widgets keep one scope per session however the page navigates. */
   private sessionUrl: string
   private sessionLocked = false
-  private lastReportedOrigin: string | null
-  /** iOS reports a navigation's URL before the old page is gone, so after an origin change no page may change widgets until the new one has loaded. */
-  private originTransitionPending = false
-  /** A reconnected host saw none of the surviving webview's navigation, so it trusts no page until one loads on the launch origin. */
-  private pageUnverified = false
-  private mainWebViewId: string | null = null
-  private readonly openPopupIds = new Set<string>()
-  private pageLoadedListener: PluginListenerHandle | null = null
-  private urlChangeListener: PluginListenerHandle | null = null
-  private closeListener: PluginListenerHandle | null = null
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
 
@@ -327,17 +386,10 @@ export class MiniAppHost {
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
-    const { requestUserConfirmation: confirm, selectLightningAsset: select } = config
-    // Every sheet of this Mini App waits for the one before, so two never stack.
-    this.config = {
-      ...config,
-      requestUserConfirmation: confirm && (request => this.inTurn(() => confirm(request))),
-      selectLightningAsset: select && (app => this.inTurn(() => select(app))),
-    }
+    this.config = config
     this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
     this.sessionUrl = config.url
-    this.lastReportedOrigin = this.origin
     this.setupBirpc()
 
     // Track the active session at module level
@@ -348,36 +400,19 @@ export class MiniAppHost {
       evmRpcUrls: this.evmRpcUrls,
     }
     this.sessionState = _activeMiniAppSession
+    // eslint-disable-next-line ts/no-this-alias -- module-level registry of the active host
+    _activeMiniAppHost = this
     isMiniAppActive.value = true
 
     // When the remote signer address changes (added/refreshed mid-session), the
-    // previously-cached Nimiq accounts list is stale. Clear the webview cache so
-    // the dApp re-prompts and receives the up-to-date account set.
+    // previously-cached Nimiq accounts list is stale. An approved session gets the
+    // new list without a prompt.
     // Watch the address string: signer reloads create new Address objects for
     // the same address, which would clear the cache without a real change.
     this.stopRemoteAddressWatcher = watch(
       () => useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-      () => {
-        logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
-        this.birpc?.clearAccountCache('nimiq')
-      },
+      () => this.pushNimiqAccounts(),
     )
-  }
-
-  /**
-   * Factory method to reconnect to an existing hidden webview after app reload.
-   * Re-registers listeners without opening a new webview.
-   */
-  static reconnect(
-    inAppBrowser: typeof InAppBrowser,
-    config: MiniAppHostConfig,
-    restoredChainId: string,
-  ): MiniAppHost {
-    const host = new MiniAppHost(inAppBrowser, config)
-    host.currentChainId = restoredChainId
-    host.sessionState.chainId = restoredChainId
-    host.pageUnverified = true
-    return host
   }
 
   public async destroy(): Promise<void> {
@@ -394,6 +429,7 @@ export class MiniAppHost {
     // launch's closeEvent/browserPageLoaded listeners too).
     if (_activeMiniAppSession === this.sessionState) {
       _activeMiniAppSession = null
+      _activeMiniAppHost = null
       isMiniAppActive.value = false
     }
     const cleanupResults = await Promise.allSettled([
@@ -402,6 +438,7 @@ export class MiniAppHost {
       this.fullscreenChangeListener?.remove(),
       this.urlChangeListener?.remove(),
       this.pageLoadedListener?.remove(),
+      this.popupOpenedListener?.remove(),
       this.closeListener?.remove(),
     ])
     for (const result of cleanupResults) {
@@ -412,6 +449,7 @@ export class MiniAppHost {
     this.fullscreenChangeListener = null
     this.urlChangeListener = null
     this.pageLoadedListener = null
+    this.popupOpenedListener = null
     this.closeListener = null
     this.birpc?.$close()
     this.birpc = null
@@ -544,16 +582,18 @@ export class MiniAppHost {
       },
     }, {
       post: (data) => {
-        if (this.destroyed || !browser)
+        const mainId = this.bridgeGate.mainId
+        if (this.destroyed || !browser || mainId === undefined || !this.bridgeGate.open)
           return
         logger.log('[MiniAppHost] birpc post:', data)
-        browser.postMessage({ detail: data })
+        // Without an id the plugin broadcasts to every webview, popups included.
+        browser.postMessage({ detail: data, id: mainId })
       },
       on: (fn) => {
         // @ts-expect-error - TS cannot detect the correct overload
         browser.addListener('messageFromWebview', (event: { id?: string, detail: unknown }) => {
-          this.isFromMainWebView(event.id)
-          if (event.detail)
+          const id = event.id ?? ''
+          if (event.detail && this.isMainWebview(id) && this.bridgeGate.open)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
           if (this.destroyed)
@@ -565,7 +605,7 @@ export class MiniAppHost {
       // Fire-and-forget host→webview methods. Without this birpc treats them as
       // request/response and the discarded promises would reject with a 120s
       // timeout if the webview disappears mid-flight (unhandledrejection).
-      eventNames: ['updateRpcUrl', 'clearAccountCache', 'fullscreenChanged'],
+      eventNames: ['updateRpcUrl', 'nimiqAccountsChanged', 'fullscreenChanged'],
       timeout: 120_000,
     })
 
@@ -580,13 +620,22 @@ export class MiniAppHost {
     }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
 
     void browser.addListener('urlChangeEvent', ({ id, url }) => {
-      if (!this.isFromMainWebView(id))
+      if (!this.isMainWebview(id ?? ''))
         return
-      this.lastPageUrl = url
-      const origin = originOf(url)
-      if (origin !== this.lastReportedOrigin)
-        this.originTransitionPending = true
-      this.lastReportedOrigin = origin
+      const origin = safeOrigin(url, '')
+      const gate = this.bridgeGate
+      gate.urlOk = origin === this.origin
+      // Close at once; reopen only on browserPageLoaded. iOS reports the URL when a
+      // navigation starts, so a foreign page that starts navigating back to the
+      // Mini App must not regain the bridge before its document is replaced.
+      if (!gate.urlOk) {
+        gate.open = false
+        // Origin only: full URLs can carry OAuth codes/tokens into persisted logs.
+        logger.warn('[MiniAppHost] Webview left the Mini App origin; bridge paused:', origin)
+      }
+      else if (!this.sessionLocked) {
+        this.sessionUrl = url
+      }
     }).then((handle) => {
       if (this.destroyed)
         void handle.remove()
@@ -594,19 +643,13 @@ export class MiniAppHost {
         this.urlChangeListener = handle
     }).catch(error => logger.error('Could not observe Mini App navigation', error))
 
-    void browser.addListener('browserPageLoaded', ({ id }) => {
-      if (!this.isFromMainWebView(id))
-        return
-      if (this.pageUnverified) {
-        if (!this.lastPageUrl || originOf(this.lastPageUrl) !== this.origin)
-          return
-        this.pageUnverified = false
+    void browser.addListener('browserPageLoaded', ({ id }: { id?: string }) => {
+      if (this.isMainWebview(id ?? '')) {
+        this.bridgeGate.open = this.bridgeGate.urlOk
+        this.sessionLocked ||= this.bridgeGate.open
+        // A change during a closed gate never reached the page.
+        this.pushNimiqAccounts()
       }
-      if (!this.sessionLocked) {
-        this.sessionLocked = true
-        this.sessionUrl = this.lastPageUrl ?? this.config.url
-      }
-      this.originTransitionPending = false
     }).then((handle) => {
       if (this.destroyed)
         void handle.remove()
@@ -614,26 +657,34 @@ export class MiniAppHost {
         this.pageLoadedListener = handle
     }).catch(error => logger.error('Could not observe Mini App page loads', error))
 
+    void browser.addListener('popupWindowOpened', ({ id }) => {
+      this.popupIds.add(id)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.popupOpenedListener = handle
+    }).catch(error => logger.error('Could not observe Mini App popups', error))
+
     void browser.addListener('closeEvent', ({ id }) => {
       if (id)
-        this.openPopupIds.delete(id)
+        this.popupIds.delete(id)
     }).then((handle) => {
       if (this.destroyed)
         void handle.remove()
       else
         this.closeListener = handle
-    }).catch(error => logger.error('Could not observe Mini App popups closing', error))
+    }).catch(error => logger.error('Could not observe Mini App popup closes', error))
   }
 
-  /** Popups report through the same listeners; the first id seen is taken as the main webview's, as at launch its first navigation precedes any script that could open one. */
-  private isFromMainWebView(id: string | undefined): boolean {
-    if (!id)
-      return true
-    this.mainWebViewId ??= id
-    if (id === this.mainWebViewId)
-      return true
-    this.openPopupIds.add(id)
-    return false
+  get mainId(): string | undefined {
+    return this.bridgeGate.mainId
+  }
+
+  /** The first webview the host hears from is the main one; popups need its page to run first. */
+  isMainWebview(id: string): boolean {
+    this.bridgeGate.mainId ??= id
+    return id === this.bridgeGate.mainId
   }
 
   private showErrorToast(message: string): void {
@@ -838,7 +889,7 @@ export class MiniAppHost {
     }
     catch (error) {
       if (error instanceof Error && error.name === 'TimeoutError') {
-        throw new NetworkError(`RPC request timed out after ${MiniAppHost.RPC_TIMEOUT_MS}ms`)
+        throw new NetworkError(`RPC request timed out after ${MiniAppHost.RPC_TIMEOUT_MS}ms`, { cause: error })
       }
       throw new NetworkError(`RPC request failed: ${(error as Error).message}`)
     }
@@ -1050,6 +1101,9 @@ export class MiniAppHost {
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
+    // The sheet must close when the request times out, however long the RPC calls took.
+    const requestStart = Date.now()
+    const deadline = requestStart + MINI_APP_REQUEST_TIMEOUT_MS
     logger.log('[ETH_TX] Step 1 - Raw params received:', JSON.stringify(params))
 
     // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
@@ -1066,7 +1120,6 @@ export class MiniAppHost {
       gasPrice?: string
       nonce?: string | number
       chainId?: string
-      rpcUrl?: string
     }
 
     if (Array.isArray(params) && params.length > 0) {
@@ -1092,7 +1145,6 @@ export class MiniAppHost {
       nonce: txParams.nonce,
       nonceType: typeof txParams.nonce,
       chainId: txParams.chainId,
-      rpcUrl: txParams.rpcUrl,
     })
 
     // Validate required fields
@@ -1144,7 +1196,9 @@ export class MiniAppHost {
     const chainName = validatedChainIdNumber ? EVM_CHAIN_NAMES[validatedChainIdNumber] : undefined
 
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
-    const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
+    // Host RPC only, keyed by the chain being signed. A Mini App chosen RPC would supply the
+    // nonce and fees the user signs, and receive the signed transaction.
+    const rpcUrl = this.getRpcUrlForChain(validatedChainIdNumber ? `0x${validatedChainIdNumber.toString(16)}` : undefined)
 
     // Nonce resolution: fetch from broadcast RPC if not provided by dApp
     logger.log('[ETH_TX] Step 3 - Nonce analysis:', {
@@ -1281,6 +1335,7 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided')
     }
 
+    const sheetWaitMs = Date.now() - requestStart
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1300,10 +1355,10 @@ export class MiniAppHost {
         decodedAssetTransfer: decodedAssetTransfer || undefined,
       },
       network: 'ethereum',
-    })
+    }, deadline)
 
     if (!confirmed) {
-      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
+      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId, timedOut: timedOutBy(deadline), sheetWaitMs })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
@@ -1389,8 +1444,10 @@ export class MiniAppHost {
 
     // Sign the transaction
     const signedTx = await ethWallet.signTransaction(tx)
+    const signedTxHash = keccak256(signedTx)
 
     logger.log('[ETH_TX] Step 5 - Transaction signed:', {
+      signedTxHash,
       signedTxLength: signedTx.length,
       signedTxPreview: `${signedTx.slice(0, 22)}...${signedTx.slice(-20)}`,
     })
@@ -1399,37 +1456,58 @@ export class MiniAppHost {
       throw new NetworkError('Missing Ethereum RPC URL to broadcast transaction')
     }
 
+    // A broadcast that could outlast the provider timeout would send a transaction
+    // the Mini App already saw time out, e.g. after signing stalled.
+    if (Date.now() + MiniAppHost.RPC_TIMEOUT_MS > requestStart + MINI_APP_PROVIDER_TIMEOUT_MS)
+      throw new NetworkError('Request timed out before the transaction was sent')
+
     logger.log('[ETH_TX] Step 6 - Broadcasting via RPC:', { rpcUrl, method: 'eth_sendRawTransaction' })
-
-    const rpcResponse = await this.rpcCall({
-      rpcUrl,
-      payload: {
-        jsonrpc: '2.0',
-        id: Date.now(),
-        method: 'eth_sendRawTransaction',
-        params: [signedTx],
-      },
-    })
-
-    logger.log('[ETH_TX] Step 7 - RPC response:', JSON.stringify(rpcResponse))
-
-    if (!rpcResponse || typeof rpcResponse !== 'object') {
-      throw new NetworkError('Invalid RPC response while broadcasting transaction')
-    }
-
-    if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
-      const rpcError = (rpcResponse as { error?: { message?: string, code?: number, data?: unknown } }).error
-      logger.error('[ETH_TX] Step 7 - RPC error details:', {
-        message: rpcError?.message,
-        code: rpcError?.code,
-        data: rpcError?.data,
+    const broadcastStart = Date.now()
+    let broadcastMs: number | undefined
+    let txHash: string
+    try {
+      const rpcResponse = await this.rpcCall({
+        rpcUrl,
+        payload: {
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'eth_sendRawTransaction',
+          params: [signedTx],
+        },
       })
-      throw new NetworkError(rpcError?.message || 'RPC error while broadcasting transaction')
-    }
+      broadcastMs = Date.now() - broadcastStart
 
-    const txHash = (rpcResponse as { result?: string }).result
-    if (!txHash || typeof txHash !== 'string') {
-      throw new NetworkError('RPC response missing transaction hash')
+      logger.log('[ETH_TX] Step 7 - RPC response:', JSON.stringify(rpcResponse))
+
+      if (!rpcResponse || typeof rpcResponse !== 'object') {
+        throw new NetworkError('Invalid RPC response while broadcasting transaction')
+      }
+
+      if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
+        const rpcError = (rpcResponse as { error?: { message?: string, code?: number, data?: unknown } }).error
+        logger.error('[ETH_TX] Step 7 - RPC error details:', {
+          message: rpcError?.message,
+          code: rpcError?.code,
+          data: rpcError?.data,
+        })
+        throw new NetworkError(rpcError?.message || 'RPC error while broadcasting transaction')
+      }
+
+      const result = (rpcResponse as { result?: string }).result
+      if (!result || typeof result !== 'string') {
+        throw new NetworkError('RPC response missing transaction hash')
+      }
+      txHash = result
+    }
+    catch (error) {
+      // broadcastMs is only set once the RPC answered, so a throw before that is a timeout or network failure.
+      const broadcastResult = broadcastMs !== undefined
+        ? 'rpc_error'
+        : (error as { cause?: { name?: string } }).cause?.name === 'TimeoutError' ? 'timeout' : 'network_error'
+      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: false, chainId: this.currentChainId, sheetWaitMs, broadcastMs: broadcastMs ?? Date.now() - broadcastStart, broadcastResult })
+      if (broadcastResult !== 'rpc_error')
+        this.trackUnknownBroadcastOutcome({ txHash: signedTxHash, rpcUrl, broadcastResult })
+      throw error
     }
 
     logger.log('[ETH_TX] Step 8 - Transaction broadcast success:', { txHash })
@@ -1441,8 +1519,57 @@ export class MiniAppHost {
       chainId: effectiveChainId,
     })
 
-    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId })
+    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId, sheetWaitMs, broadcastMs, broadcastResult: 'hash' })
     return txHash
+  }
+
+  // APP-381 metrics: a broadcast that timed out or failed in transit may still have reached the node.
+  // Watch for the locally computed hash for about 2.5 minutes and report whether it showed up.
+  private trackUnknownBroadcastOutcome({
+    txHash,
+    rpcUrl,
+    broadcastResult,
+  }: {
+    txHash: string
+    rpcUrl: string
+    broadcastResult: 'timeout' | 'network_error'
+  }): void {
+    const { url, title } = this.config
+    const chainId = this.currentChainId
+
+    void (async () => {
+      let answered = false
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await sleep(15_000)
+        try {
+          const response = await this.rpcCall({
+            rpcUrl,
+            payload: {
+              jsonrpc: '2.0',
+              id: Date.now() + attempt,
+              method: 'eth_getTransactionByHash',
+              params: [txHash],
+            },
+          })
+          const result = (response as { result?: unknown } | undefined)?.result
+          // A pending tx counts: once the node knows it, a retry would pay twice.
+          if (result) {
+            trackEvmBroadcastUnknownResolved({ dappUrl: url, dappName: title, chainId, broadcastResult, landed: true })
+            return
+          }
+          // Only `result: null` means the node does not know the tx; an error body answers nothing.
+          if (result === null)
+            answered = true
+        }
+        catch (error) {
+          logger.warn('[ETH_TX] Lookup of unconfirmed broadcast failed', { txHash, error: (error as Error).message })
+        }
+      }
+
+      // Without a single answer, landed: false would be a guess.
+      if (answered)
+        trackEvmBroadcastUnknownResolved({ dappUrl: url, dappName: title, chainId, broadcastResult, landed: false })
+    })()
   }
 
   private refreshPolygonUsdtStateAfterBroadcast({
@@ -1531,9 +1658,9 @@ export class MiniAppHost {
     }
   }
 
-  /** Checks the page, not the sending frame, which the bridge does not report: an iframe on another origin can still pass as this page. */
+  /** The bridge drops other pages' requests, but can close while one waits. */
   private canChangeWidgets(): boolean {
-    return !this.pageUnverified && this.openPopupIds.size === 0 && !this.originTransitionPending && originOf(this.lastPageUrl ?? this.config.url) === originOf(this.sessionUrl)
+    return this.bridgeGate.open && this.popupIds.size === 0
   }
 
   private addWidget(params: unknown): Promise<boolean> {
@@ -1549,12 +1676,13 @@ export class MiniAppHost {
   }
 
   private async requestWidgetAdd(id: string): Promise<boolean> {
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     // Keyed by the folder the widget file sits in, so two Mini Apps of one site stay apart.
     const found = await useMiniAppWidgets().discover(this.sessionUrl)
     if (!found.ok)
       throw new InvalidRequestError(found.error)
     const { scope, file } = found.value
-    const sheet = this.widgetSheets.then(() => this.askAboutWidget(scope, file, id))
+    const sheet = this.widgetSheets.then(() => this.askAboutWidget(scope, file, id, deadline))
     this.widgetSheets = sheet.then(() => {}, () => {})
     return sheet
   }
@@ -1564,7 +1692,7 @@ export class MiniAppHost {
     return !this.destroyed && this.canChangeWidgets()
   }
 
-  private async askAboutWidget(scope: string, file: WidgetFile, id: string): Promise<boolean> {
+  private async askAboutWidget(scope: string, file: WidgetFile, id: string, deadline: number): Promise<boolean> {
     const widgets = useMiniAppWidgets()
     if (!this.mayAskAboutWidgets())
       return false
@@ -1574,10 +1702,10 @@ export class MiniAppHost {
       const widgetName = widgets.widgetName(scope, id)
       const name = widgets.pendingName(scope)
       if (name)
-        await this.offerWidgetChange('name', 'widget_name', { url, type: 'widgetName', address: name.address, to: name.to }, () => widgets.approveName(scope, name.to))
+        await this.offerWidgetChange('name', 'widget_name', { url, type: 'widgetName', address: name.address, to: name.to }, () => widgets.approveName(scope, name.to), deadline)
       const permissions = widgets.missingPermissions(scope, id)
       if (permissions.length)
-        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', { url, type: 'widgetPermissions', widgetName }, () => widgets.grantPermissions(scope, id, permissions))
+        await this.offerWidgetChange(`permissions:${id}`, 'widget_permissions', { url, type: 'widgetPermissions', widgetName }, () => widgets.grantPermissions(scope, id, permissions), deadline)
       return true
     }
     if (this.declinedWidgetOffers.has(`add:${id}`))
@@ -1588,37 +1716,30 @@ export class MiniAppHost {
       throw new InvalidRequestError(widgets.canAdd ? `This Mini App already has ${WIDGET_LIMITS.widgetsPerMiniApp} widgets on Home` : `Home already holds ${WIDGET_LIMITS.widgetsOnHome} widgets`)
     if (!this.config.requestUserConfirmation)
       throw new InternalError('Confirmation handler not provided')
-    const confirmed = await this.config.requestUserConfirmation({ url, type: 'widget', ...widgets.consentFor(scope, definition) })
-    trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    const confirmed = await this.config.requestUserConfirmation({ url, type: 'widget', ...widgets.consentFor(scope, definition) }, deadline)
+    trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed, timedOut: !confirmed && timedOutBy(deadline) })
     if (!confirmed) {
-      this.declinedWidgetOffers.add(`add:${id}`)
+      this.noteDecline(`add:${id}`, deadline)
       return false
     }
     return this.mayAskAboutWidgets() && widgets.add(scope, definition, definition.permissions ?? [])
   }
 
   /** A change the file made waits for the user. This is where a Mini App can ask, once per session. */
-  private async offerWidgetChange(key: string, requestType: Web3RequestType, request: UserConfirmationRequest, apply: () => void) {
+  private async offerWidgetChange(key: string, requestType: Web3RequestType, request: UserConfirmationRequest, apply: () => void, deadline: number) {
     if (this.declinedWidgetOffers.has(key) || !this.config.requestUserConfirmation || !this.mayAskAboutWidgets())
       return
-    const confirmed = await this.config.requestUserConfirmation(request)
-    trackWeb3Request({ requestType, blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    const confirmed = await this.config.requestUserConfirmation(request, deadline)
+    trackWeb3Request({ requestType, blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed, timedOut: !confirmed && timedOutBy(deadline) })
     if (!confirmed)
-      this.declinedWidgetOffers.add(key)
+      this.noteDecline(key, deadline)
     else if (this.mayAskAboutWidgets())
       apply()
   }
 
-  private inTurn<T>(show: () => Promise<T>): Promise<T> {
-    const turn = this.sheets.then(() => {
-      // A Mini App closed while its sheet waited asks nothing more.
-      if (this.destroyed)
-        throw new InternalError('Host is destroyed')
-      return show()
-    })
-    // A sheet closed without an answer (an iOS swipe does that) must not hold back every later one, so the next waits a minute at most.
-    this.sheets = Promise.race([turn.catch(() => {}), this.sheets.then(() => sleep(SHEET_TURN_MS))])
-    return turn
+  private noteDecline(key: string, deadline: number) {
+    if (!timedOutBy(deadline))
+      this.declinedWidgetOffers.add(key)
   }
 
   private async setWidgetToken(params: unknown): Promise<boolean> {
@@ -1633,7 +1754,7 @@ export class MiniAppHost {
       const widgets = useMiniAppWidgets()
       // A clear goes by the site and what is stored, and lands after closing too: a sign-out must not need the network or be lost.
       if (token === null)
-        return widgets.setToken(url, id, null)
+        return widgets.setToken(this.origin, id, null)
       const found = await widgets.discover(url)
       return found.ok && !this.destroyed && widgets.setToken(found.value.scope, id, token as string)
     })
@@ -1656,7 +1777,7 @@ export class MiniAppHost {
       const widgets = useMiniAppWidgets()
       // As setToken(id, null): by the site and what is stored, and after closing too.
       if (raw === null)
-        return widgets.update(url, id, null)
+        return widgets.update(this.origin, id, null)
       const found = await widgets.discover(url)
       if (!found.ok || this.destroyed)
         return false
@@ -1761,11 +1882,26 @@ export class MiniAppHost {
     return data
   }
 
+  private pushNimiqAccounts() {
+    // No HTLC address during a replacement: keep the old list until the new one is known.
+    if (this.sharedNimiqAccounts === undefined || !this.bridgeGate.open || !useRemoteSigner().remoteAddress)
+      return
+    const accounts = nimiqAddresses()
+    const shared = JSON.stringify(accounts)
+    if (shared === this.sharedNimiqAccounts)
+      return
+    this.sharedNimiqAccounts = shared
+    this.birpc?.nimiqAccountsChanged(accounts)
+  }
+
   private async listAccounts() {
     // Ask user for permission to list accounts
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // No pushes during the prompt: the page would cache an address the user may still
+    // reject. Approval replies with the list read after the prompt.
+    this.sharedNimiqAccounts = undefined
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -1778,6 +1914,7 @@ export class MiniAppHost {
     }
 
     const accounts = nimiqAddresses()
+    this.sharedNimiqAccounts = JSON.stringify(accounts)
     trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return accounts
   }
@@ -1911,6 +2048,9 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
+    // Protocol limit; reject before the prompt instead of signing a transaction the network refuses
+    if (new TextEncoder().encode(message).length > 64)
+      throw new InvalidTransactionError('Transaction message exceeds 64 bytes')
 
     return this.sendPayment({
       recipient,
@@ -1926,24 +2066,32 @@ export class MiniAppHost {
     // Parse params
     let delegation: string
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       delegation = String(params[0])
       value = Number(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       delegation = String((params as any).delegation)
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createNewStakerTransaction method')
     }
+    // Core verification always rejects these (core-rs-albatross IncomingStakingTransactionData::verify).
+    // The cosigner answers that with a 500, leaving the tx staged until it expires, so reject before the prompt.
+    if (value < MINIMUM_STAKE)
+      throw new InvalidTransactionError(`Staker must be created with at least ${MINIMUM_STAKE / 1e5} NIM`)
 
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'create-staker', delegation },
       stakingTitle: 'Create Staker',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_create_staker',
     })
   }
@@ -1951,22 +2099,29 @@ export class MiniAppHost {
   private sendAddStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for createStakeTransaction method')
     }
+    // Same rule source as create-staker: add-stake with zero value fails with ZeroValue
+    if (value === 0)
+      throw new InvalidTransactionError('Added stake must be greater than zero')
 
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'add-stake' },
       stakingTitle: 'Add Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_add_stake',
     })
   }
@@ -1974,12 +2129,15 @@ export class MiniAppHost {
   private async sendSetActiveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let newActiveBalance: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       newActiveBalance = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newActiveBalance = Number((params as any).newActiveBalance)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendSetActiveStakeTransaction method')
@@ -1990,6 +2148,7 @@ export class MiniAppHost {
       stakingData: { type: 'set-active-stake', newActiveBalance },
       stakingTitle: 'Set Active Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_set_active',
     })
   }
@@ -1998,14 +2157,17 @@ export class MiniAppHost {
     // Parse params
     let newDelegation: string
     let reactivateAllStake: boolean
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 2) {
       newDelegation = String(params[0])
       reactivateAllStake = Boolean(params[1])
+      fee = Number(params[2] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       newDelegation = String((params as any).newDelegation)
       reactivateAllStake = Boolean((params as any).reactivateAllStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendUpdateStakerTransaction method')
@@ -2016,6 +2178,7 @@ export class MiniAppHost {
       stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
       stakingTitle: 'Update Staker',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_update',
     })
   }
@@ -2023,22 +2186,29 @@ export class MiniAppHost {
   private async sendRetireStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let retireStake: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       retireStake = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       retireStake = Number((params as any).retireStake)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
     }
+    // Same rule source as create-staker: retire-stake of zero fails with ZeroValue
+    if (retireStake === 0)
+      throw new InvalidTransactionError('Retired stake must be greater than zero')
 
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'retire-stake', retireStake },
       stakingTitle: 'Retire Stake',
       value: 0,
+      fee,
       analyticsRequestType: 'nimiq_staking_retire',
     })
   }
@@ -2046,12 +2216,15 @@ export class MiniAppHost {
   private async sendRemoveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
+    let fee: number
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
+      fee = Number(params[1] ?? 0)
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
+      fee = Number((params as any).fee ?? 0)
     }
     else {
       throw new InternalError('Invalid parameters for sendRemoveStakeTransaction method')
@@ -2061,11 +2234,14 @@ export class MiniAppHost {
       stakingData: { type: 'remove-stake' },
       stakingTitle: 'Remove Stake',
       value,
+      fee,
       analyticsRequestType: 'nimiq_staking_remove',
     })
   }
 
   private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    // One Mini App request shows up to three sheets; all close when the request times out.
+    const deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS
     const invoice = (params as { invoice?: unknown } | null)?.invoice
     if (typeof invoice !== 'string' || !invoice.trim())
       throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
@@ -2101,7 +2277,7 @@ export class MiniAppHost {
             type: 'lightning-access',
             network: 'nimiq',
             description: decoded.description || undefined,
-          }),
+          }, deadline),
         }
       }
       let allowed: boolean
@@ -2142,7 +2318,7 @@ export class MiniAppHost {
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
 
-      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined }, deadline)
       if (!asset)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
       if (asset !== Asset.NIM && asset !== Asset.USDT)
@@ -2150,49 +2326,99 @@ export class MiniAppHost {
       if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
         throw new NetworkError('Wallet changed before Lightning payment approval')
 
-      const { useStringParser } = await import('./useStringParser')
-      const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
-      if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
-        throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
-      const description = decoded.description || payment.message
+      const prepare = async () => {
+        const { useStringParser } = await import('./useStringParser')
+        const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
+        if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
+          throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
+        const description = decoded.description || payment.message
 
-      const { getSwap } = await useFastspotApiV2()
-      const quote = await getSwap(payment.paymentRef)
-      if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
-        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+        const { getSwap } = await useFastspotApiV2()
+        const quote = await getSwap(payment.paymentRef)
+        if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
+          throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
 
-      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
-        throw new NetworkError('Wallet changed before Lightning payment approval')
-      const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
-      const context = signer?.getWalletContext()
-      const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
-      const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
-      if (polygon)
-        await polygon.updateBalance()
-      if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
-        throw new NetworkError('NIM wallet is not ready')
-      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
-        throw new InvalidTransactionError('Insufficient NIM balance')
-      if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
-        throw new NetworkError('USDT wallet is not ready')
-      if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
-        throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
-      let usdtFeeAllowance = 0
-      if (polygon) {
-        const feeSnapshot = await polygon.primeHtlcFee()
-        const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
-        usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
-        if (polygon.balance < payment.amount + usdtFeeAllowance)
-          throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+        if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+          throw new NetworkError('Wallet changed before Lightning payment approval')
+        const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
+        const context = signer?.getWalletContext()
+        const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
+        const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
+        if (polygon)
+          await polygon.updateBalance()
+        if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
+          throw new NetworkError('NIM wallet is not ready')
+        if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+          throw new InvalidTransactionError('Insufficient NIM balance')
+        if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
+          throw new NetworkError('USDT wallet is not ready')
+        if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
+          throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
+        let usdtFeeAllowance = 0
+        if (polygon) {
+          const feeSnapshot = await polygon.primeHtlcFee()
+          const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
+          usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
+          if (polygon.balance < payment.amount + usdtFeeAllowance)
+            throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+        }
+
+        const { getLimits, SwapAsset } = await useFastspotApiV1()
+        const localAddress = useLocalWallet().localAddress
+        const limits = asset === Asset.USDT
+          ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
+          : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
+        if (payment.amount > Math.floor(limits.current * 0.99))
+          throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+        return {
+          // Narrowing of these properties does not survive the return.
+          payment: { ...payment, paymentRef: payment.paymentRef, invoiced: payment.invoiced },
+          description,
+          getSwap,
+          signer,
+          context,
+          polygon,
+          ethAddress,
+          usdtFeeAllowance,
+        }
       }
 
-      const { getLimits, SwapAsset } = await useFastspotApiV1()
-      const localAddress = useLocalWallet().localAddress
-      const limits = asset === Asset.USDT
-        ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
-        : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
-      if (payment.amount > Math.floor(limits.current * 0.99))
-        throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+      // Nothing else is on screen during these Fastspot calls, and the invoice stays locked until they settle.
+      const withLoadingSheet = <T>(work: Promise<T>, stage: 'prepare' | 'recheck') => {
+        const startedAt = Date.now()
+        let outcome: 'timeout' | 'cancelled' | 'failed' | undefined
+        let timer: ReturnType<typeof setTimeout> | undefined
+        return Promise.race([
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => {
+                outcome = 'timeout'
+                reject(new NetworkError(i18n.t('The Lightning payment could not be prepared in time. Please try again.')))
+              },
+              deadline - LIGHTNING_QUOTE_TIMEOUT_MARGIN_MS - Date.now(),
+            )
+            ExtendedDialog.showLoading({ message: i18n.t('Preparing your Lightning payment'), cancelButtonTitle: i18n.t('Cancel') })
+              .then(({ cancelled }) => {
+                if (cancelled) {
+                  outcome = 'cancelled'
+                  reject(new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE))
+                }
+              })
+              // OTA bundles can run on native builds without this method; the wait stays bounded.
+              .catch(error => logger.warn('Could not show the Lightning loading sheet', error))
+          }),
+          work,
+        ]).catch((error) => {
+          outcome ??= 'failed'
+          throw error
+        }).finally(async () => {
+          clearTimeout(timer)
+          trackLightningPrep(this.config.url, this.config.title, stage, outcome ?? 'ok', Date.now() - startedAt, asset)
+          await ExtendedDialog.dismissLoading().catch(error => logger.warn('Could not close the Lightning loading sheet', error))
+        })
+      }
+
+      const { payment, description, getSwap, signer, context, polygon, ethAddress, usdtFeeAllowance } = await withLoadingSheet(prepare(), 'prepare')
 
       const confirmed = await requestConfirmation({
         url: this.config.url,
@@ -2207,7 +2433,7 @@ export class MiniAppHost {
           usdtFeeAllowance,
           fees: payment.swap?.fees || [],
         },
-      })
+      }, deadline)
       if (!confirmed)
         throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
 
@@ -2217,7 +2443,7 @@ export class MiniAppHost {
         throw new NetworkError('Wallet changed before sending')
       if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
         throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
-      const currentQuote = await getSwap(payment.paymentRef)
+      const currentQuote = await withLoadingSheet(getSwap(payment.paymentRef), 'recheck')
       if (currentQuote.status !== 'PENDING_CONFIRMATION' || currentQuote.expiry <= Date.now() / 1e3 + 20 || currentQuote.sell.amount !== payment.amount)
         throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
       if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
@@ -2346,7 +2572,7 @@ export class MiniAppHost {
 
   private async sendPayment(txData: {
     value: number
-    fee?: number
+    fee: number
     message?: string
     analyticsRequestType: Web3RequestType
   } & ({
@@ -2357,11 +2583,25 @@ export class MiniAppHost {
     stakingTitle: PartialStakingTxArgs['title']
     stakingData: StakingData
   })): Promise<string> {
+    const requestStart = Date.now()
+    const deadline = requestStart + MINI_APP_REQUEST_TIMEOUT_MS
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-    // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
-    const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
+    // BigInt() throws on fractions and NaN, and the wasm u64 wraps out-of-range values, so the signed fee could differ from the prompt
+    if (!Number.isSafeInteger(txData.fee) || txData.fee < 0)
+      throw new InvalidTransactionError('Transaction fee must be a non-negative integer')
+    // Same for amounts: the prompt would show a value that differs from the one signed.
+    // Basic sends are signed with Math.ceil(value) (getSignedTx), so fractional values keep working there.
+    const amounts = [txData.transfer === Transfer.UserPayment ? Math.ceil(txData.value) : txData.value]
+    if (txData.transfer === Transfer.Staking && txData.stakingData.type === 'set-active-stake')
+      amounts.push(txData.stakingData.newActiveBalance)
+    if (txData.transfer === Transfer.Staking && txData.stakingData.type === 'retire-stake')
+      amounts.push(txData.stakingData.retireStake)
+    if (amounts.some(amount => !Number.isSafeInteger(amount) || amount < 0))
+      throw new InvalidTransactionError('Transaction amount must be a non-negative integer')
+    // Everything the local wallet does not send spends from the HTLC; fail before prompting instead of after the user confirms
+    const spendsFromRemote = !(txData.transfer === Transfer.Staking && isSentByLocalWallet(txData.stakingData, txData.fee, useLocalWallet().localBalance))
     const remoteSigner = useRemoteSigner()
     if (spendsFromRemote && !remoteSigner.remoteAddress) {
       // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.
@@ -2389,7 +2629,7 @@ export class MiniAppHost {
             : Nimiq.AccountType.Staking
           : Nimiq.AccountType.Basic,
         amount: txData.value,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2397,9 +2637,10 @@ export class MiniAppHost {
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
       network: 'nimiq',
-    })
+    }, deadline)
+    const sheetCloseMs = Date.now() - requestStart
     if (!confirmed) {
-      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, timedOut: timedOutBy(deadline), sheetCloseMs })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
@@ -2410,7 +2651,7 @@ export class MiniAppHost {
         amount: txData.value,
         title: 'Payment',
         transfer: txData.transfer,
-        fee: txData.fee ?? 0,
+        fee: txData.fee,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -2420,6 +2661,7 @@ export class MiniAppHost {
     else if (txData.transfer === Transfer.Staking) {
       partialTx = {
         amount: txData.value,
+        fee: txData.fee,
         title: txData.stakingTitle,
         transfer: txData.transfer,
         rail: Rail.MiniApp,
@@ -2432,8 +2674,17 @@ export class MiniAppHost {
       throw new InternalError('Invalid transfer type')
     }
 
-    const result = await useTransactions().sendTx(partialTx)
-    trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: result.outcome === 'submitted' })
+    // 'failed' stays only if sendTx throws
+    const sendStart = Date.now()
+    let txOutcome: TransactionSendResult['outcome'] | 'failed' = 'failed'
+    let result: TransactionSendResult
+    try {
+      result = await useTransactions().sendTx(partialTx)
+      txOutcome = result.outcome
+    }
+    finally {
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: txOutcome === 'submitted', sheetCloseMs, sendMs: Date.now() - sendStart, txOutcome, exceededProviderTimeout: Date.now() - requestStart > MINI_APP_PROVIDER_TIMEOUT_MS })
+    }
     if (result.outcome === 'rejected')
       throw new InternalError(`Failed to send payment transaction: ${result.error}`)
     if (result.outcome === 'unknown') {

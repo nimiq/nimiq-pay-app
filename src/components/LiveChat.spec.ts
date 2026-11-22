@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, reactive, ref } from 'vue'
 
 const messages = ref<WtMessage[]>([])
+const conversationEnded = ref(false)
+const sessionId = ref('')
 const sendLogs = vi.fn()
 
 vi.mock('@ionic/vue', () => {
@@ -47,15 +49,16 @@ vi.mock('@/stores/livechat', () => ({
     error: ref(false),
     messages,
     online: ref(true),
-    conversationEnded: ref(false),
+    conversationEnded,
+    sessionId,
     sendLogs,
     sendMessage: vi.fn(),
     closeSession: vi.fn(),
   }),
 }))
 
-function message(id: string, sender: string, content: string): WtMessage {
-  return { id, sender, content, timestamp: `2026-09-28 10:00:0${id}` }
+function message(id: string, sender: string, content: string, event?: string): WtMessage {
+  return { id, sender, event, content, timestamp: `2026-09-28 10:00:0${id}` }
 }
 
 async function mountChat() {
@@ -74,6 +77,7 @@ function button(wrapper: Awaited<ReturnType<typeof mountChat>>, text: string) {
 describe('liveChat logs request notice', () => {
   beforeEach(() => {
     messages.value = []
+    conversationEnded.value = false
     sendLogs.mockReset().mockResolvedValue(undefined)
   })
 
@@ -150,5 +154,66 @@ describe('liveChat logs request notice', () => {
     await wrapper.find('button[aria-label="Dismiss"]').trigger('click')
 
     expect(wrapper.text()).not.toContain('Attach logs')
+  })
+})
+
+describe('liveChat session end', () => {
+  beforeEach(() => {
+    messages.value = []
+    conversationEnded.value = false
+    sessionId.value = ''
+  })
+
+  it('keeps the history and input when support closes the session', async () => {
+    messages.value = [
+      message('1', 'agent:Ana', 'Fixed, please send logs if it happens again'),
+      message('2', 'system', 'Session closed by support.', 'session_closed'),
+    ]
+    conversationEnded.value = true
+    sessionId.value = 'session-1'
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.text()).toContain('Fixed, please send logs if it happens again')
+    expect(wrapper.text()).toContain('Session closed')
+    expect(wrapper.text()).not.toContain('Session closed by support.')
+    expect(wrapper.text()).not.toContain('Thanks for reaching out!')
+    expect(wrapper.text()).not.toContain('Attach logs')
+    expect(wrapper.find('textarea').attributes('placeholder')).toBe('Start a new chat')
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
+  })
+
+  it('shows the thank-you screen when the user ends the chat', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Hello!')]
+    conversationEnded.value = true
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.text()).toContain('Thanks for reaching out!')
+    expect(wrapper.find('textarea').exists()).toBe(false)
+  })
+})
+
+describe('liveChat send logs button', () => {
+  beforeEach(() => {
+    messages.value = []
+    conversationEnded.value = false
+    sessionId.value = ''
+  })
+
+  it('is hidden before the first message started a session', async () => {
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('textarea').attributes('placeholder')).toBe('Type your message')
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(false)
+  })
+
+  it('shows once a session exists', async () => {
+    messages.value = [message('1', 'user', 'Help me')]
+    sessionId.value = 'session-1'
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('button[title="Send logs"]').exists()).toBe(true)
   })
 })

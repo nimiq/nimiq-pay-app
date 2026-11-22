@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   routerReady: vi.fn(),
   isWasmAvailable: vi.fn(),
   error: vi.fn(),
+  identifyUser: vi.fn(),
+  trackCurrentAppOpen: vi.fn(),
 }))
 
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => !mocks.device.isWeb } }))
@@ -23,7 +25,7 @@ vi.mock('@/composables/useDecrypt', () => ({ useDecrypt: vi.fn() }))
 vi.mock('@/composables/useDevice', () => ({ useDevice: () => mocks.device }))
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ init: vi.fn(), log: vi.fn(), error: mocks.error }) }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18nRegistration: {}, setLanguage: vi.fn().mockResolvedValue(undefined) }))
-vi.mock('@/lib/analytics', () => ({ identifyUser: vi.fn(), trackCurrentAppOpen: vi.fn() }))
+vi.mock('@/lib/analytics', () => ({ identifyUser: mocks.identifyUser, trackCurrentAppOpen: mocks.trackCurrentAppOpen }))
 vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
 vi.mock('@/lib/node-globals', () => ({ installNodeGlobals: vi.fn() }))
 vi.mock('@/lib/utils', () => ({ isWasmAvailable: mocks.isWasmAvailable }))
@@ -51,6 +53,7 @@ describe('ota startup confirmation', () => {
     mocks.device.isIOS = false
     mocks.device.isWeb = false
     mocks.initDb.mockResolvedValue(undefined)
+    mocks.identifyUser.mockResolvedValue(undefined)
     mocks.routerReady.mockResolvedValue(undefined)
     mocks.notifyAppReady.mockResolvedValue({})
     mocks.isWasmAvailable.mockReturnValue(true)
@@ -63,6 +66,17 @@ describe('ota startup confirmation', () => {
   })
 
   afterEach(() => vi.restoreAllMocks())
+
+  it('reports the cold start only after identify registers the bundle version', async () => {
+    let finishIdentify!: () => void
+    mocks.identifyUser.mockReturnValueOnce(new Promise<void>(resolve => finishIdentify = resolve))
+
+    await startup()
+    expect(mocks.trackCurrentAppOpen).not.toHaveBeenCalled()
+
+    finishIdentify()
+    await vi.waitFor(() => expect(mocks.trackCurrentAppOpen).toHaveBeenCalledWith('cold_start'))
+  })
 
   it('confirms a native bundle only after routing and mounting succeed', async () => {
     const ready = Promise.withResolvers<void>()

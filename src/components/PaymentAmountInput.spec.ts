@@ -16,6 +16,8 @@ const fiatUsdPrice = ref({ price: 1, currency: 'USD' })
 const usdtQuote = ref<{ fee: number, totalDebit: number } | null>(null)
 const usdtQuoteError = ref('')
 const usdtQuoteLoading = ref(false)
+const refreshTransferQuote = vi.fn()
+let useRealQuoteRefresh = false
 let useFetchCall = 0
 
 vi.mock('@/stores/remote-signer', () => ({
@@ -30,7 +32,7 @@ vi.mock('@/stores/polygon-usdt', () => ({
     balance: usdtBalance,
     consensus: polygonConsensus,
     getCachedTransferQuote: () => null,
-    refreshTransferQuote: () => Promise.resolve(null),
+    refreshTransferQuote,
   }),
 }))
 
@@ -70,16 +72,22 @@ vi.mock('@/composables/useApi', () => ({
   }),
 }))
 
-vi.mock('@/composables/useUsdtQuoteRefresh', () => ({
-  useUsdtQuoteRefresh: () => ({
-    quote: usdtQuote,
-    error: usdtQuoteError,
-    quoteLoading: usdtQuoteLoading,
-    feeText: ref(''),
-    refresh: vi.fn(),
-    scheduleRefresh: vi.fn(),
-  }),
-}))
+vi.mock('@/composables/useUsdtQuoteRefresh', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/composables/useUsdtQuoteRefresh')>()
+  return {
+    ...actual,
+    useUsdtQuoteRefresh: (...args: Parameters<typeof actual.useUsdtQuoteRefresh>) => useRealQuoteRefresh
+      ? actual.useUsdtQuoteRefresh(...args)
+      : {
+          quote: usdtQuote,
+          error: usdtQuoteError,
+          quoteLoading: usdtQuoteLoading,
+          feeText: ref(''),
+          refresh: vi.fn(),
+          scheduleRefresh: vi.fn(),
+        },
+  }
+})
 
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
@@ -162,7 +170,7 @@ async function mountComponent(options: MountOptions = {}) {
 
   const { default: PaymentAmountInput } = await import('./PaymentAmountInput.vue')
   return mount(PaymentAmountInput, {
-    props: { state },
+    props: { state, isActive: true },
     global: {
       plugins: [createPinia()],
       mocks: {
@@ -194,6 +202,8 @@ describe('paymentAmountInput', () => {
     usdtQuote.value = null
     usdtQuoteError.value = ''
     usdtQuoteLoading.value = false
+    refreshTransferQuote.mockReset().mockResolvedValue(null)
+    useRealQuoteRefresh = false
   })
 
   it('does not render merchant name in component body (shown in flow header instead)', async () => {
@@ -341,5 +351,49 @@ describe('paymentAmountInput', () => {
     // Back in crypto mode after 6 toggles; the amount must be exactly what was entered.
     await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
     expect(wrapper.emitted('done')?.at(-1)).toEqual([1_000_000])
+  })
+
+  it('pauses the USDT quote after continuing and resumes it when the user comes back', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    useRealQuoteRefresh = true
+    usdtBalance.value = 10_000_000
+    refreshTransferQuote.mockResolvedValue({ fee: 250_000, totalDebit: 1_250_000 })
+    const payButton = (wrapper: Awaited<ReturnType<typeof mountComponent>>) => wrapper.get('[data-testid="payment-amount-input-pay"]')
+
+    try {
+      const wrapper = await mountComponent({ asset: Asset.USDT })
+      await flushPromises()
+      await wrapper.get('[data-testid="amount-input"]').trigger('click')
+      await flushPromises()
+      expect(refreshTransferQuote).toHaveBeenCalledTimes(1)
+      expect((payButton(wrapper).element as HTMLButtonElement).disabled).toBe(false)
+
+      await payButton(wrapper).trigger('click')
+      expect(wrapper.emitted('done')).toHaveLength(1)
+
+      // Flow keeps the step mounted on later steps; a second click must not emit again.
+      await payButton(wrapper).trigger('click')
+      expect(wrapper.emitted('done')).toHaveLength(1)
+
+      await wrapper.setProps({ isActive: false })
+      // The payment debits the balance while later steps are shown; that error must not resume quoting.
+      usdtBalance.value = 0
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(refreshTransferQuote).toHaveBeenCalledTimes(1)
+
+      usdtBalance.value = 10_000_000
+      await wrapper.setProps({ isActive: true })
+      await flushPromises()
+      expect((payButton(wrapper).element as HTMLButtonElement).disabled).toBe(false)
+      expect(wrapper.text()).not.toContain('You don\'t have enough USDT to cover this payment plus Polygon fees.')
+      expect(wrapper.find('[data-testid="loading-spinner"]').exists()).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(refreshTransferQuote).toHaveBeenCalledTimes(2)
+    }
+    finally {
+      vi.useRealTimers()
+    }
   })
 })

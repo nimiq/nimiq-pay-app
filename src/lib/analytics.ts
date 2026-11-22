@@ -1,9 +1,11 @@
-import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
+import type { TargetedRemoteSignerRecoveryResult } from '@/stores/sync/remote-signers'
+import type { PaymentMethod, Rail, TransactionSendResult, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
-import { reportException, useLogger } from '@/composables/useLogger'
+import { redact, reportException, useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
 import { useApp } from '@/stores/app'
@@ -26,7 +28,7 @@ export function reportCriticalError(error: unknown, context?: Record<string, unk
   reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition' | 'home_widget'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition' | 'home_widget' | 'resume'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 
@@ -111,7 +113,7 @@ export interface PaymentEventProperties {
   is_atomic_swap: boolean
 }
 
-export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled'
+export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled' | 'unknown'
 
 export interface PaymentAnalyticsState {
   startedAt: number
@@ -189,7 +191,12 @@ export function trackPaymentCompleted(props: PaymentEventProperties & { duration
 }
 
 export function trackPaymentFailed(props: PaymentEventProperties & { error_reason: string }): void {
-  capture('payment_failed', props)
+  capture('payment_failed', { ...props, error_reason: redact(props.error_reason) })
+}
+
+// The send may have reached the network, so the payment is neither completed nor failed.
+export function trackPaymentUnknown(props: PaymentEventProperties & { error_reason: string, duration_ms: number }): void {
+  capture('payment_unknown', { ...props, error_reason: redact(props.error_reason) })
 }
 
 export function trackPaymentCancelled(props: PaymentEventProperties & { cancelled_at_step: 'pin' }): void {
@@ -206,12 +213,59 @@ export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Ass
   capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
+interface SwapSettlementStats {
+  polls: number
+  last_status: string | null
+}
+
+// Extra properties per step, so the PostHog schema is checked at every call site.
+export interface SwapStepProps {
+  quote: { reused: boolean, invoice_expires_in_s: number, quote_expires_in_s: number }
+  confirm: { already_confirmed: boolean, swap_status: string }
+  verify: { invoice_expires_in_s: number, htlc_timeout_in_s: number }
+  cosign: { head_height: number, remote_height: number, status: number, replayed: boolean, tx_sent: boolean | null }
+  relay: { tx_state: string }
+  broadcast: { tx_state: string | null, execution_result: boolean | null }
+  funding_proof: { swap_status: string, has_preimage: boolean }
+  settlement_slow: SwapSettlementStats
+  settlement: SwapSettlementStats & { preimage_source: 'funding_proof' | 'poll' }
+  refund: { tx_state: string, execution_result: boolean | null, rebroadcast: boolean }
+}
+
+export type SwapStep = keyof SwapStepProps
+
+export type SwapStepEvent<S extends SwapStep> = {
+  step: S
+  ok: boolean
+  asset: Asset
+  swap_id?: string
+  duration_ms?: number
+  error_reason?: string
+} & Partial<SwapStepProps[S]>
+
+// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
+// swap_id is Fastspot's id, needed to look the swap up with them.
+// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
+// the app skips it and no `broadcast` step follows.
+export function trackSwapStep<S extends SwapStep>(props: SwapStepEvent<S>): void {
+  capture('swap_step', {
+    ...props,
+    ...(props.error_reason ? { error_reason: redact(props.error_reason) } : {}),
+    swap_pair: assetToSwapPair(props.asset),
+    swap_provider: SWAP_PROVIDER,
+  })
+}
+
 export function trackConsensusEstablished(props: { duration_ms: number, network: string, sync_mode: string }): void {
   capture('consensus_established', props)
 }
 
+export function trackConsensusSlow(props: { duration_ms: number, network: string, sync_mode: string, peer_count: number, has_client: boolean }): void {
+  capture('consensus_slow', props)
+}
+
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
-  capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+  capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
 // Why handleFunds (or the send right after it) left local funds unsecured.
@@ -248,6 +302,16 @@ export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
   capture(`funds_processing_${state}`, props)
 }
 
+// An own funded HTLC that is not the active signer is missing from the balance until this recovery lands (APP-332).
+export function trackStrayHtlcRecovery(props: {
+  status: TargetedRemoteSignerRecoveryResult['status']
+  reason?: Extract<TargetedRemoteSignerRecoveryResult, { status: 'deferred' }>['reason']
+  funded_count: number
+  has_active: boolean
+}): void {
+  capture('stray_htlc_recovery', props)
+}
+
 export function trackSyncSlow(props: { duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
   capture('sync_slow', { stage: 'remote_signer_verification', ...props })
 }
@@ -272,8 +336,16 @@ export function trackDAppOpened(url: string, name: string, source: DAppOpenSourc
   capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })
 }
 
+export function trackDAppSheetHeld(url: string, name: string, requestType: string, heldMs: number, presented: boolean): void {
+  capture('miniapp_sheet_held', { dapp_url: url, dapp_name: name, request_type: requestType, held_ms: heldMs, presented })
+}
+
 export function trackDAppClosed(url: string, name: string, durationMs: number): void {
   capture('miniapp_closed', { dapp_url: url, dapp_name: name, session_duration_ms: durationMs })
+}
+
+export function trackDAppPopupClosed(url: string, name: string): void {
+  capture('miniapp_popup_closed', { dapp_url: url, dapp_name: name })
 }
 
 export function trackWeb3Request(opts: {
@@ -284,6 +356,16 @@ export function trackWeb3Request(opts: {
   approved: boolean
   success: boolean
   chainId?: string
+  timedOut?: boolean
+  // Request start to sheet open (pre-sheet prep time)
+  sheetWaitMs?: number
+  // Request start to sheet close (includes time the user spends in the sheet)
+  sheetCloseMs?: number
+  sendMs?: number
+  txOutcome?: TransactionSendResult['outcome'] | 'failed'
+  exceededProviderTimeout?: boolean
+  broadcastMs?: number
+  broadcastResult?: 'hash' | 'rpc_error' | 'timeout' | 'network_error'
 }): void {
   capture('miniapp_web3_request', {
     request_type: opts.requestType,
@@ -293,6 +375,30 @@ export function trackWeb3Request(opts: {
     approved: opts.approved,
     success: opts.success,
     ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    ...(opts.timedOut === undefined ? {} : { timed_out: opts.timedOut }),
+    ...(opts.sheetWaitMs === undefined ? {} : { sheet_wait_ms: opts.sheetWaitMs }),
+    ...(opts.sheetCloseMs === undefined ? {} : { sheet_close_ms: opts.sheetCloseMs }),
+    ...(opts.sendMs === undefined ? {} : { send_ms: opts.sendMs }),
+    ...(opts.txOutcome === undefined ? {} : { tx_outcome: opts.txOutcome }),
+    ...(opts.exceededProviderTimeout === undefined ? {} : { exceeded_provider_timeout: opts.exceededProviderTimeout }),
+    ...(opts.broadcastMs === undefined ? {} : { broadcast_ms: opts.broadcastMs }),
+    ...(opts.broadcastResult === undefined ? {} : { broadcast_result: opts.broadcastResult }),
+  })
+}
+
+export function trackEvmBroadcastUnknownResolved(opts: {
+  dappUrl: string
+  dappName: string
+  chainId?: string
+  broadcastResult: 'timeout' | 'network_error'
+  landed: boolean
+}): void {
+  capture('miniapp_evm_broadcast_unknown_resolved', {
+    dapp_url: opts.dappUrl,
+    dapp_name: opts.dappName,
+    ...(opts.chainId ? { chain_id: opts.chainId } : {}),
+    broadcast_result: opts.broadcastResult,
+    landed: opts.landed,
   })
 }
 
@@ -300,10 +406,17 @@ export function trackChainSwitched(dappUrl: string, fromChainId: string, toChain
   capture('miniapp_chain_switched', { dapp_url: dappUrl, from_chain_id: fromChainId, to_chain_id: toChainId })
 }
 
+export function trackLightningPrep(url: string, name: string, stage: 'prepare' | 'recheck', outcome: 'ok' | 'timeout' | 'cancelled' | 'failed', durationMs: number, asset: string): void {
+  capture('miniapp_lightning_prep', { dapp_url: url, dapp_name: name, stage, outcome, duration_ms: durationMs, asset })
+}
+
 export async function identifyUser() {
   try {
     const { identifier } = await Device.getId()
     Posthog.identify({ distinctId: identifier, userProperties: { isDev } })
+    // $app_version is the native version; OTA bundles only show up here.
+    const { bundle } = await CapacitorUpdater.current()
+    await Posthog.register({ key: 'bundle_version', value: bundle.version })
   }
   catch (error) {
     logger.error('Failed to identify user in Posthog', error)

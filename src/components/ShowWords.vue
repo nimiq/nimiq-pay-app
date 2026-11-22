@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { PrivacyScreen } from '@capacitor/privacy-screen'
+import { PrivacyScreen } from '@capawesome/capacitor-privacy-screen'
 import { IonButton } from '@ionic/vue'
-import { ScreenshotEvent } from '@rdlabo/capacitor-screenshot-event'
-import { computed, onUnmounted, watch } from 'vue'
+import { computed, watch } from 'vue'
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -24,33 +24,31 @@ const words = computed(() => {
   return data
 })
 
-ScreenshotEvent.addListener('userDidTakeScreenshot', () => {
-  logger.log('Screenshot taken')
-  useToast().setToast({
-    message: i18n.t('Store screenshot safely'),
-    type: 'warning',
-    duration: 10000,
-  })
-})
+const { isIOS } = useDevice()
 
-watch(() => props.isVisible, (isVisible) => {
-  if (isVisible) {
-    PrivacyScreen.enable({
-      android: {
-        preventScreenshots: false,
-      },
+watch(() => props.isVisible, (isVisible, _, onCleanup) => {
+  if (!isVisible)
+    return
+
+  // enable() sets FLAG_SECURE on Android, which would block screenshots of the words there.
+  if (isIOS)
+    PrivacyScreen.enable()
+
+  const listener = PrivacyScreen.addListener('screenshotTaken', () => {
+    logger.log('Screenshot taken')
+    useToast().setToast({
+      message: i18n.t('Store screenshot safely'),
+      type: 'warning',
+      duration: 10000,
     })
-    ScreenshotEvent.startWatchEvent()
-  }
-  else {
-    PrivacyScreen.disable()
-    ScreenshotEvent.removeWatchEvent()
-  }
-})
-onUnmounted(() => {
-  PrivacyScreen.disable()
-  ScreenshotEvent.removeWatchEvent()
-})
+  })
+
+  onCleanup(() => {
+    if (isIOS)
+      PrivacyScreen.disable()
+    listener.then(handle => handle.remove())
+  })
+}, { immediate: true })
 </script>
 
 <template>

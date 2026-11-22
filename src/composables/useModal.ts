@@ -25,7 +25,6 @@ export enum Modal {
   Points = '@/modals/PointsModal.vue',
   MiniApps = '@/modals/MiniAppsModal.vue',
   MiniAppWarning = '@/modals/MiniAppWarningModal.vue',
-  Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
@@ -90,9 +89,6 @@ function _useModal() {
       case Modal.MiniAppWarning:
         component = defineAsyncComponent(() => import(Modal.MiniAppWarning))
         break
-      case Modal.Settings:
-        component = defineAsyncComponent(() => import(Modal.Settings))
-        break
       case Modal.Task:
         component = defineAsyncComponent(() => import(Modal.Task))
         break
@@ -148,7 +144,9 @@ function _useModal() {
       logger.log('closeModal', modal)
 
     if (modal) {
-      modal.canDismiss = true
+      // Only override boolean guards; a function canDismiss (flows) must run to start their close teardown.
+      if (typeof modal.canDismiss !== 'function')
+        modal.canDismiss = true
       await modal.dismiss(data, role)
     }
   }

@@ -3,6 +3,7 @@ import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
+import { MINI_APP_REQUEST_TIMEOUT_MS } from '@/composables/useMiniAppHost'
 import { i18n } from '@/i18n/i18n-setup'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
@@ -18,7 +19,10 @@ function resolveMiniAppLogo(url: string): string {
   return useMiniApps().iconForUrl(url) ?? getFaviconUrl(url)
 }
 
-export async function selectLightningAsset(app: { url: string, name: string, description?: string }): Promise<Asset | undefined> {
+export async function selectLightningAsset(app: { url: string, name: string, description?: string }, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS): Promise<Asset | undefined> {
+  const timeout = deadline - Date.now()
+  if (timeout <= 0)
+    return undefined
   const result = await ExtendedDialog.singleSelect({
     title: 'Pay Bitcoin Lightning',
     message: `${app.name} requests a Lightning payment${app.description ? ` for ${app.description}` : ''}. Choose what to spend.`,
@@ -28,11 +32,12 @@ export async function selectLightningAsset(app: { url: string, name: string, des
     ],
     okButtonTitle: 'Continue',
     cancelButtonTitle: 'Cancel',
+    timeout,
   })
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
 
-async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string): Promise<boolean> {
+async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string, timeout?: number): Promise<boolean> {
   const result = await ExtendedDialog.sheet({
     title,
     headerLogo: resolveMiniAppLogo(url),
@@ -40,6 +45,7 @@ async function confirmWidgetChange(url: string, title: string, rows: string[], c
     rows: rows.map(row => ({ title: row })),
     confirmButtonTitle,
     cancelButtonTitle: 'Not now',
+    timeout,
   })
   return result.confirmed
 }
@@ -48,7 +54,12 @@ async function confirmWidgetChange(url: string, title: string, rows: string[], c
  * Request user confirmation for sensitive mini-app operations.
  * Extracted from MiniAppsModal so it can be reused during session reconnection.
  */
-export async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
+export async function requestUserConfirmation(request: UserConfirmationRequest, deadline?: number): Promise<boolean> {
+  const timeout = (deadline ?? Date.now() + MINI_APP_REQUEST_TIMEOUT_MS) - Date.now()
+  if (timeout <= 0)
+    return false
+  // Asked from Home or the gallery, a widget sheet has no Mini App waiting for its answer.
+  const widgetTimeout = deadline === undefined ? undefined : timeout
   switch (request.type) {
     case 'accounts': {
       const appName = request.name || new URL(request.url).hostname
@@ -74,6 +85,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         ],
         confirmButtonTitle: 'Connect',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -83,7 +95,8 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
 
       const { formatCrypto } = useCurrencyFormatter()
       const amountNim = formatCrypto(amount, { currency: Crypto.NIM })
-      const feeNim = formatCrypto(fee, { currency: Crypto.NIM })
+      // Fees are often below 0.01 NIM, so show what gets signed instead of rounding to 0
+      const feeNim = formatCrypto(fee, { currency: Crypto.NIM, maxDecimals: DECIMALS[Crypto.NIM] })
 
       const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
         ? 'Staking Contract'
@@ -147,6 +160,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: 'Confirm',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -161,6 +175,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows: request.description ? [{ title: 'Invoice', value: request.description }] : [],
         confirmButtonTitle: 'Continue',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -195,6 +210,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: `Pay with ${asset}`,
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -291,6 +307,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: 'Confirm',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -310,6 +327,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         message: displayMessage,
         confirmButtonTitle: 'Sign',
         cancelButtonTitle: 'Reject',
+        timeout,
       })
       return result.confirmed
     }
@@ -344,6 +362,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows,
         confirmButtonTitle: action === 'add' ? 'Approve Network' : 'Switch Network',
         cancelButtonTitle: 'Cancel',
+        timeout,
       })
       return result.confirmed
     }
@@ -356,10 +375,11 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: 'Reason', value: request.reason },
+          { title: 'Reason', value: request.reason.length > 200 ? `${request.reason.slice(0, 197)}...` : request.reason },
         ],
         confirmButtonTitle: 'Share',
         cancelButtonTitle: 'Deny',
+        timeout,
       })
       return result.confirmed
     }
@@ -382,6 +402,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         ],
         confirmButtonTitle: 'Add to Home',
         cancelButtonTitle: 'Not now',
+        timeout: widgetTimeout,
       })
       return result.confirmed
     }
@@ -390,13 +411,13 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return confirmWidgetChange(request.url, `Let ${request.widgetName} send your addresses to ${new URL(request.url).hostname}?`, [
         '• With every refresh of this widget',
         '• Stop any time from its menu',
-      ], 'Allow')
+      ], 'Allow', widgetTimeout)
 
     case 'widgetName':
       return confirmWidgetChange(request.url, `Show ${request.address} as ${request.to}?`, [
         '• Shown on its widgets on Home',
         '• The address stays in each widget\'s menu',
-      ], 'Use this name')
+      ], 'Use this name', widgetTimeout)
 
     default:
       logger.error('Unknown confirmation request type:', request)

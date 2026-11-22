@@ -1,0 +1,216 @@
+import type { VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, ref } from 'vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import PinInput from '@/components/PinInput.vue'
+
+const state = vi.hoisted(() => ({
+  clearSession: vi.fn(async () => {}),
+  closeActiveMiniApp: vi.fn(async () => {}),
+  handleDeepLink: vi.fn(async () => {}),
+  decrypt: vi.fn(),
+  launchMiniApp: vi.fn(async () => {}),
+  replace: vi.fn(async () => {}),
+  session: undefined as { url: string, title: string } | undefined,
+  logger: { error: vi.fn(), log: vi.fn(), warn: vi.fn(), sendReport: vi.fn() },
+}))
+
+vi.mock('@ionic/vue', () => {
+  const passthrough = (tag: string) => defineComponent({ template: `<${tag}><slot /></${tag}>` })
+  return {
+    IonContent: passthrough('div'),
+    IonGrid: passthrough('div'),
+    IonHeader: passthrough('header'),
+    IonPage: passthrough('section'),
+    IonToolbar: passthrough('div'),
+  }
+})
+
+vi.mock('@capacitor/haptics', () => ({
+  Haptics: { notification: vi.fn() },
+  NotificationType: { Error: 'error' },
+}))
+vi.mock('@capacitor/keyboard', () => ({ Keyboard: { show: vi.fn() } }))
+vi.mock('vue-router', () => ({ useRouter: () => ({ replace: state.replace }) }))
+vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (s: string) => s } }))
+vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
+vi.mock('@/composables/useDevice', () => ({ useDevice: () => ({ isAndroid: false }) }))
+vi.mock('@/composables/useDecrypt', () => ({
+  useDecrypt: () => ({ decrypt: state.decrypt, decrypted: ref(false) }),
+}))
+vi.mock('@/composables/useMiniAppHost', () => ({ closeActiveMiniApp: state.closeActiveMiniApp }))
+vi.mock('@/lib/mini-app-launcher', () => ({ launchMiniApp: state.launchMiniApp }))
+vi.mock('@/lib/deep-link', () => ({ handleDeepLink: state.handleDeepLink }))
+vi.mock('@/stores/app', () => ({ useApp: () => ({ language: 'en', selectedFiat: 'USD' }) }))
+vi.mock('@/composables/useMiniAppSession', () => ({
+  clearSession: state.clearSession,
+  getSession: () => state.session,
+  hasPendingSession: () => false,
+  reconnectAndShow: vi.fn(async () => {}),
+}))
+vi.mock('@/stores/conn', () => ({ useConn: () => ({ dbExists: ref(true) }) }))
+vi.mock('@/composables/useBiometric', () => ({
+  useBiometric: () => ({
+    updateBiometryInfo: vi.fn(async () => {}),
+    addBiometricResumeListener: vi.fn(async () => {}),
+    removeBiometricResumeListener: vi.fn(),
+    getPinFromSecureStorage: vi.fn(async () => ({ success: false, error: null })),
+    isBiometricEnabled: ref(false),
+    isBiometricSupported: ref(false),
+    BiometryErrorType: { userCancel: 'userCancel' },
+  }),
+}))
+
+let wrapper: VueWrapper
+
+async function mountPinView() {
+  const { default: PinView } = await import('./PinView.vue')
+  // Attached so focus assertions can read document.activeElement.
+  wrapper = mount(PinView, { attachTo: document.body, global: { mocks: { $t: (s: string) => s } } })
+  await flushPromises()
+}
+
+// Types into PinInput's own input, so its done emit and loading state run as on device.
+async function typePin(pin = '1111') {
+  // Let PinInput's delayed clearInput() run first, otherwise the same value doesn't re-trigger done.
+  await vi.advanceTimersByTimeAsync(300)
+  await wrapper.find('input').setValue(pin)
+  await flushPromises()
+}
+
+// Same done emit a biometric result produces while a typed PIN is still unlocking.
+async function emitDone(pin = '1111') {
+  wrapper.findComponent(PinInput).vm.$emit('done', pin)
+  await flushPromises()
+}
+
+describe('pinView', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    state.decrypt.mockReset()
+    state.replace.mockClear()
+    state.closeActiveMiniApp.mockClear()
+    state.launchMiniApp.mockReset()
+    state.handleDeepLink.mockClear()
+    state.clearSession.mockClear()
+    state.session = undefined
+    sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('ignores a second submit while an unlock is running', async () => {
+    const { promise, resolve } = Promise.withResolvers<undefined>()
+    state.decrypt.mockReturnValue(promise)
+    await mountPinView()
+
+    await typePin()
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(true)
+    await emitDone()
+    expect(state.decrypt).toHaveBeenCalledTimes(1)
+
+    resolve(undefined)
+    await flushPromises()
+    expect(state.replace).toHaveBeenCalledTimes(1)
+    expect(state.replace).toHaveBeenCalledWith('/app')
+  })
+
+  it('submits a corrected PIN after the unlock timeout', async () => {
+    const wrong = Promise.withResolvers<string>()
+    state.decrypt.mockReturnValueOnce(wrong.promise).mockResolvedValueOnce(undefined)
+    await mountPinView()
+
+    await typePin('0000')
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(wrapper.text()).toContain('Something went wrong decrypting the database. Try reloading the app.')
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+
+    await typePin('1111')
+    expect(state.decrypt).toHaveBeenLastCalledWith('1111')
+    expect(state.replace).toHaveBeenCalledTimes(1)
+
+    // The timed-out attempt finishing late must not navigate or show its error.
+    wrong.resolve('Invalid PIN')
+    await flushPromises()
+    expect(state.replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows an error instead of a stuck spinner when navigation fails', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.replace.mockResolvedValueOnce(new Error('Navigation aborted') as never)
+    await mountPinView()
+
+    await typePin()
+    expect(wrapper.text()).toContain('Something went wrong decrypting the database. Try reloading the app.')
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+  })
+
+  it('closes the active Mini App when the PIN screen opens', async () => {
+    await mountPinView()
+
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+  })
+
+  it('closes the Mini App when its relaunch fails', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    state.launchMiniApp.mockRejectedValueOnce(new Error('open failed'))
+    await mountPinView()
+    state.closeActiveMiniApp.mockClear()
+
+    await typePin()
+
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+    expect(state.replace).toHaveBeenCalledWith('/app')
+  })
+
+  it('opens a deeplink held across the resume reload instead of the hidden Mini App', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    sessionStorage.setItem('deferredDeepLink', 'nimiqpay://miniapp?url=https%3A%2F%2Fother.example')
+    await mountPinView()
+    state.closeActiveMiniApp.mockClear()
+
+    await typePin()
+
+    expect(state.launchMiniApp).not.toHaveBeenCalled()
+    // Closed here, not left to the link: a Lightning link would otherwise orphan the hidden webview.
+    expect(state.clearSession).toHaveBeenCalledOnce()
+    expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
+    expect(state.replace).toHaveBeenCalledWith('/app')
+    expect(state.handleDeepLink).toHaveBeenCalledWith({ url: 'nimiqpay://miniapp?url=https%3A%2F%2Fother.example' })
+    expect(state.replace.mock.invocationCallOrder[0]).toBeLessThan(state.handleDeepLink.mock.invocationCallOrder[0])
+    expect(sessionStorage.getItem('deferredDeepLink')).toBeNull()
+  })
+
+  it('relaunches the hidden Mini App when no deeplink is held', async () => {
+    state.decrypt.mockResolvedValue(undefined)
+    state.session = { url: 'https://app.example', title: 'Example' }
+    await mountPinView()
+
+    await typePin()
+
+    expect(state.launchMiniApp).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://app.example', keepCookies: true }))
+    expect(state.handleDeepLink).not.toHaveBeenCalled()
+  })
+
+  it('clears the loading spinner when the same error repeats', async () => {
+    state.decrypt.mockResolvedValue('Invalid PIN')
+    await mountPinView()
+
+    await typePin()
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+    expect(document.activeElement).toBe(wrapper.find('input').element)
+
+    // Retry before PinView's 2s timer resets errorMsg, so the message is identical.
+    await typePin()
+    expect(state.decrypt).toHaveBeenCalledTimes(2)
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
+  })
+})

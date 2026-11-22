@@ -43,7 +43,7 @@ Payments don't spend from the user's normal account. They go through an HTLC tha
 3. A payment spends from the HTLC with an early-resolve proof signed by both the user and the cosigner. The cosigner never holds the user's keys.
 4. After the timeout the user can reclaim the funds alone. The app extends or recreates HTLCs before they expire.
 
-The cosigner is a WebSocket service (`src/composables/useApi.ts`). Its trusted public keys are in `src/lib/index.ts`. Sync logic lives in `src/stores/sync/`. The device debugging section of `CLAUDE.md` lists the log lines each sync step emits.
+The cosigner is a WebSocket service (`src/composables/useApi.ts`). Its trusted public keys are in `src/lib/index.ts`. Sync logic lives in `src/stores/sync/`. `docs/device-debugging.md` lists the log lines each sync step emits.
 
 ## USDT on Polygon
 

@@ -10,9 +10,6 @@ overrides:
   '@swc/wasm': 1.15.33
 
 patchedDependencies:
-  capacitor-extended-dialog@0.0.16:
-    hash: 3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb
-    path: patches/capacitor-extended-dialog@0.0.16.patch
   randombytes@2.1.0:
     hash: f5b3c7befe85e7d7bca014c768e4b1ee51688d5e69d8d710ce6f804b0598bbb2
     path: patches/randombytes@2.1.0.patch
@@ -42,9 +39,6 @@ importers:
       '@capacitor/preferences':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.5.2)
-      '@capacitor/privacy-screen':
-        specifier: ^2.0.1
-        version: 2.0.1(@capacitor/core@8.5.2)
       '@capacitor/screen-orientation':
         specifier: ^8.0.2
         version: 8.0.2(@capacitor/core@8.5.2)
@@ -60,12 +54,15 @@ importers:
       '@capawesome/capacitor-posthog':
         specifier: ^8.6.2
         version: 8.6.2(@capacitor/core@8.5.2)(posthog-js@1.436.1(react@19.3.0))
+      '@capawesome/capacitor-privacy-screen':
+        specifier: 0.1.3
+        version: 0.1.3(@capacitor/core@8.5.2)
       '@capgo/camera-preview':
         specifier: ^8.11.6
         version: 8.11.6(@capacitor/core@8.5.2)
       '@capgo/capacitor-inappbrowser':
-        specifier: ^8.21.1
-        version: 8.21.1(@capacitor/core@8.5.2)
+        specifier: ^8.27.1
+        version: 8.27.1(@capacitor/core@8.5.2)
       '@capgo/capacitor-updater':
         specifier: ^8.52.1
         version: 8.52.1(@capacitor/core@8.5.2)
@@ -87,9 +84,6 @@ importers:
       '@opengsn/common':
         specifier: ^2.2.6
         version: 2.2.6(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-      '@rdlabo/capacitor-screenshot-event':
-        specifier: ^8.0.0
-        version: 8.0.0(@capacitor/core@8.5.2)
       '@vueuse/components':
         specifier: ^14.4.0
         version: 14.4.0(vue@3.5.43(typescript@5.9.3))
@@ -109,8 +103,8 @@ importers:
         specifier: 5.7.1
         version: 5.7.1
       capacitor-extended-dialog:
-        specifier: ^0.0.16
-        version: 0.0.16(patch_hash=3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb)(@capacitor/core@8.5.2)
+        specifier: ^0.0.19
+        version: 0.0.19(@capacitor/core@8.5.2)
       capacitor-lockdown-mode:
         specifier: 0.0.1
         version: 0.0.1(@capacitor/core@8.5.2)
@@ -500,11 +494,6 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capacitor/privacy-screen@2.0.1':
-    resolution: {integrity: sha512-NDKXhf2tGMZu6JcVTDtwfUw0Y7BMBfcoinhxVqRhzHaBCO7HgXF7MRX2HLk0T+l4/2uzmRb3AvUKHiF4BW8drA==}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
-
   '@capacitor/push-notifications@8.1.3':
     resolution: {integrity: sha512-UlOCTS3uiw8ZUJ1rkFKJgoqPADipHDNn0lq5mNRwtXALVxQXIeIoRd3iqpzC+962R2LpCRJRkCTjPX2OHK3tBA==}
     peerDependencies:
@@ -547,13 +536,18 @@ packages:
       posthog-js:
         optional: true
 
+  '@capawesome/capacitor-privacy-screen@0.1.3':
+    resolution: {integrity: sha512-O1UK/2uae+Gx0c7XxrIpKAFPicbBOgUx3AKQJXfu+SSGDIBJljAKlkZQtPfPMXj8zd42xZGr+ApcbChFcLpSpw==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
   '@capgo/camera-preview@8.11.6':
     resolution: {integrity: sha512-zomk/0swWubDYkhiS9xp9RwPma63ZqCjtKkJqkuo3Glmc017/V8f1HMofuPogaxssyIqGeva7gclvohpC6YWcg==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capgo/capacitor-inappbrowser@8.21.1':
-    resolution: {integrity: sha512-JlgCbfm/sf2FACNbe11jj0j9XF/FWx8XL/PldGrwRfsAmnWK2Fcr4K5WG1KL19dtXr0FJwVyVwjkwygYJlFh5Q==}
+  '@capgo/capacitor-inappbrowser@8.27.1':
+    resolution: {integrity: sha512-KeE650hI7HWXbNP4kxKl8g+LZjIifDij8Cw1VAJGo0jBHm1P+2+t6tzeRk4gYh8+VKu6VYzH1pqDw91dZ6TAGg==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -1526,11 +1520,6 @@ packages:
 
   '@prettier/plugin-xml@2.2.0':
     resolution: {integrity: sha512-UWRmygBsyj4bVXvDiqSccwT1kmsorcwQwaIy30yVh8T+Gspx4OlC0shX1y+ZuwXZvgnafmpRYKks0bAu9urJew==}
-
-  '@rdlabo/capacitor-screenshot-event@8.0.0':
-    resolution: {integrity: sha512-jWVdX7bRMXXqqNNaTbLoksfdoW2xpZdG06noYits0a8RboxzcCXUzAIgL2iwYlH/2Oh10MdMKSbq+Rcu3666/g==}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
@@ -2862,8 +2851,8 @@ packages:
   caniuse-lite@1.0.30001814:
     resolution: {integrity: sha512-/Uaf1lAzr59XcMpW0o96WoEfr+VXK2OX4U9AgFoiSHsVJ4HppnIFUjtYzsyDH2+tgANaQb2/oxYGwCPapN1FpA==}
 
-  capacitor-extended-dialog@0.0.16:
-    resolution: {integrity: sha512-LtaRSFagXXJS6ytXb/tVS0rSgmg/bGDBDqKuob3Sh8m5LETYJZxn2VEwIInprvHtY6VmX5pBboIwubYUVWxmZA==}
+  capacitor-extended-dialog@0.0.19:
+    resolution: {integrity: sha512-iETJ4nfI2TGeczaEVsLFlNykMm5PmBUowDGN4AAh2no5eGQvZ3Mlf5ARsW543Dvg4Jg70F4y0qubOqcNeJH7oA==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -7486,10 +7475,6 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.5.2
 
-  '@capacitor/privacy-screen@2.0.1(@capacitor/core@8.5.2)':
-    dependencies:
-      '@capacitor/core': 8.5.2
-
   '@capacitor/push-notifications@8.1.3(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
@@ -7522,11 +7507,15 @@ snapshots:
     optionalDependencies:
       posthog-js: 1.436.1(react@19.3.0)
 
+  '@capawesome/capacitor-privacy-screen@0.1.3(@capacitor/core@8.5.2)':
+    dependencies:
+      '@capacitor/core': 8.5.2
+
   '@capgo/camera-preview@8.11.6(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
 
-  '@capgo/capacitor-inappbrowser@8.21.1(@capacitor/core@8.5.2)':
+  '@capgo/capacitor-inappbrowser@8.27.1(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
 
@@ -8574,10 +8563,6 @@ snapshots:
     dependencies:
       '@xml-tools/parser': 1.0.11
       prettier: 2.8.8
-
-  '@rdlabo/capacitor-screenshot-event@8.0.0(@capacitor/core@8.5.2)':
-    dependencies:
-      '@capacitor/core': 8.5.2
 
   '@rolldown/pluginutils@1.0.1': {}
 
@@ -9936,7 +9921,7 @@ snapshots:
 
   caniuse-lite@1.0.30001814: {}
 
-  capacitor-extended-dialog@0.0.16(patch_hash=3229a5fe70911360e13bf9a2cd7142d17526baaef9d7d4a9632110d30bb98ffb)(@capacitor/core@8.5.2):
+  capacitor-extended-dialog@0.0.19(@capacitor/core@8.5.2):
     dependencies:
       '@capacitor/core': 8.5.2
 

@@ -59,6 +59,8 @@ function makeState() {
   const getOrderById = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: undefined }))
   const getTransactionState = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: undefined }))
   const getContract = vi.fn((..._args: any[]): Promise<any> => Promise.reject(new Error('mocked fastspot failure')))
+  const getSwap = vi.fn((_id?: string): Promise<any> => Promise.resolve({ status: 'EXPIRED' }))
+  const setSwapPreimage = vi.fn((_hash?: string, _secret?: string): Promise<any> => Promise.resolve({}))
   const initRemoteSigner = vi.fn((): Promise<void> => Promise.resolve())
   const initPolygon = vi.fn((): Promise<void> => Promise.resolve())
   const resolveHomeBalanceState = vi.fn((): Promise<void> => Promise.resolve())
@@ -156,6 +158,8 @@ function makeState() {
     getOrderById,
     getTransactionState,
     getContract,
+    getSwap,
+    setSwapPreimage,
     initRemoteSigner,
     initPolygon,
     resolveHomeBalanceState,
@@ -181,7 +185,7 @@ export function remoteSignerFixture(address: string, balance: number, active = f
 
 export function stubNimiqGlobal() {
   vi.stubGlobal('Nimiq', {
-    Policy: { BLOCKS_PER_BATCH: 32, TRANSACTION_VALIDITY_WINDOW_BLOCKS: 120 },
+    Policy: { BLOCKS_PER_BATCH: 32, BLOCK_SEPARATION_TIME: 1000n, TRANSACTION_VALIDITY_WINDOW_BLOCKS: 120 },
     Address: {
       fromString: (value: string) => createAddress(value),
       fromUserFriendlyAddress: (value: string) => createAddress(value),
@@ -297,6 +301,8 @@ export function resetSyncState() {
     state.getOrderById,
     state.getTransactionState,
     state.getContract,
+    state.getSwap,
+    state.setSwapPreimage,
     state.initRemoteSigner,
     state.initPolygon,
     state.resolveHomeBalanceState,
@@ -359,6 +365,8 @@ export function resetSyncState() {
   state.getOrderById.mockResolvedValue({ data: undefined, error: undefined })
   state.getTransactionState.mockResolvedValue({ data: undefined, error: undefined })
   state.getContract.mockRejectedValue(new Error('mocked fastspot failure'))
+  state.getSwap.mockResolvedValue({ status: 'EXPIRED' })
+  state.setSwapPreimage.mockResolvedValue({})
   state.initRemoteSigner.mockResolvedValue(undefined)
   state.initPolygon.mockResolvedValue(undefined)
   state.resolveHomeBalanceState.mockResolvedValue(undefined)
@@ -376,6 +384,10 @@ vi.mock('@/composables/useApi', () => ({
 
 vi.mock('@/composables/useFastspotv1', () => ({
   useFastspotApiV1: vi.fn(() => Promise.resolve({ getContract: state.getContract })),
+}))
+
+vi.mock('@/composables/useFastspotV2', () => ({
+  useFastspotApiV2: vi.fn(() => Promise.resolve({ getSwap: state.getSwap })),
 }))
 
 vi.mock('@/composables/usePolygonSync', () => ({
@@ -403,6 +415,8 @@ vi.mock('@/lib/analytics', () => ({
   trackTopUpReceived: vi.fn(),
   trackFundsBlocked: vi.fn(),
   trackSyncSlow: vi.fn(),
+  trackStrayHtlcRecovery: vi.fn(),
+  trackSwapStep: vi.fn(),
 }))
 
 vi.mock('@/lib/utils', async importOriginal => ({
@@ -585,6 +599,7 @@ vi.mock('@/stores/transactions', () => {
     restorePendingOutgoingTransactions: state.restorePendingOutgoingTransactions,
     setSwapHtlcRefunded: state.setSwapHtlcRefunded,
     setPolygonSwapHtlcRefunded: state.setPolygonSwapHtlcRefunded,
+    setSwapPreimage: state.setSwapPreimage,
   }))
   return { useTransactions }
 })

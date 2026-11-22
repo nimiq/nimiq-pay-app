@@ -1,12 +1,15 @@
 import { ExtendedDialog } from 'capacitor-extended-dialog'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Asset } from '@/lib/assets'
 import { requestUserConfirmation } from './mini-app-confirmation'
 
 vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { sheet: vi.fn() } }))
+vi.mock('@/composables/useMiniAppHost', () => ({ MINI_APP_REQUEST_TIMEOUT_MS: 120_000 }))
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ error: vi.fn() }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ iconForUrl: () => undefined }) }))
 vi.mock('@/lib/site-metadata', () => ({ getFaviconUrl: () => '' }))
+vi.mock('@/stores/local-wallet', () => ({ useLocalWallet: () => ({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } }) }))
 
 describe('requestUserConfirmation Lightning payment', () => {
   beforeEach(() => {
@@ -95,5 +98,95 @@ describe('requestUserConfirmation widget', () => {
       confirmButtonTitle: 'Add to Home',
       cancelButtonTitle: 'Not now',
     }))
+  })
+})
+
+describe('requestUserConfirmation transaction', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+  })
+
+  it.each([
+    [499, '0.00499 NIM'],
+    [1499, '0.01499 NIM'],
+  ])('shows the exact staking fee for %d luna', async (fee, value) => {
+    await requestUserConfirmation({
+      type: 'transaction',
+      network: 'nimiq',
+      url: 'https://app.example',
+      name: 'Example',
+      data: { recipient: 'NQ00 STAKING', amount: 1_000_000, fee },
+      stakingData: { type: 'add-stake' },
+    } as any)
+
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      rows: expect.arrayContaining([{ title: 'Fee', value }]),
+    }))
+  })
+})
+
+describe('requestUserConfirmation device identifier', () => {
+  beforeEach(() => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+  })
+
+  it('truncates a long reason', async () => {
+    await requestUserConfirmation({ type: 'deviceIdentifier', url: 'https://app.example', reason: 'a'.repeat(10_000) })
+
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      rows: [{ title: 'Reason', value: `${'a'.repeat(197)}...` }],
+    }))
+  })
+
+  it('keeps a short reason intact', async () => {
+    await requestUserConfirmation({ type: 'deviceIdentifier', url: 'https://app.example', reason: 'Prevent duplicate rewards' })
+
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      rows: [{ title: 'Reason', value: 'Prevent duplicate rewards' }],
+    }))
+  })
+})
+
+describe('requestUserConfirmation deadline', () => {
+  const request = { type: 'deviceIdentifier', url: 'https://app.example', reason: 'Login' } as const
+
+  beforeEach(() => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+    vi.spyOn(Date, 'now').mockReturnValue(1_000)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('closes the sheet when the Mini App request times out', async () => {
+    await requestUserConfirmation(request, 31_000)
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({ timeout: 30_000 }))
+
+    await requestUserConfirmation(request)
+    expect(ExtendedDialog.sheet).toHaveBeenLastCalledWith(expect.objectContaining({ timeout: 120_000 }))
+  })
+
+  it.each([
+    { type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status' },
+    { type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status' },
+    { type: 'widgetName', url: 'https://swap.example/app', address: 'swap.example/app', to: 'SwapSpace' },
+  ] as const)('closes a $type sheet at it too', async (widgetRequest) => {
+    await requestUserConfirmation(widgetRequest, 31_000)
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({ timeout: 30_000 }))
+  })
+
+  it.each([
+    { type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status' },
+    { type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status' },
+  ] as const)('leaves a $type sheet opened from Home up until it is answered, as no Mini App waits for it', async (widgetRequest) => {
+    await requestUserConfirmation(widgetRequest)
+    expect(vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].timeout).toBeUndefined()
+  })
+
+  it('rejects without a sheet once the request timed out', async () => {
+    await expect(requestUserConfirmation(request, 1_000)).resolves.toBe(false)
+    expect(ExtendedDialog.sheet).not.toHaveBeenCalled()
   })
 })

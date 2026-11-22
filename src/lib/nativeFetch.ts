@@ -21,6 +21,11 @@ export async function nativeFetch(url: URL | RequestInfo, options?: RequestInit)
       method: options?.method,
       headers,
       data: requestBody,
+      // Without these a stalled server hangs the request forever. iOS uses
+      // `connectTimeout ?? readTimeout` as one idle timeout, so keep them equal.
+      // 30s stays under Fastspot's 60s nginx 504 and the 120s Mini App RPC deadline.
+      connectTimeout: 30_000,
+      readTimeout: 30_000,
       // webFetchExtra: options,
     })
   }

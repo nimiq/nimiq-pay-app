@@ -132,14 +132,16 @@ async function handleSubmit() {
         </template>
       </i18n-t>
       <!-- Text Input -->
-      <!-- eslint-disable-next-line vue/html-self-closing -->
+      <!-- Not self-closing: the i18n extractor would skip the rest of the template (see AGENTS.md) -->
+      <!-- eslint-disable vue/html-self-closing -->
       <textarea
         v-if="type === 'text-input'"
         ref="textareaField" :minlength="textareaMinLength" maxlength="1000"
         class="w-full h-full small:h-1/2 tall:h-3/5 p-4 placeholder:text-space/60 border-[1.5px] border-solid rounded-md border-space-space-400"
         :placeholder="$t('We value your opinion. Please enter at least ten characters.')"
         @focus="errorMsg = ''"
-      />
+      ></textarea>
+      <!-- eslint-enable vue/html-self-closing -->
       <!-- Radio Input -->
       <IonRadioGroup
         v-else-if="type === 'question'"

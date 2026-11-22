@@ -16,6 +16,12 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Use `pnpm` for dependencies and scripts.
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
+- Never self-close `<textarea>` in Vue templates. `pnpm i18n:extract` parses templates as HTML, reads everything after `<textarea />` as its text, and silently drops every later `$t` string in that file. Write `<textarea ...></textarea>` inside an `eslint-disable vue/html-self-closing` block (see `LiveChat.vue`).
+
+### CodeQL
+
+- CodeQL scans GitHub Actions, JavaScript/TypeScript, and Ruby. Swift and Java/Kotlin scanning are intentionally disabled to save CI minutes.
+- Keep GitHub default setup disabled when using the advanced CodeQL workflow; default setup rejects its result uploads.
 
 ### Mini Apps provider submodule
 
@@ -42,6 +48,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Vue & components
 
 - Ionic mounts modal contents before presenting the overlay. In `onMounted`, find the owning `ion-modal` from the component's DOM; `modalController.getTop()` excludes that still-hidden overlay and can return an underlying modal.
+- Ionic 8.8 sets `--ion-safe-area-top: 0px` on sheet modals and puts the root value in `--ion-modal-offset-top`. Heights computed on or inside a sheet must use `var(--ion-modal-offset-top, var(--ion-safe-area-top))`: plain `var(--ion-safe-area-top)` reads 0, so the sheet grows under the status bar or its content runs off the bottom (APP-328).
 - Sibling blocks of the same currency: wrap in one `<template v-if="asset === Asset.USDT">` / `<template v-if="asset === Asset.NIM">` instead of repeating the condition per block.
 - Reuse existing components before creating new ones.
 - `Flow.vue` keeps visited steps mounted in `historyStack`. When wiring step handlers (`done`, `select`, `skip`, `back`, `navigateTo`), always validate the emitting step is still the active step before changing flow state.
@@ -51,6 +58,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
 - Run tests only before committing or when debugging a test failure.
+- Vitest also discovers tests in nested `.claude/worktrees` checkouts. Exclude local agent directories with `pnpm test:unit run --exclude '**/.claude/**' --exclude '**/.codex/**'` when testing the current checkout.
 
 ## Nimiq client & sync
 
@@ -94,47 +102,16 @@ When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same v
 
 Release uses `proguard-android-optimize.txt`. With optimization on, R8 folds reads of annotation types that no rule keeps to `null`. Capacitor's `PluginHandle.getPluginAnnotation()` then returns null and `checkPermissions` crashes with an NPE. `android/app/proguard-rules.pro` keeps the Capacitor annotation interfaces; don't remove them. After R8 rule or plugin changes, install a release build and exercise permission flows (push toggle, biometrics, camera). Debug builds are not minified and won't show this.
 
+## OTA updates
+
+- Our update server's "no update" reply has no `kind`, so `CapacitorUpdater.getLatest()` rejects with `no_new_version_available` instead of resolving (APP-353). Treat that rejection as a normal result.
+- `set()` keeps any bundle the auto-update staged, and that bundle replaces the manual install on next background. Call `next()` with the same id first.
+- Auto-update downloads and stages a bundle soon after launch, even in `atBackground` mode. To test a manual download on a device, `reset()` to builtin and `delete()` the bundle first.
+
 ## CSS — teleported/portaled elements
 
 Anything teleported/portaled to `document.body` (Vue `<Teleport>`, Reka UI `DialogPortal`, etc.) renders invisible by default: `src/theme/variables.css` has `body>div:not(#app) { z-index: -100 }` (keeps the camera-preview web video behind the app), and the `:not(#app)` gives it id-level specificity that beats any utility class like `z-[99999]`. Set the z-index via inline `style` on the portaled element instead (inline wins; the rule has no `!important`) — see `MiniAppActionsSheet.vue`. Don't widen or delete the camera rule.
 
 ## Debugging on device
 
-For runtime/sync/HTLC bugs, on-device behavior questions, "why did it skip", "logs show X", or any "check the device":
-
-- Activate the **`debugging-capacitor`** skill (loads platform-specific log/debugger guidance for both iOS and Android — Capacitor projects only).
-- Pull persisted app logs (these contain `logger.log`/`logger.warn`/`logger.error` from `useLogger`):
-  ```
-  adb shell run-as com.nimiq.pay.debug cat cache/logs.txt > /tmp/nimiq-logs.txt
-  ```
-  iOS equivalent path: app sandbox `Library/Caches/logs.txt`. The persisted file is flushed every ~30s by `useLogger`, so the latest few seconds may only be visible via live logcat.
-- Live-stream WebView console + native:
-  ```
-  adb logcat -d --pid=$(adb shell pidof com.nimiq.pay.debug) | grep "Capacitor/Console"
-  ```
-- The SQLite DB at `databases/storageSQLite.db` is **encrypted** (CapacitorSQLite + SQLCipher) — do not try to `sqlite3` the file directly, it will return "file is not a database". Inspect state through logger output instead.
-
-### Grep templates for `cache/logs.txt`
-
-The sync/transactions/remote-signer paths emit emoji-prefixed events at every silent decision point. Use these to diagnose without re-reading the code:
-
-| Grep | What it tells you |
-|---|---|
-| `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransactions` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
-| `grep -E "♻️.*replacing"` | `addTransactions` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
-| `grep -E "🧹 filterDisplayableTxs dropped"` | Read-side filter (`selectTxs` / `refreshFromDb`) removed an own-HTLC `UserReceipt` already in DB. Lists hashes. |
-| `grep -E "🧹 filterUnseen"` | Recursive HTLC traversal filter dropped reclaim-to-local txs and dup hashes. Tags origin as `outer:<addr>` or `nested:<addr>`. |
-| `grep -E "📦 categorize"` | Per-remote-signer bucket distribution from `categorizeTransactions` (htlcExt/swap/withdraw/staking/unknown counts). Sanity-check whether traversal is finding what you expect. |
-| `grep -E "💸 toUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by remote-signer history sync. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |
-| `grep -E "🔄.*cache rebuilt"` | `getOurRemoteSignerAddresses` rebuilt its in-memory cache. Should fire after every `addRemoteSigner`/`updateRemoteSigner`/`discoverRemoteSignersFromBlockchain` insert. Missing rebuild = stale guard set. |
-| `grep -E "⚠️.*publicKey mismatch"` | Stored remote signer's cosigner publicKey ≠ API response's. Almost certainly cross-network stale state (testnet signer left over after switching to mainnet, or vice versa). |
-| `grep -E "All Transactions from Blockchain"` | The local HTLC history scan (`runScanLocalHtlcCreations`, shared by discovery and DB verification) got one history page. **Absence after `Verifying remote signers in DB` means the chain query stalled.** Each page times out after 30s in `waitForLocalHistory`: the history client is reset, the scan logs `getTransactionsByAddress failed` and discovery returns incomplete. |
-| `grep -E "📇 Cosigner"` | Cosigner `owner-wallets` listing, asked once per wallet and network per session (DevModal "Scan wallet history" reuses it). `listed HTLCs` gives the count fed to the stray sweep, which checks each one on chain before draining; `unavailable` means a failure or an old cosigner without the endpoint, retried after 5 min. |
-| `grep -E "🧬 Starting to sync wallets"` | `syncWallets` made it past `verifyRemoteSignersDb`. If missing, sync is wedged earlier and listeners + periodic refresh never started — that's why home appears empty. |
-| `grep -E "📚 Upsert-ing"` | DB write happening. Single writes log `Upsert-ing transaction`; history sync batches log `Upsert-ing <n> transactions` with the hashes. Sum both against the expected tx count to catch missing ingest. |
-
-### Common diagnoses
-
-- **Empty home list after fresh start**: check `🧬 Starting to sync wallets` is logged. If not, `syncWallets` is still waiting on `verifyRemoteSignersDb` → `discoverRemoteSignersFromBlockchain`. There is no timeout for the whole run. Each history page and each cosigner/chain lookup times out after 30s (`DISCOVER_TIMEOUT_MS`), so a stalled page ends the run as incomplete (`Remote signer discovery incomplete. Delaying reconciliation`) and sync continues. A wallet with many HTLCs can still take minutes, because metadata lookups run one by one. If history pages keep timing out on testnet, the light client history isn't ready yet: wait or reload.
-- **Stale tx duplicated as different titles** (e.g., same hash showing as both "Top-Up" and "Payment"): grep `♻️ replacing` for that hash. The dedup catches the in-memory dupe; the underlying multi-path write is the deeper bug — trace which paths hit the same hash via `🚫`/`💸`/`📦` logs.
-- **Cross-network leftover** (foreign address active in DB after switching networks): grep `⚠️ publicKey mismatch`. The DevModal switch flow purges `remote_signers`, `swap_htlcs`, `swap_quotes`, `transactions` — anything else network-scoped (e.g. KV keys) needs to be added there.
+For runtime/sync/HTLC bugs, on-device behavior questions, "why did it skip", "logs show X", or any "check the device": activate the `debugging-capacitor` skill and read `docs/device-debugging.md` (log commands, grep templates, common diagnoses).

@@ -52,10 +52,19 @@ vi.mock('./useLogger', () => ({ useLogger: () => ({ error: logged, log: logged, 
 
 const DEFINITION = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['medium'], content: { value: { text: 'Start' }, tone: 'neutral', rows: [] }, translations: {} }
 const SCOPE = 'https://swap.example/app/'
-// A clear goes by the site, so any URL of it.
-const PAGE = 'https://Swap.Example/app'
+// A clear goes by the site the Mini App was opened on.
+const SITE = 'https://swap.example'
+const found = { ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } }
 
-function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = false } = {}) {
+function slowSearch() {
+  let answer!: () => void
+  widgets.discover.mockReturnValueOnce(new Promise((resolve) => {
+    answer = () => resolve(found)
+  }))
+  return () => answer()
+}
+
+function createHost(confirm = vi.fn().mockResolvedValue(true)) {
   const listeners: Record<string, Array<(event: object) => void>> = {}
   const removes: Record<string, ReturnType<typeof vi.fn>> = {}
   const browser = {
@@ -70,10 +79,8 @@ function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = fal
     removeAllListeners: vi.fn(() => Promise.resolve()),
   }
   const config = { requestUserConfirmation: confirm, title: 'Swap', url: 'https://Swap.Example/app' }
-  const host = reconnect ? MiniAppHost.reconnect(browser as never, config, '0x1') : new MiniAppHost(browser as never, config)
-  const [handlers, options] = createBirpc.mock.calls.at(-1)! as any[]
-  const received = vi.fn()
-  options.on(received)
+  const host = new MiniAppHost(browser as never, config)
+  const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
   const handleRequest = handlers.handleRequest as (params: { network: string, name: string, params?: unknown }) => Promise<unknown>
   const emit = async (name: string, event: object) => {
     await Promise.resolve()
@@ -85,10 +92,9 @@ function createHost(confirm = vi.fn().mockResolvedValue(true), { reconnect = fal
     confirm,
     host,
     load: (id?: string) => emit('browserPageLoaded', { id }),
-    message: (id: string) => emit('messageFromWebview', { id, detail: { type: 'birpc' } }),
+    openPopup: (id: string) => emit('popupWindowOpened', { id }),
     navigate: (url: string, id?: string) => emit('urlChangeEvent', { id, url }),
     rawRequest: handleRequest,
-    received,
     removes,
     request: (name: string, params?: unknown) => handleRequest({ network: 'host', name, params }),
   }
@@ -110,7 +116,7 @@ describe('widgets.add', () => {
     const { confirm, request } = createHost()
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
     expect(widgets.discover).toHaveBeenCalledWith('https://Swap.Example/app')
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', widgetName: 'Swap status', description: 'Follows your swap.', url: 'https://Swap.Example/app' }))
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', widgetName: 'Swap status', description: 'Follows your swap.', url: 'https://Swap.Example/app' }), expect.any(Number))
     expect(widgets.add).toHaveBeenCalledWith(SCOPE, DEFINITION, [])
     expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_add', approved: true }))
   })
@@ -133,7 +139,7 @@ describe('widgets.add', () => {
     const { confirm, request } = createHost()
     confirm.mockResolvedValue(true)
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetName', to: 'New', address: 'swap.example/app' }))
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetName', to: 'New', address: 'swap.example/app' }), expect.any(Number))
     expect(widgets.approveName).toHaveBeenCalledWith(SCOPE, 'New')
     expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_name', approved: true }))
   })
@@ -181,12 +187,12 @@ describe('widgets.add', () => {
     confirm.mockResolvedValue(true)
     widgets.consentFor.mockReturnValueOnce({ widgetName: 'Swap status', appName: 'SwapSpace' } as never)
     await request('widgets.add', { id: 'swap' })
-    expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: 'SwapSpace' }))
+    expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: 'SwapSpace' }), expect.any(Number))
 
     const second = createHost()
     second.confirm.mockResolvedValue(true)
     await second.request('widgets.add', { id: 'swap' })
-    expect(second.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: undefined }))
+    expect(second.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'widget', appName: undefined }), expect.any(Number))
   })
 
   it('asks for the widget\'s permissions in the sheet and grants them on yes', async () => {
@@ -194,7 +200,7 @@ describe('widgets.add', () => {
     const { confirm, request } = createHost()
     confirm.mockResolvedValue(true)
     await request('widgets.add', { id: 'swap' })
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', permissions: ['addresses'] }))
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widget', permissions: ['addresses'] }), expect.any(Number))
     expect(widgets.add).toHaveBeenCalledWith(SCOPE, expect.anything(), ['addresses'])
   })
 
@@ -206,7 +212,7 @@ describe('widgets.add', () => {
     await request('widgets.add', { id: 'swap' })
     await request('widgets.add', { id: 'swap' })
     expect(confirm).toHaveBeenCalledTimes(1)
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions' }))
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ type: 'widgetPermissions' }), expect.any(Number))
     expect(widgets.grantPermissions).not.toHaveBeenCalled()
     confirm.mockResolvedValue(true)
     const again = createHost()
@@ -274,56 +280,47 @@ describe('widgets.add', () => {
     expect(browser.hide).not.toHaveBeenCalled()
   })
 
-  it('stops waiting for a sheet that never answers, so a sheet closed without a reply cannot hold back the next', async () => {
+  it('closes a widget sheet when the request that asked for it times out, however long it waited', async () => {
     vi.useFakeTimers()
     try {
-      const { confirm } = createHost()
-      confirm.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(true)
-      const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
-      void handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' }).catch(() => {})
-      const second = handlers.requestChainApproval({ chainId: '0xa', chainName: 'Optimism' }).catch(() => {})
-      await vi.advanceTimersByTimeAsync(1000)
-      expect(confirm).toHaveBeenCalledTimes(1)
-      await vi.advanceTimersByTimeAsync(60_000)
-      expect(confirm).toHaveBeenCalledTimes(2)
-      await second
+      vi.setSystemTime(1_000_000)
+      const { confirm, request } = createHost()
+      widgets.discover.mockReturnValueOnce(new Promise(resolve => setTimeout(resolve, 20_000, found)))
+      const adding = request('widgets.add', { id: 'swap' })
+      await vi.advanceTimersByTimeAsync(20_000)
+      await adding
+      expect(confirm.mock.calls[0]![1]).toBe(1_120_000)
     }
     finally {
       vi.useRealTimers()
     }
   })
 
-  it('opens no queued sheet once the Mini App has closed', async () => {
-    const first = held()
-    const { confirm, host, request } = createHost()
-    confirm.mockReturnValueOnce(first.promise).mockResolvedValue(true)
-    const adding = request('widgets.add', { id: 'swap' })
-    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+  it('opens a later request\'s sheet at once, as the dialog then closes the one on screen', async () => {
+    const { confirm } = createHost()
+    confirm.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(true)
     const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
-    const chain = handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' }).catch(() => 'refused')
-    await host.destroy()
-    first.answer(true)
-    await adding.catch(() => {})
-    expect(await chain).toBe('refused')
-    expect(confirm).toHaveBeenCalledTimes(1)
+    void handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' }).catch(() => {})
+    const second = handlers.requestChainApproval({ chainId: '0xa', chainName: 'Optimism' }).catch(() => {})
+    await flushPromises()
+    expect(confirm).toHaveBeenCalledTimes(2)
+    await second
   })
 
-  it('shows one sheet at a time, whatever asks for it', async () => {
-    const first = held()
-    const { confirm, host, request } = createHost()
-    confirm.mockReturnValueOnce(first.promise).mockResolvedValue(true)
-    const adding = request('widgets.add', { id: 'swap' })
-    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
-    const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
-    const chain = handlers.requestChainApproval({ chainId: '0x89', chainName: 'Polygon' })
-    await flushPromises()
-    expect(confirm).toHaveBeenCalledTimes(1)
-    first.answer(true)
-    await adding
-    await chain.catch(() => {})
-    expect(confirm).toHaveBeenCalledTimes(2)
-    expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'chain' }))
-    void host
+  it('takes a sheet that ran out of time for no answer, not a no', async () => {
+    vi.useFakeTimers()
+    try {
+      const { confirm, request } = createHost()
+      confirm.mockReturnValueOnce(new Promise(resolve => setTimeout(resolve, 120_000, false)))
+      const ignored = request('widgets.add', { id: 'swap' })
+      await vi.advanceTimersByTimeAsync(120_000)
+      await expect(ignored).resolves.toBe(false)
+      expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'widget_add', approved: false, timedOut: true }))
+      await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
+    }
+    finally {
+      vi.useRealTimers()
+    }
   })
 
   it('fails when the Mini App has all the widgets it may have on Home', async () => {
@@ -346,19 +343,10 @@ describe('widgets.setToken', () => {
     await request('widgets.setToken', { id: 'swap', token: 'opaque' })
     expect(widgets.setToken).toHaveBeenLastCalledWith(SCOPE, 'swap', 'opaque')
     await request('widgets.setToken', { id: 'swap', token: null })
-    expect(widgets.setToken).toHaveBeenLastCalledWith(PAGE, 'swap', null)
+    expect(widgets.setToken).toHaveBeenLastCalledWith(SITE, 'swap', null)
   })
 
   describe('so that a sign-out holds', () => {
-    const found = { ok: true, value: { scope: SCOPE, file: { widgets: [DEFINITION] } } }
-    const slowSearch = () => {
-      let answer!: () => void
-      widgets.discover.mockReturnValueOnce(new Promise((resolve) => {
-        answer = () => resolve(found)
-      }))
-      return () => answer()
-    }
-
     it('lets no earlier token land after a clear', async () => {
       const answer = slowSearch()
       const { request } = createHost()
@@ -366,7 +354,7 @@ describe('widgets.setToken', () => {
       await flushPromises()
       answer()
       await Promise.all(calls)
-      expect(widgets.setToken.mock.calls).toEqual([[SCOPE, 'swap', 'a'], [PAGE, 'swap', null]])
+      expect(widgets.setToken.mock.calls).toEqual([[SCOPE, 'swap', 'a'], [SITE, 'swap', null]])
     })
 
     it('lets no earlier state land after a switch', async () => {
@@ -408,7 +396,7 @@ describe('widgets.setToken', () => {
         await host.destroy()
         answer()
         await Promise.all(calls)
-        expect(applied.mock.calls).toEqual([[PAGE, 'swap', null]])
+        expect(applied.mock.calls).toEqual([[SITE, 'swap', null]])
         expect(widgets.update).not.toHaveBeenCalledWith(SCOPE, 'swap', expect.anything())
       })
 
@@ -421,14 +409,14 @@ describe('widgets.setToken', () => {
         expect(applied).not.toHaveBeenCalled()
         await host.destroy()
         await flushPromises()
-        expect(applied).toHaveBeenCalledWith(PAGE, 'swap', null)
+        expect(applied).toHaveBeenCalledWith(SITE, 'swap', null)
       })
 
       it('needs no widget file, so neither the network nor a block stops it', async () => {
         widgets.discover.mockResolvedValue({ ok: false, error: 'offline', transient: true })
         const { request } = createHost()
         await expect(request(name, { id: 'swap', ...nothing })).resolves.toBe(true)
-        expect(applied).toHaveBeenCalledWith(PAGE, 'swap', null)
+        expect(applied).toHaveBeenCalledWith(SITE, 'swap', null)
         expect(widgets.discover).not.toHaveBeenCalled()
       })
     })
@@ -466,7 +454,7 @@ describe('widgets.update, remove and list', () => {
   it('treats a missing state as "back to the resting state"', async () => {
     const { request } = createHost()
     await request('widgets.update', { id: 'swap' })
-    expect(widgets.update).toHaveBeenCalledWith(PAGE, 'swap', null)
+    expect(widgets.update).toHaveBeenCalledWith(SITE, 'swap', null)
   })
 
   it('answers false and an empty list when the Mini App has no widget file', async () => {
@@ -538,10 +526,6 @@ describe('concurrent widgets.add', () => {
   })
 })
 
-function discoverByPage() {
-  widgets.discover.mockImplementation(async (url: string) => ({ ok: true, value: { scope: `${new URL(url).origin}/app/`, file: { widgets: [DEFINITION] } } }))
-}
-
 describe('one site per session', () => {
   it('serves the launch URL before any event, and after a load that changed nothing', async () => {
     const { load, request } = createHost()
@@ -551,33 +535,50 @@ describe('one site per session', () => {
     expect(widgets.discover).toHaveBeenCalledWith('https://Swap.Example/app')
   })
 
-  it('adds under the www scope once a redirected launch has loaded', async () => {
-    discoverByPage()
-    const { confirm, load, navigate, request } = createHost()
+  it('never takes its site from another origin the launch went through', async () => {
+    const { load, navigate, request } = createHost()
     await navigate('https://www.swap.example/app/')
     await load()
+    await expectRefused(request)
+    await navigate('https://swap.example/app/next')
+    await load()
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
-    expect(widgets.discover).toHaveBeenCalledWith('https://www.swap.example/app/')
-    expect(widgets.add).toHaveBeenCalledWith('https://www.swap.example/app/', DEFINITION, [])
-    const [sheet] = confirm.mock.calls[0]!
-    expect(sheet.url).toBe('https://www.swap.example/app/')
+    await request('widgets.update', { id: 'swap', state: { content: { value: { text: 'Done' } } } })
+    expect(widgets.discover.mock.calls.map(([url]) => new URL(url as string).origin)).toEqual([SITE, SITE])
+    await request('widgets.setToken', { id: 'swap', token: null })
     await request('widgets.update', { id: 'swap', state: null })
-    expect(widgets.update).toHaveBeenCalledWith('https://www.swap.example/app/', 'swap', null)
-    await request('widgets.remove', { id: 'swap' })
-    expect(widgets.remove).toHaveBeenCalledWith('https://www.swap.example/app/', 'swap')
-    await request('widgets.list')
-    expect(widgets.listForScope).toHaveBeenCalledWith('https://www.swap.example/app/')
+    expect(widgets.setToken).toHaveBeenCalledExactlyOnceWith(SITE, 'swap', null)
+    expect(widgets.update).toHaveBeenLastCalledWith(SITE, 'swap', null)
+  })
+
+  it('still lands a clear asked for before the page left the site', async () => {
+    const answer = slowSearch()
+    const { navigate, request } = createHost()
+    const token = request('widgets.setToken', { id: 'swap', token: 'a' })
+    const clear = request('widgets.setToken', { id: 'swap', token: null })
+    await navigate('https://login.example/')
+    answer()
+    await Promise.all([token, clear])
+    expect(widgets.setToken).toHaveBeenLastCalledWith(SITE, 'swap', null)
+  })
+
+  it('asks nothing for a page that left the site while the widget file loaded', async () => {
+    const answer = slowSearch()
+    const { confirm, navigate, request } = createHost()
+    const adding = request('widgets.add', { id: 'swap' })
+    await navigate('https://other.example/')
+    answer()
+    await expect(adding).resolves.toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
   })
 
   it('refuses between the redirect\'s url change and its load', async () => {
-    discoverByPage()
     const { navigate, request } = createHost()
     await navigate('https://www.swap.example/app/')
     await expectRefused(request)
   })
 
   it('refuses all four requests on another origin, before and after its load', async () => {
-    discoverByPage()
     const { load, navigate, request } = createHost()
     await load()
     await navigate('https://other.example/page')
@@ -633,6 +634,7 @@ describe('one site per session', () => {
     await host.destroy()
     expect(removes.urlChangeEvent).toHaveBeenCalledTimes(1)
     expect(removes.browserPageLoaded).toHaveBeenCalledTimes(1)
+    expect(removes.popupWindowOpened).toHaveBeenCalledTimes(1)
     expect(removes.closeEvent).toHaveBeenCalledTimes(1)
   })
 })
@@ -649,70 +651,15 @@ describe('popups', () => {
     await expectRefused(request)
   })
 
-  it('refuses while a popup is open, even one on the session origin', async () => {
-    const { load, navigate, request } = createHost()
-    await navigate('https://swap.example/app/', 'main')
-    await load('main')
-    await navigate('https://swap.example/app/help', 'popup')
-    await load('popup')
-    await expectRefused(request)
-  })
-
-  it('refuses a request that arrives with a popup\'s first message', async () => {
-    const { load, message, navigate, received, request } = createHost()
-    await navigate('https://swap.example/app/', 'main')
-    await load('main')
-    await message('popup')
-    expect(received).toHaveBeenCalledWith({ type: 'birpc' })
-    await expectRefused(request)
-  })
-
   it('serves again once the popup has closed', async () => {
-    const { close, load, navigate, request } = createHost()
+    const { close, load, navigate, openPopup, request } = createHost()
     await navigate('https://swap.example/app/', 'main')
     await load('main')
-    await navigate('https://evil.example/', 'popup')
-    await load('popup')
+    await openPopup('popup')
     await expectRefused(request)
     await close('popup')
     await expect(request('widgets.list')).resolves.toEqual(['swap'])
     await expect(request('widgets.add', { id: 'swap' })).resolves.toBe(true)
-  })
-
-  it('treats events without an id as the main webview\'s', async () => {
-    const { load, navigate, request } = createHost()
-    await navigate('https://swap.example/app/', 'main')
-    await load('main')
-    await navigate('https://evil.example/')
-    await load()
-    await expectRefused(request)
-    await navigate('https://swap.example/app/')
-    await load()
-    await expect(request('widgets.list')).resolves.toEqual(['swap'])
-  })
-})
-
-describe('after a reconnect', () => {
-  it('refuses until the main webview loads a page on the launch origin', async () => {
-    discoverByPage()
-    const { load, navigate, request } = createHost(undefined, { reconnect: true })
-    await expectRefused(request)
-    await load('main')
-    await expectRefused(request)
-    await navigate('https://swap.example/app/next', 'main')
-    await expectRefused(request)
-    await load('main')
-    await expect(request('widgets.list')).resolves.toEqual(['swap'])
-    expect(widgets.discover).toHaveBeenLastCalledWith('https://swap.example/app/next')
-  })
-
-  it('stays refused after a load on another origin', async () => {
-    discoverByPage()
-    const { load, navigate, request } = createHost(undefined, { reconnect: true })
-    await navigate('https://evil.example/app/', 'main')
-    await load('main')
-    await expectRefused(request)
-    expect(widgets.discover).not.toHaveBeenCalled()
   })
 })
 

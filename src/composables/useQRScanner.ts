@@ -28,6 +28,16 @@ export enum QRScannerState {
   NoPermission = 'no-permission',
 }
 
+// start() spans permission prompts, camera start and the model download. Serialize start/stop so a stop requested
+// in that window (e.g. the step unmounting) runs after start() and releases the camera and scan loop it set up.
+// Module-wide because the native camera is a singleton: a closed scanner's late stop must not kill the next one's camera.
+let operationQueue = Promise.resolve()
+function enqueue(operation: () => Promise<void>) {
+  const queued = operationQueue.then(operation)
+  operationQueue = queued.catch(() => {})
+  return queued
+}
+
 export type QRData<T = QRDataFormat> = T extends QRDataFormat.PaymentRequest ? PaymentRequestData : string
 
 interface UseQRScannerOptions<T = QRDataFormat> {
@@ -55,8 +65,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       await onData(data)
       hasSuccessfulScan = true
       // Stop scanner after the success callback settles so failed callbacks can still retry within the same session.
-      if (state.value === QRScannerState.Scanning)
-        stop().catch(e => logger.error('Scanner cleanup failed', e))
+      stop().catch(e => logger.error('Scanner cleanup failed', e))
     }
     finally {
       isEmittingSuccessfulScan = false
@@ -149,29 +158,43 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
   const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
 
-  async function start() {
-    if (state.value === QRScannerState.Scanning)
-      return
+  function start() {
+    return enqueue(async () => {
+      if (state.value === QRScannerState.Scanning)
+        return
 
-    hasSuccessfulScan = false
-    isEmittingSuccessfulScan = false
-    const video = await setUpCameraFeed()
-    if (!hasPermission.value) {
-      state.value = QRScannerState.NoPermission
-      useToast().setToast({ message: i18n.t('No permission to use the camera'), type: 'error' })
-      logger.error('No permission to use the camera')
-      return
-    }
-    await startScan({ video })
-    state.value = QRScannerState.Scanning
+      hasSuccessfulScan = false
+      isEmittingSuccessfulScan = false
+      try {
+        const video = await setUpCameraFeed()
+        if (!hasPermission.value) {
+          state.value = QRScannerState.NoPermission
+          useToast().setToast({ message: i18n.t('No permission to use the camera'), type: 'error' })
+          logger.error('No permission to use the camera')
+          return
+        }
+        await startScan({ video })
+        state.value = QRScannerState.Scanning
+      }
+      catch (e) {
+        // stop() skips non-scanning states, so release here what was acquired before the failure (e.g. play() aborted
+        // by unmount after getUserMedia, or the model download failing after the native camera started).
+        await Promise.all([tearDownCameraFeed(), stopScan()])
+        throw e
+      }
+    })
   }
 
-  async function stop() {
-    state.value = QRScannerState.Idle
-    await Promise.all([
-      tearDownCameraFeed(),
-      stopScan(),
-    ])
+  function stop() {
+    return enqueue(async () => {
+      if (state.value !== QRScannerState.Scanning)
+        return
+      state.value = QRScannerState.Idle
+      await Promise.all([
+        tearDownCameraFeed(),
+        stopScan(),
+      ])
+    })
   }
 
   // setDummyData is only used in development mode to test the scanner. In production, it's a no-op.

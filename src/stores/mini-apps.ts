@@ -2,7 +2,7 @@ import type { WidgetSize } from '@/lib/mini-app-widgets'
 import { CapacitorHttp } from '@capacitor/core'
 import { computedAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, shallowRef } from 'vue'
 import { isDev } from '@/lib'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { fetchBestIcon, fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
@@ -125,8 +125,15 @@ export const useMiniApps = defineStore('mini-apps', () => {
   )
   const bestIconInFlight = new Set<string>()
 
-  // Fetch remote apps, update cache on success, fall back to cache on failure
-  const remoteApps = computedAsync<RemoteMiniApp[]>(async () => {
+  // Fresh catalog from this session's fetch. Undefined until one succeeds, so the modal can
+  // retry after a failed launch fetch instead of staying empty until restart (APP-314).
+  const fetchedRemoteApps = shallowRef<RemoteMiniApp[]>()
+  const isFetchingRemoteApps = ref(false)
+
+  async function loadRemoteApps() {
+    if (isFetchingRemoteApps.value || fetchedRemoteApps.value)
+      return
+    isFetchingRemoteApps.value = true
     try {
       const response = await CapacitorHttp.get({
         url: REMOTE_JSON_URL,
@@ -138,13 +145,19 @@ export const useMiniApps = defineStore('mini-apps', () => {
       if (response.status >= 200 && response.status < 300) {
         const data = response.data as RemoteMiniAppsResponse
         const apps = [...tagType(data.nimiq, 'nimiq'), ...tagType(data.evm, 'evm')]
+        fetchedRemoteApps.value = apps
         cachedRemoteApps.value = apps
-        return apps
       }
     }
-    catch { /* silent fallback to cache */ }
-    return cachedRemoteApps.value ?? []
-  }, [])
+    catch { /* keep showing the cached list */ }
+    finally {
+      isFetchingRemoteApps.value = false
+    }
+  }
+  void loadRemoteApps()
+
+  // Reactive on the cache, so a cached list shows even when it loads from Preferences after the fetch fails.
+  const remoteApps = computed<RemoteMiniApp[]>(() => fetchedRemoteApps.value ?? cachedRemoteApps.value ?? [])
 
   const baseDApps = computed<BaseDApp[]>(() => {
     const devApp: BaseDApp[] = isDev && !isMockEnabled
@@ -158,7 +171,8 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return [...devApp, ...remoteApps.value.map(toBaseDApp)]
   })
 
-  const isLoading = computed(() => baseDApps.value.length === 0)
+  const isLoading = computed(() => baseDApps.value.length === 0 && isFetchingRemoteApps.value)
+  const hasLoadError = computed(() => baseDApps.value.length === 0 && !isFetchingRemoteApps.value && !fetchedRemoteApps.value)
 
   const recentlyViewedDApps = useStorageAsync<RecentDApp[]>(
     'recentlyViewedDApps',
@@ -183,6 +197,11 @@ export const useMiniApps = defineStore('mini-apps', () => {
     if (deviceIdConsent.value[origin])
       return
     deviceIdConsent.value = { ...deviceIdConsent.value, [origin]: true }
+  }
+
+  function revokeDeviceIdConsent(origin: string) {
+    const { [origin]: _, ...rest } = deviceIdConsent.value
+    deviceIdConsent.value = rest
   }
 
   // In-memory description cache for recently-viewed dApps; keyed by raw stored url.
@@ -360,6 +379,8 @@ export const useMiniApps = defineStore('mini-apps', () => {
     nonFeaturedDApps,
     popularDApps,
     isLoading,
+    hasLoadError,
+    loadRemoteApps,
     searchedDescriptions,
     descriptionTexts,
     ensureDescription,
@@ -371,7 +392,9 @@ export const useMiniApps = defineStore('mini-apps', () => {
     iconForUrl,
     ensureBestIcon,
     getMiniAppReportUrl,
+    deviceIdConsent,
     hasDeviceIdConsent,
     grantDeviceIdConsent,
+    revokeDeviceIdConsent,
   }
 })

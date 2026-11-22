@@ -16,6 +16,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
+import { DEFERRED_DEEPLINK_KEY } from '@/lib/app-resume'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { installNodeGlobals } from '@/lib/node-globals'
 import { isWasmAvailable } from '@/lib/utils'
@@ -121,11 +122,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   // but no consensus/sync is started.
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
-  identifyUser() // Identify user as early as possible to capture all analytics events, including those during app initialization
-  if (!isAlertRoute)
-    trackCurrentAppOpen('cold_start')
+  // Lets device tests prove which source is running (.claude/skills/ship/scripts/verify-build.sh). One string, because
+  // the log file writes each arg on its own line. Every build logs it, so the newest line always describes the live JS.
+  useLogger('build').log(`🏷️ Build stamp ${__BUILD_STAMP__}`)
+  // Identify user as early as possible to capture all analytics events, including those during app initialization.
+  // app_opened waits so the first launch after an OTA reports the new bundle_version, not the previous one.
+  void identifyUser().then(() => {
+    if (!isAlertRoute)
+      trackCurrentAppOpen('cold_start')
+  })
   if (!isAlertRoute) {
-    useMiniApps() // computedAsync triggers description fetching on store creation
+    useMiniApps() // store creation starts the Mini Apps catalog fetch
   }
 
   const { isWeb } = useDevice()
@@ -137,6 +144,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       // Check if setup is completed
       if (isWebAndNoPin || isMobileAndNoDb) {
+        // Only PinView replays a link held across the resume reload; drop it so it can't fire after onboarding
+        sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
         if (to.name === 'Setup')
           return next()
         return next({ name: 'Setup', replace: true })

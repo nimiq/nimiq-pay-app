@@ -42,6 +42,8 @@ function useCameraFeedMobile() {
 
 function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
   const hasPermission = ref(false)
+  // Kept outside the template ref: a stop queued behind start() can run after unmount, when the ref is already null.
+  let stream: MediaStream | undefined
 
   function getVideoElement() {
     const video = cameraFeedContainer.value.querySelector('video')
@@ -52,7 +54,6 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
 
   async function setUpCameraFeed() {
     const video = getVideoElement()
-    let stream
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
@@ -76,7 +77,8 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
   }
 
   async function tearDownCameraFeed() {
-    (getVideoElement().srcObject as MediaStream)?.getTracks().forEach(track => track.stop())
+    stream?.getTracks().forEach(track => track.stop())
+    stream = undefined
   }
 
   return {

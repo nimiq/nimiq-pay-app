@@ -44,10 +44,6 @@ const config: CapacitorConfig = {
     LocalNotifications: {
       smallIcon: 'ic_stat_name'
     },
-    PrivacyScreen: {
-      enable: false,
-      preventScreenshots: false
-    },
     Posthog: {
       apiKey: 'phc_Ar1vGHvWGTZDBG4m5VM9KkpOW6lFkV3fVqUocmoJ2DR',
       host: 'https://eu.i.posthog.com',

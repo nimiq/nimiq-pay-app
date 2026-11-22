@@ -6,19 +6,20 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
+import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { trackCurrentAppOpen } from '@/lib/analytics'
-import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
+import { DEFERRED_DEEPLINK_KEY, shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { isDev } from '@/lib/index'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
@@ -37,6 +38,9 @@ onLongPress(
 )
 
 onMounted(async () => {
+  // The native loading sheet survives a webview reload. Native builds without this method reject.
+  ExtendedDialog.dismissLoading().catch(() => {})
+
   try {
     const { version, build } = await App.getInfo()
     logger.log(`Nimiq Pay v${version} (build ${build})`)
@@ -76,12 +80,24 @@ onMounted(async () => {
   }
 })
 
+let lastPauseTimestamp = 0
+// Stays true until the page reloads: InAppBrowser.close() fires its own pause/resume on Android,
+// and those later resumes must not start sync on the page being torn down
+let isReloadingAfterResume = false
+
 App.addListener('appUrlOpen', async (event) => {
+  // Hold a link that wakes the app until resume decides on the reload (iOS fires appUrlOpen first). The
+  // reload drops every plugin listener (Capacitor resets the bridge on navigation), so a Mini App launched
+  // on this page never reports it loaded and gets closed. Resume opens the link if it doesn't reload;
+  // otherwise PinView opens it after unlock on the new page.
+  if (isReloadingAfterResume || lastPauseTimestamp !== 0) {
+    logger.log('Deeplink held until resume')
+    sessionStorage.setItem(DEFERRED_DEEPLINK_KEY, event.url)
+    return
+  }
   const { handleDeepLink } = await import('@/lib/deep-link')
   await handleDeepLink(event)
 })
-
-let lastPauseTimestamp = 0
 App.addListener('pause', () => {
   const { isAppInBackground } = storeToRefs(useLocks())
   lastPauseTimestamp = Date.now()
@@ -89,17 +105,20 @@ App.addListener('pause', () => {
 })
 
 App.addListener('resume', async () => {
+  if (isReloadingAfterResume)
+    return
   const { reopenMiniAppWebviewAfterResume } = storeToRefs(useApp())
   const now = Date.now()
   const timeInBackground = now - lastPauseTimestamp
   logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
   // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
   if (shouldReloadAppAfterBackground(lastPauseTimestamp, now)) {
+    isReloadingAfterResume = true
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
 
     // If a mini-app webview is open, keep it only when auto-reopen is enabled
-    const { getActiveMiniAppSession } = await import('@/composables/useMiniAppHost')
+    const { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp } = await import('@/composables/useMiniAppHost')
     const { clearSession, saveSession } = await import('@/composables/useMiniAppSession')
     const activeSession = getActiveMiniAppSession()
     const preserveSession = shouldPreserveMiniAppSession({
@@ -109,7 +128,7 @@ App.addListener('resume', async () => {
 
     if (preserveSession && activeSession) {
       try {
-        await InAppBrowser.hide()
+        await hideActiveMiniApp()
         saveSession(activeSession)
         logger.log('Mini-app webview hidden, session saved for reconnection after PIN')
       }
@@ -117,7 +136,7 @@ App.addListener('resume', async () => {
         logger.error('Failed to hide webview, falling back to close:', err)
         await clearSession()
         try {
-          await InAppBrowser.close()
+          await closeActiveMiniApp()
         }
         catch {}
       }
@@ -127,13 +146,26 @@ App.addListener('resume', async () => {
       if (activeSession && !reopenMiniAppWebviewAfterResume.value)
         logger.log('Mini-app webview auto-reopen disabled, closing webview on app reload')
       try {
-        await InAppBrowser.close()
+        await closeActiveMiniApp()
       }
       catch {}
     }
 
     lastPauseTimestamp = 0
+    // go(0) only schedules the reload; stop here so resume sync doesn't run on the dying page
     router.go(0)
+    return
+  }
+  // This pause is used up: a deeplink arriving later in the foreground opens right away
+  lastPauseTimestamp = 0
+  // While locked, PinView opens the held link after unlock. Taking it here would park it in memory,
+  // and a later resume reload before unlock would lose it.
+  const heldDeepLink = useDecrypt().decrypted.value ? sessionStorage.getItem(DEFERRED_DEEPLINK_KEY) : null
+  if (heldDeepLink) {
+    sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
+    void import('@/lib/deep-link')
+      .then(({ handleDeepLink }) => handleDeepLink({ url: heldDeepLink }))
+      .catch(err => logger.error('Held deeplink failed:', err))
   }
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')

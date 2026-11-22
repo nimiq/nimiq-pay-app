@@ -1,7 +1,7 @@
 {
   "verbose": 2,
   "hooks": {
-    "before:init": "node -e \"if (!process.env.GITHUB_TOKEN?.trim()) { console.error('GITHUB_TOKEN is required to publish the release and upload assets. Set it in .env or the environment.'); process.exit(1); }\"",
+    "before:init": "node -e \"const missing = ['GITHUB_TOKEN', 'BROWSERSTACK_USERNAME', 'BROWSERSTACK_ACCESS_KEY', 'APP_IDENTIFIER', 'GOOGLE_PLAY_JSON_KEY_FILE'].filter(name => !process.env[name]?.trim()); for (const name of missing) console.error(name + ' is required for the release. Set it in .env or the environment.'); process.exit(missing.length ? 1 : 0);\"",
     "after:bump": [
       "node scripts/generate-changelog.mjs ${version}",
       "pnpm build:ios",

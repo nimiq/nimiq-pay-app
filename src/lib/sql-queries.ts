@@ -59,6 +59,7 @@ export enum SQLQuery {
   SetSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
   SetTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
   SetTxHidden = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.hidden', json(?)) WHERE hash = ?`,
+  GetSwapTxHashByHtlc = `SELECT hash FROM transactions WHERE recipient = ? AND transfer = '${Transfer.UserPaymentToAtomicSwap}' LIMIT 1`, // eslint-disable-line ts/prefer-literal-enum-member
   SetSwapTxRefundedByHtlc = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE recipient = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',
@@ -129,6 +130,13 @@ export enum SQLQuery {
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
   PurgeRemoteSigners = 'DELETE FROM remote_signers',
+  // Root HTLC creations whose whole extension chain is drained and fully walked. A remote_signers
+  // row can't say this: it is written at send time and before the walk reads extensions.
+  CreateSettledHtlcCreationsTable = 'CREATE TABLE IF NOT EXISTS settled_htlc_creations (transaction_hash TEXT PRIMARY KEY)',
+  GetSettledHtlcCreations = 'SELECT transaction_hash FROM settled_htlc_creations',
+  InsertSettledHtlcCreation = 'INSERT OR IGNORE INTO settled_htlc_creations (transaction_hash) VALUES (?)',
+  DeleteSettledHtlcCreation = 'DELETE FROM settled_htlc_creations WHERE transaction_hash = ?',
+  PurgeSettledHtlcCreations = 'DELETE FROM settled_htlc_creations',
 
   // These queries are used to ensure the correct state of the remote signers
   GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
@@ -148,9 +156,14 @@ export enum SQLQuery {
   AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
   AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
   BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
+  AddHtlcIdRecoveryFailedColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id_recovery_failed INTEGER',
+  // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; later rows and the sweep use ms.
+  NormalizeLegacyPolygonSwapHtlcTimeout = 'UPDATE swap_htlcs SET timeout_block = timeout_block * 1000 WHERE htlc_id IS NULL AND address LIKE \'0x%\' AND timeout_block < 100000000000',
   // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
   BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  // Rows restored from chain have no Fastspot swap id; an existing row keeps its own.
+  InsertRecoveredSwapHtlc = 'INSERT OR IGNORE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, \'\', \'recovered\')',
   InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
   ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
@@ -160,10 +173,12 @@ export enum SQLQuery {
   SetNativeSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = ? WHERE address = ?',
   SetSwapHtlcRefundAttempt = 'UPDATE swap_htlcs SET refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
   ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
+  SetRecoveredSwapHtlcId = 'UPDATE swap_htlcs SET htlc_id = ?, tx_hash = COALESCE(tx_hash, address) WHERE address = ? AND htlc_id IS NULL',
+  SetSwapHtlcIdRecoveryFailed = 'UPDATE swap_htlcs SET htlc_id_recovery_failed = 1 WHERE address = ? AND htlc_id IS NULL',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
   DeleteSwapHtlcByTxHash = 'DELETE FROM swap_htlcs WHERE address = ? OR tx_hash = ?',
   GetSwapHtlcByAddress = 'SELECT * FROM swap_htlcs WHERE address = ? OR htlc_id = ? LIMIT 1',
-  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
+  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ? AND htlc_id_recovery_failed IS NULL',
   GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? OR tx_hash = ? LIMIT 1',
   PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
@@ -304,6 +319,26 @@ export const migrations: Migration[] = [
     toVersion: 13,
     statements: [
       SQLQuery.BackfillHtlcHistoryChecked,
+    ],
+  },
+  {
+    toVersion: 14,
+    statements: [
+      SQLQuery.AddHtlcIdRecoveryFailedColumnToSwapHtlcs,
+      SQLQuery.NormalizeLegacyPolygonSwapHtlcTimeout,
+    ],
+  },
+  {
+    toVersion: 15,
+    statements: [
+      SQLQuery.CreateSettledHtlcCreationsTable,
+    ],
+  },
+  {
+    // Chains settled before swap HTLC restore existed must be walked once more to restore their swap rows.
+    toVersion: 16,
+    statements: [
+      SQLQuery.PurgeSettledHtlcCreations,
     ],
   },
 ]

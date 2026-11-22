@@ -6,6 +6,7 @@ interface ImportMetaEnv {
 }
 
 declare const __VITE_SERVER_IP__: string
+declare const __BUILD_STAMP__: string
 
 declare const __ENABLE_BTC_LN__: boolean
 declare const __ENABLE_BLUECODE__: boolean

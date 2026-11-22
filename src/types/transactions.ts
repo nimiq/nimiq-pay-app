@@ -272,6 +272,18 @@ export type StakingData = {
   type: 'remove-stake'
 }
 
+/**
+ * Remove-stake and staking signals move no funds out of the wallet, and the staking contract only checks the staker's
+ * proof, so the local wallet (the staker) sends them. Staking can drain the HTLC, which the chain then prunes, so an
+ * HTLC sender would be invalid. Signals with a fee the local balance cannot cover stay on the HTLC.
+ */
+export function isSentByLocalWallet(stakingData: StakingData, fee: number, localBalance: number) {
+  if (stakingData.type === 'remove-stake')
+    return true
+  const isSignal = stakingData.type === 'set-active-stake' || stakingData.type === 'retire-stake' || stakingData.type === 'update-staker'
+  return isSignal && fee <= localBalance
+}
+
 export type StakingTransaction = BaseTransaction & {
   transfer: Transfer.Staking
   title: TransactionTitle
@@ -380,7 +392,7 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 }
 
 export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'fee' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
-export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
+export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'fee' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
 
 export type PartialSendTxArgs
   = | PartialUserTxArgs
