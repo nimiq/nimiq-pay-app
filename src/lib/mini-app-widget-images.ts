@@ -60,10 +60,6 @@ function imageFormat(bytes: Uint8Array): ImageFormat | undefined {
 
 /** From the bytes rather than what the server calls them: only these three formats, which cannot run anything, reach the app. */
 export function readWidgetImage(base64: string, sha256: string): { ok: true, value: string } | { ok: false, error: string } {
-  const tooLarge = { ok: false, error: `the image is larger than ${WIDGET_LIMITS.imageBytes} bytes` } as const
-  // A rough check first: a native response has no size cap, and decoding a large one would hold up the app.
-  if (base64.length * 3 / 4 > WIDGET_LIMITS.imageBytes * 1.1)
-    return tooLarge
   let binary: string
   try {
     binary = atob(base64)
@@ -72,7 +68,7 @@ export function readWidgetImage(base64: string, sha256: string): { ok: true, val
     return { ok: false, error: 'the image is not base64' }
   }
   if (binary.length > WIDGET_LIMITS.imageBytes)
-    return tooLarge
+    return { ok: false, error: `the image is larger than ${WIDGET_LIMITS.imageBytes} bytes` }
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++)
     bytes[i] = binary.charCodeAt(i)
@@ -84,5 +80,5 @@ export function readWidgetImage(base64: string, sha256: string): { ok: true, val
   const { type, width, height } = format
   if (!width || !height || width > WIDGET_LIMITS.imagePixels || height > WIDGET_LIMITS.imagePixels)
     return { ok: false, error: `the image is ${width} × ${height}, at most ${WIDGET_LIMITS.imagePixels} × ${WIDGET_LIMITS.imagePixels} is allowed` }
-  return { ok: true, value: `data:${type};base64,${base64.replace(/\s/g, '')}` }
+  return { ok: true, value: `data:${type};base64,${base64}` }
 }

@@ -233,16 +233,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       // Above every stored one, whatever the clock says, so that an answer under way never matches a later revision.
       lastRevision = Math.max(lastRevision, ...all.map(w => w.revision ?? 0))
       ready.value = true
-      // An unreadable list names no image, and would take them all.
-      if (widgetsUnreadable)
-        return
-      // A delete can fail or die with the app, and a token's id is never named again.
-      useConn().query<{ key: string }[]>(SQLQuery.SelectKvKeysLike, [imageKey('%')]).then((rows) => {
-        for (const id of (rows ?? []).map(({ key }) => key.slice(imageKey('').length))) {
-          if (!isBusy(id))
-            freeIfUnwanted(id)
-        }
-      }).catch(error => logger.warn('Could not look for widget images to free', error))
+      void keepImages()
     },
   })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
@@ -282,18 +273,18 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const galleryFiles = reactive(new Map<string, WidgetFile | null | 'loading'>())
   // The gallery and `add` can use a file long after it was read.
   const filesReadAt = new Map<string, number>()
-  // Kept images by copy, read from the encrypted database. Previews by image id, only while the gallery is open.
+  // Kept images by copy, only those cards draw: all of them at 1 MB each would fill the memory. Previews by image id, only while the gallery is open.
   const images = reactive(new Map<string, string>())
   const previews = reactive(new Map<string, string>())
-  // Not in the database, so that a failing one is not looked up again at every tick.
-  const absentImages = new Set<string>()
+  const savedImages = new Set<string>()
+  let listing: Promise<boolean> | undefined
   const reading = new Set<string>()
   const downloading = new Set<string>()
-  // By pin, to stop one whose token went: during a preflight, the token itself hasn't left yet.
-  const tokenRequests = new Map<string, AbortController>()
+  // By pin, to stop one no widget names any more or whose token went: during a preflight, the token itself hasn't left yet.
+  const requests = new Map<string, AbortController>()
   // Saved instead of downloaded, so that they outlast the gallery.
   const takenPreviews = new Map<string, string>()
-  let previewSession = 0
+  let previewRequests = new AbortController()
   const discoveries = new Map<string, Promise<FetchOutcome<{ scope: string, file: WidgetFile }>>>()
   const inFlight = new Set<string>()
   let current: Promise<void> | undefined
@@ -370,7 +361,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     // The user has seen it, and the gallery may close before it is stored.
     for (const id of Object.values(definition.images ?? {}).filter(image => !image.sendToken).map(imageId)) {
       const preview = previews.get(id)
-      if (preview)
+      if (preview && !savedImages.has(id))
         takenPreviews.set(id, preview)
     }
     stored.value = [...stored.value, {
@@ -813,9 +804,30 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   ])
   const pinnedIds = computed(() => new Set(pinnedImages.value.map(({ id }) => id)))
 
+  // With the one shown before, which fills in until the wanted one is read.
+  const drawnIds = computed(() => new Set(widgets.value.flatMap(w => pinsOf(w, [imageIn(shownContent(w, now.value), w.definition.images), w.shownImage])).map(({ id }) => id)))
+
   async function keepImages() {
-    const unknown = [...pinnedIds.value].filter(id => !images.has(id) && !absentImages.has(id) && !isBusy(id))
-    await Promise.all(unknown.map(readSavedImage))
+    if (!ready.value)
+      return
+    listing ??= useConn().query<{ key: string }[]>(SQLQuery.SelectKvKeysLike, [imageKey('%')]).then((rows) => {
+      for (const id of (rows ?? []).map(({ key }) => key.slice(imageKey('').length))) {
+        savedImages.add(id)
+        // A delete can fail or die with the app, and a token's id is never named again. Unreadable widgets name no image, and would take them all.
+        if (!widgetsUnreadable)
+          freeIfUnwanted(id)
+      }
+      return true
+    }).catch((error) => {
+      logger.warn('Could not list the widget images', error)
+      listing = undefined
+      return false
+    })
+    // Without the list, what is stored would be downloaded again.
+    if (!await listing)
+      return
+    const unread = [...drawnIds.value].filter(id => savedImages.has(id) && !images.has(id) && !isBusy(id))
+    await Promise.all(unread.map(readSavedImage))
     downloadMissing()
   }
 
@@ -825,23 +837,25 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   // A busy id is freed only once it is done, so that a delete never lands on a copy that is wanted again.
   function freeIfUnwanted(id: string) {
-    if (!pinnedIds.value.has(id))
-      Promise.resolve(kv().removeItem(imageKey(id))).catch(error => logger.warn('Could not free a widget image', error))
+    if (pinnedIds.value.has(id))
+      return
+    savedImages.delete(id)
+    Promise.resolve(kv().removeItem(imageKey(id))).catch(error => logger.warn('Could not free a widget image', error))
   }
 
   async function readSavedImage(id: string) {
     reading.add(id)
     try {
       const saved = await kv().getItem(imageKey(id))
-      if (!pinnedIds.value.has(id))
-        return
-      if (saved)
+      if (!saved)
+        savedImages.delete(id)
+      else if (drawnIds.value.has(id))
         images.set(id, saved)
-      else
-        absentImages.add(id)
     }
     catch (error) {
       logger.warn('Could not read a widget image', error)
+      // Downloaded instead, or the card would keep the image before it.
+      savedImages.delete(id)
     }
     finally {
       reading.delete(id)
@@ -865,7 +879,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   function mayKeep(pin: ImagePin, at: number): boolean {
     const { id, scope } = pin
-    if (!absentImages.has(id) || images.has(id) || isBusy(id))
+    if (savedImages.has(id) || isBusy(id))
       return false
     if (takenPreviews.has(id))
       return true
@@ -909,12 +923,11 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
           return
         }
       }
-      const request = image.sendToken ? new AbortController() : undefined
-      if (request)
-        tokenRequests.set(pinKey(pin), request)
-      const result: FetchOutcome<string> = preview ? { ok: true, value: preview } : await downloadImage(pin, request?.signal)
+      const request = new AbortController()
+      requests.set(pinKey(pin), request)
+      const result: FetchOutcome<string> = preview ? { ok: true, value: preview } : await downloadImage(pin, request.signal)
       if (!result.ok) {
-        if (request?.signal.aborted)
+        if (request.signal.aborted)
           setFailure(key, failedBefore)
         else
           noteFailure(pin, result, at, failedBefore)
@@ -926,18 +939,18 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         return
       }
       await kv().setItem(imageKey(id), result.value)
+      savedImages.add(id)
       setFailure(key, undefined)
-      if (!pinnedIds.value.has(id))
-        return
       // Drawn only once saved, as the image before it is freed as soon as this one is drawn.
-      images.set(id, result.value)
+      if (drawnIds.value.has(id))
+        images.set(id, result.value)
     }
     catch (error) {
       logger.warn('Could not keep a widget image', error)
     }
     finally {
       downloading.delete(id)
-      tokenRequests.delete(pinKey(pin))
+      requests.delete(pinKey(pin))
       takenPreviews.delete(id)
       freeIfUnwanted(id)
       void keepImages()
@@ -999,18 +1012,23 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   // Joined, so that this runs when the set of images changes, not with every state.
   watch(() => [...pinnedIds.value].sort().join('\n'), (_, before) => {
     for (const id of before.split('\n').filter(id => id && !pinnedIds.value.has(id))) {
-      images.delete(id)
-      absentImages.delete(id)
       if (!isBusy(id)) {
         takenPreviews.delete(id)
         freeIfUnwanted(id)
       }
     }
   })
+  watch(() => [...drawnIds.value].sort().join('\n'), () => {
+    for (const id of images.keys()) {
+      if (!drawnIds.value.has(id))
+        images.delete(id)
+    }
+    void keepImages()
+  })
   // Not with the ids alone: a token, or the end of a reconnect, makes an image downloadable.
   watch(() => [...new Set(pinnedImages.value.map(pinKey))].join('\n'), (keys) => {
     const current = new Set(keys.split('\n'))
-    for (const [key, request] of tokenRequests) {
+    for (const [key, request] of requests) {
       if (!current.has(key))
         request.abort()
     }
@@ -1019,27 +1037,33 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   /** Only what the previews draw, and never stored: browsing the gallery leaves nothing behind. */
   async function loadPreviewImages(scopes: string[]) {
-    const session = previewSession
+    const { signal } = previewRequests
     const wanted = scopes.flatMap((scope) => {
       const file = galleryFiles.get(scope)
       return !file || file === 'loading'
         ? []
         : file.widgets.flatMap((definition) => {
             const image = imageIn(previewContent(definition), definition.images)
-            return image && !image.sendToken && definition.sizes[0] !== 'icon' && !isOnHome(scope, definition.id) ? [{ image, id: imageId(image), scope }] : []
+            return image && !image.sendToken && definition.sizes[0] !== 'icon' ? [{ image, id: imageId(image), scope }] : []
           })
     })
+    const listed = await listing
     await inTurns([...new Map(wanted.map(entry => [pinKey(entry), entry])).values()], async ({ image, id, scope }) => {
-      if (session !== previewSession || images.has(id) || previews.has(id))
+      if (signal.aborted || previews.has(id))
         return
-      const result = await downloadImage({ image, id, scope })
-      if (result.ok && session === previewSession)
+      // Its own copy: what a card draws goes from memory when the card moves on.
+      const kept = images.get(id) ?? (savedImages.has(id) || !listed ? await Promise.resolve(kv().getItem(imageKey(id))).catch(error => logger.warn('Could not read a widget image', error)) : undefined)
+      if (signal.aborted)
+        return
+      const result: FetchOutcome<string> = kept ? { ok: true, value: kept } : await downloadImage({ image, id, scope }, signal)
+      if (result.ok && !signal.aborted)
         previews.set(id, result.value)
     })
   }
 
   function clearPreviewImages() {
-    previewSession++
+    previewRequests.abort()
+    previewRequests = new AbortController()
     previews.clear()
   }
 

@@ -13,6 +13,8 @@ export type FetchOutcome<T> = { ok: true, value: T } | { ok: false, error: strin
 
 const MAX_REDIRECTS = 3
 const DEADLINE_MS = 15_000
+// 1 MB takes that long at about 140 kbit/s.
+const IMAGE_DEADLINE_MS = 60_000
 const IDLE_TIMEOUT_MS = 10_000
 // A hop started late still gets time to fail as itself.
 const MIN_HOP_MS = 1_000
@@ -67,25 +69,27 @@ function queryKey(part: string): string {
   }
 }
 
-interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', maxBytes: number, parse: (response: Answer, url: string) => FetchOutcome<T> }
+interface NativeRead<T> { accept: string, responseType: 'text' | 'arraybuffer', maxBytes: number, deadlineMs: number, parse: (response: Answer, url: string) => FetchOutcome<T> }
 type Answer = Pick<HttpResponse, 'status' | 'headers' | 'data'>
-interface Download { timedOut: boolean, endsAt: number, id?: string }
+interface Download { stopped: boolean, endsAt: number, id?: string }
 
 /** Native client, so discovery needs no CORS; redirects by hand, so none leaves the origin. */
 let lastDownload = 0
 
-async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): Promise<FetchOutcome<T>> {
+async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>, signal?: AbortSignal): Promise<FetchOutcome<T>> {
   if (!canDownloadWidgets())
     return transientError('this build of Nimiq Pay has no downloader for widgets')
   let timer: ReturnType<typeof setTimeout> | undefined
-  const state: Download = { timedOut: false, endsAt: Date.now() + DEADLINE_MS }
+  const state: Download = { stopped: false, endsAt: Date.now() + read.deadlineMs }
   const deadline = new Promise<FetchOutcome<never>>((resolve) => {
-    timer = setTimeout(() => {
-      state.timedOut = true
+    const stop = (why: string) => {
+      state.stopped = true
       if (state.id)
         CappedDownload.cancel({ id: state.id }).catch(() => {})
-      resolve(transientError(`${url} timed out`))
-    }, DEADLINE_MS)
+      resolve(transientError(`${url} ${why}`))
+    }
+    timer = setTimeout(stop, read.deadlineMs, 'timed out')
+    signal?.addEventListener('abort', () => stop('was stopped'))
   })
   try {
     return await Promise.race([nativeGetHops(url, origin, read, state), deadline])
@@ -98,7 +102,7 @@ async function nativeGet<T>(url: string, origin: string, read: NativeRead<T>): P
 async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>, state: Download): Promise<FetchOutcome<T>> {
   let current = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (state.timedOut)
+    if (state.stopped)
       return transientError(`${url} timed out`)
     let response: Answer
     try {
@@ -127,7 +131,7 @@ async function nativeGetHops<T>(url: string, origin: string, read: NativeRead<T>
     if (response.status !== 200)
       return statusError(current, response.status)
     // Past the deadline nobody reads the answer, and an image is costly to check.
-    return state.timedOut ? transientError(`${url} timed out`) : read.parse(response, current)
+    return state.stopped ? transientError(`${url} timed out`) : read.parse(response, current)
   }
   return definiteError(`too many redirects from ${url}`)
 }
@@ -159,6 +163,7 @@ const WIDGET_FILE_READ: NativeRead<unknown> = {
   accept: 'application/json',
   responseType: 'text',
   maxBytes: WIDGET_LIMITS.fileBytes,
+  deadlineMs: DEADLINE_MS,
   parse(response, url) {
     const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
     if (new TextEncoder().encode(body).length > WIDGET_LIMITS.fileBytes)
@@ -210,7 +215,7 @@ export async function fetchWidgetImage(image: WidgetImage, scope: string, token?
   if (image.sendToken) {
     if (!token)
       return definiteError(`${image.url} needs the widget's token`)
-    const answer = await fetchWithoutCookies(image.url, { Accept: IMAGE_ACCEPT, ...identityHeaders({ token }) }, WIDGET_LIMITS.imageBytes, Date.now(), signal)
+    const answer = await fetchWithoutCookies(image.url, { Accept: IMAGE_ACCEPT, ...identityHeaders({ token }) }, WIDGET_LIMITS.imageBytes, IMAGE_DEADLINE_MS, Date.now(), signal)
     if (!answer.ok)
       return answer
     const read = readWidgetImage(encodeBase64(answer.value), image.sha256)
@@ -220,11 +225,12 @@ export async function fetchWidgetImage(image: WidgetImage, scope: string, token?
     accept: IMAGE_ACCEPT,
     responseType: 'arraybuffer',
     maxBytes: WIDGET_LIMITS.imageBytes,
+    deadlineMs: IMAGE_DEADLINE_MS,
     parse(response, url) {
       const read = readWidgetImage(String(response.data), image.sha256)
       return read.ok ? read : definiteError(`${url}: ${read.error}`)
     },
-  })
+  }, signal)
 }
 
 /** Only a definite miss moves up a folder: after a network error the search stops, so a parent folder's file is never taken for this Mini App's. */
@@ -263,7 +269,7 @@ export async function fetchWidgetRefresh(
   const query = kept.join('&')
   const href = `${path}?${query ? `${query}&` : ''}${ours}`
 
-  const answer = await fetchWithoutCookies(href, identityHeaders(identity), WIDGET_LIMITS.stateBytes, now)
+  const answer = await fetchWithoutCookies(href, identityHeaders(identity), WIDGET_LIMITS.stateBytes, DEADLINE_MS, now)
   if (!answer.ok)
     return answer
   let json: unknown
@@ -278,10 +284,10 @@ export async function fetchWidgetRefresh(
 }
 
 /** For requests that carry something of the user's: not the native client, whose options, headers included, debug builds log. */
-async function fetchWithoutCookies(href: string, headers: Record<string, string>, maxBytes: number, now = Date.now(), signal?: AbortSignal): Promise<FetchOutcome<Uint8Array>> {
+async function fetchWithoutCookies(href: string, headers: Record<string, string>, maxBytes: number, deadlineMs: number, now = Date.now(), signal?: AbortSignal): Promise<FetchOutcome<Uint8Array>> {
   const controller = new AbortController()
   signal?.addEventListener('abort', () => controller.abort())
-  const timer = setTimeout(() => controller.abort(), DEADLINE_MS)
+  const timer = setTimeout(() => controller.abort(), deadlineMs)
   try {
     let response: Response
     try {

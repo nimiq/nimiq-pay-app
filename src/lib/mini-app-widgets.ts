@@ -38,7 +38,7 @@ export const WIDGET_LIMITS = {
   tokenLength: 2048,
   images: 8,
   stateImages: 4,
-  imageBytes: 256 * 1024,
+  imageBytes: 1024 * 1024,
   imagePixels: 1024,
   refreshBudgets: [
     { windowMs: 60 * 60_000, max: 30 },

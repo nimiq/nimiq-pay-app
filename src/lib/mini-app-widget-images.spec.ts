@@ -86,6 +86,12 @@ describe('readWidgetImage', () => {
     expect(read(bytes).ok).toBe(false)
   })
 
+  it('accepts an image of exactly 1 MB', () => {
+    const full = new Uint8Array(1024 * 1024)
+    full.set(png(10, 20))
+    expect(read(full).ok).toBe(true)
+  })
+
   it('refuses a file over the size limit before hashing it', () => {
     const big = new Uint8Array(WIDGET_LIMITS.imageBytes + 1)
     big.set(png(10, 20))

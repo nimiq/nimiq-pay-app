@@ -59,7 +59,7 @@ Live states you send are not translated by this field: send them in your current
 "images": { "hero": { "url": "art/hero.webp", "sha256": "<64 hex characters>" } }
 ```
 
-At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 256 KB (Nimiq Pay stops the download there) and 1024 × 1024 pixels, on your own origin. A state you push, a refresh answer and their `next` states can carry an image instead of a key, for example one for this user, at most 4 different images in a state and its later states together. The widget file takes keys only.
+At most 8 per widget, each a PNG, JPEG or WebP (checked from its bytes; no SVG or GIF) of at most 1 MB (Nimiq Pay stops the download there and gives each image 60 seconds) and 1024 × 1024 pixels, on your own origin. A state you push, a refresh answer and their `next` states can carry an image instead of a key, for example one for this user, at most 4 different images in a state and its later states together. The widget file takes keys only.
 
 ```js
 background: { image: { url: '/w/7f3c9a.png', sha256: '<64 hex characters>' } }
@@ -300,11 +300,11 @@ All widgets of your Mini App share one refresh budget (section 6), so more widge
 | Refreshes, one Mini App (all its widgets) | 30 per hour, 60 per 3 hours, 180 per 24 hours |
 | Images in a widget file | 8 per widget |
 | Images a state carries, its later states' included | 4 different |
-| One image | 256 KB, 1024 × 1024 pixels |
+| One image | 1 MB (1,048,576 bytes), 1024 × 1024 pixels |
 | Image downloads, one site (all its widgets) | 60 per hour, 120 per 24 hours |
 | Refresh interval | 60 s to 24 h |
 | Times | within 30 days of now |
-| Network timeouts | Widget file and each image without `sendToken`: 15 s in all, redirects included, and 10 s without a byte. Refresh and images with `sendToken`: 15 s in all |
+| Network timeouts | Widget file and refresh: 15 s in all. Each image: 60 s in all. The widget file and images without `sendToken` count redirects in that time and also end after 10 s without a byte |
 
 A state that breaks a rule (a wrong type, two kinds in one value, too many rows, a bad `refresh.url`, a `path` that is not a string, an empty text) is refused whole and `update` rejects with the field named, so you can find the problem:
 

@@ -79,17 +79,17 @@ describe('downloads on a phone', () => {
     expect(result.ok && result.value.widgets[0]!.appName).toBe('Café Krone')
   })
 
-  it('read an image through it, stopping at 256 KB', async () => {
+  it('read an image through it, stopping at 1 MB', async () => {
     capped.mockResolvedValue(answer(200, PNG))
     expect((await fetchWidgetImage(IMAGE, SCOPE)).ok).toBe(true)
-    expect(capped.mock.calls[0]![0]).toMatchObject({ maxBytes: 256 * 1024, headers: { 'Cache-Control': 'no-cache' } })
+    expect(capped.mock.calls[0]![0]).toMatchObject({ maxBytes: 1024 * 1024, headers: { 'Cache-Control': 'no-cache' } })
     expect(get).not.toHaveBeenCalled()
   })
 
   it('refuse for good what went over the limit, as a check after the download does', async () => {
     capped.mockRejectedValue(tooLarge())
     expect(await fetchWidgetFile(SCOPE, NOW)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('larger than 32768 bytes') })
-    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('larger than 262144 bytes') })
+    expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('larger than 1048576 bytes') })
   })
 
   it('move up a folder past a file that is too large', async () => {
@@ -105,12 +105,33 @@ describe('downloads on a phone', () => {
     expect(await fetchWidgetImage(IMAGE, SCOPE)).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('can\'t decode') })
   })
 
+  it('give an image 60 s, as 1 MB takes that long on a slow connection, and a file 15 s', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    capped.mockResolvedValue(answer(404))
+    await fetchWidgetFile(SCOPE, NOW)
+    await fetchWidgetImage(IMAGE, SCOPE)
+    expect(capped.mock.calls.map(([options]) => [options.timeout, options.idleTimeout])).toEqual([[15_000, 10_000], [60_000, 10_000]])
+  })
+
+  it('stop an image download when told to', async () => {
+    capped.mockReturnValueOnce(new Promise(() => {}))
+    const request = new AbortController()
+    const result = fetchWidgetImage(IMAGE, SCOPE, undefined, request.signal)
+    await vi.waitFor(() => expect(capped).toHaveBeenCalledOnce())
+    request.abort()
+    expect(await Promise.race([result, new Promise(resolve => setTimeout(resolve, 100, 'still running'))])).toMatchObject({ ok: false, transient: true })
+    expect(cancelled).toHaveBeenCalledExactlyOnceWith({ id: capped.mock.calls[0]![0].id })
+  })
+
   it('stop the transfer under way at the deadline', async () => {
     vi.useFakeTimers()
     capped.mockResolvedValueOnce(answer(301, '', { location: '/moved.png' }))
     capped.mockReturnValueOnce(new Promise(() => {}))
     const result = fetchWidgetImage(IMAGE, SCOPE)
-    await vi.advanceTimersByTimeAsync(15_000)
+    await vi.advanceTimersByTimeAsync(59_999)
+    expect(cancelled).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
     expect(await result).toMatchObject({ ok: false, transient: true })
     const [first, second] = capped.mock.calls.map(([options]) => options.id)
     expect(second).not.toBe(first)
@@ -129,7 +150,7 @@ describe('downloads on a phone', () => {
     expect(capped.mock.calls[1]![0].url).toBe(`${SCOPE}moved.png`)
   })
 
-  it('give each hop only what is left of the 15 s', async () => {
+  it('give each hop only what is left of the 60 s', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(NOW)
     capped.mockImplementationOnce(async () => {
@@ -138,14 +159,14 @@ describe('downloads on a phone', () => {
     })
     capped.mockResolvedValueOnce(answer(200, PNG))
     await fetchWidgetImage(IMAGE, SCOPE)
-    expect(capped.mock.calls.map(([options]) => options.timeout)).toEqual([15_000, 3_000])
+    expect(capped.mock.calls.map(([options]) => options.timeout)).toEqual([60_000, 48_000])
   })
 
   it('allow the downloader no less than a second, which it needs to give up cleanly', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(NOW)
     capped.mockImplementationOnce(async () => {
-      vi.setSystemTime(NOW + 14_900)
+      vi.setSystemTime(NOW + 59_900)
       return answer(301, '', { location: '/moved.png' })
     })
     capped.mockResolvedValueOnce(answer(200, PNG))
@@ -200,6 +221,7 @@ describe('downloads on the web, for development', () => {
 describe('an image that asks for the token', () => {
   const bytes = Uint8Array.from(atob(PNG), c => c.charCodeAt(0))
   const IMAGE = { url: `${SCOPE}mine.png`, sha256: sha256HexOfBytes(bytes), sendToken: true as const }
+  const untilAborted = (_url: string, init: RequestInit) => new Promise((_, reject) => init.signal!.addEventListener('abort', () => reject(new Error('aborted'))))
   const answered = (init: object = {}) => ({ status: 200, type: 'cors', body: null, arrayBuffer: async () => bytes.slice().buffer, ...init })
 
   it('is fetched like a refresh: only the token, no cookies, cache, native client or cookie clearing', async () => {
@@ -221,17 +243,35 @@ describe('an image that asks for the token', () => {
   })
 
   it('stops reading past the size limit', async () => {
-    const response = streamed(Array.from({ length: 3 }).fill('x'.repeat(100 * 1024)) as string[])
+    const response = streamed(Array.from({ length: 3 }).fill('x'.repeat(400 * 1024)) as string[])
     fetchMock.mockResolvedValue(response)
     expect((await fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')).ok).toBe(false)
     expect(response.cancel).toHaveBeenCalled()
   })
 
   it('may be as large as any image, not only as a state', async () => {
-    const full = new Uint8Array(256 * 1024)
+    const full = new Uint8Array(1024 * 1024)
     full.set(bytes)
     fetchMock.mockResolvedValue(answered({ arrayBuffer: async () => full.slice().buffer }))
     expect((await fetchWidgetImage({ ...IMAGE, sha256: sha256HexOfBytes(full) }, SCOPE, 'opaque-token')).ok).toBe(true)
+  })
+
+  it('refuses one byte over 1 MB', async () => {
+    const over = new Uint8Array(1024 * 1024 + 1)
+    over.set(bytes)
+    fetchMock.mockResolvedValue(answered({ arrayBuffer: async () => over.slice().buffer }))
+    expect(await fetchWidgetImage({ ...IMAGE, sha256: sha256HexOfBytes(over) }, SCOPE, 'opaque-token')).toMatchObject({ ok: false, transient: false, error: expect.stringContaining('1048576') })
+  })
+
+  it('has 60 s', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation(untilAborted)
+    const pending = fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')
+    const signal = fetchMock.mock.calls[0]![1].signal as AbortSignal
+    await vi.advanceTimersByTimeAsync(59_999)
+    expect(signal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await pending).toMatchObject({ ok: false, transient: true })
   })
 
   it('lets go of a refusal\'s body, which would keep downloading past the limit and the deadline', async () => {
@@ -241,8 +281,7 @@ describe('an image that asks for the token', () => {
   })
 
   it('stops, preflight or not, when told to', async () => {
-    fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) =>
-      new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted')))))
+    fetchMock.mockImplementation(untilAborted)
     const request = new AbortController()
     const result = fetchWidgetImage(IMAGE, SCOPE, 'opaque-token', request.signal)
     request.abort()
