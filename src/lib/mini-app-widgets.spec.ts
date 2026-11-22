@@ -155,6 +155,20 @@ describe('a widget\'s images and backgrounds', () => {
     expect(parseWidgetState(tree, ctx).ok).toBe(true)
   })
 
+  it('reads sendToken on an image of a file and of a state', () => {
+    const asked = { ...image, sendToken: true }
+    const inFile = parseWidgetFile(file({ images: { hero: asked } }), ctx)
+    expect(inFile.ok && inFile.value.widgets[0]!.images!.hero).toMatchObject({ sendToken: true })
+    const inState = parseWidgetState(state({}, { background: { image: asked } }), ctx)
+    expect(inState.ok && inState.value!.content.background).toMatchObject({ image: { sendToken: true } })
+    const not = parseWidgetFile(file({ images: { hero: { ...image, sendToken: false } } }), ctx)
+    expect(not.ok && not.value.widgets[0]!.images!.hero).not.toHaveProperty('sendToken')
+  })
+
+  it.each(['true', 1, 'a-token', null])('refuses sendToken %s, so a token is never written there', (sendToken) => {
+    expectError(parseWidgetFile(file({ images: { hero: { ...image, sendToken } } }), ctx), 'file.widgets[0].images.hero.sendToken')
+  })
+
   it('refuses a background that is both, or neither', () => {
     expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: { image: 'hero', chart: { kind: 'bars', points: [1, 2] } } } }), ctx), 'file.widgets[0].content.background')
     expectError(parseWidgetFile(file({ content: { value: { text: 'x' }, background: {} } }), ctx), 'file.widgets[0].content.background')

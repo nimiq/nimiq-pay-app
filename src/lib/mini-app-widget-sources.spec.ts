@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { sha256HexOfBytes } from '@/lib/crypto'
 
 const { clearAllCookies, get, isNativePlatform } = vi.hoisted(() => ({ clearAllCookies: vi.fn(), get: vi.fn(), isNativePlatform: vi.fn() }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform }, CapacitorCookies: { clearAllCookies }, CapacitorHttp: { get }, registerPlugin: () => ({}) }))
@@ -26,6 +27,7 @@ function streamed(chunks: string[], init: { status?: number, type?: string } = {
   return { status: init.status ?? 200, type: init.type ?? 'basic', body: { getReader: () => reader }, cancel }
 }
 
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAUCAYAAAAAAAA='
 const PARAMS = { lang: 'en', network: 'mainnet' } as const
 const REFRESH = { url: 'https://swap.example/w', every: 60 }
 const STATE = JSON.stringify({ content: { value: { text: 'Done' } } })
@@ -77,6 +79,78 @@ describe('native downloads', () => {
     get.mockResolvedValue(respond(404, ''))
     await fetchWidgetFile(SCOPE, NOW)
     expect(clearAllCookies).not.toHaveBeenCalled()
+  })
+})
+
+describe('an image that asks for the token', () => {
+  const bytes = Uint8Array.from(atob(PNG), c => c.charCodeAt(0))
+  const IMAGE = { url: `${SCOPE}mine.png`, sha256: sha256HexOfBytes(bytes), sendToken: true as const }
+  const answered = (init: object = {}) => ({ status: 200, type: 'cors', body: null, arrayBuffer: async () => bytes.slice().buffer, ...init })
+
+  it('is fetched like a refresh: only the token, no cookies, cache, native client or cookie clearing', async () => {
+    fetchMock.mockResolvedValue(answered())
+    expect(await fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')).toMatchObject({ ok: true, value: expect.stringMatching(/^data:image\/png;base64,iVBOR/) })
+    expect(fetchMock).toHaveBeenCalledWith(IMAGE.url, expect.objectContaining({ headers: { Accept: 'image/png, image/jpeg, image/webp', Authorization: 'Bearer opaque-token' }, credentials: 'omit', cache: 'no-store', redirect: 'manual', referrerPolicy: 'no-referrer' }))
+    expect(get).not.toHaveBeenCalled()
+    expect(clearAllCookies).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a redirect', { status: 0, type: 'opaqueredirect' }],
+    ['a refusal', { status: 401 }],
+    ['other bytes', { arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }],
+  ])('is not taken from %s', async (_, init) => {
+    fetchMock.mockResolvedValue(answered(init))
+    expect((await fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')).ok).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops reading past the size limit', async () => {
+    const response = streamed(Array.from({ length: 3 }).fill('x'.repeat(100 * 1024)) as string[])
+    fetchMock.mockResolvedValue(response)
+    expect((await fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')).ok).toBe(false)
+    expect(response.cancel).toHaveBeenCalled()
+  })
+
+  it('may be as large as any image, not only as a state', async () => {
+    const full = new Uint8Array(256 * 1024)
+    full.set(bytes)
+    fetchMock.mockResolvedValue(answered({ arrayBuffer: async () => full.slice().buffer }))
+    expect((await fetchWidgetImage({ ...IMAGE, sha256: sha256HexOfBytes(full) }, SCOPE, 'opaque-token')).ok).toBe(true)
+  })
+
+  it('lets go of a refusal\'s body, which would keep downloading past the limit and the deadline', async () => {
+    fetchMock.mockResolvedValue(answered({ status: 401 }))
+    await fetchWidgetImage(IMAGE, SCOPE, 'opaque-token')
+    expect((fetchMock.mock.calls[0]![1].signal as AbortSignal).aborted).toBe(true)
+  })
+
+  it('stops, preflight or not, when told to', async () => {
+    fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted')))))
+    const request = new AbortController()
+    const result = fetchWidgetImage(IMAGE, SCOPE, 'opaque-token', request.signal)
+    request.abort()
+    expect((fetchMock.mock.calls[0]![1].signal as AbortSignal).aborted).toBe(true)
+    expect(await result).toMatchObject({ ok: false, transient: true })
+  })
+
+  it('makes no request without a token', async () => {
+    expect((await fetchWidgetImage(IMAGE, SCOPE)).ok).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('never leaves the site with it', async () => {
+    expect((await fetchWidgetImage({ ...IMAGE, url: 'https://cdn.example/mine.png' }, SCOPE, 'opaque-token')).ok).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('is the only kind that gets it', async () => {
+    get.mockResolvedValue(respond(404, ''))
+    await fetchWidgetImage({ url: IMAGE.url, sha256: IMAGE.sha256 }, SCOPE, 'opaque-token')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(JSON.stringify(get.mock.calls)).not.toContain('opaque-token')
   })
 })
 
@@ -263,7 +337,6 @@ describe('fetchWidgetFile', () => {
 })
 
 describe('fetchWidgetImage', () => {
-  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAUCAYAAAAAAAA='
   const IMAGE = { url: 'https://swap.example/hero.png', sha256: 'a'.repeat(64) }
 
   it('reads it with the native client, around cleared cookies, and checks it', async () => {

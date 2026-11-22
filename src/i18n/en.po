@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:524
+#: src/stores/mini-app-widgets.ts:536
 msgid "No longer available"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:505
+#: src/stores/mini-app-widgets.ts:517
 msgid "Not available"
 msgstr ""
 

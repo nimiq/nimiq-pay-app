@@ -71,6 +71,8 @@ export interface WidgetImage {
   url: string
   /** Lower-case hex, of the image's bytes. */
   sha256: string
+  /** Fetched with the token of the widget that names it, and never without one. */
+  sendToken?: true
 }
 
 export interface WidgetContent {
@@ -374,7 +376,12 @@ function images(raw: unknown, ctx: ParseContext, path: string): Record<string, W
 function imageSource(raw: unknown, ctx: ParseContext, path: string): WidgetImage {
   const r = record(raw, path)
   const url = sameOrigin(r.url, ctx, `${path}.url`)
-  return { url, sha256: hex(r.sha256, HASH_RE, 'a SHA-256 in hex', `${path}.sha256`) }
+  const result: WidgetImage = { url, sha256: hex(r.sha256, HASH_RE, 'a SHA-256 in hex', `${path}.sha256`) }
+  if (r.sendToken !== undefined && typeof r.sendToken !== 'boolean')
+    fail(`${path}.sendToken`, 'expected true or false (the token itself is set with setToken)')
+  if (r.sendToken)
+    result.sendToken = true
+  return result
 }
 
 function content(raw: unknown, ctx: ParseContext, path: string, inlineImages = false): WidgetContent {

@@ -2,6 +2,7 @@ import type { HttpResponse } from '@capacitor/core'
 import type { WidgetFile, WidgetImage, WidgetRefresh, WidgetState } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
 import { Capacitor, CapacitorCookies, CapacitorHttp } from '@capacitor/core'
+import { encodeBase64 } from 'ethers'
 import { isDev } from '@/lib'
 import { miniAppHoldsCookies } from '@/lib/mini-app-active'
 import { readWidgetImage } from '@/lib/mini-app-widget-images'
@@ -12,6 +13,7 @@ export type FetchOutcome<T> = { ok: true, value: T } | { ok: false, error: strin
 
 const MAX_REDIRECTS = 3
 const DEADLINE_MS = 15_000
+const IMAGE_ACCEPT = 'image/png, image/jpeg, image/webp'
 
 function transientError(error: string): FetchOutcome<never> {
   return { ok: false, error, transient: true }
@@ -186,12 +188,21 @@ function onWidgetOrigin(url: string, scope: string): { origin: string, target: U
   }
 }
 
-export async function fetchWidgetImage(image: WidgetImage, scope: string): Promise<FetchOutcome<string>> {
+export async function fetchWidgetImage(image: WidgetImage, scope: string, token?: string, signal?: AbortSignal): Promise<FetchOutcome<string>> {
   const place = onWidgetOrigin(image.url, scope)
   if (!place)
     return definiteError(`${image.url} cannot serve this widget's images`)
+  if (image.sendToken) {
+    if (!token)
+      return definiteError(`${image.url} needs the widget's token`)
+    const answer = await fetchWithoutCookies(image.url, { Accept: IMAGE_ACCEPT, ...identityHeaders({ token }) }, WIDGET_LIMITS.imageBytes, Date.now(), signal)
+    if (!answer.ok)
+      return answer
+    const read = readWidgetImage(encodeBase64(answer.value), image.sha256)
+    return read.ok ? read : definiteError(`${image.url}: ${read.error}`)
+  }
   return withClearedCookies(() => nativeGet(image.url, place.origin, {
-    accept: 'image/png, image/jpeg, image/webp',
+    accept: IMAGE_ACCEPT,
     responseType: 'arraybuffer',
     stopsForMiniApp: true,
     parse(response, url) {
@@ -247,45 +258,49 @@ export async function fetchWidgetRefresh(
   const query = kept.join('&')
   const href = `${path}?${query ? `${query}&` : ''}${ours}`
 
+  const answer = await fetchWithoutCookies(href, identityHeaders(identity), WIDGET_LIMITS.stateBytes, now)
+  if (!answer.ok)
+    return answer
+  let json: unknown
+  try {
+    json = JSON.parse(new TextDecoder().decode(answer.value))
+  }
+  catch {
+    return definiteError(`${href} is not JSON`)
+  }
+  const parsed = parseWidgetState(json, { origin, base: scope, now, allowInsecure: isDev })
+  return parsed.ok ? parsed : { ...parsed, transient: false }
+}
+
+/** For requests that carry something of the user's: not the native client, which sends and stores the site's cookies, can cache on disk and logs headers in debug builds. */
+async function fetchWithoutCookies(href: string, headers: Record<string, string>, maxBytes: number, now = Date.now(), signal?: AbortSignal): Promise<FetchOutcome<Uint8Array>> {
   const controller = new AbortController()
+  signal?.addEventListener('abort', () => controller.abort())
   const timer = setTimeout(() => controller.abort(), DEADLINE_MS)
   try {
-    // Refreshes skip the native client because it sends and stores the site's cookies.
     let response: Response
     try {
-      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', headers: identityHeaders(identity), signal: controller.signal })
+      response = await fetch(href, { credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer', headers, signal: controller.signal })
     }
     catch {
       return transientError(`could not reach ${href}`)
     }
     if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400))
-      return definiteError(`refresh URLs must not redirect (${href})`)
+      return definiteError(`${href} must not redirect`)
     if (response.status !== 200)
       return statusError(href, response.status, retryAfterMs(response.headers?.get('retry-after') ?? null, now))
-
-    let bytes: Uint8Array
     try {
-      const read = await readCapped(response, WIDGET_LIMITS.stateBytes)
-      if (!read)
-        return definiteError(`${href} is larger than ${WIDGET_LIMITS.stateBytes} bytes`)
-      bytes = read
+      const read = await readCapped(response, maxBytes)
+      return read ? { ok: true, value: read } : definiteError(`${href} is larger than ${maxBytes} bytes`)
     }
     catch {
       return transientError(`could not read ${href}`)
     }
-
-    let json: unknown
-    try {
-      json = JSON.parse(new TextDecoder().decode(bytes))
-    }
-    catch {
-      return definiteError(`${href} is not JSON`)
-    }
-    const parsed = parseWidgetState(json, { origin, base: scope, now, allowInsecure: isDev })
-    return parsed.ok ? parsed : { ...parsed, transient: false }
   }
   finally {
     clearTimeout(timer)
+    // A refusal's body would go on downloading, past the limit and the deadline.
+    controller.abort()
   }
 }
 
