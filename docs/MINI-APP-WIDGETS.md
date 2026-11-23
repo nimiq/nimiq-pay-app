@@ -9,7 +9,7 @@ This page is the reference for Mini App authors. The code is the authority if th
 - Nimiq Pay draws every widget itself, so it always looks like Nimiq Pay and can be restyled in one place. You send meaning (text, numbers, a tone) and, if you like, a background image, never layout, colours or fonts.
 - The user picks the size of each widget: `icon`, `small`, `medium` or `large`. You list the sizes your widget supports; the first one is the default.
 - The card header (your Mini App's icon and name, and the "⋯" menu) belongs to Nimiq Pay. It shows the catalog name when the widget's folder equals the catalog entry's URL, otherwise the name your widget file declares (see `name` below), otherwise the host and folder (`name.github.io/my-app`). The address always appears in the widget's menu and in the gallery. A widget has no buttons or inputs: tapping the card opens your Mini App.
-- Each Nimiq Pay account keeps its own widgets on the device. After logging out and back in, the user finds the widgets they had, in the same order and sizes, but at rest: what your Mini App sent and the token are gone with the logout, a widget that had a token shows "Open to reconnect" (not as an icon) until your Mini App sends a state or a token, and one your server ended with 410 stays ended. Another account on the same device starts without them.
+- Each Nimiq Pay account keeps its own widgets on the device. After logging out and back in, the user finds the widgets they had, in the same order and sizes, but at rest: what your Mini App sent and the token are gone with the logout, a widget that had a token shows "Open to reconnect" (not as an icon) until your Mini App sends a state or a token or clears it, and one your server ended with 410 stays ended. Another account on the same device starts without them.
 - A Mini App only runs while it is open, so a widget changes in three ways: your Mini App sends a new state while it is open, Nimiq Pay follows scheduled and on-chain triggers you described earlier, or Nimiq Pay polls a URL on your server (section 5).
 
 ## 2. The widget file
@@ -270,7 +270,7 @@ export default {
 }
 ```
 
-All widgets of your Mini App share one refresh budget (section 6), so more widgets do not buy more requests. A refresh over budget waits until the budget allows it. Each is due up to 30 seconds after its interval, at random, so that devices do not all ask at once. Your first refresh after an add and pull to refresh do not wait, though they count. A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets and re-checks their files right away, but each at most once a minute.
+All widgets of your Mini App share one refresh budget (section 6), so more widgets do not buy more requests. A refresh over budget waits until the budget allows it. Each is due up to 30 seconds after its interval, at random, so that devices do not all ask at once. Your first refresh after an add or after the user logs back in, and pull to refresh, do not wait, though they count. A failing refresh keeps the last state; the interval doubles per failure up to 30 minutes, and after three failures the card adds "Not updated since 14:05". Pull to refresh on Home refreshes widgets and re-checks their files right away, but each at most once a minute.
 
 **Rules.**
 

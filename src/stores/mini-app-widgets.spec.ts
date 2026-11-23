@@ -85,16 +85,20 @@ vi.mock('@/stores/mini-apps', () => ({
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => nimiqNetwork }))
 vi.mock('@/lib/mini-app-widget-download', () => ({ canDownloadWidgets: () => downloader.available }))
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
-const accounts = vi.hoisted(() => ({ key: 'account-a', saved: new Map<string, unknown[]>(), reads: 0, writes: [] as { key: string, widgets: Record<string, unknown>[], options: unknown[] }[], readError: undefined as Error | undefined, writeError: undefined as Error | undefined, identity: Promise.resolve() as Promise<unknown>, reading: Promise.resolve() as Promise<unknown>, writing: Promise.resolve() as Promise<unknown> }))
+const account = await vi.hoisted(async () => {
+  const { reactive } = await import('vue')
+  return reactive({ key: 'account-a' })
+})
+const accounts = vi.hoisted(() => ({ readsNothing: false, saved: new Map<string, unknown[]>(), reads: 0, writes: [] as { key: string, widgets: Record<string, unknown>[], options: unknown[] }[], readError: undefined as Error | undefined, writeError: undefined as Error | undefined, identity: Promise.resolve() as Promise<unknown>, reading: Promise.resolve() as Promise<unknown>, writing: Promise.resolve() as Promise<unknown> }))
 vi.mock('@/lib/mini-app-widget-accounts', () => ({
   accountKey: async () => {
     await accounts.identity
-    return accounts.key
+    return account.key
   },
-  currentAccountKey: () => accounts.key,
+  currentAccountKey: () => account.key,
   readSavedWidgets: async (key: string) => {
     accounts.reads++
-    const saved = structuredClone(accounts.saved.get(key) ?? [])
+    const saved = accounts.readsNothing ? [] : structuredClone(accounts.saved.get(key) ?? [])
     await accounts.reading
     if (accounts.readError)
       throw accounts.readError
@@ -187,7 +191,8 @@ beforeEach(() => {
   logged.mockClear()
   isMiniAppActive.value = false
   sessionStorage.clear()
-  Object.assign(accounts, { key: 'account-a', reads: 0, writes: [], readError: undefined, writeError: undefined, identity: Promise.resolve(), reading: Promise.resolve(), writing: Promise.resolve() })
+  account.key = 'account-a'
+  Object.assign(accounts, { readsNothing: false, reads: 0, writes: [], readError: undefined, writeError: undefined, identity: Promise.resolve(), reading: Promise.resolve(), writing: Promise.resolve() })
   accounts.saved.clear()
   fetchWidgetFile.mockReset()
   // The hourly re-check runs in any test that ticks past an hour.
@@ -3475,7 +3480,7 @@ describe('per account', () => {
 
   it('gives another account none, and leaves the first one\'s copy', async () => {
     accounts.saved.set('account-a', [saved()])
-    accounts.key = 'account-b'
+    account.key = 'account-b'
     const store = await setup()
     expect(store.widgets).toEqual([])
     expect(accounts.saved.get('account-a')).toHaveLength(1)
@@ -3603,16 +3608,40 @@ describe('per account', () => {
     expect(store.widgets.map(w => w.widgetId)).toEqual(['kept'])
   })
 
-  it('saves again at the next tick after a write failed, so a removal holds after a logout', async () => {
+  it('saves the removal of the last widget again within a minute, with no widget left to tick', async () => {
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] })
+    vi.setSystemTime(NOW)
     accounts.saved.set('account-a', [saved()])
-    accounts.writeError = new Error('locked')
     const store = await setup()
+    accounts.writeError = new Error('locked')
     store.remove(SCOPE, 'swap')
     await flushPromises()
     accounts.writeError = undefined
-    await store.tick({ chain: fakeChain(), at: NOW + 15_000 })
-    await flushPromises()
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(accounts.saved.get('account-a')).toEqual([])
+  })
+
+  it('keeps the saved copy when its read finds nothing for an empty Home, as iOS answers a failed read with nothing', async () => {
+    accounts.saved.set('account-a', [saved()])
+    accounts.readsNothing = true
+    await setup()
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toHaveLength(1)
+    expect(accounts.writes).toEqual([])
+  })
+
+  it('drops the list and saves nothing more when another wallet is unlocked without a reload', async () => {
+    accounts.saved.set('account-a', [saved()])
+    const store = await setup()
+    expect(store.widgets).toHaveLength(1)
+    account.key = 'account-b'
+    await flushPromises()
+    expect(store.widgets).toEqual([])
+    store.add(SCOPE, definition({ id: 'new' }), [])
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toHaveLength(1)
+    expect(accounts.saved.has('account-b')).toBe(false)
   })
 
   it('saves a removal made while the save of its adding was still under way', async () => {
@@ -3718,7 +3747,7 @@ describe('per account', () => {
     store.add(SCOPE, definition(), [])
     await flushPromises()
     const written = accounts.writes.length
-    accounts.key = 'account-b'
+    account.key = 'account-b'
     store.setSize(SCOPE, 'swap', 'small')
     await flushPromises()
     expect(accounts.writes).toHaveLength(written)

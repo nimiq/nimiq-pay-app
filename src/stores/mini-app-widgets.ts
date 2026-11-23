@@ -129,6 +129,7 @@ const MIN_FORCED_REFRESH_GAP_MS = 60_000
 const DOWNLOADS_AT_ONCE = 6
 const DOWNLOADS_AT_ONCE_PER_SITE = 3
 const IMAGE_RETRY_MS = 5 * 60_000
+const SAVE_RETRY_MS = 30_000
 const MAX_IMAGE_RETRY_MS = 6 * 60 * 60_000
 const WIDGETS_KEY = 'miniAppWidgets'
 // Read once per database: a widget whose removal was not saved must not come back on the next start.
@@ -263,13 +264,19 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   let saving = Promise.resolve()
   // What the saved copy holds, once written.
   let savedJson = ''
-  let saveFailed = false
   // By reference: stringifying every definition at each change of the list would cost far more than the rare real change.
   const savedList = computed<SavedWidget[]>((previous) => {
     const list = stored.value.map(toSaved)
     return list.length === previous?.length && list.every((w, i) => (Object.keys(w) as (keyof SavedWidget)[]).every(key => w[key] === previous[i]![key])) ? previous : list
   })
   watch([savedAs, savedList], saveForAccount)
+  watch(currentAccountKey, (key, before) => {
+    // The setup flow can unlock another wallet without a reload: it must not get this one's widgets, nor their address grants.
+    if (before !== undefined && key !== before) {
+      savedAs.value = undefined
+      stored.value = []
+    }
+  })
 
   function saveForAccount() {
     const key = savedAs.value
@@ -282,10 +289,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
         return
       await SecureStorage.set(key, JSON.parse(json), false, false, KeychainAccess.whenUnlockedThisDeviceOnly)
       savedJson = json
-      saveFailed = false
     }).catch((error) => {
-      // Tried again at each tick: a removal, or an address the user stopped sharing, must not come back at the next login.
-      saveFailed = true
+      // Tried again, Home empty or not: a removal, or an address the user stopped sharing, must not come back at the next login.
+      setTimeout(saveForAccount, SAVE_RETRY_MS)
       logger.warn('Could not save the widgets of this account', error)
     })
   }
@@ -296,6 +302,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       if (await kv().getItem(RESTORED_KEY) == null) {
         const at = Date.now()
         const saved = await readSavedWidgets(key)
+        // iOS answers a failed read with nothing: an empty Home must not overwrite the saved copy before it changes.
+        if (!saved.length && !stored.value.length)
+          savedJson = '[]'
         // Taken after the read, as a Mini App can add a widget meanwhile; Home's own come first within the limits.
         const kept = [...stored.value]
         const restored: HomeWidget[] = []
@@ -1256,8 +1265,6 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
   function tick(options: TickOptions = {}): Promise<void> {
-    if (saveFailed)
-      saveForAccount()
     if (!current) {
       current = step(options).finally(() => {
         current = undefined
