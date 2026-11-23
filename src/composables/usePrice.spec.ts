@@ -49,10 +49,12 @@ vi.mock('@/composables/useCurrencyFormatter', () => ({
   }),
 }))
 
+const insertPrice = vi.fn().mockResolvedValue(undefined)
+
 vi.mock('@/composables/usePriceDb', () => ({
   usePriceDb: () => ({
     getPriceDb: vi.fn().mockResolvedValue(undefined),
-    insertPrice: vi.fn().mockResolvedValue(undefined),
+    insertPrice,
     getClosestPreviousPrice: vi.fn().mockResolvedValue(undefined),
   }),
 }))
@@ -121,5 +123,16 @@ describe('usePrice', () => {
 
     await flushPromises()
     expect(fiat.total).toBe(1)
+  })
+
+  it('resolves with the fetched price when caching it in the database fails', async () => {
+    insertPrice.mockRejectedValueOnce(new Error('database is closed'))
+    const { usePrice } = await import('./usePrice')
+
+    const { fiat, getFiatPrice, state } = usePrice(ref(100000), { immediate: false })
+
+    await expect(getFiatPrice()).resolves.toBeUndefined()
+    expect(state.value).toBe('loaded')
+    expect(fiat.total).toBe(2)
   })
 })
