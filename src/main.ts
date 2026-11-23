@@ -14,7 +14,7 @@ import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
-import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
+import { identifyUser, reportCriticalError, trackCurrentAppOpen } from '@/lib/analytics'
 import { DEFERRED_DEEPLINK_KEY } from '@/lib/app-resume'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { installNodeGlobals } from '@/lib/node-globals'
@@ -98,9 +98,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { language } = storeToRefs(useApp())
   setLanguage(language.value)
 
+  const wasmLoaded = useNimiqNetwork().initWasm()
   if (!isAlertRoute)
     await useConn().init()
-  useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
   useLogger('build').log(`🏷️ Build stamp ${__BUILD_STAMP__}`)
   void identifyUser().then(() => {
@@ -148,12 +148,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   router.onError((err) => {
     const message = err instanceof Error ? err.message : String(err)
     useLogger('router').error('Navigation error', message)
+    reportCriticalError(err, { context: 'router-navigation' })
     const isChunkError = /dynamically imported module|module script failed|ChunkLoadError|Failed to fetch dynamically/i.test(message)
     if (isChunkError && !sessionStorage.getItem('chunkReloaded')) {
       sessionStorage.setItem('chunkReloaded', '1')
       location.reload()
     }
   })
+
+  if (await wasmLoaded && !isAlertRoute && !isMockEnabled)
+    void useNimiqNetwork().initClient()
 
   app.use(router)
 
