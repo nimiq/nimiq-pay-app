@@ -252,6 +252,17 @@ export function trackConsensusSlow(props: { duration_ms: number, network: string
   capture('consensus_slow', props)
 }
 
+export function trackUpdatingConnection(modal: HTMLIonModalElement): void {
+  const openedAt = Date.now()
+  capture('updating_connection_opened', {})
+  void modal.onDidDismiss().then(({ role }) => {
+    capture('updating_connection_closed', {
+      duration_ms: Date.now() - openedAt,
+      closed_by: role === 'confirm' ? 'auto' : role === 'cancel' ? 'close_button' : 'other',
+    })
+  })
+}
+
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
   capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }

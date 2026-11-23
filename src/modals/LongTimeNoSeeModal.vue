@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar, modalController } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { watchDebounced } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
@@ -17,18 +17,16 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcRecreating, hasHtlcExpired, isHtlcActive } = storeToRefs(useRemoteSigner())
 const { blocksUntilNextMacroBlock } = storeToRefs(useSync())
 
+const content = ref<HTMLElement>()
+// Ionic mounts contents before presentation, so getTop() can still return an underlying modal.
 let selfModal: HTMLIonModalElement | undefined
-onMounted(async () => {
-  selfModal = await modalController.getTop()
+onMounted(() => {
+  selfModal = content.value?.closest('ion-modal') ?? undefined
 })
 
-function dismissSelf() {
-  return closeModal({ modal: selfModal })
-}
-
 watchDebounced([consensus, isHtlcRecreating, isHtlcActive, hasHtlcExpired], () => {
-  if (consensus.value === 'established' && hasHtlcExpired.value === false && isHtlcActive.value)
-    dismissSelf()
+  if (selfModal && consensus.value === 'established' && hasHtlcExpired.value === false && isHtlcActive.value)
+    closeModal({ modal: selfModal })
 }, { immediate: true, debounce: debounceDelay, maxWait: debounceMaxWait })
 
 const maxProgress = Nimiq.Policy.BLOCKS_PER_BATCH
@@ -48,13 +46,13 @@ watch(progress, (progress) => {
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click.stop="() => dismissSelf()">
+        <IonButton @click.stop="closeModal({ modal: selfModal, role: 'cancel' })">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <div class="flex flex-col items-center h-full p-8 pt-0 gap-4">
+  <div ref="content" class="flex flex-col items-center h-full p-8 pt-0 gap-4">
     <h1 class="text-2xl font-bold text-center">
       {{ $t('Updating connection') }}
     </h1>
