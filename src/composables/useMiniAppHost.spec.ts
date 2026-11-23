@@ -419,6 +419,16 @@ describe('bridge origin', () => {
     expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
   })
 
+  it('logs only the origin when the webview leaves the Mini App', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://evil.example/callback?code=secret#token=secret' })
+
+    expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('left the Mini App origin'), 'https://evil.example')
+    expect(JSON.stringify(loggerWarn.mock.calls)).not.toContain('secret')
+  })
+
   it('never accepts popup webviews, even when the main webview is on the Mini App origin', async () => {
     const { browser } = await createPermissionHost()
     const { emit, receive } = await bridgeTransport({ browser })
