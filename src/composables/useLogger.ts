@@ -160,6 +160,10 @@ export function useLogger(name: string = '') {
     logs.value.push(formatLogs(args))
   }
 
+  /**
+   * Reports to PostHog only the first string argument and the first error, both redacted. Pass a static label as
+   * the first string: later arguments can hold user content and stay in the local log file.
+   */
   function error(...args: any[]) {
     if (isDev) {
       const stack = new Error('error').stack?.split('\n').slice(-1)[0].trim()
