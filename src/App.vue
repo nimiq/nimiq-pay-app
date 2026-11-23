@@ -170,10 +170,12 @@ App.addListener('resume', async () => {
 
   trackCurrentAppOpen('resume')
 
-  const { useTransactions } = await import('@/stores/transactions')
-  const { useSync } = await import('@/stores/sync')
-  await useTransactions().refreshFromDb()
-  void useSync().updateTransactionHistory()
+  if (useDecrypt().decrypted.value) {
+    const { useTransactions } = await import('@/stores/transactions')
+    const { useSync } = await import('@/stores/sync')
+    await useTransactions().refreshFromDb()
+    void useSync().updateTransactionHistory()
+  }
 
   void Posthog.reloadFeatureFlags()
     .then(() => Promise.all([useFeatureFlags().refreshUsdtMaintenance(), useFeatureFlags().refreshCryptocityPoints()]))
