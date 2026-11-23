@@ -4,7 +4,7 @@ import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
-import { computedAsync, useTimeoutFn } from '@vueuse/core'
+import { computedAsync, useTimeoutFn, whenever } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
 import { computed, effectScope, onUnmounted, ref, toValue, watch, watchEffect } from 'vue'
@@ -15,7 +15,6 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
-// TODO: async import
 import { useToast } from '@/composables/useToast'
 import { isGenericPolygonQuoteErrorMessage, useUsdtQuoteRefresh } from '@/composables/useUsdtQuoteRefresh'
 import { buildPaymentAnalyticsProps, startPaymentAnalytics, trackPaymentStarted } from '@/lib/analytics'
@@ -32,8 +31,6 @@ import InfoIcon from './icons/info.vue'
 import LoadingSpinner from './icons/loading-spinner.vue'
 import PolygonWarning from './PolygonWarning.vue'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
@@ -68,7 +65,6 @@ const isNimiqAsset = computed(() => asset.value === Asset.NIM)
 const cryptoCurrency = computed(() => assetToCrypto(asset.value))
 const loading = ref(false)
 
-// Non-included USDT fees from Fastspot quote (e.g. Polygon HTLC gas)
 const nonIncludedUsdtFee = computed(() => {
   if (!payment.value.swap?.fees)
     return 0
@@ -119,15 +115,11 @@ const htlcFeeSnapshot = computedAsync(async (): Promise<Awaited<ReturnType<typeo
   }
   catch (error) {
     logger.error('Failed to get Polygon HTLC fee', error)
-    // Keep the fee already shown so a failed refresh neither lowers it nor drops the cap.
-    // A new object re-triggers the refresh watcher, which retries after HTLC_FEE_RETRY_MS.
     return htlcFeeSnapshot.value && { ...htlcFeeSnapshot.value }
   }
 }, null, loadingHtlcFee)
-// Only the first fetch blocks paying; a background refresh keeps the fee already shown.
 const awaitingHtlcFee = computed(() => loadingHtlcFee.value && !htlcFeeSnapshot.value)
 
-// The store's HTLC fee expires; re-prime it so the fee shown and approved stays current.
 const HTLC_FEE_RETRY_MS = 5_000
 const htlcFeeRefreshDelay = ref(0)
 const { start: scheduleHtlcFeeRefresh, stop: stopHtlcFeeRefresh } = useTimeoutFn(() => htlcFeeRefresh.value++, htlcFeeRefreshDelay, { immediate: false })
@@ -150,8 +142,6 @@ const usdtFee = computed(() => {
   if (asset.value !== Asset.USDT)
     return payment.value.fee
 
-  // For atomic swaps, show the higher of Fastspot's non-included USDT fee and our HTLC relay estimate:
-  // it is also the most the swap may sign.
   return isAtomicSwap.value
     ? Math.max(nonIncludedUsdtFee.value, htlcFeeSnapshot.value?.fee ?? 0)
     : (usdtQuote.value?.fee ?? payment.value.fee)
@@ -176,8 +166,6 @@ const hasEnoughBalance = computed(() => {
 })
 
 const amounts = computedAsync(async () => {
-  // Prefer fiat values that came with the request, and only calculate the missing parts.
-  // This allows dev mocks to provide a fee label while still deriving the main fiat amount from live pricing.
   const { fiatAmount, fiatFeeAmount, fiatCurrency } = payment.value
   const missingFiatAmount = fiatAmount === undefined
   const missingFiatFeeAmount = fiatFeeAmount === undefined
@@ -255,11 +243,8 @@ async function convertSwapFeesToFiat(filter: (fee: { asset: string, amount: numb
   return total
 }
 
-// Network fees: all NETWORK-source fees (blockchain costs for BTC, Polygon, etc.)
 const swapNetworkFee = computedAsync(() => convertSwapFeesToFiat(f => f.source === 'NETWORK'), null)
 
-// Service/swap fee: computed from percentage like the wallet does:
-// (fromAmount - fromServiceNetworkFee) * serviceFeePercentage, then convert to fiat
 const swapServiceFee = computedAsync(async () => {
   const fees = payment.value.swap?.fees
   if (!fees)
@@ -269,12 +254,10 @@ const swapServiceFee = computedAsync(async () => {
   if (!serviceFee?.percentage)
     return null
 
-  // Sum included NETWORK fees in the sell asset to get fromServiceNetworkFee
   const includedNetworkFeeInSellAsset = fees
     .filter(f => f.source === 'NETWORK' && f.included && f.asset === asset.value)
     .reduce((sum, f) => sum + f.amount, 0)
 
-  // Wallet formula: (fromAmount - fromServiceNetworkFee) * serviceFeePercentage
   const feeAmount = (payment.value.amount - includedNetworkFeeInSellAsset) * serviceFee.percentage
 
   if (feeAmount <= 0)
@@ -289,14 +272,12 @@ const swapServiceFee = computedAsync(async () => {
   return fiatAmount.fiat.total
 }, null)
 
-// Combined swap fee (for inline text and NIM swaps)
 const swapFee = computed(() => {
   if (swapNetworkFee.value === null && swapServiceFee.value === null)
     return null
   return (swapNetworkFee.value ?? 0) + (swapServiceFee.value ?? 0)
 })
 
-// Rounded total for display (avoids duplicating the expression in the template)
 const roundedSwapFeeTotal = computed(() =>
   roundUpToTwoDecimals(swapNetworkFee.value ?? 0) + roundUpToTwoDecimals(swapServiceFee.value ?? 0),
 )
@@ -306,21 +287,9 @@ const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentVali
 
 const goCryptoError = ref<string>()
 const goCryptoIsAboutToExpire = ref<boolean>()
-const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, async (isGoCrypto) => {
-  // Watch payment rail for whether it's a GoCrypto payment and if that's the case, lazy load and setup GoCrypto
-  // monitoring. As soon as we load it and set it up, the rail watcher can be stopped, as the monitoring itself will
-  // observe the payment ref and its rail for further changes.
-  if (!isGoCrypto)
-    return
-  window.setTimeout(unwatchGoCryptoRail, 0) // run after watcher invocation
+whenever(() => payment.value.rail === Rail.GoCrypto, async () => {
   // Have to create and dispose an effect scope manually as watchers/effects are not used synchronously in setup script.
-  // Could also stop monitoring manually, instead of defining a scope, but the scope already handles automatically not
-  // executing the run handler when it's already stopped, i.e. when the component has already been unmounted before the
-  // async code continues.
   const scope = effectScope()
-  // Note that we stop the monitoring only on unmount and not on step visibility change. This way, the monitoring also
-  // stays active throughout the following steps, for example PinInput, until the PaymentPreview step is unmounted, e.g.
-  // by the flow being dismissed or going back to a step before the PaymentPreview step.
   onUnmounted(() => scope.stop())
   const { useGoCryptoMonitoring } = await import('@/composables/useGoCryptoMonitoring')
   scope.run(() => {
@@ -332,17 +301,10 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
       goCryptoIsAboutToExpire.value = !remainingTimeExpiryEarly.value && !!remainingTimeExpiryFinal.value
     })
   })
-}, { immediate: true })
+}, { immediate: true, once: true })
 
 const objectHasData = (obj?: unknown) => typeof obj === 'object' && Object.keys(obj as Record<string, unknown>).length > 0
-// Only show the toggle if he scanned QR code
 const canPayWithPuntos = computed(() => asset.value === Asset.NIM && objectHasData(props.state[StepName.QRCodeScanner]))
-/**
- * Only allow paying with Points if:
- *   - The user has enough NIM balance
- *   - The user is eligible for Points
- *   - The user has scanned something with the QR code scanner in previous steps (no bluecode...)
- */
 const payWithPuntos = ref((asset.value === Asset.NIM) && (!hasEnoughBalance.value && isEligible.value && canPayWithPuntos.value))
 
 const paymentMethod = computed(() => {
@@ -360,7 +322,6 @@ const swapAddressLimits = computedAsync(async () => {
   if (!isAtomicSwap.value)
     return null
 
-  // https://github.com/nimiq/wallet/blob/1102b802030833d5d84d9c304baa85331ba51362/src/composables/useSwapLimits.ts#L252
   const { getLimits, SwapAsset } = await useFastspotApiV1()
   try {
     if (asset.value === Asset.USDT) {
@@ -377,10 +338,8 @@ const swapAddressLimits = computedAsync(async () => {
   }
 }, null, loadingSwapLimits)
 
-// Buffer 1% of the swap limit to avoid slippage
 const swapLimit = computed(() => swapAddressLimits.value ? Math.floor(swapAddressLimits.value.current * 0.99) : 0)
 const remainingFiatLimits = computedAsync(async () => {
-  // Don't need to do extra computation if the payment is not atomic swap or the swap is not over the limit
   if (!isAtomicSwap.value || payment.value.amount <= swapLimit.value)
     return
 
@@ -394,9 +353,8 @@ const isUsdtMaintenanceBlocked = computed(() => asset.value === Asset.USDT && is
 
 const disabled = computed(() =>
   isUsdtMaintenanceBlocked.value
-  || (isAtomicSwap.value && (loadingSwapLimits.value || awaitingHtlcFee.value)) /* Not loaded yet */
-  // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
-  || (isAtomicSwap.value && !!swapAddressLimits.value && payment.value.amount > swapLimit.value) /* Over swap limit */
+  || (isAtomicSwap.value && (loadingSwapLimits.value || awaitingHtlcFee.value))
+  || (isAtomicSwap.value && !!swapAddressLimits.value && payment.value.amount > swapLimit.value)
   || !(
     (asset.value === Asset.USDT && polygonConsensus.value === 'established' && hasEnoughBalance.value)
     || (isEligible.value && payWithPuntos.value)
@@ -420,12 +378,9 @@ watch(() => goCryptoError.value || flowErrorMessage.value, (message) => {
     duration: 5 * 1e3,
   })
   if (goCryptoError.value)
-    // Go back to QR scanner
     emit('back', StepName.QRCodeScanner)
 }, { immediate: true })
 
-// A payment failing on the PIN step puts its error there, so the preview's error watch never resets `loading`.
-// Reset it when the user comes back, which also resumes the paused USDT quote refresh so the fee shown is current.
 watch(() => props.isVisible, (visible) => {
   if (!visible || !loading.value)
     return
@@ -453,7 +408,6 @@ function handlePay() {
     payWithPuntos: payWithPuntos.value,
     paymentAnalytics,
     polygonQuote: usdtQuote.value || undefined,
-    // A swap may not sign more than the fee shown; without an HTLC estimate there is nothing to cap against.
     usdtFeeAllowance: asset.value === Asset.USDT && isAtomicSwap.value && htlcFeeSnapshot.value
       ? usdtFee.value
       : undefined,
@@ -504,7 +458,6 @@ const usdtTotalDebitFiat = computedAsync(async () => {
 const usdtPreviewFiatTotal = computed(() => {
   if (!amounts.value?.fiatCurrency)
     return undefined
-  // For atomic swaps, derive fiat from the USDT total directly to avoid rounding gaps
   if (isAtomicSwap.value && usdtTotalDebitFiat.value)
     return roundUpToTwoDecimals(usdtTotalDebitFiat.value.amount)
   return roundUpToTwoDecimals((amounts.value.fiatAmount || 0) + (usdtPreviewFiatFeeAmount.value || 0))
@@ -528,7 +481,6 @@ const totalPreviewFeeFiat = computed<{ amount: number, currency: string } | null
   }
 })
 
-// Unified inline fee for the "incl. {fee} fees" label
 const inlineFee = computed<{ amount: number, currency: string } | null>(() => {
   if (isAtomicSwap.value && swapFee.value)
     return { amount: roundedSwapFeeTotal.value, currency: selectedFiat.value }
@@ -553,7 +505,6 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
       </template>
 
       <template v-if="isAtomicSwap || !isNimiqAsset" #amount-after>
-        <!-- Atomic swap info popover (NIM or USDT) -->
         <PopoverRoot v-if="isAtomicSwap">
           <PopoverTrigger as-child>
             <button
@@ -572,7 +523,6 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
               align="end"
               :align-offset="-32"
             >
-              <!-- USDT swap: structured fee breakdown (matching wallet's approach) -->
               <template v-if="!isNimiqAsset">
                 <div v-if="swapNetworkFee" class="flex items-start justify-between gap-x-4 text-sm">
                   <span class="text-white/60">{{ $t('Network fees') }}</span>
@@ -587,7 +537,6 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
                   <span class="text-right text-white"><FiatAmount :amount="roundedSwapFeeTotal" :currency="selectedFiat" /></span>
                 </div>
               </template>
-              <!-- NIM swap: simple total fee -->
               <i18n-t v-else-if="swapFee" keypath="Includes {fee} in fees" tag="p" class="text-base text-white">
                 <template #fee>
                   <FiatAmount :amount="swapFee" :currency="selectedFiat" />
@@ -606,7 +555,6 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
             </PopoverContent>
           </PopoverPortal>
         </PopoverRoot>
-        <!-- Regular USDT info popover (non-swap) -->
         <PopoverRoot v-else-if="!isNimiqAsset">
           <PopoverTrigger as-child>
             <button
