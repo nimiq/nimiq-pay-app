@@ -1,7 +1,6 @@
 import type { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import type { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 
-// EIP-6963 Types
 interface EIP6963ProviderInfo {
   uuid: string
   name: string
@@ -38,6 +37,8 @@ export declare global {
     __NIMIQ_RPC_URL__?: string
     /** Ethereum RPC URL injected by the host before this script runs. */
     __ETH_RPC_URL__?: string
+    /** Set to true from a webview inspector to log provider traffic. */
+    __NIMIQ_PAY_DEBUG__?: boolean
     /** Host context seeded by Nimiq Pay before the provider script runs. */
     __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat, network?: NimiqPayNetwork, version?: string }
     /** Public host APIs exposed to mini apps. */
