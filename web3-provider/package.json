@@ -11,21 +11,21 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.34.9",
   "dependencies": {
     "@trustwallet/web3-provider-core": "../vendor/trust-web3-provider/packages/core",
     "@trustwallet/web3-provider-ethereum": "../vendor/trust-web3-provider/packages/ethereum",
     "@nimiq/web3-provider-nimiq": "../vendor/trust-web3-provider/packages/nimiq",
-    "birpc": "^4.0.0",
+    "birpc": "^4.2.0",
     "buffer": "^6.0.3"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-commonjs": "^29.0.3",
     "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "rollup": "^4.55.1",
+    "@rollup/plugin-typescript": "^12.3.1",
+    "rollup": "^4.68.4",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "tslib": "^2.8.1",
+    "tslib": "^2.9.1",
     "typescript": "^5.9.3"
   }
 }
