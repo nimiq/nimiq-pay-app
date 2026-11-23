@@ -137,14 +137,12 @@ function _useModal() {
   }
 
   async function closeModal({ modal: modalToClose, data = null, role = 'confirm' }: { modal?: HTMLIonModalElement, data?: any, role?: CloseRole } = {}) {
-    // Close the top modal
     const modal = modalToClose || await modalController.getTop()
 
     if (import.meta.env.MODE === 'development')
       logger.log('closeModal', modal)
 
     if (modal) {
-      // Only override boolean guards; a function canDismiss (flows) must run to start their close teardown.
       if (typeof modal.canDismiss !== 'function')
         modal.canDismiss = true
       await modal.dismiss(data, role)
@@ -154,7 +152,6 @@ function _useModal() {
   async function closeAllModals() {
     const modal = await modalController.getTop()
 
-    // Close all modals in background
     allModals.forEach(async (modal) => {
       if (modal)
         await modal.dismiss()

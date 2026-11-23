@@ -1,6 +1,3 @@
-// Only ever loaded via dynamic import when mock mode is enabled, so fixtures
-// (and the stores wired up in loadMockData) stay out of the production bundle
-// and out of spec module graphs.
 import type { ExternalTransaction } from '@/types/transactions'
 import { storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
@@ -15,17 +12,15 @@ import { markAsUnknownTransactionTitle, MerchantCategory, PaymentMethod, Rail, T
 
 const logger = useLogger('mock-data')
 
-export const MOCK_NIM_BALANCE = 12_500 * 1e5 // 12,500 NIM
-export const MOCK_USDT_BALANCE = 482_750_000 // 482.75 USDT
+export const MOCK_NIM_BALANCE = 12_500 * 1e5
+export const MOCK_USDT_BALANCE = 482_750_000
 
-// USD price per crypto unit.
 const MOCK_PRICES_USD: Record<Crypto, number> = {
   [Crypto.NIM]: 0.002,
   [Crypto.BTC]: 100_000,
   [Crypto.USDT]: 1,
 }
 
-// Fiat units per USD.
 const MOCK_USD_TO_FIAT: Record<Fiat, number> = {
   [Fiat.USD]: 1,
   [Fiat.EUR]: 0.92,
@@ -33,7 +28,6 @@ const MOCK_USD_TO_FIAT: Record<Fiat, number> = {
   [Fiat.GMD]: 71,
 }
 
-/** Crypto price expressed in the given fiat. Used by the usePrice mock short-circuit. */
 export function getMockPrice(crypto: Crypto, fiat: Fiat): number {
   return MOCK_PRICES_USD[crypto] * MOCK_USD_TO_FIAT[fiat]
 }
@@ -54,7 +48,6 @@ const MINUTE = 60 * 1e3
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-// Addresses are only rendered (sliced/copied), never parsed, so plausible strings are enough.
 const MOCK_REMOTE_HTLC_ADDRESS = 'NQ45 M6QV 6KKM 4DHC L9QC 5T2F GU8Q D303 4661'
 const MOCK_TOPUP_SENDER_ADDRESS = 'NQ57 2814 76S1 EVJM 6EFL 0F0P PV0T C1L0 RJPY'
 const MOCK_WITHDRAWAL_ADDRESS = 'NQ19 YG54 46TX P7PT FUTR K1KY DDM8 GD3D AGYU'
@@ -79,7 +72,6 @@ export function getMockTransactions(): ExternalTransaction[] {
     {
       ...base,
       transfer: Transfer.UserPaymentToMerchant,
-      // Merchant payments display the store name instead of a generic "Payment"
       title: markAsUnknownTransactionTitle('Nimiq Store'),
       sender: MOCK_REMOTE_HTLC_ADDRESS,
       senderType: Nimiq.AccountType.HTLC,
@@ -177,7 +169,7 @@ export function getMockTransactions(): ExternalTransaction[] {
       sender: MOCK_USDT_SENDER_ADDRESS,
       recipient: MOCK_USDT_MERCHANT_ADDRESS,
       timestamp: now - 40 * MINUTE,
-      amount: 12_900_000, // 12.90 USDT
+      amount: 12_900_000,
       fee: 10_000,
       hash: mockHash(6),
       asset: Asset.USDT,
@@ -199,7 +191,7 @@ export function getMockTransactions(): ExternalTransaction[] {
       sender: MOCK_USDT_SENDER_ADDRESS,
       recipient: MOCK_USDT_MERCHANT_ADDRESS,
       timestamp: now - 8 * HOUR,
-      amount: 250_000_000, // 250 USDT
+      amount: 250_000_000,
       hash: mockHash(7),
       asset: Asset.USDT,
       chain: Chain.Polygon,
@@ -208,13 +200,12 @@ export function getMockTransactions(): ExternalTransaction[] {
       ...base,
       transfer: Transfer.UserPayment,
       title: 'Withdrawal',
-      // HTLC sender/basic recipient so TransactionItem picks the withdraw icon, like NIM withdrawals.
       senderType: Nimiq.AccountType.HTLC,
       recipientType: Nimiq.AccountType.Basic,
       sender: MOCK_USDT_SENDER_ADDRESS,
       recipient: MOCK_USDT_WITHDRAWAL_ADDRESS,
       timestamp: now - 3 * DAY,
-      amount: 75_000_000, // 75 USDT
+      amount: 75_000_000,
       fee: 10_000,
       hash: mockHash(8),
       asset: Asset.USDT,
@@ -227,7 +218,7 @@ export function getMockTransactions(): ExternalTransaction[] {
       sender: MOCK_USDT_SENDER_ADDRESS,
       recipient: MOCK_USDT_MERCHANT_ADDRESS,
       timestamp: now - 6 * DAY,
-      amount: 320_650_000, // 320.65 USDT
+      amount: 320_650_000,
       hash: mockHash(9),
       asset: Asset.USDT,
       chain: Chain.Polygon,
@@ -237,13 +228,7 @@ export function getMockTransactions(): ExternalTransaction[] {
   return [...nimTxs, ...usdtTxs].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
 }
 
-/**
- * Fills the stores with in-memory fixtures instead of syncing with the blockchain.
- * Called from syncWallets() when mock mode is enabled. Never writes to the database.
- */
 export async function loadMockData() {
-  // Without this, isConsensusNeeded paths (e.g. opening the Top Up address) leave a permanent
-  // tx-skeleton row and an "Establishing consensus…" pill — there is no client to ever establish.
   const { consensus } = storeToRefs(useNimiqNetwork())
   consensus.value = 'established'
 
@@ -260,7 +245,6 @@ export async function loadMockData() {
   isAppStarting.value = false
   isProcessingRemote.value = false
 
-  // Mock-aware: hydrates the fixture transactions instead of reading the DB.
   await useTransactions().refreshFromDb()
 
   logger.log('🎭 Mock data loaded')

@@ -18,10 +18,8 @@ const { showModal } = useModal()
 const { htlcThreshold, withdrawalDenomination, withdrawalAddressesHistory } = storeToRefs(useApp())
 const { setToast } = useToast()
 
-// Threshold is stored in luna; show it in NIM. Edited via the AutoDepositThreshold modal.
 const htlcThresholdNim = computed(() => toCoins(htlcThreshold.value, Crypto.NIM))
 
-// Same scan as the Dev modal's "Scan wallet history": finds HTLCs missing from the local DB, then reconciles them.
 const isScanning = ref(false)
 async function rescanPendingNim() {
   if (isScanning.value)

@@ -6,7 +6,7 @@ import { IPV4_RE, isPrivateOrReservedIPv4 } from '@/lib/url-safety'
 type MiniAppDescriptions = Record<string, string>
 
 /**
- * Normalize user input into an absolute mini-app URL.
+ * Normalize user input into an absolute Mini App URL.
  * Accepts HTTPS URLs, HTTP URLs of local dev servers in dev builds, and hostnames without a protocol.
  */
 export function normalizeMiniAppUrl(input: string): string | undefined {
@@ -28,8 +28,6 @@ export function normalizeMiniAppUrl(input: string): string | undefined {
     if (!isHostnameLike)
       return undefined
 
-    // The bridge is injected into the page, so cleartext would let anyone on the network drive it.
-    // Only local dev servers (localhost, LAN IPs) may use http, and only in dev builds.
     if (parsed.protocol === 'http:' && !(import.meta.env.DEV && (hostname === 'localhost' || isPrivateOrReservedIPv4(hostname))))
       return undefined
 

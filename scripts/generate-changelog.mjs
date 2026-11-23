@@ -14,9 +14,6 @@
 //
 // Idempotent: if src/data/changelog.json already has an entry for `version`, the AI
 // is NOT called again (manual edits are preserved) unless --force is passed.
-//
-// AI backend: `release:beta` asks before release-it starts and passes the choice here.
-// Direct interactive runs ask when both CLIs are installed; other runs prefer `claude`.
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -52,10 +49,6 @@ function getVersion() {
   return pkg.version
 }
 
-// The git range (previous release .. HEAD) we diff for the changelog. Prefer the
-// `🚀 Release v` commit over git tags: this repo's recent releases aren't reliably
-// tagged, so `git describe --tags` can point at a much older release. Tags are the
-// fallback; a bounded window is the last resort for a first-ever changelog.
 function resolveRange() {
   let prevRef = sinceArg
   if (!prevRef) {
@@ -76,7 +69,7 @@ function resolveRange() {
   }
   const range = `${prevRef}..HEAD`
   try {
-    git(['rev-list', '--count', range]) // throws if prevRef is unresolvable
+    git(['rev-list', '--count', range])
     return range
   }
   catch {
@@ -107,7 +100,6 @@ async function chooseAi() {
     throw new Error('Neither `claude` nor `codex` CLI is available. Install one or edit src/data/changelog.json manually.')
   if (process.env.CHANGELOG_AI)
     return selectAi(available, process.env.CHANGELOG_AI)
-  // Non-interactive (CI / --print-latest) or only one installed: prefer claude.
   if (available.length === 1 || printLatest || !process.stdin.isTTY)
     return available[0]
   const answer = (await ask('\n🤖 Which AI CLI should write the changelog? [claude/codex] (default: claude): ')).toLowerCase()
@@ -192,7 +184,6 @@ function entryToMarkdown(entry) {
   return lines.join('\n').trimEnd()
 }
 
-// CHANGELOG.md is fully derived from the JSON so both never drift.
 function writeChangelogMd(entries) {
   const body = entries.map(entryToMarkdown).join('\n\n')
   writeFileSync(CHANGELOG_MD, `# Changelog\n\nAll notable changes to Nimiq Pay.\n\n${body}\n`)
@@ -226,7 +217,6 @@ async function main() {
   const existingIndex = entries.findIndex(e => e.version === version)
   let entry = existingIndex >= 0 ? entries[existingIndex] : null
 
-  // Only touch git and the AI when we actually need to generate a new entry.
   if (entry && !force) {
     log(`♻️  Reusing existing entry for v${version}.`)
   }
@@ -243,13 +233,11 @@ async function main() {
     log(`✅ Wrote ${CHANGELOG_JSON}`)
     if (!printLatest && process.stdin.isTTY) {
       await confirmReview()
-      // Pick up any manual edits made during the pause.
       entries = loadEntries()
       entry = entries.find(e => e.version === version) || entry
     }
   }
 
-  // Keep CHANGELOG.md fully derived from the (possibly hand-edited) JSON.
   writeChangelogMd(entries)
 
   if (printLatest)

@@ -59,12 +59,10 @@ watchDebounced(() => props.isVisible, async (isVisible) => {
     return
   if (isVisible) {
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
-    // Measure again: the class makes sheets full screen and pads the header, which moves the container
     measureCameraFeedContainerTop()
     const activatingMessage = i18n.t('Activating scanner')
     useToast().setToast({ message: activatingMessage, type: 'spinner', keepOpen: true })
     await start()
-    // Only clear the spinner: start() may have replaced it with an error toast the user must see
     useToast().clearToast(activatingMessage)
   }
   else {
@@ -74,7 +72,6 @@ watchDebounced(() => props.isVisible, async (isVisible) => {
   }
 }, { immediate: true, debounce: 250, maxWait: 500 })
 
-// Preload the scanner library
 onMounted(ready)
 
 onBeforeUnmount(() => {
@@ -178,15 +175,12 @@ function handleManualInput() {
 </template>
 
 <style>
-/* Non-scoped style on purpose, as we're manipulating parent elements (in an admittedly hacky fashion, which likely
-still is better though than assigning styles via js) */
-
 body.native-qr-scanner-modal-open ion-app > div {
   display: none;
 }
 body.native-qr-scanner-modal-open ion-modal {
-  --ion-backdrop-color: transparent; /* make backdrop transparent */
-  --background: transparent; /* make dialog background transparent */
+  --ion-backdrop-color: transparent;
+  --background: transparent;
   --overflow: visible; /* make ::before element defined below visible */
 }
 /* The camera shows through the transparent background above a sheet, so sheets go full screen while scanning.
@@ -200,7 +194,6 @@ body.native-qr-scanner-modal-open ion-modal.modal-sheet ion-header {
   padding-top: var(--ion-modal-offset-top, 0px);
 }
 body.native-qr-scanner-modal-open ion-modal .ion-page::before {
-  /* Simulate backdrop above modal. Only visible when the user drags the modal down to close it. */
   content: '';
   position: absolute;
   width: 100%;

@@ -32,7 +32,6 @@ vi.mock('@/composables/useDevice', () => ({ useDevice: () => ({ isWeb: false }) 
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ log: vi.fn(), warn: vi.fn(), error: vi.fn() }) }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 
-// Resolves checkEncryptionSecret calls by hand, in call order, to hold a decrypt mid-flight.
 function deferSecretChecks() {
   const pending: Array<(valid: boolean) => void> = []
   mocks.conn.sqlite.checkEncryptionSecret.mockImplementation(() => new Promise((resolve) => {
@@ -73,7 +72,6 @@ describe('useDecrypt decrypt', () => {
     const wrong = decrypt('0000')
     const right = decrypt('1111')
     await vi.waitFor(() => expect(checks).toHaveLength(1))
-    // The second submit must not start while the first is still running.
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(checks).toHaveLength(1)
 

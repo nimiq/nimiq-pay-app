@@ -24,7 +24,6 @@ const logger = useLogger('useStringParser')
 const { query, run } = useConn()
 
 const CPL_URL_ID_PARAM = 'cpl_id'
-// This is for unified QR code format (Ex: bitcoin:[...]&lightning=[...])
 const LN_URL_PARAM = 'lightning'
 
 export enum QRDataFormat {
@@ -86,16 +85,12 @@ export function useStringParser() {
     return content.toLowerCase().startsWith(isTestnet ? 'lntb' : 'lnbc') || content.toLowerCase().startsWith('lnurl')
   }
 
-  // Parses different URL formats and returns a PaymentRequestData object
-  // TODO Bluecode
   async function getPaymentRequestData(content: string, lightningSellAsset?: Asset): Promise<Result<PaymentRequestData, string>> {
     if (isValidEthAddress(content))
       return parsePolygonAddress(content)
 
-    // Add a protocol to Bitcoin Lightning invoices if it's missing, to pass URL parsing
     if (isLightningInvoice(content))
       content = `lightning:${content}`
-    // Remove wallet.nimiq.com prefix
     if (content.startsWith(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`)) {
       content = content.replace(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`, '')
     }
@@ -107,7 +102,6 @@ export function useStringParser() {
       // Scanned or pasted content can be anything (even a seed phrase), and some engines echo it in the URL
       // error's message. Logs reach PostHog and support reports, so record neither.
       logger.error('Error invalid URL', { length: content.length, errorName: e instanceof Error ? e.name : typeof e })
-      // The returned error reaches logs, toasts and Mini Apps, so it must not echo the input.
       return { error: i18n.t('Invalid URL'), data: undefined }
     }
 
@@ -125,7 +119,6 @@ export function useStringParser() {
     else if (rail === Rail.BitcoinLightning) {
       result = await parseBitcoinLightningUrl(url, lightningSellAsset)
     }
-    // If it is a payment request from the Nimiq Wallet, redirect to the withdrawal flow
     else if (rail === Rail.NimiqWallet) {
       result = parseNimiqWalletRequest(url)
     }
@@ -158,10 +151,6 @@ export function useStringParser() {
   }
 
   // CPL uses the following format: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
-  // And it looks like this:
-  //   nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
-  // We will parse it as follows:
-  //    { message: 'cplink.com ref #PZEd', rail: Rail.Cpl, railMerchantId: '', paymentRef: PZEdCP62, amount: 183000, recipient: 'NQ51...', merchantName: 'Maxi Shoes' }
   async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData, string>> {
     if (protocol !== 'nimiq:') {
       return {
@@ -179,11 +168,10 @@ export function useStringParser() {
     const rawAmount = searchParams.get('amount') || '0'
     const lunaAmount = Math.round(Number.parseFloat(rawAmount) * 1e5)
 
-    // Checked in luna: a sub-luna amount rounds to 0, which would route to manual amount entry
     if (!Number.isSafeInteger(lunaAmount) || lunaAmount <= 0)
       return { error: i18n.t('Invalid CPLink. Missing amount or recipient.'), data: undefined }
 
-    const fee = 0 // There is no fee in NIM (yay)
+    const fee = 0
     const merchantName = searchParams.get('label') || undefined
     const transfer = Transfer.UserPaymentToMerchant
     const rail = Rail.CryptoPaymentLink
@@ -198,7 +186,7 @@ export function useStringParser() {
       return { error: i18n.t('Invalid CPLink. Could not fetch payment details.'), data: undefined }
 
     const { fiatCurrency, fiatAmount, itemDescription } = cplRes
-    const fiatFeeAmount = 0 // There is no fee in NIM (yay)
+    const fiatFeeAmount = 0
     const message = searchParams.get('message') || itemDescription
 
     const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount, asset: Asset.NIM, chain: Chain.Nimiq }
@@ -231,7 +219,6 @@ export function useStringParser() {
       return { error: i18n.t('Invalid Bitcoin Lightning invoice: missing timestamp.'), data: undefined }
     const invoiceExpiresAt = timestampSection.value + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
 
-    // Show expiry error 20s before actual expiry
     if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
@@ -260,13 +247,6 @@ export function useStringParser() {
     }, quoteStartedAt)
     if (existingQuote) {
       try {
-        // TODO: I don't know what could happen if the swap was already created
-        // const quoteOrSwap = await useFastspotApiV2().then(({ getSwap }) => getSwap(existingQuote.swap_id))
-        // if('hash' in quoteOrSwap) {
-        //   return { error: i18n.t('Swap for this invoice was already created, create a new invoice'), data: undefined }
-        // } else {
-        //   quote = quoteOrSwap
-        // }
         quote = await useFastspotApiV2().then(({ getSwap }) => getSwap(existingQuote.swap_id))
       }
       catch (e) {
@@ -294,9 +274,7 @@ export function useStringParser() {
     if (quote.sell.asset !== sellAssetId)
       return { error: i18n.t('Could not fetch amount for Bitcoin Lightning swap.'), data: undefined }
 
-    // Aggregate fees by (asset, included, source):
-    // - Included fees with same key: sum amounts
-    // - Non-included fees with same key: take max (e.g. redemption/refund are alternatives)
+    // Non-included fees with same key: take max (e.g. redemption/refund are alternatives)
     const feeMap = new Map<string, { asset: string, amount: number, included: boolean, source: 'NETWORK' | 'SERVICE', percentage?: number }>()
     for (const fee of quote.fees) {
       const key = `${fee.asset}-${fee.included}-${fee.source}`
@@ -321,7 +299,7 @@ export function useStringParser() {
       recipient: decoded.paymentRequest,
       amount: quote.sell.amount,
       fee: 0,
-      merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the LN invoice
+      merchantCategory: MerchantCategory.Shop,
       rail: Rail.BitcoinLightning,
       paymentRef: quote.id,
       transfer: Transfer.UserPaymentToAtomicSwap,
@@ -355,7 +333,6 @@ export function useStringParser() {
     const nimAmount = Number.parseFloat(rawAmount)
     const lunaAmount = Math.round(nimAmount * 1e5)
 
-    // 0 means the request has no amount and the user enters it
     if (!Number.isSafeInteger(lunaAmount) || nimAmount < 0)
       return { error: i18n.t('Invalid amount'), data: undefined }
 
@@ -363,7 +340,7 @@ export function useStringParser() {
       recipient,
       amount: lunaAmount,
       fee: 0,
-      merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the Nimiq Wallet request
+      merchantCategory: MerchantCategory.Shop,
       rail: Rail.NimiqWallet,
       paymentRef: '',
       transfer: Transfer.UserPaymentToMerchant,

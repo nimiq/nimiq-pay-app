@@ -10,7 +10,6 @@ export enum FlowName {
   Login = 'login',
   VerifyPhone = 'verifyPhone',
   OnBoardingPoints = 'onBoardingPoints',
-  // OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
   Payment = 'payment',
   NimWithdraw = 'nimWithdraw',
@@ -19,7 +18,7 @@ export enum FlowName {
   SaveAddress = 'saveAddress',
   NimTopUp = 'nimTopUp',
   ViewTransactions = 'viewTransactions',
-  ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
+  ViewTransactionDetail = 'viewTransactionDetail',
   Backup = 'backup',
   ChangePin = 'changePin',
   ComingSoon = 'comingSoon',
@@ -28,8 +27,6 @@ export enum FlowName {
 }
 
 interface FlowHookCbReturn {
-  // Prevents the default behavior.
-  // e.g. onDone will close the modal by default.
   prevent?: boolean
 }
 export type FlowHookCb = (state: State, options: { err: (msg: string) => void, setToast: (options: Toast) => void }) => Promise<FlowHookCbReturn | void>
@@ -37,28 +34,14 @@ export type FlowHookCb = (state: State, options: { err: (msg: string) => void, s
 export interface Flow {
   flowName: FlowName
   steps: Step[]
-
-  // Function that will be called when the flow is supposed to be closed. If it
-  // is not set, the flow will be closed automatically when the last step is
-  // done.
   onDone?: FlowHookCb
-
-  // Function that will be called when the flow is cancelled. Also, the flow
-  // will be closed automatically when the last step is done.
   onCancel?: FlowHookCb
-
-  // In which step the flow will start
   initialStep?: StepName
-
-  // The component that will be filled in the defeault slot of Flow.vue
   slotComponent?: Component
-
-  // Android back button goes to the previous step instead of closing the flow
   backButtonNavigates?: boolean
 }
 
 export interface FlowInitOptions {
-  // Currently none.
 }
 
 export type FlowInit = (options?: FlowInitOptions) => Promise<Flow>
@@ -76,10 +59,6 @@ export enum StepName {
   RecoveryWordsStep = 'recoveryWordsStep',
   GetNotified = 'getNotified',
   OnBoardingPoints = 'onBoardingPoints',
-  // OnBoardingCashback1 = 'onBoardingCashback1',
-  // OnBoardingCashback2 = 'onBoardingCashback2',
-  // OnBoardingCashback3 = 'onBoardingCashback3',
-  // OnBoardingCashback4 = 'onBoardingCashback4',
   OnBoardingBluecode1 = 'onBoardingBluecode1',
   OnBoardingBluecode2 = 'onBoardingBluecode2',
   OnBoardingBluecode3 = 'onBoardingBluecode3',
@@ -110,7 +89,7 @@ export enum StepName {
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimWithdrawalConfirmStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion, StepName.Settings, StepName.SettingsGeneral, StepName.SettingsSecurity, StepName.SettingsPayments, StepName.SettingsSavedAddresses, StepName.SettingsMiniApps, StepName.SettingsAccount] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion, StepName.Settings, StepName.SettingsGeneral, StepName.SettingsSecurity, StepName.SettingsPayments, StepName.SettingsSavedAddresses, StepName.SettingsMiniApps, StepName.SettingsAccount] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -142,10 +121,10 @@ export interface State {
     paymentAnalytics: PaymentAnalyticsState
   }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
-  [StepName.NimWithdrawalAddressSelectionStep]: string // User selects a saved address
-  [StepName.NimWithdrawalConfirmStep]: { polygonQuote?: PolygonTransferQuote } // Quote shown when the user confirmed
+  [StepName.NimWithdrawalAddressSelectionStep]: string
+  [StepName.NimWithdrawalConfirmStep]: { polygonQuote?: PolygonTransferQuote }
   [StepName.NimAddressInput]: string
-  [StepName.TransactionList]: ExternalTransaction // User selects a transaction
+  [StepName.TransactionList]: ExternalTransaction
   [StepName.ComingSoon]: string
 }
 
@@ -171,9 +150,6 @@ export interface NavigationControl {
 }
 
 type BaseStep = {
-  /**
-   * Title of the modal
-   */
   title?: string | Ref<string>
 
   /**
@@ -182,14 +158,8 @@ type BaseStep = {
    */
   ariaLabel?: string
 
-  /**
-   * An icon for the title (e.g. ShopIcon when showing the `merchantName`)
-   */
   titleIcon?: Component
 
-  /**
-   * Subline of the modal
-   */
   description?: string | Ref<string>
 
   /**
@@ -238,8 +208,8 @@ export interface StepCallbacks {
    * Read more about branching flows in the ./README.md
    */
   navigateTo: (p: NavigateToOptions) => void
-  next: () => void // alias for navigateTo(1)
-  prev: () => void // alias for navigateTo(-1)
+  next: () => void
+  prev: () => void
 
   /**
    * Callback function to set an error in step. This will abort the flow
@@ -256,9 +226,6 @@ export interface StepCallbacks {
 }
 
 export type InputStep = BaseStep & {
-  /**
-   * Just for reference while debugging and references in the code
-   */
   step: InputStepName
 
   /**
@@ -279,12 +246,8 @@ export type InputStep = BaseStep & {
 }
 
 export type InfoStep = BaseStep & {
-  /**
-   * Just for reference while debugging and references in the code
-   */
   step: InfoStepName
 
-  // Just to be explicit, and avoid TS issues
   autofocus?: undefined
   overrideHeight?: undefined
 }
@@ -310,14 +273,12 @@ export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMet
 
 export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => true,
-  select: (_: OnDoneStepValue) => true, // Just an alias for done
+  select: (_: OnDoneStepValue) => true,
   skip: () => true,
   back: () => true,
   focus: () => true,
   navigateTo: (_: NavigateToOptions) => true,
 }
-
-// Complex types for State
 
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency' | 'railMerchantId' | 'recipientType' | 'senderType' | 'recipientData' | 'senderData' | 'asset' | 'chain'>
   & {
@@ -331,8 +292,6 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
-  // Fiat amount the user entered in the amount step, shown verbatim on the confirm screen
-  // so the confirmation matches what they just typed even if rates shift before signing.
   fiatAmount: number
   polygonQuote?: PolygonTransferQuote
 }

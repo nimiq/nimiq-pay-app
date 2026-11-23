@@ -27,11 +27,7 @@ export const useSyncBalances = defineStore('sync-balances', () => {
   const { getAllRemoteSigners, blockHeightToTimestamp } = remoteSignerStore
   const { isUpdatingBalancesNow, shouldUpdateBalancesAgain } = storeToRefs(useSyncState())
 
-  /**
-   * Updates the local and the remote wallet balances.
-   */
   async function updateBalances() {
-    // Pull-to-refresh / head listeners must not overwrite mock balances with chain values.
     if (isMockEnabled)
       return
 
@@ -154,7 +150,6 @@ export const useSyncBalances = defineStore('sync-balances', () => {
           publicKey: remotePublicKey.value!,
           start,
           end: 'timeout' in account ? account.timeout : Number.MAX_VALUE,
-          // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
           proofSize: remoteSignerStore.remoteProofSize,
         }, context)
         if (!isCurrent())

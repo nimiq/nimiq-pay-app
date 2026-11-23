@@ -2,9 +2,6 @@ import type { MaybeRef } from 'vue'
 import type { GoCryptoPaymentApiError, GoCryptoPaymentDetails, GoCryptoRequestIdentifier, GoCryptoUserFriendlyStatus, GoCryptoUserFriendlyStatusOptions, GoCryptoUserFriendlyStatusTitle } from '@/composables/useGoCrypto'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
-// This composable is not part of useGoCrypto as it includes some input options and output processing specific to Nimiq
-// Pay app, and composition api code specific to Vue, while the idea is to keep useGoCrypto generic, and to eventually
-// move it into its own library/package.
 import { getCurrentScope, onScopeDispose, ref, toValue, watch } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import {
@@ -96,8 +93,6 @@ async function getGoCryptoApiFetchOptions() {
 }
 
 function getGoCryptoApiUserFriendlyStatusOptions(): GoCryptoUserFriendlyStatusOptions<false> {
-  // As Record to typecheck for missing or superfluous entries. Return entries via getters, such that translations are
-  // always based on currently selected language, even if it changes during monitoring.
   /* eslint-disable no-useless-computed-key */
   const translations: Record<GoCryptoUserFriendlyStatusTitle, string> = {
     get ['Not a pending payment request']() { return i18n.t('Not a pending payment request') },
@@ -126,21 +121,19 @@ function goCryptoPaymentDetailsToPaymentRequestData<IM extends boolean>(
   userFriendlyStatus: GoCryptoUserFriendlyStatus<IM>,
 ): Result<PaymentRequestData, string> {
   if (userFriendlyStatus.paymentStatus === 'failed'
-    || userFriendlyStatus.paymentStatus === 'accepted') { // Also report already paid request as error
+    || userFriendlyStatus.paymentStatus === 'accepted') {
     return { error: userFriendlyStatus.title, data: undefined }
   }
   else if ('errorCode' in paymentDetails) {
-    // This case should already be entirely be covered by the case above, and is just included here as a type guard
     return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
   }
 
-  // still pending GoCrypto request
   const fiatCurrency = GoCryptoFiatCurrency[paymentDetails.fiatCurrency]
   const data: PaymentRequestData = {
     recipient: paymentDetails.recipient,
     amount: paymentDetails.amount,
     fee: 0,
-    feeIncludedInAmount: false, // there doesn't seem to be any fee applied by GoCrypto
+    feeIncludedInAmount: false,
     merchantName: paymentDetails.storeName,
     merchantCategory: MerchantCategory.Shop,
     rail: Rail.GoCrypto,

@@ -2,6 +2,23 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.24.2 — 2026-11-20
+
+### Lightning payments recover
+If a Lightning payment with NIM was cut short because you closed the app, or because you logged out and back in, the app now finishes it or refunds your NIM. Payments no longer stay stuck as Pending.
+
+### Smoother staking in Mini Apps
+Staking actions started from a Mini App now go through properly. You no longer see an unknown result or a signal stuck as Pending in your history.
+
+### Mini App links open reliably
+A link to a Mini App now opens correctly even when the app was in the background or locked. It waits until you unlock, then opens the right Mini App.
+
+### See what's new after every update
+The What's New card now shows up after every app update, so you won't miss new features.
+
+### Fewer hiccups
+Turning on biometrics and then canceling now resets the switch correctly. Slow connections no longer leave the app waiting forever, and you see fewer unnecessary error messages.
+
 ## 2.24.0 — 2026-11-17
 
 ### Redesigned Settings

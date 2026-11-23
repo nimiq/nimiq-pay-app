@@ -82,7 +82,6 @@ describe('useStringParser', () => {
     const { data, error } = await useStringParser().getPaymentRequestData(seed)
 
     expect(data).toBeUndefined()
-    // Tests run i18n without interpolation, so assert the message takes no input parameter at all.
     expect(error).toBe('Invalid URL')
   })
 
@@ -357,7 +356,6 @@ describe('useStringParser', () => {
       'swap-usdt-1',
       expect.any(Number),
     ])
-    // Included fees summed per (asset, source); non-included take max per (asset, source)
     expect(data?.swap?.fees).toEqual([
       { asset: 'BTC', amount: 25, included: true, source: 'NETWORK' },
       { asset: 'USDT', amount: 1000, included: true, source: 'NETWORK' },

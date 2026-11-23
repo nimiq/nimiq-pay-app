@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useConn } from './conn'
 
 const mocks = vi.hoisted(() => {
-  // Stateful like the native plugin: isDBOpen reflects open/close and queries need an open db.
   const state = { opened: false }
   const connections = new Set<string>()
   const openConnection = async () => {
@@ -31,7 +30,6 @@ const mocks = vi.hoisted(() => {
       checkConnectionsConsistency: vi.fn(async () => ({ result: true })),
       isConnection: vi.fn(async (name: string) => ({ result: connections.has(name) })),
       retrieveConnection: vi.fn(async () => connection),
-      // Mirrors the plugin: a second create on an existing name rejects.
       createConnection: vi.fn(async (name: string) => {
         if (connections.has(name))
           throw new Error(`Connection ${name} already exists`)
@@ -81,8 +79,6 @@ describe('useConn open', () => {
     expect(conn.locked).toBe(false)
   })
 
-  // The decrypt retry's checkEncryptionSecret closes every native connection, so a late finish of
-  // the timed-out open would unlock queries onto a closed connection.
   it('abandons a timed-out open so its late finish cannot unlock', async () => {
     vi.useFakeTimers()
     try {

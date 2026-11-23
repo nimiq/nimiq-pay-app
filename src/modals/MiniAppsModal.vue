@@ -71,7 +71,6 @@ onBeforeUnmount(unregisterHardwareBack)
 
 onMounted(() => {
   warmUpWeb3ProviderScript()
-  // Retries when the launch fetch failed; no-op once the catalog loaded this session.
   void loadRemoteApps()
 })
 
@@ -191,7 +190,7 @@ async function openCompetitionExternal(url: string) {
       return
     await Browser.open({ url: target.toString(), toolbarColor: '#0582CA' })
   }
-  catch { /* Invalid or unavailable external links stay inert. */ }
+  catch { }
 }
 </script>
 
@@ -226,7 +225,6 @@ async function openCompetitionExternal(url: string) {
               Discover
             </p>
 
-            <!-- Search Bar -->
             <IonSearchbar
               v-model="searchQuery"
               placeholder="Search or enter App URL"
@@ -263,7 +261,6 @@ async function openCompetitionExternal(url: string) {
               @menu="openMenu"
             />
 
-            <!-- Recently Viewed (shown only when not searching) -->
             <template v-if="!isSearching && filteredRecent.length > 0">
               <p class="text-lg font-bold text-space text-left">
                 Recently Viewed
@@ -294,7 +291,6 @@ async function openCompetitionExternal(url: string) {
               </div>
             </template>
 
-            <!-- Loading skeleton (first launch with no cache) -->
             <template v-if="isLoading">
               <p class="text-lg font-bold text-space text-left">
                 Featured Apps
@@ -321,7 +317,6 @@ async function openCompetitionExternal(url: string) {
               </div>
             </template>
 
-            <!-- When searching: single "Matching Apps" list -->
             <template v-else-if="isSearching">
               <p class="text-lg font-bold text-space text-left">
                 Matching Apps
@@ -349,9 +344,7 @@ async function openCompetitionExternal(url: string) {
               </div>
             </template>
 
-            <!-- When not searching: Featured Apps + All Apps sections -->
             <template v-else>
-              <!-- Featured Apps -->
               <template v-if="filteredFeatured.length > 0">
                 <p class="text-lg font-bold text-space text-left">
                   Featured Apps
@@ -373,7 +366,6 @@ async function openCompetitionExternal(url: string) {
                 </div>
               </template>
 
-              <!-- All Apps -->
               <template v-if="filteredNonFeatured.length > 0">
                 <p class="text-lg font-bold text-space text-left">
                   All Apps
@@ -394,7 +386,6 @@ async function openCompetitionExternal(url: string) {
                 </div>
               </template>
 
-              <!-- Type-filter empty state (no recent + no featured + no non-featured under the active filter) -->
               <p
                 v-if="isFilterActive && !hasAnyResults"
                 class="text-sm text-space/60 text-center py-6"

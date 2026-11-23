@@ -4,16 +4,12 @@ import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 
 export interface PriceTable {
-  // The fiat currency
   fiat: MaybeRef<string>
 
-  // The crypto currency
   crypto: MaybeRef<string>
 
-  // The price of 1 NIM in the fiat currency
   price: MaybeRef<number>
 
-  // The timestamp of the price. It is rounded to the nearest 10 minutes
   checkpoint: number
 }
 

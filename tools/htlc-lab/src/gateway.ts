@@ -76,7 +76,6 @@ export class CoreGateway implements Gateway {
     try {
       for (const register of registrations) {
         const id = await register()
-        // Reconnect/unmount may finish while core is still registering the listener.
         if (generation !== this.listenerGeneration) {
           await client.removeListener(id)
           return
@@ -287,7 +286,6 @@ export class CoreGateway implements Gateway {
     const pending = [owner]
     const visited = new Set<string>()
     const contracts = new Map<string, { address: string, expiry: number, balance: number }>()
-    // Follow drained extension contracts too: the current HTLC may only occur in their history.
     while (pending.length) {
       const address = pending.shift()!
       if (visited.has(address))

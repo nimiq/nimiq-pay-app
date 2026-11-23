@@ -21,7 +21,6 @@ async function loadLogger(name = 'test') {
   return useLogger(name)
 }
 
-// Reports run after a microtask so a failing PostHog call can't throw into the caller.
 async function flushReports() {
   await Promise.resolve()
   await Promise.resolve()

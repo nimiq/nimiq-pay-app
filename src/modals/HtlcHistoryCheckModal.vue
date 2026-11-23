@@ -21,7 +21,6 @@ const progress = computed(() => {
   return Math.min(maxProgress, Math.max(0, Math.floor((now.value.getTime() - startedAt) / 1000)))
 })
 
-// The check passing marks it checked; the hold ending (limit, funded HTLC, no local funds) clears the start.
 const isReleased = computed(() => htlcHistoryChecked.value || htlcCheckHoldStartedAt.value === undefined)
 
 const content = ref<HTMLElement>()
@@ -29,13 +28,11 @@ const content = ref<HTMLElement>()
 let selfModal: HTMLIonModalElement | undefined
 onMounted(() => {
   selfModal = content.value?.closest('ion-modal') ?? undefined
-  // The hold may end while this modal is still loading, before the watcher exists.
   if (isReleased.value && selfModal)
     closeModal({ modal: selfModal })
 })
 
 watch(isReleased, (released) => {
-  // Before onMounted pins selfModal, closeModal would dismiss whatever is on top; onMounted re-checks.
   if (released && selfModal)
     closeModal({ modal: selfModal })
 })

@@ -27,7 +27,6 @@ vi.mock('@vueuse/core', () => ({
   useTimeoutPoll: (callback: () => Promise<void>) => {
     pollCallCount++
     if (pollCallCount % 2 === 1) {
-      // First call: main sync poll
       state.pollCallback = callback
       return {
         pause: state.pause,
@@ -35,7 +34,6 @@ vi.mock('@vueuse/core', () => ({
         isActive: state.isActive,
       }
     }
-    // Second call: fee poll
     state.feePollCallback = callback
     return {
       pause: state.pauseFeePoll,

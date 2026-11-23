@@ -10,7 +10,6 @@ import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
 import { configDefaults } from 'vitest/config'
 import { buildStamp } from './scripts/build-stamp.mjs'
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   return {
@@ -22,7 +21,7 @@ export default defineConfig(({ mode }) => {
       poOptimizer(),
       {
         name: 'copy-web3-provider:serve',
-        apply: () => true, // apply for both 'serve' (dev server) and 'build'
+        apply: () => true,
         buildStart() {
           try {
             copyFileSync('./web3-provider/dist/provider.js', 'public/web3-provider.js')
@@ -57,11 +56,10 @@ export default defineConfig(({ mode }) => {
     define: {
       __VITE_SERVER_IP__: JSON.stringify(getLocalIP()),
       __BUILD_STAMP__: JSON.stringify(buildStamp()),
-      __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component
-      __VUE_I18N_LEGACY_API__: true, // We use the legacy api, which is also vue-i18n's default
+      __VUE_I18N_FULL_INSTALL__: true, // support <i18n-t> component
+      __VUE_I18N_LEGACY_API__: true,
       __INTLIFY_PROD_DEVTOOLS__: false,
-      // __ENABLE_BTC_LN__: process.env.ENABLE_BTC_LN ? true : false,
-      __ENABLE_BTC_LN__: true, // Enable BTC LN by default, remove this once Apple is not complaining
+      __ENABLE_BTC_LN__: true,
       __ENABLE_BLUECODE__: env.VITE_ENABLE_BLUECODE === 'true',
       __ENABLE_MINI_APPS__: env.VITE_ENABLE_MINI_APPS === 'true',
       __WALKIE_TALKIE_URL__: JSON.stringify(env.VITE_WALKIE_TALKIE_URL),
@@ -70,12 +68,10 @@ export default defineConfig(({ mode }) => {
   }
 })
 
-// Get local network IP
 function getLocalIP() {
   const nets = networkInterfaces()
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]!) {
-      // Skip internal (i.e. 127.0.0.1) and non-IPv4 addresses
       if (net.family === 'IPv4' && !net.internal) {
         return net.address
       }

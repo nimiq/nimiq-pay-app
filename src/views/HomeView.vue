@@ -10,7 +10,6 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import LiveChat from '@/components/LiveChat.vue'
 import LiveChatBadge from '@/components/LiveChatBadge.vue'
-// TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
@@ -50,7 +49,6 @@ const { htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
-// Hidden in mock mode without persisting hasDoneBackup (which would suppress a real user's reminder).
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && !isMockEnabled)
 
 // `isHomeVisible` combines three signals because IntersectionObserver alone misses
@@ -158,14 +156,10 @@ function scrollToFirstNotification() {
   })
 }
 
-const REFRESH_SPINNER_TIMEOUT = 5_000 // hide wheel even if sync still running (APP-159)
+const REFRESH_SPINNER_TIMEOUT = 5_000
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')
-  // Detached so the spinner can be capped while sync finishes. The `.catch` keeps this promise
-  // from rejecting (the timeout below may leave it pending) — it ONLY handles real sync failures.
-  // The trailing refreshFromDb repaints the list with freshly-written txs once sync finishes,
-  // including the case where it outlived the spinner timeout.
   const syncWork = (async () => {
     await Promise.all([
       sleep(2000),
@@ -179,9 +173,6 @@ async function handleRefresh(event: CustomEvent) {
     await useTransactions().refreshFromDb()
   })().catch(err => logger.error('Refresh sync work failed', err))
 
-  // Cap the wheel: if sync outlives the timeout it keeps running in the background and the
-  // refreshFromDb inside syncWork repaints the list when it completes. This catch only ever
-  // fires on timeout (syncWork never rejects), so the message is accurate.
   await promiseWithTimeout(syncWork, REFRESH_SPINNER_TIMEOUT)
     .catch(() => logger.warn('Refresh still syncing after timeout, dismissing spinner (APP-159)'))
   await useTransactions().refreshFromDb()
@@ -189,7 +180,6 @@ async function handleRefresh(event: CustomEvent) {
 }
 
 watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
-  // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
     get title() { return i18n.t('Activate Cashback & Rewards') },
@@ -202,7 +192,6 @@ watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
     action: () => initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'home_notification' }),
   }
 
-  // Remove notification if user has just verified their phone number
   if (phoneNumberVerified.value) {
     removeLocalNotification(verifyNumberNotification.id, false)
     removeLocalNotification(claimRewardsNotification.id, false)
@@ -221,8 +210,6 @@ watch(() => localNotifications.value.length, (newValue, oldValue) => {
     scrollToFirstNotification()
 })
 
-// Skip re-presenting while one is already shown — showModal() dismisses the
-// current top before re-presenting, which could kill an unrelated overlay.
 let isLongTimeNoSeeOpen = false
 watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, remoteOk, updatingDb]) => {
   if (!(expired && remoteOk && !updatingDb) || isLongTimeNoSeeOpen)
@@ -235,7 +222,6 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, rem
   })
 }, { immediate: true })
 
-// Explain why new funds wait while a fresh database checks for older HTLCs.
 let isHtlcHistoryCheckOpen = false
 watch(htlcCheckHoldStartedAt, async (holdStartedAt) => {
   if (holdStartedAt === undefined || htlcHistoryChecked.value || isHtlcHistoryCheckOpen)
@@ -306,8 +292,6 @@ onMounted(() => {
         <IonRefresherContent />
       </IonRefresher>
 
-      <!-- Notification Horizontal Scroll -->
-      <!-- my-8 to have some space even when no notifications -->
       <IonGrid class="flex flex-col gap-y-2 pb-0 my-8" :class="{ 'mt-6': localNotifications.length > 0 || isReferralCardShown && referralClaimsRemaining > 0 }">
         <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
           <motion.ul
@@ -336,7 +320,6 @@ onMounted(() => {
           </motion.ul>
         </IonRow>
 
-        <!-- Referral -->
         <IonRow v-if="isReferralCardShown && referralClaimsRemaining > 0" class="mb-8">
           <motion.div
             :initial="{ opacity: 0, y: 50, scale: 0.9, rotate: -2 }"
@@ -360,7 +343,6 @@ onMounted(() => {
       <TheHomeTransactions class="mt-10" />
     </IonContent>
 
-    <!-- Live Chat -->
     <IonBackdrop v-if="liveChatEnabled && liveChatShown" class="bg-black opacity-[0.32] z-20" @ion-backdrop-tap="liveChatShown = false" />
     <LiveChatBadge v-if="liveChatEnabled" ref="chatBadgeRef" class="absolute left-[72px] z-20" :style="{ top: `${chatBadgeTop}px` }" />
     <LiveChat :style="{ '--top-margin': `${chatBadgeBottom}px` }" />

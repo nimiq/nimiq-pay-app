@@ -1,9 +1,6 @@
 import type { Address } from '@nimiq/core/web'
 import { Transfer } from '../types/transactions'
 
-// We store the remote Wallet.
-// The only thing we store about the local wallet is the entropy, and from that we can derive the private key
-// and its remote wallet
 export interface RemoteSigner {
   address: Address
   balance: number
@@ -11,42 +8,26 @@ export interface RemoteSigner {
   publicKey: string
   active: boolean
 
-  /**
-   * The timestamp when the wallet has started to be valid
-   */
   start: number
 
-  /**
-   * The timestamp when the wallet validity has ended
-   */
   end: number
 }
 
-// Set once this database's signers were checked against history for funded HTLCs, or the hold gave up.
-// Logout and restore delete the database, so a restored wallet must check again.
 export const HTLC_HISTORY_CHECKED_KV_KEY = 'htlcHistoryChecked'
-// Set once a clean sweep followed every HTLC's extensions. Separate from the check because upgraded installs
-// are backfilled as checked (no hold) but may still miss a funded extension an older version never stored.
 export const HTLC_EXTENSIONS_WALKED_KV_KEY = 'htlcExtensionsWalked'
-// Persisted so restarts don't restart the hold and block HTLC creation forever.
 export const HTLC_CHECK_HOLD_STARTED_KV_KEY = 'htlcCheckHoldStartedAt'
 
 export enum SQLQuery {
-  // Key-Value Store
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
   SelectKv = 'SELECT value FROM kv WHERE key = ?',
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
-  // Transactions
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railMerchantId TEXT, merchantName TEXT, merchantCategory TEXT, paymentRef TEXT, paymentMethod TEXT, fiatAmount REAL, fiatFeeAmount REAL, fiatCurrency TEXT, isCashbackClaimed INTEGER)',
-  SelectPaginationTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST LIMIT ? OFFSET ?`, // eslint-disable-line ts/prefer-literal-enum-member
-  SelectPaginationTransactionsByAsset = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE asset = ? AND transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST LIMIT ? OFFSET ?`, // eslint-disable-line ts/prefer-literal-enum-member
   SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetUserReceiptSenders = `SELECT DISTINCT sender FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\'`, // eslint-disable-line ts/prefer-literal-enum-member
   GetTransactionByHash = 'SELECT hash, validityStartHeight, senderData, recipientData, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
-  // List queries don't select senderData, recipientData or validityStartHeight; re-saving such a row keeps the stored values.
   UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, (SELECT senderData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT recipientData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT validityStartHeight FROM transactions WHERE hash = ?)))',
   UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
   MergeReplacementTxState = `UPDATE transactions SET
@@ -106,7 +87,6 @@ export enum SQLQuery {
       AND transfer IN ('${Transfer.UserPayment}', '${Transfer.UserPaymentToMerchant}', '${Transfer.UserPaymentToAtomicSwap}')`,
   SelectPendingHtlcCreations = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, status, validityStartHeight, raw FROM transactions WHERE status IN ('new', 'pending', 'included') AND transfer IN (\'${Transfer.LocalToRemote}\', \'${Transfer.ExtendRemote}\')`, // eslint-disable-line ts/prefer-literal-enum-member
 
-  // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
   GetActiveRemoteSigner = 'SELECT * FROM remote_signers WHERE active = 1',
   GetAllRemoteSigners = 'SELECT * FROM remote_signers',
@@ -124,30 +104,24 @@ export enum SQLQuery {
     end = excluded.end,
     active = 0`,
   InsertRemoteSigner = 'INSERT OR REPLACE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
-  // Recovery must not overwrite an existing signer's metadata or active state.
   InsertInactiveRemoteSigner = 'INSERT OR IGNORE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
   PurgeRemoteSigners = 'DELETE FROM remote_signers',
-  // Root HTLC creations whose whole extension chain is drained and fully walked. A remote_signers
-  // row can't say this: it is written at send time and before the walk reads extensions.
   CreateSettledHtlcCreationsTable = 'CREATE TABLE IF NOT EXISTS settled_htlc_creations (transaction_hash TEXT PRIMARY KEY)',
   GetSettledHtlcCreations = 'SELECT transaction_hash FROM settled_htlc_creations',
   InsertSettledHtlcCreation = 'INSERT OR IGNORE INTO settled_htlc_creations (transaction_hash) VALUES (?)',
   DeleteSettledHtlcCreation = 'DELETE FROM settled_htlc_creations WHERE transaction_hash = ?',
   PurgeSettledHtlcCreations = 'DELETE FROM settled_htlc_creations',
 
-  // These queries are used to ensure the correct state of the remote signers
   GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
   GetDeactivatedRemoteSignersWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0 AND active = 0',
 
-  // NIM Prices
   CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS prices (fiat TEXT NOT NULL, checkpoint INTEGER NOT NULL, price INTEGER NOT NULL, crypto TEXT, UNIQUE(fiat, checkpoint, crypto))',
   InsertPrice = 'INSERT OR REPLACE INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
   GetPriceAt = 'SELECT * FROM prices WHERE checkpoint = ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
   GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
 
-  // Swap HTLCs
   CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
   AddHtlcIdColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id TEXT',
   AddTxHashColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN tx_hash TEXT',
@@ -158,9 +132,9 @@ export enum SQLQuery {
   AddHtlcIdRecoveryFailedColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id_recovery_failed INTEGER',
   // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; later rows and the sweep use ms.
   NormalizeLegacyPolygonSwapHtlcTimeout = 'UPDATE swap_htlcs SET timeout_block = timeout_block * 1000 WHERE htlc_id IS NULL AND address LIKE \'0x%\' AND timeout_block < 100000000000',
-  // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
-  BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
+  BackfillHtlcHistoryChecked = `INSERT OR IGNORE INTO kv (key, value) SELECT '${HTLC_HISTORY_CHECKED_KV_KEY}', '1' WHERE EXISTS (SELECT 1 FROM remote_signers)`, // eslint-disable-line ts/prefer-literal-enum-member
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  InsertRecoveredSwapHtlc = 'INSERT OR IGNORE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, \'\', \'recovered\')',
   InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
   ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
@@ -179,7 +153,6 @@ export enum SQLQuery {
   GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? OR tx_hash = ? LIMIT 1',
   PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
-  // Swap Quotes
   CreateSwapQuotesTable = 'CREATE TABLE IF NOT EXISTS swap_quotes (ln_invoice TEXT PRIMARY KEY NOT NULL, swap_id TEXT NOT NULL, timeout INTEGER NOT NULL)',
   InsertSwapQuote = 'INSERT OR REPLACE INTO swap_quotes (ln_invoice, swap_id, timeout) VALUES (?, ?, ?)',
   DeleteSwapQuote = 'DELETE FROM swap_quotes WHERE swap_id = ?',
@@ -188,14 +161,12 @@ export enum SQLQuery {
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
   PurgeSwapQuotes = 'DELETE FROM swap_quotes',
 
-  // Mini App Lightning attempts are kept after swap quote cleanup to prevent duplicate invoice payments.
   CreateMiniAppLightningPaymentsTable = 'CREATE TABLE IF NOT EXISTS mini_app_lightning_payments (network TEXT NOT NULL, invoice_hash TEXT NOT NULL, origin TEXT NOT NULL, owner TEXT NOT NULL, swap_id TEXT NOT NULL, tx_hash TEXT, status TEXT NOT NULL, PRIMARY KEY (network, invoice_hash))',
   GetMiniAppLightningPayment = 'SELECT origin, owner, swap_id, tx_hash, status FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ? LIMIT 1',
   InsertMiniAppLightningPayment = 'INSERT INTO mini_app_lightning_payments (network, invoice_hash, origin, owner, swap_id, status) VALUES (?, ?, ?, ?, ?, \'pending\')',
   SetMiniAppLightningPaymentStatus = 'UPDATE mini_app_lightning_payments SET tx_hash = COALESCE(tx_hash, ?), status = ? WHERE network = ? AND invoice_hash = ?',
   DeleteMiniAppLightningPayment = 'DELETE FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ?',
 
-  // Polygon payment attempts
   CreatePolygonPaymentAttemptsTable = 'CREATE TABLE IF NOT EXISTS polygon_payment_attempts (network TEXT NOT NULL, sender TEXT NOT NULL, request_json TEXT NOT NULL, title TEXT NOT NULL, relay_request_json TEXT NOT NULL, relay_url TEXT NOT NULL, signature TEXT NOT NULL, fee INTEGER NOT NULL, start_block INTEGER NOT NULL, created_at INTEGER NOT NULL, relay_hash TEXT, PRIMARY KEY (network, sender))',
   InsertPolygonPaymentAttempt = 'INSERT INTO polygon_payment_attempts (network, sender, request_json, title, relay_request_json, relay_url, signature, fee, start_block, created_at, relay_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   GetPolygonPaymentAttempt = 'SELECT * FROM polygon_payment_attempts WHERE network = ? AND sender = ? LIMIT 1',
@@ -203,11 +174,9 @@ export enum SQLQuery {
   DeletePolygonPaymentAttempt = 'DELETE FROM polygon_payment_attempts WHERE network = ? AND sender = ?',
   PurgePolygonPaymentAttempts = 'DELETE FROM polygon_payment_attempts',
 
-  // Legacy: NAKA was removed, but migrations are additive-only, so the table stays.
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
 }
 
-// History refreshes chain evidence without replacing richer payment metadata.
 export const UPSERT_POLYGON_HISTORY_TX = `${SQLQuery.UpsertTx.replace('INSERT OR REPLACE', 'INSERT')}
   ON CONFLICT(hash) DO UPDATE SET
     status = excluded.status,
@@ -216,11 +185,6 @@ export const UPSERT_POLYGON_HISTORY_TX = `${SQLQuery.UpsertTx.replace('INSERT OR
     raw = COALESCE(excluded.raw, transactions.raw)`
 
 export const DEFAULT_LIMIT = 30
-
-export interface DbPagination {
-  limit?: number
-  offset?: number
-}
 
 interface Migration {
   toVersion: number
@@ -329,6 +293,12 @@ export const migrations: Migration[] = [
     toVersion: 15,
     statements: [
       SQLQuery.CreateSettledHtlcCreationsTable,
+    ],
+  },
+  {
+    toVersion: 16,
+    statements: [
+      SQLQuery.PurgeSettledHtlcCreations,
     ],
   },
 ]

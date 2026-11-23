@@ -12,31 +12,25 @@ import { MINI_APP_PROVIDER_TIMEOUT_MS } from './birpc-types'
 import { handleAddEthereumChain, handleSwitchEthereumChain } from './chain-request-handler'
 import { generateUUID } from './utils'
 
-/** Chains added dynamically via wallet_addEthereumChain (session-scoped) */
 const dynamicChainIds = new Set<number>()
 
-/** In-flight native `listAccounts`/`requestAccounts` promises per network — prevents duplicate prompts on concurrent calls. */
 const inFlightAccountRequests = new Map<'nimiq' | 'ethereum', Promise<unknown>>()
 
 function isChainAvailable(chainId: number): boolean {
   return ALLOWED_EVM_CHAIN_IDS.has(chainId) || dynamicChainIds.has(chainId)
 }
 
-// Enable debug logging - disabled by default in production build
-// In development, the script can set window.__NIMIQ_PAY_DEBUG__ = true
+function isDebugEnabled() {
+  return window.__NIMIQ_PAY_DEBUG__ === true
+}
+
 function log(...args: unknown[]) {
-  // Check for debug flag on window (safe for browsers)
-  // if (typeof window !== 'undefined' && (window as unknown as { __NIMIQ_PAY_DEBUG__?: boolean }).__NIMIQ_PAY_DEBUG__) {
-  //   // eslint-disable-next-line no-console
-  //   console.log('[Provider]', ...args)
-  // }
-  // TODO: Use code above when ready for production
-  // For now, always log
+  if (!isDebugEnabled())
+    return
   // eslint-disable-next-line no-console
   console.log('[Provider]', ...args)
 }
 
-/** Type guard for objects with a chainId property */
 function hasChainId(obj: unknown): obj is { chainId: unknown } {
   return typeof obj === 'object' && obj !== null && 'chainId' in obj
 }
@@ -54,7 +48,7 @@ const Nimiq = new NimiqProvider({
   rpc: nimiqRpc,
 })
 const Ethereum = new EthereumProvider({
-  chainId: '0x1', // Ethereum mainnet
+  chainId: '0x1',
   rpc: ethRpc,
 })
 
@@ -115,8 +109,6 @@ const provider = new Web3Provider({
       }
       const existing = inFlightAccountRequests.get(network)
       if (existing) {
-        // Ride the in-flight native call so we only ever show one prompt for
-        // concurrent requests; respond to this caller's id once it resolves.
         existing
           .then(result => provider.sendResponse(params.id!, result))
           .catch((error: any) => provider.sendError(params.id!, {
@@ -136,14 +128,14 @@ const provider = new Web3Provider({
         if (pushed)
           return pushed
         setCachedAccounts(network, reply as string[])
-        // request() doesn't write #accounts, and the host counts this reply as delivered.
+        // request() doesn't write #accounts.
         if (network === 'nimiq' && Nimiq.connected)
           Nimiq.updateAccounts(reply as string[])
         return reply
       })
       inFlightAccountRequests.set(network, nativePromise)
       nativePromise
-        .catch(() => { /* sendError already delivered; swallow to avoid unhandledrejection on the originator chain */ })
+        .catch(() => {})
         .finally(() => {
           if (inFlightAccountRequests.get(network) === nativePromise)
             inFlightAccountRequests.delete(network)
@@ -230,7 +222,6 @@ const provider = new Web3Provider({
       }
 
       default: {
-        // sendError already rejects the caller's promise; consume the native chain.
         return forwardToNative().catch(() => {})
       }
     }
@@ -285,20 +276,18 @@ window.nimiqPay = Object.freeze({
   },
 })
 
-// Announce provider immediately for EIP-6963 discovery
 announceProvider()
 
-// Dispatch EIP-1193 initialization event for dApp compatibility
 window.dispatchEvent(new Event('ethereum#initialized'))
 
-// Extra logs for debugging
-// TODO: Remove or conditionally compile out in production
 const originalRequest = window.ethereum.request.bind(window.ethereum)
 window.ethereum.request = async <T>(args: IRequestArguments): Promise<T> => {
   try {
     const res = await originalRequest(args)
-    // eslint-disable-next-line no-console
-    console.log('eth.request OK', args?.method, res)
+    if (isDebugEnabled()) {
+      // eslint-disable-next-line no-console
+      console.log('eth.request OK', args?.method, res)
+    }
     return res as T
   }
   catch (e) {

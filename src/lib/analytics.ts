@@ -20,9 +20,6 @@ function capture(event: string, properties: object): void {
   void Posthog.capture({ event, properties: properties as Record<string, unknown> })
 }
 
-// Report a critical "should-not-happen" error to PostHog. Use only for genuine
-// invariant violations, not everyday failures. Not isDev-gated: dev reports are
-// filterable via the isDev person-property set in identifyUser().
 export function reportCriticalError(error: unknown, context?: Record<string, unknown>): void {
   const err = error instanceof Error ? error : new Error(String(error))
   reportException(err, { message: err.message, name: err.name, properties: context })
@@ -101,8 +98,6 @@ export function trackCurrentAppOpen(openSource: AppOpenSource): void {
   })
 }
 
-// --- Payment Analytics ---
-
 export type AmountRange = '<1' | '1-10' | '10-100' | '100-1000' | '1000-10000' | '10000-50000' | '50000-100000' | '100000+'
 
 export interface PaymentEventProperties {
@@ -139,7 +134,6 @@ export function buildPaymentAnalyticsProps(opts: {
   amount: number
   transfer: Transfer | undefined
 }): PaymentEventProperties {
-  // Convert from smallest units (luna/wei) to human-readable coins
   const { decimals } = assetRegistry[opts.asset]
   const humanAmount = opts.amount / (10 ** decimals)
   return {
@@ -194,7 +188,6 @@ export function trackPaymentFailed(props: PaymentEventProperties & { error_reaso
   capture('payment_failed', { ...props, error_reason: redact(props.error_reason) })
 }
 
-// The send may have reached the network, so the payment is neither completed nor failed.
 export function trackPaymentUnknown(props: PaymentEventProperties & { error_reason: string, duration_ms: number }): void {
   capture('payment_unknown', { ...props, error_reason: redact(props.error_reason) })
 }
@@ -218,7 +211,6 @@ interface SwapSettlementStats {
   last_status: string | null
 }
 
-// Extra properties per step, so the PostHog schema is checked at every call site.
 export interface SwapStepProps {
   quote: { reused: boolean, invoice_expires_in_s: number, quote_expires_in_s: number }
   confirm: { already_confirmed: boolean, swap_status: string }
@@ -243,10 +235,6 @@ export type SwapStepEvent<S extends SwapStep> = {
   error_reason?: string
 } & Partial<SwapStepProps[S]>
 
-// One event per Lightning swap step, so a stuck swap shows the last step it reached without device logs.
-// swap_id is Fastspot's id, needed to look the swap up with them.
-// `broadcast` only covers the app's own send. When the cosigner broadcast the tx (`cosign` with `tx_sent: true`),
-// the app skips it and no `broadcast` step follows.
 export function trackSwapStep<S extends SwapStep>(props: SwapStepEvent<S>): void {
   capture('swap_step', {
     ...props,
@@ -268,7 +256,6 @@ export function trackSwapFailed(props: { error_reason: string, asset: Asset }): 
   capture('swap_failed', { ...props, error_reason: redact(props.error_reason), swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
-// Why handleFunds (or the send right after it) left local funds unsecured.
 export type FundsBlockReason
   = | 'pending_tx'
     | 'remote_balance_error'
@@ -302,7 +289,6 @@ export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
   capture(`funds_processing_${state}`, props)
 }
 
-// An own funded HTLC that is not the active signer is missing from the balance until this recovery lands (APP-332).
 export function trackStrayHtlcRecovery(props: {
   status: TargetedRemoteSignerRecoveryResult['status']
   reason?: Extract<TargetedRemoteSignerRecoveryResult, { status: 'deferred' }>['reason']
@@ -354,9 +340,7 @@ export function trackWeb3Request(opts: {
   success: boolean
   chainId?: string
   timedOut?: boolean
-  // Request start to sheet open (pre-sheet prep time)
   sheetWaitMs?: number
-  // Request start to sheet close (includes time the user spends in the sheet)
   sheetCloseMs?: number
   sendMs?: number
   txOutcome?: TransactionSendResult['outcome'] | 'failed'

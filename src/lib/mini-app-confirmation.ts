@@ -37,10 +37,6 @@ export async function selectLightningAsset(app: { url: string, name: string, des
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
 
-/**
- * Request user confirmation for sensitive mini-app operations.
- * Extracted from MiniAppsModal so it can be reused during session reconnection.
- */
 export async function requestUserConfirmation(request: UserConfirmationRequest, deadline = Date.now() + MINI_APP_REQUEST_TIMEOUT_MS): Promise<boolean> {
   const timeout = deadline - Date.now()
   if (timeout <= 0)
@@ -224,17 +220,14 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       const gasLimit = txParams.gas ? Number.parseInt(txParams.gas, 16) : 0
       const nativeAssetSymbol = txParams.chainName === 'Polygon' || txParams.chainId === `0x${polygonUsdtConfig.networkId.toString(16)}` ? 'MATIC' : 'ETH'
 
-      // Convert wei hex to Gwei for readable gas prices
       const toGwei = (hex?: string) => {
         if (!hex)
           return null
         const wei = BigInt(hex)
-        // 1 Gwei = 1e9 wei. Show up to 2 decimals.
         const gwei = Number(wei) / 1e9
         return `${gwei.toFixed(2)} Gwei`
       }
 
-      // Estimate max total fee: gasLimit * maxFeePerGas (or gasPrice)
       const feePerGasHex = txParams.maxFeePerGas || txParams.gasPrice
       const maxTotalFee = feePerGasHex && gasLimit
         ? formatEther(BigInt(feePerGasHex) * BigInt(gasLimit))

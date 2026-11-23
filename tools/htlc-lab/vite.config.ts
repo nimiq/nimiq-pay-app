@@ -12,7 +12,6 @@ export default defineConfig({
     hmr: false,
     // Vite discovers ordinary parent imports, but does not automatically allow core's worker URL.
     fs: { allow: [fileURLToPath(new URL('.', import.meta.url)), fileURLToPath(new URL('../../node_modules', import.meta.url))] },
-    // Fixed upstreams keep recovery words and private keys entirely in the browser.
     proxy: {
       '/cosigner/testnet': { target: 'https://pay-test-cos.nim.sh', changeOrigin: true, rewrite: p => p.replace('/cosigner/testnet', '') },
       '/cosigner/mainnet': { target: 'https://cs1.nimpay.app', changeOrigin: true, rewrite: p => p.replace('/cosigner/mainnet', '') },

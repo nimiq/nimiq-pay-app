@@ -13,7 +13,6 @@ const featureString = ref('')
 async function handleEnableFeature() {
   logger.log(`Enabling secret feature: ${featureString.value}`)
   const hashedString = sha256Hex(featureString.value)
-  // Add secret features as `case '<sha256 of password>':` branches
   switch (hashedString) {
     default:
       logger.log('Invalid secret feature password entered')

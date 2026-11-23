@@ -9,7 +9,6 @@ interface MockToast {
 }
 
 const state = vi.hoisted(() => ({
-  // Pending create() calls, resolved manually to control the interleaving
   creates: [] as Array<{ resolve: () => void, toast: MockToast }>,
 }))
 

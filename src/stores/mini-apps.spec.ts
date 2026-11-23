@@ -85,7 +85,6 @@ describe('useMiniApps.isTrustedMiniAppUrl', () => {
       store.addRecentlyViewed({ url: `https://app-${i}.example/`, name: `App ${i}`, icon: '' })
 
     expect(store.recentlyViewedDApps.length).toBe(20)
-    // The 5 oldest entries are evicted; the oldest survivor (added 5th) is still trusted.
     expect(store.isTrustedMiniAppUrl('https://app-5.example/')).toBe(true)
     expect(store.isTrustedMiniAppUrl('https://app-4.example/')).toBe(false)
   })

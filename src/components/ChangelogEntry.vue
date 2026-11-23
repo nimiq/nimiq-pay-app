@@ -2,7 +2,6 @@
 import type { ChangelogEntry } from '@/composables/useChangelog'
 import { useFormatTime } from '@/composables/useTime'
 
-// `compact` de-emphasizes older versions rendered inside the collapsible.
 defineProps<{ entry: ChangelogEntry, compact?: boolean }>()
 
 function formatDate(date: string) {

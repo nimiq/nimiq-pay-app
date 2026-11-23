@@ -11,7 +11,7 @@ Two modes:
 
 Run whole job, stop at end with report. Only earlier stops: failed preflight check, submodule or `main` question (step 1), version question, `main` moving under release branch (step 8), or release-it failure after tag pushed.
 
-Invoking native mode = user's explicit request to: create branch `release-X.Y.Z`, commit (languages, `ota.json`, release), push branch and tag, run release-it (TestFlight / Play beta build-number bumps, public GitHub release, BrowserStack upload), open release PR. Invoking OTA mode = request to open `ota.json` PR if needed and push `ota-vX.Y.Z` tag. Neither authorizes: merging PRs, `pnpm release`, store uploads, force-push, moving or reusing tags, or changes to other repos.
+Invoking native mode = user's explicit request to: create branch `release-X.Y.Z`, commit (languages, `ota.json`, release), push branch and tag, run release-it (TestFlight / Play beta build-number bumps, public GitHub release, BrowserStack upload), open release PR. Invoking OTA mode = request to open changelog PR (with `ota.json` change if needed) and, once merged, push `ota-vX.Y.Z` tag. Neither authorizes: merging PRs, `pnpm release`, store uploads, force-push, moving or reusing tags, or changes to other repos.
 
 Sign every commit and tag. No AI attribution in commits or PR body. Run prose others read (PR body, store notes, changelog entry) through `humanizer` skill.
 
@@ -123,11 +123,18 @@ release-it has `requireUpstream: true`, fails with "No upstream configured" with
 
 `pnpm release:beta` normally pauses for human review of AI changelog, but only in TTY. Agent shells have none, so generate and review first. release-it's `after:bump` hook reuses existing entry for version.
 
+OTAs since `$PREV` have own changelog entries, so native entry starts after newest one that has entry. OTA shipped without entry doesn't count; its changes go into this entry:
+
 ```bash
-CHANGELOG_AI=<claude|codex> node scripts/generate-changelog.mjs X.Y.Z
+SINCE="$PREV"
+for T in $(git tag -l 'ota-v*' --sort=-v:refname); do
+  git merge-base --is-ancestor "$PREV" "$T" || continue
+  jq -e --arg v "${T#ota-v}" 'any(.[]; .version == $v)' src/data/changelog.json >/dev/null && { SINCE="$T"; break; }
+done
+CHANGELOG_AI=<claude|codex> node scripts/generate-changelog.mjs X.Y.Z --since="$SINCE"
 ```
 
-Use `claude` from Claude Code, `codex` from Codex. Then review `X.Y.Z` entry in `src/data/changelog.json` against `git log "$PREV"..HEAD`:
+Without `--since` script starts from `$PREV`'s `🚀 Release v` commit and repeats what OTA entries already announced. Use `claude` from Claude Code, `codex` from Codex. Then review `X.Y.Z` entry in `src/data/changelog.json` against `git log "$SINCE"..HEAD`:
 
 - every user-visible change covered, nothing outside range
 - written for app users: no issue IDs, PR numbers, file names or internal terms
@@ -204,7 +211,7 @@ In T3 Code, link PR (`link_pull_request`). Don't merge it.
 
 ## 11. Store notes
 
-From reviewed changelog entry write:
+From reviewed changelog entry plus OTA entries newer than `$PREV` (store users may never have received those OTAs) write:
 
 - **App Store "What's New"**
 - **Google Play release notes**, 500 characters max (count them)

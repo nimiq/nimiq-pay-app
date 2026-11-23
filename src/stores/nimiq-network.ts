@@ -67,11 +67,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       await Nimiq.default()
     }
     catch (error) {
-      // WASM instantiation can fail on some WebViews (e.g. a non-callable `crypto.getRandomValues`
-      // import). Never let that become an uncaught rejection or wedge boot — log and bail so the app
-      // still unlocks and renders; sync simply stays offline until the next launch.
-      // iOS Lockdown Mode is gated out in main.ts before init() runs, so this is a genuine failure.
-      // Reported first so PostHog gets the context; the logger then skips the already reported error.
       reportCriticalError(error, { context: 'nimiq-wasm-init', network: networkName.value })
       logger.error('Nimiq WASM init failed; running without the PoS client', error)
       return
@@ -80,12 +75,10 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!options.launchNimiqClient)
       return
 
-    // config.logLevel('debug')
     const clientConfig = buildClientConfig()
     logger.log('Creating Nimiq client with config', clientConfig)
     const consensusStartedAt = Date.now()
     let consensusTracked = false
-    // consensus_established only fires on success, so an outage shows up as silence without this.
     const consensusSlowTimer = setTimeout(() => trackConsensusSlow({
       duration_ms: Date.now() - consensusStartedAt,
       network: networkName.value,
@@ -104,7 +97,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         // Client.create cannot be cancelled, so dispose a client that appears after our timeout.
         // A rejected creation has nothing to dispose.
         void creation.then(lateClient => disconnectClient(lateClient, 'Failed to disconnect late Nimiq client'), () => {})
-        // Capped backoff instead of giving up: the app has no other way to get a client before restart.
         await sleep(Math.min(2 ** attempt * 1e3, 60 * 1e3))
       }
     }
@@ -113,10 +105,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(async () => {
       await useNimiqNetwork().reconnect()
-      // Consensus listener only arms the watchdog on an established -> lost transition, so re-arm it here
       if (consensus.value !== 'established')
         startReconnectNetwork()
-    }, 2 * 60 * 1e3, { immediate: false }) // 2 minutes
+    }, 2 * 60 * 1e3, { immediate: false })
 
     client.value.addConsensusChangedListener(async (newConsensus) => {
       logger.log('Consensus:', newConsensus)
@@ -135,7 +126,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
           stopReconnectNetwork()
         }
       }
-      // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established') {
         setToast({
           message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
@@ -193,7 +183,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         logger.log('Disconnected from network, connecting again...')
         await client.value?.connectNetwork()
 
-        // Bounded so a client that never regains consensus releases the lock and can be reconnected again
         await until(consensus).toBe('established', { timeout: 2 * 60 * 1e3 })
         if (consensus.value === 'established')
           logger.log('Connected to network')
@@ -258,11 +247,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       throw new Error(i18n.t('Cashlink has no balance'))
 
     const tx = Nimiq.TransactionBuilder.newBasicWithData(
-      keyPair.toAddress(), // sender address
-      address, // recipient address
-      CashlinkExtraData.CLAIMING, // extraData
+      keyPair.toAddress(),
+      address,
+      CashlinkExtraData.CLAIMING,
       BigInt(balance),
-      0n, // fee
+      0n,
       height.value,
       await client.value!.getNetworkId(),
     )
@@ -328,26 +317,21 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
    */
   async function getBalance(address: Address | string | Uint8Array, type?: PlainAccount['type']) {
     if (!address)
-      return { data: 0, error: 'Address missing' } // No user facing
+      return { data: 0, error: 'Address missing' }
     try {
       const account = client.value
         ? await promiseWithTimeout(client.value.getAccount(address), ACCOUNT_LOOKUP_TIMEOUT_MS)
         : undefined
       if (!account)
-        return { data: 0, error: NO_ACCOUNT_ERROR } // No user facing
+        return { data: 0, error: NO_ACCOUNT_ERROR }
       return { data: !type || account.type === type ? account.balance : 0, error: undefined }
     }
     catch (error) {
       logger.error('Error getting balance', error)
-      return { data: 0, error: 'Error getting balance' } // No user facing
+      return { data: 0, error: 'Error getting balance' }
     }
   }
 
-  /**
-   * Get all transactions from HTLCs and their consecutive extensions
-   * @param htlcAddress
-   * @returns Txs from HTLCs and extensions
-   */
   async function getAllOutgoingTransactionsFromHtlcs(htlcAddress: Address, txs: PlainTransactionDetails[] = []): Promise<PlainTransactionDetails[]> {
     try {
       const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
@@ -367,7 +351,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   }
 
   return {
-    client, // make sure to await for client.value.waitForConsensusEstablished() before using it
+    client,
     consensus,
     head,
     headTimestamp,

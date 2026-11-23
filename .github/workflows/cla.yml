@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request_target' || (github.event.issue.pull_request && (contains(github.event.comment.body, 'recheck') || contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA')))
     steps:
-      # Maintained fork of the archived contributor-assistant/github-action
       - uses: iainmcgin/cla-github-action@0d27e5a16278d4adb6b0c4b92f08ad27b0a21dc8 # v3.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

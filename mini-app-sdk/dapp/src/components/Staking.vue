@@ -107,7 +107,7 @@ function refresh() {
     fetchStaker();
 }
 
-const UNLOCKING_PERIOD = 60 * 60 * 12; // Unlocking period is one epoch (12 hours)
+const UNLOCKING_PERIOD = 60 * 60 * 12;
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
@@ -150,7 +150,7 @@ async function startStaking() {
     try {
         const result = await provider.value.sendNewStakerTransaction({
             delegation: delegationStr,
-            value, // TODO
+            value,
         });
         console.log('Staking started successfully:', result);
         setTimeout(refresh, 1500);
@@ -249,7 +249,7 @@ function timeToUnlock(inactiveFrom: number | null, currentBlockNumber: number): 
     if (!inactiveFrom) return 'N/A';
     const blocksLeft = (inactiveFrom + UNLOCKING_PERIOD) - currentBlockNumber;
     if (blocksLeft <= 0) return 'Already unlocked';
-    const secondsLeft = blocksLeft * 59.1/60; // ~1 block per second
+    const secondsLeft = blocksLeft * 59.1/60;
     const hours = Math.floor(secondsLeft / 3600);
     const minutes = Math.floor((secondsLeft % 3600) / 60);
     const seconds = Math.floor(secondsLeft) % 60;

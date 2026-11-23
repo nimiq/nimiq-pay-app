@@ -9,7 +9,6 @@ const ready = ref(false)
 let ro: ResizeObserver | null = null
 let raf = 0
 
-// Shared hidden measurer
 let measurer: HTMLSpanElement | null = null
 function ensureMeasurer(font: string) {
   if (!measurer) {
@@ -39,7 +38,6 @@ function measureWidths(node: HTMLElement) {
   measurer.textContent = '…'
   const ellipsis = measurer.getBoundingClientRect().width || ch
 
-  // thin space + ellipsis + thin space
   measurer.textContent = '\u2009…\u2009'
   const sep = measurer.getBoundingClientRect().width || (ellipsis + 2 * ch)
 
@@ -60,7 +58,6 @@ function compute() {
 
   const capacity = Math.floor(available / ch)
 
-  // Fits fully
   if (capacity >= text.length) {
     if (displayed.value !== text)
       displayed.value = text
@@ -68,7 +65,6 @@ function compute() {
     return
   }
 
-  // Too small for even plain ellipsis
   if (available <= ellipsis) {
     if (displayed.value !== '…')
       displayed.value = '…'
@@ -79,7 +75,6 @@ function compute() {
   const sepChars = Math.max(1, Math.ceil(sep / ch))
   const usable = capacity - sepChars
 
-  // Not enough room for head/tail
   if (usable <= 0) {
     const minimal = available >= sep ? '\u2009…\u2009' : '…'
     if (displayed.value !== minimal)
@@ -121,7 +116,6 @@ watch(() => props.text, schedule)
 </script>
 
 <template>
-  <!-- Keep invisible until first computed value is ready to avoid initial flash -->
   <span ref="host" class="block w-full max-w-full overflow-hidden whitespace-nowrap" :style="{ visibility: ready ? 'visible' : 'hidden' }">
     {{ displayed }}
   </span>

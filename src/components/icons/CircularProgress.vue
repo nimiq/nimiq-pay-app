@@ -32,7 +32,6 @@ const progressOffset = computed(() => availableCircle * (1 - props.value / props
 const progressDashOffset = computed(() => {
   if (isCompleted.value)
     return 0
-  // Show a bit of the circle when the value is 0
   return progressOffset.value + gapPortion - (props.value === 0 ? 1 : 0)
 })
 const backgroundDashOffset = computed(() => availableCircle - (progressOffset.value - gapPortion))
@@ -41,9 +40,6 @@ const backgroundDashOffset = computed(() => availableCircle - (progressOffset.va
 <template>
   <div class="relative">
     <svg ref="circleRef" :class="value === 0 ? 'animate-spin' : '-rotate-90'" class="w-full h-full origin-center transition-transform" viewBox="0 0 200 200">
-      <!-- Fixed gap with stroke-dasharray and stroke-dashoffset -->
-      <!-- Both circles have the same radius of 88 (200/2 - stroke-width/2) -->
-      <!-- Circumference is 2 * PI * radius ≈ 552.9 -->
       <circle ref="backgroundRef" class="progress-background" cx="100" cy="100" r="88" :style="{ 'stroke-dashoffset': backgroundDashOffset }" />
       <circle ref="progressRef" class="progress-value" cx="100" cy="100" r="88" :style="{ 'stroke-dashoffset': progressDashOffset }" :class="isCompleted ? 'stroke-algae' : 'stroke-sky'" />
     </svg>
@@ -70,8 +66,6 @@ circle {
   stroke: #1F2348;
   stroke-width: 12px;
   opacity: 0.2;
-  /* The total circumference is 2 * PI * radius */
-  /* For radius 88, circumference is ~552.9 */
   stroke-dasharray: 552.9;
   stroke-dashoffset: 0;
   transition: stroke-dashoffset 0.3s ease-in-out;

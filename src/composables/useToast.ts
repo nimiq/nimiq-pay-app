@@ -11,26 +11,11 @@ function _useToast() {
   const toast = ref<HTMLIonToastElement | null>(null)
   const toastMessage = ref('')
   let presentPromise: Promise<void> | null = null
-  // Bumped by every setToast/clearToast so in-flight setToast calls know they were superseded
   let toastId = 0
 
-  // FIXME: animation not working
-  // const enterAnimation = (baseEl: HTMLElement) => {
-  //   const root = baseEl.shadowRoot
-  //   const slideAnimation = createAnimation().addElement(root!.querySelector('.notification-alert-toast')!).fromTo('transform', 'translateY(-100%)', 'translateY(0)')
-
-  //   return createAnimation()
-  //     .addElement(baseEl)
-  //     .duration(500)
-  //     .addAnimation(slideAnimation)
-  // }
-
   async function setToast({ message, type = 'success', keepOpen, duration = 3 * 1e3 }: Toast) {
-    // Prevent showing the same toast multiple times
     if (message === toastMessage.value)
       return
-    // Claim ownership before awaiting: otherwise overlapping calls each create a toast and
-    // the one that loses the assignment (possibly a keepOpen spinner) is never dismissed.
     const previousCleared = clearToast()
     const id = ++toastId
     toastMessage.value = message
@@ -52,8 +37,6 @@ function _useToast() {
       cssClass: 'notification-alert-toast',
       position: 'top',
       swipeGesture: 'vertical',
-      // animated: true,
-      // enterAnimation,
     })
     if (id !== toastId) {
       // Never presented, so dismiss() would be a no-op and leave the element in the DOM
@@ -81,7 +64,6 @@ function _useToast() {
       toastMessage.value = ''
   }
 
-  // With `message`, only clears if that toast is still the current one (shown or pending)
   async function clearToast(message?: string) {
     if (message !== undefined && message !== toastMessage.value)
       return
@@ -96,7 +78,7 @@ function _useToast() {
       try {
         await presentPromise
       }
-      catch { /* present rejection is non-fatal for dismissal */ }
+      catch {}
     }
     await t.dismiss()
   }

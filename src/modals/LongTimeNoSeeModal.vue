@@ -17,7 +17,6 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcRecreating, hasHtlcExpired, isHtlcActive } = storeToRefs(useRemoteSigner())
 const { blocksUntilNextMacroBlock } = storeToRefs(useSync())
 
-// Pin to this specific modal so a later-stacked modal isn't dismissed instead.
 let selfModal: HTMLIonModalElement | undefined
 onMounted(async () => {
   selfModal = await modalController.getTop()
@@ -39,7 +38,6 @@ const progress = computed(() => {
     return maxProgress
   return !isHtlcActive.value && hasHtlcExpired.value === false ? maxProgress - blocksUntilNextMacroBlock.value : 0
 })
-// Only show completed one time, then wait for closeModal
 watch(progress, (progress) => {
   if (progress >= maxProgress && hasHtlcExpired.value === false)
     isCompleted.value = true

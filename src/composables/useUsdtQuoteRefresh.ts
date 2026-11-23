@@ -72,16 +72,9 @@ function formatPolygonQuoteError(err: unknown) {
 }
 
 interface UseUsdtQuoteRefreshOptions {
-  /**
-   * When true, automatically refresh + schedule when `request` changes.
-   * When false (default), the consumer controls refresh timing via `refresh` + `scheduleRefresh`.
-   */
   autoRefresh?: boolean
 }
 
-/**
- * Manages USDT transfer quote lifecycle: state, caching, periodic refresh, and cleanup.
- */
 export function useUsdtQuoteRefresh(
   request: ComputedRef<PolygonTransferQuoteRequest | null>,
   loading: Ref<boolean>,
@@ -158,7 +151,6 @@ export function useUsdtQuoteRefresh(
     }, QUOTE_REFRESH_INTERVAL_MS)
   }
 
-  /** Reset state when request becomes null. */
   watch(request, (req) => {
     if (!req) {
       quote.value = null
@@ -167,7 +159,6 @@ export function useUsdtQuoteRefresh(
     }
   })
 
-  /** Restart the timer when loading toggles (e.g. after payment submission). */
   watch(loading, () => {
     scheduleRefresh()
   })
@@ -191,7 +182,6 @@ export function useUsdtQuoteRefresh(
     }, { immediate: true })
   }
 
-  /** Basic fee status text: "Calculating fees…" while loading, "incl. {fee} fees" once quoted, or empty. */
   const feeText = computed(() => {
     if (quoteLoading.value && !quote.value)
       return i18n.t('Calculating fees...')

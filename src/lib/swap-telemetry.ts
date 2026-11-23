@@ -17,7 +17,6 @@ export function errorReason(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-// Times one swap step and reports it once: a catch that runs after the step already ended does not report it again.
 export function startSwapStep<S extends SwapStep>(step: S, context: SwapTelemetryContext, startProps?: StepProps<S>, startedAt = Date.now()) {
   let reported = false
   function report(ok: boolean, props?: StepProps<S>, error_reason?: string) {
@@ -33,8 +32,6 @@ export function startSwapStep<S extends SwapStep>(step: S, context: SwapTelemetr
   }
 }
 
-// Expired-HTLC sweeps retry a stuck refund every few blocks, so only its first failure per swap is reported. The caller
-// owns `reportedFailures` and keeps it for the session.
 export function startSwapRefund(context: SwapTelemetryContext & { swap_id: string }, reportedFailures: Set<string>) {
   const step = startSwapStep('refund', context)
   const isFirstFailure = () => !reportedFailures.has(context.swap_id) && !!reportedFailures.add(context.swap_id)
@@ -63,13 +60,11 @@ export function trackFundingProof(patchedSwap: Promise<{ status: string, preimag
   )
 }
 
-// Shared by the NIM and USDT settlement waits. Durations count from the funding proof, when Fastspot can start paying.
 export function startSwapSettlement(context: SwapTelemetryContext, fundingProofStartedAt: number) {
   const step = startSwapStep('settlement', context, undefined, fundingProofStartedAt)
   let polls = 0
   let lastStatus: string | undefined
   const stats = () => ({ polls, last_status: lastStatus ?? null })
-  // The in-app flow waits behind the PIN spinner, and users kill the app before the final event.
   const slowTimer = window.setTimeout(
     () => trackSwapStep({ step: 'settlement_slow', ok: false, ...context, duration_ms: Date.now() - fundingProofStartedAt, ...stats() }),
     Math.max(0, fundingProofStartedAt + SWAP_SETTLEMENT_SLOW_MS - Date.now()),
@@ -91,7 +86,6 @@ export function startSwapSettlement(context: SwapTelemetryContext, fundingProofS
       stop()
       step.fail(error, stats())
     },
-    // For exits without an outcome, like a wallet switch mid-settlement.
     stop,
   }
 }

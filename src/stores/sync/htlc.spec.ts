@@ -29,7 +29,6 @@ describe('useSyncHtlc', () => {
     return { promise, resolve }
   }
 
-  // nodesAreSynced is an async computed; touch it then flush microtasks so it resolves to true.
   async function primeNodesAreSynced() {
     const { useSyncState } = await import('./state')
     void useSyncState().nodesAreSynced
@@ -140,9 +139,7 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().handleFunds()
 
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
-      // The sweep must keep following HTLC extensions, so the timeout is not a passed check.
       expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_HISTORY_CHECKED_KV_KEY, '1')
-      // Not assigned, so HomeView doesn't flash the hold modal.
       expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
     })
 
@@ -171,7 +168,6 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
       expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_HISTORY_CHECKED_KV_KEY, '1')
       expect(useSyncState().htlcHistoryChecked).toBe(false)
-      // Clearing the start releases the explanation modal.
       expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
     })
 
@@ -269,7 +265,6 @@ describe('useSyncHtlc', () => {
     })
 
     it('leaves an expired active HTLC to the timeout reclaim instead of asking the cosigner', async () => {
-      // The cosigner refuses past validity end (409 "Wallet validity end reached").
       state.localBalance = 100_000
       state.height = 1000
       state.remoteHeight = 1000
@@ -302,7 +297,6 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().handleFunds(true)
 
       expect(state.sendTx).not.toHaveBeenCalled()
-      // Secured funds stay secured; only the new deposit waits, so no explanation modal.
       expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
     })
 
@@ -342,7 +336,7 @@ describe('useSyncHtlc', () => {
     it('delays handleFunds when nodes are not synced and HTLC inactive', async () => {
       state.localBalance = 100_000
       state.height = 1000
-      state.remoteHeight = 100_000 // far apart
+      state.remoteHeight = 100_000
       state.isHtlcActive = false
       state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
@@ -357,7 +351,6 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).not.toHaveBeenCalled()
-      // Guarded before the remote-balance fetch, so no RPC is wasted while below threshold.
       expect(state.getBalance).not.toHaveBeenCalled()
     })
 
@@ -465,7 +458,7 @@ describe('useSyncHtlc', () => {
       state.isHtlcActive = true
       state.htlcStart = 100_000
       state.htlcEnd = 300_000
-      state.headTimestamp = 199_000 // satisfies htlcCanBeExtended
+      state.headTimestamp = 199_000
       state.isSendingTx = true
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().extendValidity()
@@ -1848,7 +1841,6 @@ describe('useSyncHtlc', () => {
       await htlc.checkExpiredSwapHtlcs()
       const firstQueryCalls = state.query.mock.calls.length
 
-      // headTimestamp is in ms: BLOCKS_PER_BATCH (32) + 1 ms later is still inside the batch.
       state.headTimestamp += 33
       await htlc.checkExpiredSwapHtlcs()
       expect(state.query.mock.calls.length).toBe(firstQueryCalls)
@@ -1878,7 +1870,6 @@ describe('useSyncHtlc', () => {
       expect(state.refundPolygonSwapHtlc).toHaveBeenCalledWith(polygonRow)
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
       expect(state.updateSinglePolygonTransaction).not.toHaveBeenCalled()
-      // refundPolygonSwapHtlc reports its own outcome.
       expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
@@ -1933,7 +1924,6 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.logger.error).toHaveBeenCalledWith('Polygon HTLC refund failed; will retry next sweep', expect.any(Error))
       expect(trackSwapStep).not.toHaveBeenCalled()
-      // Row not deleted — only the swap_quotes cleanup ran
       expect(state.run).not.toHaveBeenCalledWith(expect.stringContaining('swap_htlcs'), ['0xrelayhash'])
     })
 
@@ -2079,7 +2069,6 @@ describe('useSyncHtlc', () => {
       const { SQLQuery } = await import('@/lib/sql-queries')
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      // A rebroadcast copy is rejected once the original lands, so its lookup decides next sweep.
       expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
       expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
@@ -2133,7 +2122,6 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.client.sendTransaction).toHaveBeenCalledOnce()
-      // Inside its window the same refund is rebuilt, so a rebroadcast keeps its hash.
       expect(vi.mocked((globalThis as any).Nimiq.Transaction).mock.calls.at(-1)?.[9]).toBe(validityStartHeight)
     })
 
@@ -2213,6 +2201,18 @@ describe('useSyncHtlc', () => {
       expect(state.setSwapPreimage).not.toHaveBeenCalled()
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
       expect(trackSwapStep).not.toHaveBeenCalled()
+    })
+
+    it('deletes an empty recovered swap HTLC without asking Fastspot', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: '', swap_status: 'recovered' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.getSwap).not.toHaveBeenCalled()
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
     })
 
     it('does not ask Fastspot about an empty HTLC with a proven refund', async () => {

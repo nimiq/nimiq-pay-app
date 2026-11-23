@@ -442,12 +442,10 @@ describe('useSyncTransactions', () => {
         await store.updateSingleTransaction(row.hash)
       expect(row.validityStartHeight).toBe(100)
 
-      // A reorg returns the imported transaction to pending before it disappears.
       state.client.getTransaction.mockResolvedValue({ ...included, state: 'pending' })
       await store.updateSingleTransaction(row.hash)
       expect(state.updateTransactionStatus).toHaveBeenLastCalledWith({ hash: row.hash, status: 'pending', timestamp: 42 })
 
-      // Model pending-state restoration without serialized content after a restart.
       syncState.pendingTransactions.splice(0, syncState.pendingTransactions.length, {
         transactionHash: row.hash,
         sender: row.sender,
@@ -1180,8 +1178,6 @@ describe('useSyncTransactions', () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve', 'NQ77 FOREIGN CREATOR'))
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
-        // Receipt is persisted via the refresh path, but the notifier must stay silent
-        // — that's the listener-only contract for incoming-payment notifications.
         expect(state.addReceiptTransactions).toHaveBeenCalled()
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
       })

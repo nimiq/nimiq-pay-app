@@ -28,25 +28,17 @@ const { showAnimations, activeAsset, hasDismissedPendingNimHint } = storeToRefs(
 const { localBalance, pendingNimSince } = storeToRefs(useLocalWallet())
 const { isProcessingRemote } = storeToRefs(useLocks())
 
-// During HTLC create/extend/recreate the on-chain NIM balance is transiently 0 and the
-// signer can be cleared (homeBalanceState 'loading'). Spend-to-zero never sets these flags.
 const isNimHtlcTransition = computed(() =>
   activeAsset.value === Asset.NIM
   && (isProcessingRemote.value || isTransactionPending.value || homeBalanceState.value === 'loading'),
 )
 
-// NIM staged in the local wallet, waiting to reach the HTLC threshold before being secured.
-// Shown as a subordinate "topping up" line, never added to the spendable balance above.
 const pendingNim = computed(() => activeAsset.value === Asset.NIM ? localBalance.value : 0)
 
 const displayedBalance = computed(() => {
   if (activeAsset.value === Asset.USDT) {
-    // Pre-consensus the canonical balance is always 0; fall back to the KV-cached value.
     return usdtBalance.value === 0 && usdtHomeBalanceState.value === 'loading' ? lastKnownUsdtBalance.value : usdtBalance.value
   }
-  // While funds sit in the local wallet they've left the HTLC (e.g. drained to recreate it) and
-  // are shown in the pending line. Show the real (possibly 0) remote balance rather than the
-  // optimistic last-known one so the same funds aren't counted in both the balance and pending.
   if (balance.value === 0 && isNimHtlcTransition.value && pendingNim.value === 0)
     return lastKnownRemoteBalance.value
   return balance.value
@@ -57,9 +49,6 @@ const { fiat, crypto } = usePrice(displayedBalance, {
   cryptoCurrency: computed(() => assetToCrypto(activeAsset.value)),
 })
 
-// Skeleton when there's no balance number to show: still loading/transitioning, or the balance is
-// 0 while NIM funds are pending (they're mid-flight into the HTLC, so the real balance isn't known
-// yet). The pending line stays visible alongside the skeleton.
 const showSkeleton = computed(() =>
   displayedBalance.value === 0
   && (displayedBalanceState.value === 'loading' || isNimHtlcTransition.value || pendingNim.value > 0),
@@ -98,10 +87,8 @@ function handlePendingNimHintOpen(open: boolean) {
 
 async function handlePendingNimClick() {
   dismissPendingNimHint()
-  // A hold this tap starts is announced by HomeView's watcher; only re-explain one already running.
   const wasHeld = htlcCheckHoldStartedAt.value !== undefined
   await handleFunds(true).catch(error => logger.error('Error while securing pending NIM', error))
-  // A held top-up would otherwise do nothing visible once the user closed the explanation.
   if (wasHeld && htlcCheckHoldStartedAt.value !== undefined && !htlcHistoryChecked.value && !await modalController.getTop())
     await useModal().showModal(Modal.HtlcHistoryCheck, { isOnTop: true, isSmall: true, canDismiss: false })
 }
@@ -123,12 +110,6 @@ async function handlePendingNimClick() {
         <PriceChange :currency="crypto.currency" />
       </div>
     </div>
-    <!--
-      Tour hook (APP-177): tapping the pending line force-secures the locally-staged NIM into the
-      HTLC right now, bypassing the htlcThreshold auto-deposit gate. Disabled/dimmed while a NIM HTLC
-      tx is already in flight (isNimHtlcTransition). The future onboarding tour targets
-      [data-tour="pending-topup"] and calls this same handleFunds(true) path.
-    -->
     <PopoverRoot :open="pendingNimHintOpen" @update:open="handlePendingNimHintOpen">
       <Transition name="pending">
         <PopoverAnchor v-if="pendingNim > 0" as-child>

@@ -7,8 +7,6 @@ import MnemonicInput from '@/components/MnemonicInput.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 defineProps({ errorMsg: { type: String } })
@@ -16,7 +14,6 @@ defineEmits(stepEmits)
 
 const loginWords: Ref<string[]> = ref([])
 const isDevImport = ref(false)
-// Check for undefined before use every since every skips undefined values
 const isValidMnemonic = computed(() => loginWords.value.length === 12 && !loginWords.value.includes(undefined as any) && loginWords.value.every(word => Nimiq.MnemonicUtils.DEFAULT_WORDLIST.includes(word)))
 
 const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adult', 'cost', 'country', 'mask', 'night', 'giraffe']

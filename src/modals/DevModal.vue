@@ -31,8 +31,6 @@ import { Transfer } from '@/types/transactions'
 
 const logger = useLogger('DevModal')
 
-// Note: no translations in this file as it's for dev purposes only.
-
 const router = useRouter()
 
 const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
@@ -87,7 +85,6 @@ async function onNetworkSegmentChange(value: unknown) {
   if (!isNetworkChoice(value) || value === currentNetworkChoice.value)
     return
 
-  // Tx history, remote signers, and swap state are environment-scoped — purge before flipping.
   const alert = await alertController.create({
     header: `Switch to ${value === 'default' ? 'DEFAULT' : value.toUpperCase()}?`,
     message: 'This will clear your local transaction history, remote signer registrations, and pending swaps. Your wallet, PIN, and backup remain intact.',
@@ -101,9 +98,6 @@ async function onNetworkSegmentChange(value: unknown) {
   if (role !== 'confirm')
     return
 
-  // Must run before the override flip: remote signer addresses, swap HTLCs, and swap quotes are
-  // tied to a specific cosigner (per-network public key) — leaving them in place causes the next
-  // session to load a foreign-network signer as "active" and stall sync.
   useSyncState().walletContextGeneration += 1
   await Promise.allSettled([
     clearTxHistory(),
@@ -133,7 +127,6 @@ async function writeToClipboard(string: string) {
 };
 
 async function handleClearTx() {
-  // Clear tx table
   await clearTxHistory()
   router.go(0)
 }
@@ -163,7 +156,6 @@ async function checkForOtaUpdate() {
   }
   catch (error) {
     // Our update server omits `kind`, so the plugin rejects "no update" instead of resolving it.
-    // Drop this branch once the server sends `kind: 'up_to_date'`.
     if (error instanceof Error && error.message === 'no_new_version_available')
       otaStatus.value = NO_OTA_UPDATE_MESSAGE
     else

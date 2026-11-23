@@ -37,11 +37,9 @@ const payment = computedAsync(async () => {
   return data
 })
 
-// Using watch instead of computedAsync because updating the fiat values triggered a recomputation
 watch(payment, async () => {
   if (!payment.value)
     return null
-  // Otherwise, use the API to get the fiat values
   const cryptoCurrency = assetToCrypto(payment.value.asset ?? Asset.NIM)
   const fiatAmount = usePrice(payment.value.amount, { cryptoCurrency })
   const fiatFeeAmount = usePrice(payment.value.fee, { cryptoCurrency })

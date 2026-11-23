@@ -1,4 +1,3 @@
-// Builds the injected Mini Apps provider from the pinned trust-web3-provider submodule.
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -6,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const vendor = join(root, 'vendor/trust-web3-provider')
-// Bun comes from the pinned devDependency, not a global install.
 const bun = join(root, 'node_modules/.bin/bun')
 
 if (!existsSync(join(vendor, 'package.json'))) {
@@ -19,7 +17,6 @@ function run(command, args, cwd) {
     execFileSync(command, args, { cwd, stdio: 'inherit' })
   }
   catch {
-    // The child already printed its error; skip Node's stack trace.
     console.error(`🚫 Failed: ${command} ${args.join(' ')} (in ${cwd})`)
     process.exit(1)
   }

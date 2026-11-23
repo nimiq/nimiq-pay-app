@@ -22,20 +22,6 @@ const nimiqNetwork = useNimiqNetwork()
 const { networkId, height } = storeToRefs(nimiqNetwork)
 const COSIGNER_SEND_TIMEOUT_MS = 30_000
 
-/**
- * Signs any transaction in the wallet.
- *
- * Different Transfer types are used to sign different transactions and therefore different
- * arguments are needed for each one. The value, flag and recipient will be set automatically
- * depending on the Transfer type.
- *
- * Basically, we have two different Transfer Types in the local wallet:
- *  - UserPayment or UserReceipt: When the user interacts with other wallets in the network
- *  - Sync: Any other transaction that is needed to keep the HTLC alive. See the Transfer enum
- *    for more information.
- *
- * @param partialArgs
- */
 export interface GetSignedTxOptions {
   beforeRemoteBroadcast?: (tx: Transaction, swap?: Swap) => Promise<void>
 }
@@ -51,17 +37,17 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     if (!useRemoteSigner().remoteAddress)
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
     const tx = new Nimiq.Transaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
-      /* recipientType */ Nimiq.AccountType.Basic,
-      /* recipientData */ Nimiq.BufferUtils.fromUtf8(partialArgs.message || ''),
-      /* value */ BigInt(Math.ceil(partialArgs.amount)),
-      /* fee */ BigInt(partialArgs.fee ?? 0),
-      /* flags */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      useRemoteSigner().remoteAddress!,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      Nimiq.Address.fromString(partialArgs.recipient),
+      Nimiq.AccountType.Basic,
+      Nimiq.BufferUtils.fromUtf8(partialArgs.message || ''),
+      BigInt(Math.ceil(partialArgs.amount)),
+      BigInt(partialArgs.fee ?? 0),
+      0,
+      getValidityStartHeight(),
+      networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     return getSignedTxByRemote(tx, {}, options)
@@ -70,7 +56,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     if (!useRemoteSigner().remoteAddress)
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
-    // Confirm swap with Fastspot
     const swapContext = { asset: Asset.NIM, swap_id: partialArgs.paymentRef! }
     const localWallet = useLocalWallet().localAddress
     const { confirmSwap, getSwap } = await useFastspotApiV1()
@@ -79,10 +64,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     let swap: Swap
     try {
       swap = await confirmSwap(
-        /* swap */ { id: swapContext.swap_id } as PreSwap,
-        /* redeem */ { asset: SwapAsset.BTC_LN },
-        /* refund */ { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
-        /* uid */ localWallet.toHex(),
+        { id: swapContext.swap_id } as PreSwap,
+        { asset: SwapAsset.BTC_LN },
+        { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
+        localWallet.toHex(),
       ).catch(async (error) => {
         if (!(error instanceof Error && error.message === 'The swap was already confirmed before.'))
           throw error
@@ -109,13 +94,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       htlc_timeout_in_s: nimHtlc ? Math.round((nimHtlc.timeoutTime - Date.now()) / 1e3) : undefined,
     })
 
-    // Verify swap hash
     if (swap.hash !== decoded.payment_hash) {
       verify.fail('hash_mismatch')
       return { outcome: 'rejected', error: i18n.t('Invalid swap hash') }
     }
 
-    // Construct swap NIM HTLC data
     if (!nimContract || !nimHtlc) {
       verify.fail('missing_nim_contract')
       return { outcome: 'rejected', error: i18n.t('No NIM HTLC found in swap') }
@@ -138,7 +121,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     data.writeUint8(1)
     data.writeUint64(nimHtlc.timeoutTime)
 
-    // Verify data gainst data given in swap
     logger.log('Verifying Swap data')
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data) {
       verify.fail('htlc_data_mismatch')
@@ -146,22 +128,20 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     }
     verify.end(true)
 
-    // Setup HTLC creation transaction
     const tx = new Nimiq.Transaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
-      /* recipientType */ Nimiq.AccountType.HTLC,
-      /* recipientData */ data,
-      /* value */ BigInt(partialArgs.amount), // Must be the exact amount
-      /* fee */ BigInt(partialArgs.fee ?? 0),
-      /* flags */ 1,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      useRemoteSigner().remoteAddress!,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      Nimiq.AccountType.HTLC,
+      data,
+      BigInt(partialArgs.amount), // Must be the exact amount
+      BigInt(partialArgs.fee ?? 0),
+      1,
+      getValidityStartHeight(),
+      networkId.value,
     )
 
-    // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
     logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof), proofLength: tx.proof.length })
     return getSignedTxByRemote(tx, { swap }, options)
@@ -174,40 +154,39 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       switch (partialArgs.stakingData.type) {
         case 'create-staker':
           data = Nimiq.StakingDataBuilder.createStaker(
-            /* delegation */ Nimiq.Address.fromString(partialArgs.stakingData.delegation),
+            Nimiq.Address.fromString(partialArgs.stakingData.delegation),
           )
           value = BigInt(partialArgs.amount)
           break
         case 'add-stake':
           data = Nimiq.StakingDataBuilder.addStake(
-            /* stakerAddress */ useLocalWallet().localAddress,
+            useLocalWallet().localAddress,
           )
           value = BigInt(partialArgs.amount)
           break
         case 'update-staker':
           data = Nimiq.StakingDataBuilder.updateStaker(
-            /* newDelegation */ Nimiq.Address.fromString(partialArgs.stakingData.newDelegation),
-            /* reactivateAllStake */ partialArgs.stakingData.reactivateAllStake,
+            Nimiq.Address.fromString(partialArgs.stakingData.newDelegation),
+            partialArgs.stakingData.reactivateAllStake,
           )
           break
         case 'set-active-stake':
           data = Nimiq.StakingDataBuilder.setActiveStake(
-            /* newActiveBalance */ BigInt(partialArgs.stakingData.newActiveBalance),
+            BigInt(partialArgs.stakingData.newActiveBalance),
           )
           break
         case 'retire-stake':
           data = Nimiq.StakingDataBuilder.retireStake(
-            /* retireStake */ BigInt(partialArgs.stakingData.retireStake),
+            BigInt(partialArgs.stakingData.retireStake),
           )
           break
         case 'remove-stake': {
-          // For stake removal, the local wallet must sign the transaction, the remote wallet is not involved.
           const tx = Nimiq.TransactionBuilder.newRemoveStake(
-            /* recipient */ useLocalWallet().localAddress,
-            /* value */ BigInt(partialArgs.amount),
-            /* fee */ BigInt(partialArgs.fee ?? 0),
-            /* validityStartHeight */ getValidityStartHeight(),
-            /* networkId */ networkId.value,
+            useLocalWallet().localAddress,
+            BigInt(partialArgs.amount),
+            BigInt(partialArgs.fee ?? 0),
+            getValidityStartHeight(),
+            networkId.value,
           )
           tx.sign(useLocalWallet().localWallet, undefined)
           return { outcome: 'signed', signedTx: tx }
@@ -226,18 +205,18 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     const tx = new Nimiq.Transaction(
-      /* sender */ sentByLocal ? localWallet.localAddress : useRemoteSigner().remoteAddress!,
-      /* senderType */ sentByLocal ? Nimiq.AccountType.Basic : Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString(Nimiq.Policy.STAKING_CONTRACT_ADDRESS),
-      /* recipientType */ Nimiq.AccountType.Staking,
-      /* recipientData */ data,
-      /* value */ value,
-      /* fee */ BigInt(partialArgs.fee ?? 0),
+      sentByLocal ? localWallet.localAddress : useRemoteSigner().remoteAddress!,
+      sentByLocal ? Nimiq.AccountType.Basic : Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      Nimiq.Address.fromString(Nimiq.Policy.STAKING_CONTRACT_ADDRESS),
+      Nimiq.AccountType.Staking,
+      data,
+      value,
+      BigInt(partialArgs.fee ?? 0),
       // If value > 0, it's a create or add stake transaction, otherwise it's a signaling transaction.
-      /* flags */ value > 0n ? 0b00 : 0b10,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      value > 0n ? 0b00 : 0b10,
+      getValidityStartHeight(),
+      networkId.value,
     )
 
     if (sentByLocal) {
@@ -246,7 +225,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'signed', signedTx: tx }
     }
 
-    // Next, we create the inner signature and set it on the recipient data field.
     // Add-stake transactions do not have an inner signature.
     if (partialArgs.stakingData.type !== 'add-stake') {
       const { privateKey, publicKey } = localWallet.localWallet
@@ -255,24 +233,22 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       tx.data = Nimiq.StakingDataBuilder.setProof(tx.data, innerSigProof)
     }
 
-    // Now we create the HTLC early resolve proof
     tx.proof = createResolveProof({ mode: 'early', tx })
-    // Finally, we get the cosigner to sign the transaction
     return getSignedTxByRemote(tx, {}, options)
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     let tx = new Nimiq.Transaction(
-      /* sender */ useLocalWallet().localAddress,
-      /* senderType */ Nimiq.AccountType.Basic,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
-      /* recipientType */ Nimiq.AccountType.HTLC,
-      /* data */ createDepositData(),
-      /* value */ BigInt(useLocalWallet().localBalance),
-      /* fee */ 0n,
-      /* flags */ 1,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      useLocalWallet().localAddress,
+      Nimiq.AccountType.Basic,
+      new Uint8Array(0),
+      Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      Nimiq.AccountType.HTLC,
+      createDepositData(),
+      BigInt(useLocalWallet().localBalance),
+      0n,
+      1,
+      getValidityStartHeight(),
+      networkId.value,
     )
     const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
     tx = new Nimiq.Transaction(
@@ -299,68 +275,68 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     const tx = new Nimiq.Transaction(
-      /* sender */ sender,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.AccountType.Basic,
-      /* recipientData */ new Uint8Array(0),
-      /* value */ BigInt(useRemoteSigner().remoteBalance),
-      /* fee */ 0n,
-      /* flags */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      sender,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      useLocalWallet().localAddress,
+      Nimiq.AccountType.Basic,
+      new Uint8Array(0),
+      BigInt(useRemoteSigner().remoteBalance),
+      0n,
+      0,
+      getValidityStartHeight(),
+      networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     return getSignedTxByRemote(tx, {}, options)
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
     const tx = new Nimiq.Transaction(
-      /* sender */ partialArgs.sender,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.AccountType.Basic,
-      /* recipientData */ new Uint8Array(0),
-      /* value */ BigInt(partialArgs.amount),
-      /* fee */ 0n,
-      /* flags */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      partialArgs.sender,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      useLocalWallet().localAddress,
+      Nimiq.AccountType.Basic,
+      new Uint8Array(0),
+      BigInt(partialArgs.amount),
+      0n,
+      0,
+      getValidityStartHeight(),
+      networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'early', tx, cosignerProofSize: partialArgs.proofSize })
     return getSignedTxByRemote(tx, { address: partialArgs.sender }, options)
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
     const tx = new Nimiq.Transaction(
-      /* sender */ partialArgs.sender,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.AccountType.Basic,
-      /* recipientData */ new Uint8Array(0),
-      /* value */ BigInt(partialArgs.amount),
-      /* fee */ 0n,
-      /* flags */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      partialArgs.sender,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      useLocalWallet().localAddress,
+      Nimiq.AccountType.Basic,
+      new Uint8Array(0),
+      BigInt(partialArgs.amount),
+      0n,
+      0,
+      getValidityStartHeight(),
+      networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'timeout', tx })
     return { outcome: 'signed', signedTx: tx }
   }
   else if (partialArgs.transfer === Transfer.ExtendRemote) {
     let tx = new Nimiq.Transaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
-      /* recipientType */ Nimiq.AccountType.HTLC,
-      /* recipientData */ createDepositData(),
-      /* value */ BigInt(useRemoteSigner().remoteBalance),
-      /* fee */ 0n,
-      /* flags */ 1,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
+      useRemoteSigner().remoteAddress!,
+      Nimiq.AccountType.HTLC,
+      new Uint8Array(0),
+      Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      Nimiq.AccountType.HTLC,
+      createDepositData(),
+      BigInt(useRemoteSigner().remoteBalance),
+      0n,
+      1,
+      getValidityStartHeight(),
+      networkId.value,
     )
     const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
     tx = new Nimiq.Transaction(
@@ -385,7 +361,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
 }
 
 interface GetSignedTxByRemoteArgs {
-  // The address of the HTLC contract
   address?: Address
   swap?: Swap
 }
@@ -416,7 +391,6 @@ export async function getSignedTxByRemote(
 
   logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const cosign = swap && startSwapStep('cosign', { asset: Asset.NIM, swap_id: swap.id }, {
-    // Lets a stale validity start height be told apart from a slow cosigner.
     head_height: height.value,
     remote_height: useRemoteSigner().remoteHeight,
   })
@@ -479,14 +453,13 @@ export async function getSignedTxByRemote(
 function createDepositData() {
   const remotePublicKey = useRemoteSigner().remotePublicKey
   if (!remotePublicKey)
-    throw new Error('Remote public key is undefined') // no translation as not user-facing
+    throw new Error('Remote public key is undefined')
   const data = new Nimiq.SerialBuffer(82)
   data.write(useLocalWallet().localWallet.toAddress().serialize())
   data.write(Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().serialize())
   data.writeUint8(1 /* BLAKE2B */)
   data.write(new Uint8Array(32))
   data.writeUint8(1)
-  // Current time + 14 days
   const timestamp = Date.now() + 14 * 24 * 60 * 60 * 1000
   data.writeUint64(timestamp)
   return data
@@ -506,7 +479,6 @@ export function createResolveProof({ tx, mode, cosignerProofSize }: CreateResolv
   const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
   const isEarly = mode === 'early'
   const proofLen = 1 + sigProof.length + (isEarly ? effectiveCosignerProofSize : 0)
-  // TODO: check if sigProofLength is different from remoteProofSize
   logger.log({ proofLen, isEarly, sigProofLength: sigProof.length })
   const proof = new Nimiq.SerialBuffer(proofLen)
   proof.writeUint8(isEarly ? /* EARLY_RESOLVE */ 1 : /* TIMEOUT_RESOLVE */ 2)
@@ -515,11 +487,6 @@ export function createResolveProof({ tx, mode, cosignerProofSize }: CreateResolv
   return proof
 }
 
-/**
- * Since the validity start height of the transaction must be greater than the validity start height of the remote wallet,
- * we need the remote height plus one, just in case.
- * @returns The height at which the validity of the transaction starts
- */
 function getValidityStartHeight() {
   return Math.max(useRemoteSigner().remoteHeight, height.value) + 1
 }
@@ -554,7 +521,6 @@ export async function buildTopUpReceipt(tx: PlainTransactionDetails): Promise<Us
     title: isCashlink ? 'Cashlink Claiming' : 'Top-Up',
     message: isCashlink ? '' : Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
     fee: tx.fee,
-    // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
     proofSize: useRemoteSigner().remoteProofSize,
   }
 }
