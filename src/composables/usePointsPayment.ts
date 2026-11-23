@@ -28,11 +28,6 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
   const hasCashback = computed(() => cashback.value > 0)
   const message = ref<string>()
 
-  /**
-   * Checks if the payment is valid with points.
-   *
-   * If the payment is valid, it will set the cashback amount
-   */
   async function checkPointsPaymentValidity() {
     if (toValue(amount) <= 0)
       return

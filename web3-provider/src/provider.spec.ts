@@ -16,7 +16,6 @@ let emitFullscreenChange: (enabled: boolean) => void
 let emitNimiqAccountsChanged: (accounts: string[]) => void
 let addWindowListener: MockInstance<typeof window.addEventListener>
 
-// Exercise the actual injected bundle and RPC transport used by old SDK consumers.
 beforeAll(() => {
   const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
   execFileSync('pnpm', ['build'], {
@@ -29,7 +28,6 @@ beforeAll(() => {
 beforeEach(() => {
   handleRequest.mockReset()
   sessionStorage.clear()
-  // Each test is a new page: listeners of earlier bundles must not handle its messages.
   addWindowListener = vi.spyOn(window, 'addEventListener')
   const native = createBirpc({ handleRequest }, {
     post: data => window.dispatchEvent(new CustomEvent('messageFromNative', { detail: data })),
@@ -123,7 +121,6 @@ describe('Nimiq account updates', () => {
     await window.nimiq!.listAccounts()
     expect(listener).not.toHaveBeenCalled()
 
-    // The page wiped its storage, so this call prompts again while #accounts still holds the old list.
     sessionStorage.clear()
     handleRequest.mockResolvedValue(['NQ11 WALLET', 'NQ22 HTLC'])
     await expect(window.nimiq!.request({ method: 'listAccounts' })).resolves.toEqual(['NQ11 WALLET', 'NQ22 HTLC'])

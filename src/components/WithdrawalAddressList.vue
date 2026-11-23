@@ -10,13 +10,11 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
-// `manage`: Settings view, lists every saved address for editing only (no selection, no add).
 const { manage = false } = defineProps<{ manage?: boolean }>()
 const emit = defineEmits(stepEmits)
 const app = useApp()
 const { withdrawalAddressesHistory, isNimiqAsset } = storeToRefs(app)
 
-// Most-recently-saved first, filtered to the active asset unless managing all of them.
 const addresses = computed<SavedAddress[]>(() =>
   withdrawalAddressesHistory.value
     .slice()

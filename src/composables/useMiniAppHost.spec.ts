@@ -77,7 +77,6 @@ const {
   sendSwapPayment: vi.fn(),
   showLoading: vi.fn((): Promise<{ cancelled: boolean }> => new Promise(() => {})),
   run: vi.fn(),
-  // Valid hex, so the host can hash it like a real signed transaction.
   signTransaction: vi.fn(async () => '0x5161ed'),
   syncTransactionHistory: vi.fn(async () => {}),
   trackEvmBroadcastUnknownResolved: vi.fn(),
@@ -237,7 +236,6 @@ describe('remote address watcher', () => {
     await handleRequest({ network: 'nimiq', name: 'listAccounts' })
     expect(requestUserConfirmation).toHaveBeenCalledOnce()
 
-    // A replacement passes through no address; the old list stays until the new one is known.
     signer.remoteAddress = undefined
     await nextTick()
     expect(bridge.nimiqAccountsChanged).not.toHaveBeenCalled()
@@ -246,7 +244,6 @@ describe('remote address watcher', () => {
     await nextTick()
     expect(bridge.nimiqAccountsChanged).toHaveBeenCalledExactlyOnceWith(['NQ11 LOCAL', 'NQ22 REMOTE'])
 
-    // Signer reloads create new objects for the same address.
     signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
     await nextTick()
     expect(bridge.nimiqAccountsChanged).toHaveBeenCalledOnce()
@@ -345,7 +342,6 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
     expect(browser.removeListener).toHaveBeenCalledTimes(5)
   })
 
@@ -357,7 +353,6 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    // fullscreenChange + urlChangeEvent + browserPageLoaded + popupWindowOpened + closeEvent
     expect(browser.removeListener).toHaveBeenCalledTimes(5)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
@@ -414,7 +409,6 @@ describe('bridge origin', () => {
     expect(receive).toHaveBeenCalledOnce()
     expect(browser.postMessage).not.toHaveBeenCalled()
 
-    // A navigation back to the Mini App only reopens the bridge once it has loaded.
     emit('urlChangeEvent', { id: 'm', url: 'https://APP.example/after-login?x=1' })
     emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
     expect(receive).toHaveBeenCalledOnce()
@@ -457,7 +451,6 @@ describe('app-driven close and hide', () => {
     const { browser, host } = await createPermissionHost()
     const emit = (event: string, payload: unknown) =>
       (browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
-    // The launcher registers the id openWebView returns.
     host.isMainWebview('main')
     inAppBrowser.close.mockClear()
     inAppBrowser.hide.mockClear()
@@ -545,7 +538,6 @@ describe('app-driven close and hide', () => {
     })
     const { host } = await createPermissionHost()
     inAppBrowser.close.mockClear()
-    // The first close only reaches a popup; the second one closes the Mini App.
     inAppBrowser.close.mockResolvedValueOnce(undefined).mockImplementationOnce(() => host.destroy())
 
     const closing = closeActiveMiniApp()
@@ -602,7 +594,6 @@ describe('chain approval', () => {
 
     expect(getActiveMiniAppSession()).toMatchObject({ chainId: '0x1f', evmRpcUrls: { '0x1f': 'https://custom.test' } })
     expect(shared).toEqual({ '0x1': 'https://eth-rpc.test' })
-    // Omitted chainId falls back to the current chain, which must still pass the allowlist.
     await expect((host as any).signEthTransaction({
       to: '0x2222222222222222222222222222222222222222',
       from: ethAddress,
@@ -1421,7 +1412,6 @@ describe('MiniAppHost staking protocol rules', () => { // eslint-disable-line te
       message,
     })
     expect(confirmationPrompt).not.toHaveBeenCalled()
-    // sendTx is what stages the transaction with the cosigner
     expect(sendTx).not.toHaveBeenCalled()
   })
 
@@ -1746,7 +1736,6 @@ describe('miniAppHost', () => {
 
       const error = await (createHostOnChain() as any).signEthTransaction(txParams).catch((e: unknown) => e)
 
-      // The Mini App keeps getting the same error as before.
       expect(error).toBeInstanceOf(NetworkError)
       expect(error.message).toBe('RPC request timed out after 30000ms')
       expect(trackWeb3Request).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -1828,7 +1817,6 @@ describe('miniAppHost', () => {
           return jsonRpcResponse({ jsonrpc: '2.0', id: 4, result: '0x5208' })
         case 'eth_sendRawTransaction':
           return jsonRpcResponse({ jsonrpc: '2.0', id: 5, result: '0xabc123' })
-        // Non-null receipt ends the background Polygon refresh loop.
         case 'eth_getTransactionReceipt':
           return jsonRpcResponse({ jsonrpc: '2.0', id: 6, result: { status: '0x1' } })
         default:
@@ -1982,7 +1970,6 @@ describe('miniAppHost', () => {
       const payload = JSON.parse(String(init?.body)) as { method: string }
       switch (payload.method) {
         case 'eth_sendRawTransaction':
-          // Slowest broadcast that still beats the RPC timeout.
           vi.setSystemTime(Date.now() + rpcTimeoutMs - 1)
           return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0xabc123' })
         case 'eth_getTransactionReceipt':

@@ -1006,7 +1006,6 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
     const { persistHistoryTransaction } = await import('./polygon-usdt')
     await persistHistoryTransaction(makeIncomingGroup(2000), localAddr)
     expect(txMocks.addReceiptTransactions).toHaveBeenCalledTimes(1)
-    // callback omitted → nothing to assert beyond the receipt being persisted.
   })
 
   it('does NOT invoke onIncomingPersisted for outgoing txs', async () => {
@@ -1031,9 +1030,6 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
   })
 })
 
-// Freshness filter used inside syncTransactionHistory incremental branch: only fire
-// notifications for incoming txs strictly newer than the max timestamp present in DB
-// before the pass started.
 describe('usdt incremental freshness filter', () => {
   function freshnessFilter(newIncoming: Array<{ timestamp: number }>, previousMaxTimestamp: number) {
     return newIncoming.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)

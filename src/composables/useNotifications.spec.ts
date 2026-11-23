@@ -199,8 +199,6 @@ describe('useNotifications — local notifications', () => {
     })
 
     it('requests permission and fires when localNotificationsStatus is PROMPT and request is granted', async () => {
-      // Bug A regression: existing users with push granted but local never asked
-      // must be prompted on first incoming tx, not silently skipped.
       state.localNotificationsStatus = ref('prompt')
       state.checkPermissions.mockResolvedValue({ display: 'prompt' })
       state.requestPermissions.mockResolvedValue({ display: 'granted' })
@@ -441,7 +439,6 @@ describe('useNotifications — local notifications', () => {
   describe('push notification listeners', () => {
     it('setup flow then MainView init leaves a single listener set', async () => {
       const { useNotifications } = await import('./useNotifications')
-      // getNotifiedStep and MainView each create their own instance.
       await useNotifications().registerNotifications()
       await useNotifications().init()
       expect(state.pushListeners).toEqual(['registration', 'registrationError', 'pushNotificationReceived', 'pushNotificationActionPerformed'])

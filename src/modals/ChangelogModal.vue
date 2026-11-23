@@ -12,7 +12,6 @@ import { useModal } from '@/composables/useModal'
 const { closeModal } = useModal()
 const { latest, previous, resolveVersion, markChangelogSeen } = useChangelog()
 
-// Opening the changelog counts as seeing it, so the home card stops appearing.
 onMounted(async () => {
   await resolveVersion()
   markChangelogSeen()
@@ -40,10 +39,8 @@ onMounted(async () => {
       </div>
 
       <template v-if="latest">
-        <!-- Latest version, always expanded -->
         <ChangelogEntry :entry="latest" class="mt-6" />
 
-        <!-- Older versions, hidden until requested -->
         <CollapsibleRoot v-if="previous.length" class="mt-8">
           <CollapsibleTrigger class="collapsible-trigger flex w-full items-center justify-between border-t border-ash py-4 text-left">
             <span class="text-base font-bold text-space">{{ $t('Previous versions') }}</span>
@@ -65,7 +62,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Chevron points right when closed, rotates down when the section opens. */
 .chevron {
   transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -73,7 +69,6 @@ onMounted(async () => {
   transform: rotate(90deg);
 }
 
-/* Height animation driven by Reka's measured content height. */
 .collapsible-content {
   overflow: hidden;
 }

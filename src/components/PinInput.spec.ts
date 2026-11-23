@@ -44,7 +44,6 @@ vi.mock('@/composables/useBiometric', () => ({
 }))
 
 const wrappers: VueWrapper[] = []
-// Stand in for the single input Flow.vue renders and hands to the composable.
 let sharedEl: HTMLInputElement
 
 async function mountPin(props: Record<string, unknown>) {
@@ -114,7 +113,6 @@ describe('pinInput', () => {
     sharedEl.focus()
     expect(document.activeElement).toBe(sharedEl)
 
-    // Leaving the PIN step (e.g. navigating to a non-PIN step or closing the flow) must blur.
     await wrapper.setProps({ isActive: false })
     await nextFrame()
 

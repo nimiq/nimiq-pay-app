@@ -35,11 +35,9 @@ const { consensus, height } = storeToRefs(useNimiqNetwork())
 const app = useApp()
 const asset = computed(() => props.tx.asset || Asset.NIM)
 const recipientAlias = computed(() => props.tx.recipient ? app.getAlias(props.tx.recipient) : undefined)
-// Incoming payment: sender is the counterparty; recipient is the user's own address (hidden).
 const isIncoming = computed(() => props.tx.transfer === Transfer.UserReceipt)
 const senderAlias = computed(() => props.tx.sender ? app.getAlias(props.tx.sender) : undefined)
 const isSenderSaved = computed(() => !!props.tx.sender && app.isSavedAddress(props.tx.sender))
-// A small hop every 3s draws the eye to the "add to address book" affordance.
 const jumpTransition = { duration: 0.45, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.55 } as const
 const chain = computed(() => props.tx.chain || Chain.Nimiq)
 const paymentMethod = computed(() => props.tx.paymentMethod || assetToPaymentMethod(asset.value))
@@ -62,7 +60,6 @@ const swapTimeoutTime = computedAsync(async () => {
 })
 const timeUntilTimeout = computed(() => {
   if (swapTimeoutTime.value && consensus.value === 'established' && height.value > 0) {
-    // Convert timestamp to hours from now
     const hours = Math.floor((swapTimeoutTime.value - Date.now()) / 1000 / 60 / 60)
     if (hours > 48) {
       const days = Math.floor(hours / 24)
@@ -164,8 +161,6 @@ onBeforeMount(() => {
       </div>
       <div>{{ chain }}</div>
 
-      <!-- Only display first 4 and last 4 characters. For an incoming payment we show the
-           sender (the counterparty); the recipient is the user's own address, so it's hidden. -->
       <template v-if="isIncoming && tx.sender">
         <div>{{ $t('Sender') }}</div>
         <div
@@ -206,8 +201,6 @@ onBeforeMount(() => {
           {{ tx.meta.secret }}
         </div>
       </div>
-
-      <!-- TODO Add the geo location name -->
     </div>
 
     <div v-if="isSwapPending" class="text-pumpkin mt-auto text-center">

@@ -13,7 +13,6 @@ const { reopenMiniAppWebviewAfterResume } = storeToRefs(useApp())
 const miniApps = useMiniApps()
 const { deviceIdConsent } = storeToRefs(miniApps)
 
-// Consent is keyed by origin; drop the scheme for display.
 const deviceIdOrigins = computed(() => Object.keys(deviceIdConsent.value)
   .map(origin => ({ origin, label: origin.replace(/^https?:\/\//, '') })))
 </script>

@@ -17,8 +17,6 @@ import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
-// `saveContact`: opened from an incoming payment to save its sender. The address is
-// prefilled (via state.qrCodeScanner) and shown read-only; the user only adds a name.
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, saveContact: { type: Boolean, default: false }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
 

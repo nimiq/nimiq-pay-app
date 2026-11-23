@@ -10,7 +10,6 @@ const emit = defineEmits(stepEmits)
 const { showModal } = useModal()
 const { phoneNumberVerified } = storeToRefs(useApp())
 
-// Deleting the points account unverifies the phone; this page is then empty and hidden from the root.
 watch(phoneNumberVerified, (verified) => {
   if (!verified)
     emit('back')

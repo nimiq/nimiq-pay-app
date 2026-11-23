@@ -108,7 +108,6 @@ describe('useNimiqNetwork', () => {
     const newest = onHeadChanged('h3')
     pendingBlocks[1]({ hash: 'h2', height: 102, type: 'micro' })
     await newer
-    // Applied without waiting for the newest event
     expect(store.head).toMatchObject({ hash: 'h2', height: 102 })
 
     pendingBlocks[0]({ hash: 'h1', height: 101, type: 'micro' })
@@ -121,7 +120,6 @@ describe('useNimiqNetwork', () => {
     expect(store.head).toMatchObject({ hash: 'h3', height: 103 })
   })
 
-  // On device, a macro block fires the head event twice, then the next micro block follows ~6ms later
   it.each([
     ['in order', [0, 1, 2]],
     ['micro first', [2, 0, 1]],
@@ -157,7 +155,6 @@ describe('useNimiqNetwork', () => {
     expect(store.head).toMatchObject({ hash: 'skip', height: 101 })
   })
 
-  // Albatross prefers the branch with the earlier skip block, even when it is shorter
   it('follows a rebranch to a lower head', async () => {
     const { store, onHeadChanged, pendingBlocks } = await initWithPendingHeadBlocks()
 

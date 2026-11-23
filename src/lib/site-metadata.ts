@@ -1,19 +1,11 @@
 import { CapacitorHttp } from '@capacitor/core'
 import { safeOrigin } from '@/lib/url-safety'
 
-/**
- * The site's own favicon at the conventional path — immediate placeholder and
- * last-resort fallback. No third-party service (avoids leaking browsing metadata).
- */
 export function getFaviconUrl(url: string): string {
   const origin = safeOrigin(url, '')
   return origin ? `${origin}/favicon.ico` : ''
 }
 
-/**
- * Google's favicon service. Used only as a render-time fallback when a site's own icons 404
- * (see applyIconFallback) — never eagerly for the whole list, so the metadata leak stays minimal.
- */
 export function getGoogleFaviconUrl(url: string, size = 128): string {
   const origin = safeOrigin(url, '')
   return origin
@@ -21,7 +13,6 @@ export function getGoogleFaviconUrl(url: string, size = 128): string {
     : ''
 }
 
-/** Resolve `href` against `base` to an absolute http(s) URL, or undefined (rejects javascript:, data:, etc.). */
 function toHttpUrl(href: string, base: string): string | undefined {
   try {
     const { protocol, href: abs } = new URL(href, base)
@@ -32,7 +23,6 @@ function toHttpUrl(href: string, base: string): string | undefined {
   }
 }
 
-/** Largest edge from a `sizes` attr like "192x192 512x512"; `any` → Infinity, absent → 0. */
 function sizesToPixels(sizes: string | null | undefined): number {
   if (!sizes)
     return 0
@@ -94,9 +84,6 @@ async function fetchHtmlDoc(url: string): Promise<Document | undefined> {
   return undefined
 }
 
-/**
- * Extract metadata from a parsed HTML document.
- */
 function getPageMetadata(doc: Document) {
   const title = (doc.querySelector('title')?.textContent ?? '').trim()
   const description = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() ?? ''
@@ -112,10 +99,6 @@ function getPageMetadata(doc: Document) {
   return { title, description, openGraph }
 }
 
-/**
- * Fetch a webpage and extract its description.
- * Priority: meta description -> og:description -> <title> -> undefined
- */
 export async function fetchPageDescription(url: string): Promise<string | undefined> {
   try {
     const doc = await fetchHtmlDoc(url)
@@ -134,21 +117,14 @@ export async function fetchPageDescription(url: string): Promise<string | undefi
   }
 }
 
-/**
- * Best square icon a site declares for itself, by priority:
- * apple-touch-icon -> largest <link rel=icon> -> /favicon.ico.
- * Returns an absolute http(s) URL, or undefined on failure. Rendered via <img> only (no code exec).
- */
 export async function fetchBestIcon(pageUrl: string): Promise<string | undefined> {
   try {
     const doc = await fetchHtmlDoc(pageUrl)
     if (!doc)
       return getFaviconUrl(pageUrl)
 
-    // 1. apple-touch-icon — 180px square app icon.
     const appleHref = doc.querySelector('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')?.getAttribute('href')
 
-    // 2. Largest declared <link rel~=icon>.
     const largestIconHref = Array.from(doc.querySelectorAll('link[rel~="icon"]'))
       .sort((a, b) => sizesToPixels(b.getAttribute('sizes')) - sizesToPixels(a.getAttribute('sizes')))[0]
       ?.getAttribute('href')

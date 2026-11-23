@@ -20,7 +20,6 @@ async function pollStatus() {
     online.value = status.online
   }
   catch {
-    // Silently ignore polling errors
   }
 }
 
@@ -63,7 +62,6 @@ async function pollMessages() {
       return
     lastMessageId.value = newMessages.at(-1)!.id
 
-    // Filter out messages we already have (in case of out-of-order delivery)
     const existingIds = new Set(messages.value.map(m => m.id))
     const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
     if (!uniqueNewMessages.length)
@@ -81,22 +79,17 @@ async function pollMessages() {
     messages.value = [...messages.value, ...uniqueNewMessages]
       .sort((a, b) => a.timestamp === b.timestamp ? 0 : a.timestamp > b.timestamp ? 1 : -1)
 
-    // Support can close the session from Slack. Keep the session (also across restarts) so the user can
-    // read the last reply; closing the chat window then resets it
     if (isSessionClosed(uniqueNewMessages)) {
       stopPolling()
       conversationEnded.value = true
     }
   }
   catch {
-    // Silently ignore polling errors
   }
 }
 
 onMounted(async () => {
   try {
-    // Only query for active session when sessionId is not already set (if it is set, then the badge was
-    // loaded from the startup-init function and getStatus was already called there)
     if (!sessionId.value) {
       const status = await getStatus(userId)
       online.value = status.online
@@ -110,7 +103,6 @@ onMounted(async () => {
       if (history.length > 0) {
         lastMessageId.value = history.at(-1)!.id
 
-        // Count unread agent messages (those received after the user last viewed the chat)
         if (lastReadMessageId.value !== '0') {
           const cutoffIdx = history.findIndex(m => m.id === lastReadMessageId.value)
           if (cutoffIdx >= 0) {
@@ -140,25 +132,22 @@ onUnmounted(() => {
   stopStatusPolling()
 })
 
-// Adjust polling interval and clear pending count when shown changes
 watch(shown, (isShown) => {
   if (isShown) {
     pendingMessageCount.value = 0
-    lastReadMessageId.value = lastMessageId.value // mark messages as read
+    lastReadMessageId.value = lastMessageId.value
   }
   if (sessionId.value) {
     startPolling()
   }
 })
 
-// Reset state when chat is closed after conversation ended
 watch(shown, (isShown) => {
   if (!isShown && conversationEnded.value) {
     livechat.reset()
   }
 })
 
-// Start/stop polling when session changes
 watch(sessionId, (newId) => {
   if (newId) {
     startPolling()

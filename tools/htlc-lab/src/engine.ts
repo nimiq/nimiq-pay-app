@@ -40,7 +40,6 @@ export class LabEngine {
       this.state.spamBalance = await this.gateway.balance(this.state.spammer)
     for (const contract of this.state.contracts) {
       contract.balance = await this.gateway.balance(contract.address)
-      // Expired/drained contracts may no longer be served by the cosigner.
       contract.registered = await this.gateway.registered(contract.address)
     }
   }
@@ -72,7 +71,6 @@ export class LabEngine {
         return
       }
       await this.refresh()
-      // Restore keeps the same amount again in the wallet, so the app has local funds to secure.
       const needed = config.scenario === 'two' || config.scenario === 'bomb'
         ? 2 * (config.amount + config.fee)
         : config.scenario === 'drained'
@@ -105,8 +103,7 @@ export class LabEngine {
     // Record BEFORE broadcast: even a rejected HTTP/RPC response can follow an accepted submission.
     const tracked: Tracked = { ...prepared, kind, index, submittedAt: Date.now(), state: 'unknown' }
     this.state.transactions.push(tracked)
-    // Core can wait for a receipt before resolving sendTransaction. The tracked queue, not that
-    // response, limits concurrency. Late responses must not downgrade independent chain evidence.
+    // Core can wait for a receipt before resolving sendTransaction.
     void Promise.resolve().then(() => this.gateway.broadcast(prepared.hash)).then(() => {
       const tx = this.state.transactions.find(tx => tx.hash === prepared.hash)
       if (tx?.state === 'unknown')
@@ -216,7 +213,6 @@ export class LabEngine {
     this.ticking = true
     let actionLocked = false
     try {
-      // Listeners invalidate snapshots; the timer only drains events and schedules spam/receipt checks.
       if (this.headChanged) {
         this.headChanged = false
         this.state.head = await this.gateway.head()
@@ -237,7 +233,7 @@ export class LabEngine {
             if (tx.state === 'confirmed' && (tx.kind === 'cleanup' || tx.kind === 'return'))
               this.note(`Return confirmed: ${tx.hash}. Check live balances before clearing this run.`)
           }
-          catch { /* A failed lookup is not evidence that a transaction was never included. */ }
+          catch {}
         }
         this.lastPollAt = Math.max(now, this.clock())
         if (['observe', 'cancelled', 'failed', 'idle'].includes(this.state.stage))
@@ -359,7 +355,7 @@ export class LabEngine {
       try {
         tx.state = await this.gateway.transaction(hash)
       }
-      catch { /* Absence is inconclusive. Reusing identical signed bytes cannot create a second transfer. */ }
+      catch {}
       if (tx.state !== 'unknown' && tx.state !== 'pending') {
         this.note(`Recheck resolved ${hash} as ${tx.state}; no rebroadcast needed.`)
         return
@@ -427,7 +423,6 @@ export class LabEngine {
 
   report() {
     const s = this.state
-    // Explicit allowlist: never serialize the gateway, signing keys, or arbitrary errors.
     return {
       version: 2,
       units: { amounts: 'NIM', fees: 'Luna' },

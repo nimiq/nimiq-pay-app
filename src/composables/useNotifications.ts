@@ -1,5 +1,3 @@
-// TODO: https://capacitorjs.com/docs/apis/background-runner
-
 import type { PermissionState } from '@capacitor/core'
 import type { ActionPerformed } from '@capacitor/push-notifications'
 import type { Ref } from 'vue'
@@ -42,29 +40,9 @@ interface LocalNotification {
   action?: (() => void) | undefined
 }
 
-/**
- * @description List of local notifications to show to the user
- * @property {string} id - Unique identifier for the notification, can be used to remove it. It needs to be unique for each notification
- * @property {string} title - The title of the notification
- * @property {string} subtitle - The subtitle of the notification
- * @property {() => void} action - The action to perform when the notification is clicked
- */
 const localNotificationsArray: Ref<LocalNotification[]> = ref([
-  // {
-  //   id: 'beta-message',
-  //   get title() { return i18n.t('Beta Testing') },
-  //   get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
-  //   action: () => logger.log('Notification Card 2 clicked'),
-  // },
-  // {
-  //   id: 'welcome-message',
-  //   get title() { return i18n.t('Welcome to Nimiq Pay') },
-  //   get subtitle() { return i18n.t('Your wallet is ready to use') },
-  //   // action: () => initializeFlow(FlowName.OnBoardingPoints),
-  // },
 ])
 
-// Module scope: each useNotifications() call is a new instance, so the guard must be shared.
 let tapHandle: { remove: () => Promise<void> } | null = null
 
 export function useNotifications() {
@@ -114,7 +92,6 @@ export function useNotifications() {
   }
 
   async function addListeners() {
-    // Setup flow and MainView register from separate instances; one push tap must run performAction once.
     await PushNotifications.removeAllListeners()
     await PushNotifications.addListener('registration', (token) => {
       logger.log('🔔 Registration token:', token.value)
@@ -147,14 +124,11 @@ export function useNotifications() {
     await addListeners()
     try {
       await PushNotifications.register()
-      // Channels are only available on Android
       if (isAndroid) {
         await PushNotifications.createChannel({
           id: 'rewards',
           name: i18n.t('Rewards Notifications'),
           description: i18n.t('Notifications about new campaigns and other important events'),
-          // TODO: custom sound
-          // sound: 'custom-sound.wav',
           visibility: 1,
           lights: true,
           vibration: true,
@@ -217,7 +191,6 @@ export function useNotifications() {
 
   async function openTask(task_id: string) {
     const { data: task, error } = await (await import('@/stores/points')).usePoints().getTaskById(task_id)
-    // TODO: show error
     if (error) {
       logger.error(error)
       return
@@ -243,7 +216,6 @@ export function useNotifications() {
   }
 
   function addLocalNotification(notification: LocalNotification, unshift = false) {
-    // No notification cards in mock mode — keeps UI-dev views and store screenshots clean.
     if (isMockEnabled)
       return
     if (localNotificationsArray.value.some(n => n.id === notification.id))
@@ -261,21 +233,16 @@ export function useNotifications() {
       closedNotifications.value.push(id)
   }
 
-  // "What's New" card: shown once per update, only when the installed version has an
-  // unseen changelog entry. Opening the modal (from the card or the menu) marks it seen.
   async function maybeAddChangelogNotification() {
     if (isMockEnabled)
       return
     const { hasUnseenChangelog, changelogCardExhausted, recordChangelogCardShown, resolveVersion, currentVersion } = useChangelog()
     await resolveVersion()
-    // Hide once seen, or after it has been shown a few times without interaction.
     if (!hasUnseenChangelog.value || changelogCardExhausted.value)
       return
     const id = `changelog-${currentVersion.value}`
-    // Already dismissed → don't re-show or count it.
     if (closedNotifications.value.includes(id))
       return
-    // Opening the modal marks the changelog seen (ChangelogModal onMounted), so no need here.
     addLocalNotification({
       id,
       title: i18n.t('What\'s New'),
@@ -339,9 +306,6 @@ export function useNotifications() {
     if (isWeb)
       return
     if (localNotificationsStatus.value !== LocalNotificationsStatus.GRANTED) {
-      // Local notifications were added after the push permission flow shipped, so
-      // existing users may have granted push but never been asked for local. Ask now;
-      // they can still deny.
       await requestLocalNotificationsPermission()
       // @ts-expect-error - status can change after the await
       if (localNotificationsStatus.value !== LocalNotificationsStatus.GRANTED) {
@@ -354,7 +318,6 @@ export function useNotifications() {
 
     const formatted = tx.asset === Asset.USDT
       ? formatUsdtAmount(tx.amount)
-      // usePrice outside a component queries prices and leaves a height watcher running.
       : useCurrencyFormatter().formatCrypto(tx.amount, { currency: Crypto.NIM })
     const memo = tx.message?.trim()
     let body = memo ? tx.message! : ''
@@ -423,7 +386,6 @@ export function useNotifications() {
 }
 
 // djb2-style 31-bit positive hash; LocalNotifications id field is a 32-bit int.
-// Deterministic per tx-hash so a duplicate fire (e.g. resync) overwrites the same notif slot.
 function hashToInt32(input: string): number {
   let h = 5381
   for (let i = 0; i < input.length; i++)

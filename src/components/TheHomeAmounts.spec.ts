@@ -338,7 +338,6 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(true)
-    // Main balance stays the spendable remote balance, not remote + local.
     expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('25')
   })
 
@@ -507,7 +506,6 @@ describe('theHomeAmounts', () => {
   })
 
   it('shows the balance skeleton (not the last known balance) while funds are pending with a 0 balance, and keeps the pending line', async () => {
-    // localBalance holds funds just drained from our own remote to recreate the HTLC.
     homeBalanceState.value = 'loading'
     isProcessingRemote.value = true
     remoteBalance.value = 0
@@ -517,7 +515,6 @@ describe('theHomeAmounts', () => {
     const wrapper = await mountComponent()
     await flushPromises()
 
-    // Balance shows a skeleton (real balance unknown), but the pending line stays visible.
     expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="fiat-amount"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(true)

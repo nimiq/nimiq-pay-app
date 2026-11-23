@@ -240,7 +240,6 @@ describe('mini-app-launcher', () => {
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const first = launchMiniApp({ url: 'https://app.uniswap.org', source: 'deeplink' })
-    // Drain microtasks so first launch reaches openWebView and parks on the deferred.
     await flushPromises()
     expect(openWebView).toHaveBeenCalledTimes(1)
 
@@ -270,7 +269,6 @@ describe('mini-app-launcher', () => {
     deferred.resolve({ id: MAIN_WEBVIEW_ID })
     await pending
 
-    // Guard is held until the webview confirms it loaded; simulate the native event.
     pageLoadedHandler?.()
     expect(openingMiniAppUrl.value).toBeNull()
   })
@@ -358,7 +356,6 @@ describe('mini-app-launcher', () => {
     await flushPromises()
     isMiniAppActive.value = true
 
-    // closeActiveMiniApp closes the popup, then the Mini App.
     closeActiveMiniApp.mockImplementationOnce(async () => {
       await handlers.closeEvent?.({ id: 'popup-webview', url: 'https://accounts.example/' })
       await handlers.closeEvent?.({ id: MAIN_WEBVIEW_ID, url: 'https://app.uniswap.org/' })
@@ -451,7 +448,6 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'deeplink' })
 
-    // openWebView resolved but the page-loaded signal hasn't fired yet: still opening.
     expect(clearToast).not.toHaveBeenCalled()
 
     pageLoadedHandler?.()
@@ -464,7 +460,6 @@ describe('mini-app-launcher', () => {
 
     await launchMiniApp({ url: 'https://app.uniswap.org', source: 'deeplink' })
 
-    // clearGuard clears the spinner toast, then the error toast replaces it.
     expect(clearToast).toHaveBeenCalledTimes(1)
     expect(setToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'error' }))
   })
@@ -603,8 +598,6 @@ describe('mini-app-launcher', () => {
   })
 
   it('clears a preserved session and closes its hidden webview before opening', async () => {
-    // A resume-reload leaves isMiniAppActive false while the native webview survives;
-    // the pending session marker is the only trace of it.
     sessionStorage.setItem('miniAppSession', JSON.stringify({
       url: 'https://old.example',
       title: 'Old',
@@ -700,7 +693,6 @@ describe('mini-app-launcher', () => {
       selectLightningAsset: (app: unknown, deadline?: number) => Promise<unknown>
     }]
 
-    // The provider is live from documentStart, so a connect can arrive before the webview shows.
     const request = { type: 'accounts', url: 'https://app.uniswap.org/', network: 'ethereum' }
     const confirmation = config.requestUserConfirmation(request, 123)
     const assetSelection = config.selectLightningAsset({ url: 'https://app.uniswap.org/', name: 'Uniswap' }, 456)

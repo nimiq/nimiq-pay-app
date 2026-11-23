@@ -34,7 +34,6 @@ function setup() {
     statuses,
     balances,
     tick: () => {
-      // Simulate the client head/account notifications that precede this check.
       engine.notifyChainChanged('head')
       engine.notifyChainChanged('balances')
       return engine.tick(pollTime += 4000)

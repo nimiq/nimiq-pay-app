@@ -53,7 +53,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     }
   }, 30_000, { immediate: false })
 
-  // Reloading from DB catches transactions saved outside the in-memory list.
   const { resume: startPeriodicDbRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
       return
@@ -102,9 +101,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   ) {
     if (!isCurrent())
       return false
-    // Both callers restore pending sends first. Start before any step that can fail, so a failure can't leave it off.
     startPeriodicTransactionRefresh()
-    // Before the listeners exist: a validity send from a head during startup would make the verification below skip itself.
     lastValidityCheckHeight = localHeight.value
     if (!await registerWalletListeners(context, isCurrent))
       return false
@@ -112,13 +109,11 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     await updateBalances()
     if (!isCurrent())
       return false
-    // Surface cached/history txs ASAP — don't block first paint on remote-signer verification (APP-159)
     void updateTransactionHistory()
     await useRemoteSigner().resolveHomeBalanceState()
     if (!isCurrent())
       return false
 
-    // Initial reconciliation can finish before signer hydration. Unblock deposits before history verification.
     await checkHtlcState()
     if (!isCurrent())
       return false
@@ -139,15 +134,11 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   let readinessSyncPromise: Promise<void> | undefined
   let readinessSyncQueued = false
 
-  /**
-   * Syncs the local and the remote wallet immediately and then every time a new block is minted.
-   */
   async function syncWallets() {
     logger.log('Starting wallet sync process', { hasLocalWallet: hasLocalWallet.value })
     if (!hasLocalWallet.value)
       return
 
-    // Pinia survives an in-app logout/login, but pending work belongs to one wallet only.
     syncState.setWalletContext(localAddress.value.toUserFriendlyAddress(), networkName.value)
 
     if (isMockEnabled) {
@@ -157,12 +148,10 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     }
 
-    // The flags live in this wallet's DB (wiped on logout); load them before the sweep or a deposit reads them.
     await syncState.loadHtlcHistoryFlags()
 
     isSyncingWallets.value = true
     try {
-      // Polygon startup must not wait for Nimiq readiness or recovery.
       usePolygonSync().init().catch(error => logger.error('Failed to initialize Polygon sync', error))
       await readinessSyncPromise
       logger.log('Hydrating wallet state from DB')
@@ -228,7 +217,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       headChangeUpdatesLock.value = true
 
       try {
-        // Included payments release the send lock, but still need finality/rejection updates.
         const unconfirmed = await useConn().query<{ hash: string }[]>(SQLQuery.SelectUnconfirmedNimPayments)
         if (!isListenerContextCurrent(context)) {
           headChangeUpdatesLock.value = false
@@ -246,13 +234,10 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       }
 
       try {
-        // An unchecked database holds waiting local funds until a sweep comes back clean, so retry as often as when empty.
         const shouldVerify = (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
           || ((remoteBalance.value === 0 || (!syncState.htlcHistoryChecked && localBalance.value > 0)) && localHeight.value % 10 === 0)
         if (shouldVerify) {
           const verifying = verifyRemoteSignersDb()
-          // Until extensions are walked its sweep can outlast the hold, so don't hold this listener: handleFunds
-          // must run to end the hold, and payment status updates must not wait either.
           if (syncState.htlcExtensionsWalked)
             await verifying
           else
@@ -262,7 +247,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
         await updateBalances()
         await handleFunds()
 
-        // This listener skips heads while busy, so a `height % BLOCKS_PER_BATCH` check could miss every batch.
         if (localHeight.value - lastValidityCheckHeight >= Nimiq.Policy.BLOCKS_PER_BATCH) {
           lastValidityCheckHeight = localHeight.value
           await Promise.all([checkRemoteValidity(), extendValidity()])
@@ -309,8 +293,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     logger.log(`📬 New ${tx.state} transaction received`, tx)
 
-    // Staking txs (signals and remove-stake the local wallet sends) only update the row the send staged.
-    // They are not Top-Ups; history sync records them when no staged row exists.
     if (tx.senderType === 'staking' || tx.recipientType === 'staking') {
       await updateSingleTransaction(tx.transactionHash, tx)
       return
@@ -326,9 +308,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (dbTxs.some(dbTx => dbTx.hash === hash))
       return
 
-    // Drop drains from our own HTLCs — they'd be mis-recorded as fresh Top-Ups with the drain
-    // block's recent timestamp. The proof carries the HTLC creator address; for our chain
-    // (including extensions) this is always the local wallet. Foreign HTLC senders stay.
     if (isOwnHtlcDrain(tx, context.owner)) {
       logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
       await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender, context)
@@ -349,7 +328,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (!isListenerContextCurrent(context))
       return
     trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)
-    // Real-time only: refresh / history paths must NOT fire the notifier.
     void useNotifications().scheduleIncomingPaymentNotification(receipt)
   }
 
@@ -458,7 +436,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   }, { immediate: true })
 
   watch(localHeight, async () => {
-    // The walk can take minutes. isHtlcActive comes from this reconciliation, so a new HTLC must not wait for it (APP-317).
     if (!isVerifyingRemoteSignersDb.value) {
       if (isSyncingWallets.value)
         return
@@ -485,7 +462,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       if (!isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent())
         return
       logger.log(`📬 New transaction from remote received`, tx)
-      // Only the in-flight sendTx reads this, to skip rebroadcasting a tx already included; it clears the list when done.
       if (isSendingTx.value)
         pendingPaymentTransactions.value.push(tx)
       try {

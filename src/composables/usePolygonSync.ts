@@ -14,7 +14,6 @@ const POLYGON_POLL_INTERVAL_MS = isDev ? 30_000 : 10_000
 const POLYGON_FEE_POLL_INTERVAL_MS = 60_000
 const logger = useLogger('polygon-sync')
 
-// USDT only exists on mainnet; mock mode seeds the balance itself and has no client.
 const isPolygonSyncDisabled = isTestnet || isMockEnabled
 
 let initialized = false
@@ -77,7 +76,6 @@ export function usePolygonSync() {
       return
     }
 
-    // Keep fee snapshot warm so it's cached when user starts a payment
     const { pause: pauseFeePoll, resume: resumeFeePoll, isActive: isFeePollActive } = useTimeoutPoll(feePollCallback, POLYGON_FEE_POLL_INTERVAL_MS, { immediate: true })
 
     const { activeAsset } = storeToRefs(useApp())

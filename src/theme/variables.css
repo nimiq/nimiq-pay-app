@@ -1,5 +1,4 @@
 :root {
-  /** primary **/
 	--ion-color-primary: theme(colors.space.DEFAULT);
 	--ion-color-primary-rgb: 31,35,72;
 	--ion-color-primary-contrast: #ffffff;
@@ -7,7 +6,6 @@
 	--ion-color-primary-shade: #1b1f3f;
 	--ion-color-primary-tint: #35395a;
 
-  /** secondary **/
 	--ion-color-secondary: #e9b213;
 	--ion-color-secondary-rgb: 233,178,19;
 	--ion-color-secondary-contrast: #000000;
@@ -15,7 +13,6 @@
 	--ion-color-secondary-shade: #cd9d11;
 	--ion-color-secondary-tint: #ebba2b;
 
-  /** tertiary **/
 	--ion-color-tertiary: #0582CA;
 	--ion-color-tertiary-rgb: 5,130,202;
 	--ion-color-tertiary-contrast: #ffffff;
@@ -23,7 +20,6 @@
 	--ion-color-tertiary-shade: #0472b2;
 	--ion-color-tertiary-tint: #1e8fcf;
 
-  /** success **/
 	--ion-color-success: #21bca5;
 	--ion-color-success-rgb: 33,188,165;
 	--ion-color-success-contrast: #000000;
@@ -31,7 +27,6 @@
 	--ion-color-success-shade: #1da591;
 	--ion-color-success-tint: #37c3ae;
 
-  /** warning **/
 	--ion-color-warning: #fc8702;
 	--ion-color-warning-rgb: 252,135,2;
 	--ion-color-warning-contrast: #000000;
@@ -39,7 +34,6 @@
 	--ion-color-warning-shade: #de7702;
 	--ion-color-warning-tint: #fc931b;
 
-  /** danger **/
 	--ion-color-danger: #d94432;
 	--ion-color-danger-rgb: 217,68,50;
 	--ion-color-danger-contrast: #ffffff;
@@ -47,7 +41,6 @@
 	--ion-color-danger-shade: #bf3c2c;
 	--ion-color-danger-tint: #dd5747;
 
-  /** dark **/
   --ion-color-dark: #222428;
   --ion-color-dark-rgb: 34, 36, 40;
   --ion-color-dark-contrast: #ffffff;
@@ -55,7 +48,6 @@
   --ion-color-dark-shade: #1e2023;
   --ion-color-dark-tint: #383a3e;
 
-  /** medium **/
   --ion-color-medium: #92949c;
   --ion-color-medium-rgb: 146, 148, 156;
   --ion-color-medium-contrast: #ffffff;
@@ -63,7 +55,6 @@
   --ion-color-medium-shade: #808289;
   --ion-color-medium-tint: #9d9fa6;
 
-  /** light **/
   --ion-color-light: #f4f5f8;
   --ion-color-light-rgb: 244, 245, 248;
   --ion-color-light-contrast: #000000;
@@ -71,7 +62,6 @@
   --ion-color-light-shade: #d7d8da;
   --ion-color-light-tint: #f5f6f9;
 
-  /* Nimiq Colors */
   --colors-gray: #f8f8f8;
   --colors-lightgray: #fbfbfb;
   --colors-white: white;
@@ -113,11 +103,10 @@
   --slide-left-distance: 200px;
 }
 
-/* Transitions */
 .fade-enter-active, .fade-leave-active {
   transition: opacity .5s;
 }
-.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+.fade-enter, .fade-leave-to {
   opacity: 0;
 }
 
@@ -149,7 +138,6 @@
 }
 
 
-/* Fonts */
 @font-face {
   font-family: 'Fira Mono';
   src: url('../assets/fonts/FiraMono-Regular.ttf') format('truetype');
@@ -201,7 +189,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* TailwindCSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

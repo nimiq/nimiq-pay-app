@@ -20,8 +20,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   const localAddress = computed(() => localWallet.value.toAddress())
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
-  // Persisted so the home screen's "pending" amount shows instantly on cold start, before the
-  // network balance fetch completes. Hydrated from the per-account DB cache (cleared on logout).
   const localBalance = useStorageAsync('localBalance', 0, kv(), { writeDefaults: false })
   const pendingNimSince = useStorageAsync('pendingNimSince', 0, kv(), { writeDefaults: false })
 
@@ -43,7 +41,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     }
     catch (error) {
       let errorMessage = (error as Error).message || i18n.t('An unknown error occurred while importing words')
-      // Translate and reword Nimiq core error messages
       const invalidWordErrorMatch = errorMessage.match(/^Invalid mnemonic, word >(.*)< is not in wordlist$/)
       if (invalidWordErrorMatch) {
         const word = invalidWordErrorMatch[1]
@@ -62,7 +59,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     }
   }
 
-  // Cache the Ethereum wallet to avoid expensive BIP44 derivation on every call
   const ethWallet = computed<HDNodeWallet | null>(() => {
     if (!entropy.value) {
       return null

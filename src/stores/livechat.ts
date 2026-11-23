@@ -18,19 +18,12 @@ export const useLiveChat = defineStore('livechat', () => {
   const error = ref(false)
   const pendingMessageCount = ref(0)
 
-  // Walkie-Talkie session state
-  // sessionId is persisted so we know on restart whether to check for an active session
   const sessionId = useStorageAsync('livechat-sessionId', '', kvPreferences())
-  // lastReadMessageId tracks the last message the user saw, for unread count on restart
   const lastReadMessageId = useStorageAsync('livechat-lastReadMessageId', '0', kvPreferences())
   const messages = ref<WtMessage[]>([])
   const lastMessageId = ref('0')
   const online = ref(false)
 
-  /**
-   * If true, the chat badge is removed when overlay is closed.
-   * True initially (no session), false after first message, true again after closeSession.
-   */
   const conversationEnded = ref(true)
 
   function reset() {
@@ -47,11 +40,6 @@ export const useLiveChat = defineStore('livechat', () => {
     conversationEnded.value = true
   }
 
-  /**
-   * Called on app startup. If a session was persisted, verify it still exists on the backend
-   * and restore the enabled state so the badge appears. Does nothing if no session was persisted.
-   * A session support closed is kept until the user has seen it, which resets the chat on close.
-   */
   async function initFromBackground() {
     await new Promise(resolve => setTimeout(resolve, 500)) // Wait a bit for the async storage to have been read
     console.warn('Initializing live chat from background', sessionId)
@@ -72,12 +60,10 @@ export const useLiveChat = defineStore('livechat', () => {
         conversationEnded.value = true
       }
       else {
-        // Session no longer exists on the backend — clean up
         sessionId.value = ''
       }
     }
     catch {
-      // Silently ignore — badge stays hidden
     }
   }
 
@@ -102,7 +88,6 @@ export const useLiveChat = defineStore('livechat', () => {
     if (!trimmed)
       return
 
-    // After support closed the session, the next message starts a new one with fresh history
     if (isSessionClosed(messages.value)) {
       sessionId.value = ''
       lastReadMessageId.value = '0'
@@ -114,7 +99,6 @@ export const useLiveChat = defineStore('livechat', () => {
     const walletAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
     const userId = walletAddress.replaceAll(' ', '')
 
-    // Optimistically append user message
     const message: WtMessage = {
       id: '',
       sender: 'user',
@@ -147,7 +131,6 @@ export const useLiveChat = defineStore('livechat', () => {
     return sessionId.value
   }
 
-  /** Uploads the app logs to the support thread. The backend adds a 📎 message to history, picked up by polling. */
   async function sendLogs() {
     const walletAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
     const userId = walletAddress.replaceAll(' ', '')

@@ -32,7 +32,6 @@ function createHtlcCreation(overrides: Record<string, unknown> = {}) {
   }
 }
 
-// A successful spend from the HTLC: the history evidence a drained creation needs.
 function createHtlcDrain(creation: ReturnType<typeof createHtlcCreation>) {
   return {
     transactionHash: 'drain-hash',
@@ -190,7 +189,6 @@ function mockAddressSpecificSignerMetadata(...transactions: any[]) {
   ))
 }
 
-// Makes the DB return one active remote signer (balance 25) for `single` queries.
 function mockActiveSignerQuery() {
   state.query.mockImplementation(((_sql: string, _params?: unknown[], options?: { single?: boolean }) => {
     if (options?.single) {
@@ -208,8 +206,6 @@ function mockActiveSignerQuery() {
   }) as any)
 }
 
-// Makes the DB return one active remote signer whose validity window has already passed
-// (end 100_000 < headTimestamp 123_456), with the given balance.
 function mockExpiredSignerQuery(balance: number) {
   state.query.mockImplementation(((_sql: string, _params?: unknown[], options?: { single?: boolean }) => {
     if (options?.single) {
@@ -345,7 +341,6 @@ describe('useRemoteSigner', () => {
     state.hasLocalWallet = true
     state.client = {
       getAccount: vi.fn(() => Promise.resolve(createLiveHtlcAccount())),
-      // Swap HTLC lookups: spent unless a test says otherwise.
       getAccounts: vi.fn((addresses: unknown[]) => Promise.resolve(addresses.map(() => ({ type: 'basic', balance: 0 })))),
       waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
       getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
@@ -632,8 +627,6 @@ describe('useRemoteSigner', () => {
     expect(store.lastKnownRemoteBalance).toBe(25)
   })
 
-  // An expired-but-drained signer is inert: nothing to recover, so it must not drive the
-  // "Updating connection" recovery UI even though its validity window has passed.
   it('does not flag an expired HTLC as expired when it holds no balance to recover', async () => {
     state.consensus = 'connecting'
     mockExpiredSignerQuery(0)
@@ -772,7 +765,6 @@ describe('useRemoteSigner', () => {
   it('resolves a drained confirmed creation whose address received NIM afterwards', async () => {
     const creation = createHtlcCreation()
     mockAddressSpecificSignerMetadata(creation)
-    // The pruned HTLC address is now a basic account: its balance can't be reclaimed.
     state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 100_000 })
     state.client.getTransactionsByAddress.mockResolvedValue([createHtlcDrain(creation)])
     const { useRemoteSigner } = await import('./remote-signer')
@@ -875,7 +867,6 @@ describe('useRemoteSigner', () => {
     state.runSet.mockClear()
     state.run.mockClear()
     state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
-    // An early-resolve payment spends part of the HTLC; the rest is still there.
     state.client.getTransactionsByAddress.mockResolvedValue([{ ...createHtlcDrain(creation), value: 1 }])
 
     await expect(store.activateRemoteSignerFromTransaction(creation as any)).rejects.toThrow('history spends 1 of 696900000')
@@ -1102,7 +1093,6 @@ describe('useRemoteSigner', () => {
       const creation = createHtlcCreation()
       mockAddressSpecificSignerMetadata(creation)
       state.client.getTransactionsByAddress.mockResolvedValue([creation])
-      // Later lookups time out like the real cosigner API does.
       state.getRemoteSigner
         .mockReturnValueOnce(new Promise(() => {}))
         .mockResolvedValue({ data: undefined, hasError: true, status: 504, error: { message: 'Something went wrong', statusCode: 504, error: 'TIMEOUT' } })
@@ -2160,7 +2150,6 @@ describe('useRemoteSigner', () => {
     expect(result).toMatchObject({ localComplete: true, added: 1, errors: [] })
     const { SQLQuery } = await import('@/lib/sql-queries')
     const insert = (state.run.mock.calls as unknown as [string, unknown[]][]).find(([sql]) => sql === SQLQuery.InsertInactiveRemoteSigner)
-    // address, balance, proofSize, publicKey, start, end, active
     expect(insert?.[1]).toEqual([creation.recipient, 0, 98, 'service-public-key', creation.timestamp, creation.data.timeout, false])
   })
 
@@ -2192,7 +2181,6 @@ describe('useRemoteSigner', () => {
       { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
     ])
-    // handleFunds trusts the cached flag, so a stale `true` would skip the hold for the new signer set.
     expect(useSyncState().htlcHistoryChecked).toBe(false)
     expect(useSyncState().htlcExtensionsWalked).toBe(false)
     expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
@@ -2270,7 +2258,6 @@ describe('useRemoteSigner', () => {
       const { result } = await discover()
 
       expect(result).toMatchObject({ localComplete: true, alreadyKnown: 1, added: 0, createdHtlcs: [root.recipient] })
-      // The one remaining lookup is updateRemoteFromApi for the wallet itself, once per walk.
       expect((state.getRemoteSigner.mock.calls as unknown as [{ address: ReturnType<typeof createAddress> }][]).map(([arg]) => arg.address.toUserFriendlyAddress())).toEqual([local])
       expect(state.getAccount).not.toHaveBeenCalled()
       const historyAddresses = (state.client.getTransactionsByAddress.mock.calls as [ReturnType<typeof createAddress>][]).map(([address]) => address.toUserFriendlyAddress())
@@ -2321,7 +2308,6 @@ describe('useRemoteSigner', () => {
         const isExtension = address.toUserFriendlyAddress() === extension.recipient
         const creation = isExtension ? extension : root
         return Promise.resolve({
-          // A different hash forces a creation lookup, which the default getTransaction mock can't answer.
           data: createRemoteSignerApiData(creation.recipient, { creatingTransactionHash: isExtension ? 'other-hash' : root.transactionHash, validityStart: creation.validityStartHeight + 10, validityEnd: creation.data.timeout }),
           error: undefined,
           hasError: false,
@@ -2453,7 +2439,6 @@ describe('useRemoteSigner', () => {
     const { newer, older, firstPage, secondPage } = twoHistoryPages()
     const calls: string[] = []
     state.client.getTransactionsByAddress = vi.fn((address: any, _sinceHeight: unknown, _known: unknown, startAt: string | undefined) => {
-      // Signer histories are read after metadata; only local history pages must come first.
       if (address?.toUserFriendlyAddress() !== 'NQ00 TEST LOCAL ADDRESS')
         return Promise.resolve([])
       calls.push('history')
@@ -2467,7 +2452,6 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    // A complete discovery reads local history again afterwards (home balance); the scan's pages come first.
     expect(calls.slice(0, calls.indexOf('metadata'))).toEqual(['history', 'history'])
     expect(result).toMatchObject({ historyComplete: true, createdHtlcs: [newer.recipient, older.recipient] })
   })
@@ -2698,7 +2682,6 @@ describe('useRemoteSigner', () => {
     else
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertRecoveredSwapHtlc, expect.anything())
 
-    // A funded signer is walked again every verify cycle; a resolved swap HTLC is not looked up twice.
     await remoteSigner.discoverRemoteSignersFromBlockchain()
     expect(state.client.getAccounts).toHaveBeenCalledOnce()
   })
@@ -3886,7 +3869,6 @@ describe('useRemoteSigner', () => {
 
       const { useRemoteSigner } = await import('./remote-signer')
       const store = useRemoteSigner()
-      // Allow the immediate getStatus interval to populate remotePublicKey.
       await Promise.resolve()
       await Promise.resolve()
 

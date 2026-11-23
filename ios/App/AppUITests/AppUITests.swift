@@ -1,10 +1,3 @@
-//
-//  AppUITests.swift
-//  AppUITests
-//
-//  Created by Alberto Monterroso on 2024-03-07.
-//
-
 import XCTest
 
 let devWallet = [
@@ -16,31 +9,24 @@ let devWallet = [
 final class AppUITests: XCTestCase {
 
   override func setUpWithError() throws {
-    // Put setup code here. This method is called before the invocation of each test method in the class.
     let app = XCUIApplication()
     setupSnapshot(app)
     app.launchArguments = ["--Reset"]
     app.launch()
-    // In UI tests it is usually best to stop immediately when a failure occurs.
     continueAfterFailure = false
-
-    // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
   }
 
   override func tearDownWithError() throws {
-    // Put teardown code here. This method is called after the invocation of each test method in the class.
     let app = XCUIApplication()
     app.uninstall(name: "Nimiq Pay")
   }
 
   func testExample() async throws {
-    // UI tests must launch the application that they test.
     let app = XCUIApplication()
     let timeout = TimeInterval(10)
 
     let webViewsQuery = app.webViews
     let loginButton = webViewsQuery.buttons["Login"]
-    // Wait for the login button to exist
     let exists = loginButton.waitForExistence(timeout: 10)
     if !exists {
       XCTFail("Cannot login, uninstalling the app. Try again.")
@@ -51,14 +37,12 @@ final class AppUITests: XCTestCase {
 
     tapButton("Login")
 
-    // textField array
     var textFields: [XCUIElement] = []
     for i in 1...12 {
       textFields.append(webViewsQuery.textFields[String(format: "%02d", i)])
     }
       
 
-    // Fill in the text fields
     for (index, textField) in textFields.enumerated() {
       tapInputField(textField)
       textField.typeText(devWallet[index])
@@ -66,13 +50,11 @@ final class AppUITests: XCTestCase {
 
     tapButton("CONFIRM")
 
-    // Wait for the first pin input to be hittable and fill the pin
     let firstPinInput = webViewsQuery.secureTextFields["pinCode"]
     _ = firstPinInput.waitForExistence(timeout: timeout)
     tapInputField(firstPinInput, shouldBeFocused: true)
     firstPinInput.typeText("1234")
 
-    // Do the same with the pin confirmation
     let secondPinInput = webViewsQuery.secureTextFields["pinCodeConfirm"]
     _ = secondPinInput.waitForExistence(timeout: timeout)
     tapInputField(secondPinInput, shouldBeFocused: true)
@@ -83,7 +65,6 @@ final class AppUITests: XCTestCase {
     tapInputField(searchField)
     searchField.typeText("CA")
 
-    // For an unknown reason, I can only select buttons with one word. United States is not working for example
     let radio = webViewsQuery.otherElements["Canada"]
     let e = radio.waitForExistence(timeout: timeout)
     if !e {
@@ -122,7 +103,6 @@ final class AppUITests: XCTestCase {
 
     tapButton("GOT IT")
 
-    // Phone Number is verified, Rewards modal is shown
     snapshot("1Points")
     tapButton("close points modal")
 
@@ -131,7 +111,6 @@ final class AppUITests: XCTestCase {
     snapshot("2TopUp")
     tapButton("close flow modal")
 
-    // Close the notification
     for button in webViewsQuery.buttons.allElementsBoundByIndex {
       if !button.exists || button.label != "close notification card" {
         continue
@@ -146,7 +125,6 @@ final class AppUITests: XCTestCase {
       sleep(1)
     }
 
-    // Wait until the tx history is loaded
     sleep(60)
     snapshot("3HomeScreen")
   }

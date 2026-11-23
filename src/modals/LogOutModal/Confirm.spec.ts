@@ -9,7 +9,6 @@ const hasDoneBackup = ref(false)
 const remoteBalance = ref(0)
 const localBalance = ref(0)
 const usdtBalance = ref(0)
-// What the RPC returns on the logout check; undefined simulates a failed balanceOf read.
 let rpcUsdtBalance: number | undefined = 0
 const updateUsdtBalance = vi.fn(async () => {
   if (rpcUsdtBalance === undefined)
@@ -79,7 +78,6 @@ async function confirmLogout() {
   await flushPromises()
 }
 
-// Clicks Confirm with the RPC read held open; resolve it via the returned function.
 async function confirmWithPendingUsdtRead() {
   let resolveRead!: (isFresh: boolean) => void
   updateUsdtBalance.mockImplementationOnce(() => new Promise<boolean>((resolve) => {

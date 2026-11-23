@@ -55,7 +55,6 @@ describe('useSyncRemoteSigners', () => {
     const dateNow = vi.spyOn(Date, 'now').mockImplementation(() => now)
 
     try {
-      // A fast incomplete run is normal right after startup.
       await store.verifyRemoteSignersDb({ discoveryResult })
       expect(trackSyncSlow).not.toHaveBeenCalled()
 
@@ -847,7 +846,6 @@ describe('useSyncRemoteSigners', () => {
 
       expect(state.registerValidatedRemoteSigner).not.toHaveBeenCalled()
       expect(state.sendTx).not.toHaveBeenCalled()
-      // Two funded HTLCs exist until the creation is activated, so the history is not clean yet.
       expect(persistedHtlcHistoryCheck()).toBe(false)
     })
 
@@ -864,7 +862,6 @@ describe('useSyncRemoteSigners', () => {
     })
 
     it('reclaims an expired stray HTLC with the timeout path without asking the cosigner', async () => {
-      // Past timeout only our key can move it, so cosigner metadata is irrelevant and may be unavailable.
       mockAccounts({ [activeAddress]: htlcAccount(261_000), [strayAddress]: htlcAccount(56_000, { timeout: 150_000 }) })
       state.getBalance.mockResolvedValue({ data: 56_000, error: undefined })
       state.registerValidatedRemoteSigner.mockRejectedValue(new Error('Cosigner metadata unavailable'))
@@ -1150,7 +1147,6 @@ describe('useSyncRemoteSigners', () => {
       })
 
       it('follows extensions through a listed HTLC', async () => {
-        // A listing may predate the middle HTLC's newer, funded extension.
         const middle = 'NQ97 TEST LISTED MIDDLE'
         state.remoteAddress = undefined
         scanResult([activeAddress])
@@ -1212,7 +1208,6 @@ describe('useSyncRemoteSigners', () => {
     })
 
     it('still follows HTLC extensions on an upgraded install backfilled as checked', async () => {
-      // An older version may have stored the root but never its funded extension.
       state.remoteAddress = createAddress(strayAddress)
       mockExtension(activeAddress, strayAddress)
       mockAccounts({ [strayAddress]: htlcAccount(860_000) })
@@ -1250,7 +1245,6 @@ describe('useSyncRemoteSigners', () => {
       await flushMicrotasks()
 
       expect(persistedHtlcHistoryCheck()).toBe(true)
-      // Discovery rescans: HTLCs created while the sweep ran would be missing from the earlier scan.
       expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledExactlyOnceWith()
       validation.resolve(discovery([activeAddress], true))
       await verifying

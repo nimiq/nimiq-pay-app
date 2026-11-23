@@ -2,8 +2,6 @@ import * as v from 'valibot'
 import { ContractStateSchema } from './bluecode-issuer.schema'
 import { HexStringSchema, NimiqAddressSchema } from './common.schema'
 
-/** AUTH */
-
 export const AuthStartRequestSchema = v.pipe(
   v.object({
     address: v.pipe(NimiqAddressSchema, v.description('User\'s local wallet address')),
@@ -38,8 +36,6 @@ export const AuthCompleteResponseSchema = v.pipe(
 
 export type AuthCompleteResponse = v.InferOutput<typeof AuthCompleteResponseSchema>
 
-/** USER */
-
 export const UserStateSchema = v.union([
   v.literal('ACTIVE'),
   v.literal('INACTIVE'),
@@ -51,7 +47,7 @@ export const IdentificationSchema = v.pipe(
     provider: v.union([
       v.literal('NAKA-SUMSUB'),
     ]),
-    id: v.string(), // ID is ok to return, as it's the external KYC-provider ID, not an internal database ID
+    id: v.string(),
     status: v.union([
       v.literal('INITIALIZED'),
       v.literal('PENDING'),
@@ -73,7 +69,7 @@ export type Identification = v.InferOutput<typeof IdentificationSchema>
 export const IdentificationTokenResponseSchema = v.pipe(
   v.object({
     token: v.string(),
-    tokenExpiresAt: v.string(), // ISO date string
+    tokenExpiresAt: v.string(),
   }),
 )
 
@@ -132,8 +128,6 @@ export const UserStatusResponseSchema = v.pipe(
 
 export type UserStatusResponse = v.InferOutput<typeof UserStatusResponseSchema>
 
-/** NAKA */
-
 export const NakaRegistrationResponseSchema = v.pipe(
   NakaRegistrationSchema,
 )
@@ -178,8 +172,6 @@ export const NakaEncryptedCardDataResponseSchema = v.pipe(
 )
 
 export type NakaEncryptedCardDataResponse = v.InferOutput<typeof NakaEncryptedCardDataResponseSchema>
-
-/** Bluecode */
 
 export const BluecodeUpdateContractRequestSchema = v.object({
   state: v.optional(

@@ -1,5 +1,4 @@
 import type { Ref } from 'vue'
-// import { isDev } from '@/lib'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { Posthog } from '@capawesome/capacitor-posthog'
@@ -12,29 +11,19 @@ const isDev = true
 
 const logs: Ref<string[]> = ref([])
 let writingLock = Promise.resolve()
-// Name the file with the current date and time, replacing colons with dashes
-// Format will be logs-yyyy-mm-dd.txt
 const logFileName = 'logs.txt'
-// Save in the Cache, in case something goes wrong and cannot clear the logs they will be deleted when there's no space
 const directory = Directory.Cache
 
-// The same error from a retry loop would otherwise be reported on every head.
 const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
 const MAX_ERROR_REPORTS_PER_SESSION = 200
 const errorReportedAt = new Map<string, number>()
-// Counts every report, so recurring errors re-reported after the throttle window still hit the cap.
 let errorReportCount = 0
-// Errors already sent to PostHog, so an error reported and then caught and logged is not sent twice.
 const reportedErrors = new WeakSet<object>()
 
-// Never addresses (Nimiq, 20-byte EVM, Bitcoin), Lightning invoices and LNURLs, 32-byte hex (tx hashes, but also
-// keys) or URL query strings and fragments. Swap API errors can echo the invoice back. Collapsing hashes also keeps
-// one PostHog issue per message instead of one per hash.
 export function redact(text: string) {
   return text
     .replace(/\b(?:lightning:)?ln(?:bc|tb|bcrt|url)[0-9a-z]{20,}\b/gi, 'ln…')
     .replace(/\b(?:bc|tb|bcrt)1[0-9a-z]{20,}\b/gi, 'btc…')
-    // Testnet m/n addresses need a digit, so long camelCase words without l/I/O/0 are not redacted.
     .replace(/\b(?:[123]|[mn](?=[1-9A-HJ-NP-Za-km-z]*[1-9]))[1-9A-HJ-NP-Za-km-z]{25,34}\b/g, 'btc…')
     .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
     .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')
@@ -42,9 +31,6 @@ export function redact(text: string) {
     .replace(/(\b[a-z][\w+.-]*:\/\/[^\s?#]*)[?#]\S*/gi, '$1?…')
 }
 
-// Only the first string, the error and top-level `hash`/`transactionHash` fields are sent. Keep the first string a
-// static label: later string args and objects can hold user content (scanned QR codes, request bodies) and stay
-// in the local log file only.
 function reportError(name: string, args: any[]) {
   if (isDevBuild || errorReportCount >= MAX_ERROR_REPORTS_PER_SESSION)
     return
@@ -74,14 +60,12 @@ function reportError(name: string, args: any[]) {
   })
 }
 
-// The single PostHog exception sink, shared with reportCriticalError: redacts and sends each error object once.
 export function reportException(error: any, report: { message: string, name: string, properties?: Record<string, unknown> }) {
   if (error && typeof error === 'object') {
     if (reportedErrors.has(error))
       return
     reportedErrors.add(error)
   }
-  // Reporting must never throw back into the caller's error path.
   void Promise.resolve().then(() => Posthog.captureException({
     message: redact(report.message),
     name: report.name,
@@ -89,7 +73,6 @@ export function reportException(error: any, report: { message: string, name: str
   })).catch(() => {})
 }
 
-// Saves the logs to a file if there's no new logs for 5 seconds
 const debouncedSaveLogs = useDebounceFn(saveLogsToFile, 15 * 1e3, { maxWait: 60 * 1e3 })
 watch(logs, debouncedSaveLogs, { deep: true })
 
@@ -121,10 +104,6 @@ async function saveLogsToFile() {
   logs.value = []
 }
 
-/**
- * @description Logs to the console with a timestamp and a prefix
- * @param {string} name - The name of the logger, will be prefixed to the logs
- */
 export function useLogger(name: string = '') {
   async function init() {
     try {
@@ -135,8 +114,6 @@ export function useLogger(name: string = '') {
       const logFiles = files.filter(file => file.name.startsWith('logs-') && file.name.endsWith('.txt'))
       const mainLogFile = files.find(file => file.name === logFileName)
 
-      // Rotate logs with a file size greater than 5MB
-      // Size is in bytes
       if (mainLogFile && mainLogFile.size > 5 * 1e6) {
         await Filesystem.rename({
           from: mainLogFile.name,
@@ -145,7 +122,6 @@ export function useLogger(name: string = '') {
         })
       }
 
-      // Delete logs older than 7 days
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3
       for (const file of logFiles) {
         const date = new Date(file.name.split('logs-')[1].split('-x')[0]).getTime()
@@ -164,7 +140,6 @@ export function useLogger(name: string = '') {
 
   function log(...args: any[]) {
     if (isDev) {
-      // Get the stack trace and log the file and line number
       const stack = new Error('log').stack?.split('\n').slice(-1)[0].trim()
       if (stack)
         console.log(`${name} ${stack}:\n`, ...args)
@@ -201,7 +176,6 @@ export function useLogger(name: string = '') {
     const prefix = `[${new Date().toISOString()}] ${name}:\n`
     try {
       // Error fields are non-enumerable, so a plain stringify writes `{}` and drops the message.
-      // The replacer runs per value, so only pay for it when an arg is an Error.
       return prefix + JSON.stringify(args, args.some(arg => arg instanceof Error)
         ? (_, value) => value instanceof Error ? { name: value.name, message: value.message, stack: value.stack } : value
         : undefined, 2)
@@ -251,7 +225,6 @@ export function useLogger(name: string = '') {
       })
     }
     catch (e) {
-      // Surface the failure instead of swallowing it, so a broken export is debuggable.
       error('sendReport failed', e)
       try {
         const { toastController } = await import('@ionic/vue')
@@ -271,7 +244,6 @@ export function useLogger(name: string = '') {
     return saveLogsToFile()
   }
 
-  /** Current log file as base64, keeping only the newest `maxBytes` */
   async function readLogsBase64(maxBytes: number) {
     await saveLogsToFile()
     await writingLock

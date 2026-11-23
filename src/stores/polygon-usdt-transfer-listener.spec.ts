@@ -15,7 +15,6 @@ vi.mock('ethers', async (importOriginal) => {
   const actual = await importOriginal<typeof import('ethers')>()
   return {
     ...actual,
-    // Each provider's first RPC call blocks until the test releases it, to model a slow cold connect.
     JsonRpcProvider: vi.fn(() => ({
       getBlockNumber: vi.fn(() => new Promise<number>((resolve, reject) => mocks.blockNumberGates.push(ok => ok ? resolve(1) : reject(new Error('rpc down'))))),
     })),
@@ -74,7 +73,6 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     mocks.tokenContracts.length = 0
     mocks.blockNumberGates.length = 0
     mocks.ethAddress.value = null
-    // The client cache is module-level; a fresh URL per test forces a new client
     mocks.rpcUrl.value = `https://polygon-${++rpcId}.example`
     setActivePinia(createPinia())
     store = usePolygonUsdt()
@@ -88,7 +86,6 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     mocks.ethAddress.value = ADDRESS_A
     await nextTick()
 
-    // Logout while init() is still waiting on the first RPC call
     mocks.ethAddress.value = null
     await nextTick()
     await releaseBlockNumber()
@@ -115,7 +112,6 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     expect(oldToken.off).toHaveBeenCalledWith(oldToken.on.mock.calls[0][0], oldToken.on.mock.calls[0][1])
     expect(newToken.on).toHaveBeenCalledTimes(1)
 
-    // Logout after the switch removes the listener from the contract it was registered on
     mocks.ethAddress.value = null
     await nextTick()
     await flush()
@@ -141,7 +137,6 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     await nextTick()
     await flush()
 
-    // The first RPC never answers before the switch to the second
     mocks.rpcUrl.value = `https://polygon-${++rpcId}.example`
     await nextTick()
     await releaseBlockNumber({ index: 1 })
@@ -149,7 +144,6 @@ describe('polygon-usdt Transfer listener lifecycle', () => {
     const [newToken] = mocks.tokenContracts
     expect(newToken.on).toHaveBeenCalledTimes(1)
 
-    // The hung run settling late must not attach a second listener
     await releaseBlockNumber()
     const listeners = mocks.tokenContracts.reduce((sum, t) => sum + t.on.mock.calls.length - t.off.mock.calls.length, 0)
     expect(listeners).toBe(1)

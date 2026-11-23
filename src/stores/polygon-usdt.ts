@@ -176,7 +176,6 @@ const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 20
 const CONCURRENT_RANGE_FETCHES = 4
 const BLOCK_TS_CACHE_MAX = 5_000
 const POLYGON_RELAY_AMBIGUITY_GRACE_MS = 5 * 60_000
-// HTLC relays hold the forwarder nonce lock while waiting; a timeout leaves the relay pending.
 const HTLC_RELAY_CONFIRMATION_TIMEOUT_MS = 2 * 60_000
 const POLYGON_PAYMENT_FINALITY_BLOCKS = 10
 
@@ -290,20 +289,16 @@ export function isSuccessfulOpenGsnReceipt(
       return BigInt(parsed.args.status) === 0n
     }
     catch {
-      // Ignore unrelated RelayHub logs.
     }
   }
   return false
 }
 
-// Accept stale-by-a-few-seconds timestamps on deep reorgs in exchange for skipping
-// redundant eth_getBlockByNumber across listener + history loops.
 const blockTimestampCache = new Map<number, number>()
 
 async function getBlockTimestampCached(provider: JsonRpcProvider, blockNumber: number): Promise<number | undefined> {
   const cached = blockTimestampCache.get(blockNumber)
   if (cached !== undefined) {
-    // Refresh insertion order so frequently-accessed blocks survive FIFO eviction.
     blockTimestampCache.delete(blockNumber)
     blockTimestampCache.set(blockNumber, cached)
     return cached
@@ -537,7 +532,6 @@ export async function completePolygonRelayTransaction(
         await callbacks.onReplaced?.(relayHash, error.replacement.hash)
       }
       catch (persistenceError) {
-        // The replacement already executed; bookkeeping failure cannot make it safe to pay again.
         logger.error('Failed to persist mined Polygon replacement', persistenceError, { oldHash: relayHash, newHash: error.replacement.hash })
       }
       return { hash: error.replacement.hash, status: 'mined' }
@@ -615,7 +609,6 @@ export async function resolvePolygonTransferQuote(input: ResolvePolygonTransferQ
     : await input.buildFreshQuote()
 
   assertQuoteBalance(quote.amount, BigInt(quote.fee), input.balance)
-  // The user confirmed the approved quote's total; never sign a higher fee they did not see.
   if (approvedQuote && quote.fee > approvedQuote.fee)
     throw new Error(i18n.t('Polygon fee changed; review the payment again'))
   return quote
@@ -1226,7 +1219,6 @@ async function buildHtlcRelayEnvelope(
 
 // Swap funding and expiry refunds sign with the same on-chain HTLC forwarder nonce. Hold it from the
 // read in buildHtlcRelayEnvelope until the relay returns, so two relays can't sign the same nonce.
-// relayHtlcTransaction bounds the confirmation wait, so an unmined relay can't hold it forever.
 let htlcForwarderRelay: Promise<unknown> | null = null
 
 async function withHtlcForwarderNonce<T>(relay: () => Promise<T>): Promise<T> {
@@ -1640,13 +1632,10 @@ export async function persistHistoryTransaction(group: TransferGroup, address: s
   await options?.onIncomingPersisted?.(receipt)
 }
 
-// Dynamic import to avoid a circular dep between useNotifications and this store.
 async function notifyFreshIncoming(txs: UserReceiptTransaction[], currentBalance: number, previousMaxTimestamp = 0) {
   const fresh = txs.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)
   if (fresh.length === 0)
     return
-  // Track each as a Top-Up, except own swap-HTLC refunds — those come from the HTLC contract
-  // and aren't real deposits.
   const htlcContract = getAddress(polygonUsdtConfig.htlcContract)
   for (const tx of fresh) {
     if (getAddress(tx.sender) !== htlcContract)
@@ -1656,8 +1645,6 @@ async function notifyFreshIncoming(txs: UserReceiptTransaction[], currentBalance
   await Promise.all(fresh.map(tx => scheduleIncomingPaymentNotification(tx)))
 }
 
-// Fetch a contiguous block range as rpcMaxBlockRange-sized chunks, CONCURRENT_RANGE_FETCHES
-// at a time. Returns the union of all groups across chunks, unsorted.
 async function fetchRangesParallel(
   address: string,
   fromBlock: number,
@@ -1682,8 +1669,6 @@ async function fetchRangesParallel(
 
 export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   const { polygonRpcUrl, isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
-  // Invalidate the cached client and its lookups when the RPC URL changes from PostHog;
-  // a lookup still pending on the old provider must not block quotes on the new one
   watch(polygonRpcUrl, (newUrl) => {
     if (newUrl !== resolvedRpcUrl) {
       resolvedRpcUrl = newUrl
@@ -1718,10 +1703,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   let hasHydratedCachedBalance = false
   let persistedBalance: number | null = null
 
-  // Display-only fallback so the home screen can show the last known balance while the RPC
-  // connects. Kept separate from `balance` (strictly RPC truth) so spend/quote paths never
-  // see a cached value. Mainnet-only: the kv table survives the dev network switch, and mock
-  // mode seeds balance itself.
   const lastKnownBalance = shallowRef(0)
 
   async function hydrateCachedBalance() {
@@ -1742,7 +1723,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     if (consensus.value === 'established')
       return
 
-    // Fire-and-forget: nothing here depends on it, and awaiting would delay the RPC connect.
     hydrateCachedBalance().catch(error => logger.error('Failed to hydrate cached USDT balance', error))
     consensus.value = 'syncing'
     try {
@@ -1755,7 +1735,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
-  // Resolves true only when `balance` was just read from the RPC; errors are logged, not thrown.
   async function updateBalance(): Promise<boolean> {
     const { data: address, error } = useLocalWallet().getEthAddress()
     if (error || !address) {
@@ -1772,7 +1751,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const newBalance = Number(await client.tokenContract.balanceOf(address))
       if (newBalance !== balance.value)
         balance.value = newBalance
-      // Persist once per changed value (not per poll); also converges a stale cache back to 0.
       if (persistedBalance !== newBalance) {
         persistedBalance = newBalance
         await run(SQLQuery.UpsertKv, [getUsdtBalanceCacheKey(address), String(newBalance)])
@@ -1848,15 +1826,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const client = await getClient()
       const dbTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [Asset.USDT])
       const knownHashes = new Set(dbTransactions.map(tx => tx.hash))
-      // Rows arrive ORDER BY timestamp DESC NULLS FIRST; first row with a real
-      // timestamp is the max. Used to suppress notifications for out-of-order
-      // or late-finality incoming txs.
       const previousMaxTimestamp = dbTransactions.find(tx => typeof tx.timestamp === 'number')?.timestamp ?? 0
 
-      // Fire the initial-scan balance and nonce in parallel only when we know we'll enter that branch;
-      // ethers v6 batches concurrent JSON-RPC calls so this folds into one HTTP round-trip.
-      // Not `balance`: updateBalance swallows errors and leaves 0, which would persist
-      // canStopEarly = false for a funded wallet and force a full rescan.
       const willEnterInitialScan = !(hasLoadedHistory.value && lastHistorySyncBlock.value > 0)
       const needsInitialCounters = willEnterInitialScan && !initialHistoryScanSession.value
       const [latestBlock, prefetchedInitialBalance, prefetchedInitialNonce] = await Promise.all([
@@ -1910,8 +1881,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
       }
 
-      // Catch new blocks while the backward scan is still in flight, so new txs aren't
-      // gated on Contract.on listener health (HMR, dropped events, ethers polling stalls).
       if (session.state.headBlock < latestBlock) {
         const fwdFrom = session.state.headBlock + 1
         const forwardGroups = await fetchRangesParallel(address, fwdFrom, latestBlock, knownHashes)
@@ -1927,7 +1896,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
           }
         }
 
-        // Always notify — these are post-headBlock txs, genuinely new even on cold install.
         await notifyFreshIncoming(forwardIncoming, balance.value, previousMaxTimestamp)
 
         session.state.headBlock = latestBlock
@@ -1943,9 +1911,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
           logger.log('🏃 Polygon forward catch-up', { from: fwdFrom, to: latestBlock, newTxs: forwardIncoming.length })
       }
 
-      // Only notify during the BACKWARD scan if the user already had history (resume case).
-      // True cold start (empty DB) is a backfill of historical txs — surfacing each as a
-      // "Payment received" would be misleading. Mirrors NIM's real-time-only rule.
       const notifyDuringInitialScan = dbTransactions.length > 0
       const initialScanIncoming: UserReceiptTransaction[] = []
 
@@ -2012,7 +1977,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     const tx = parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
     const { status, timestamp, lookupFailed } = await getTransactionState(hash)
     const transactionsStore = useTransactions()
-    // An RPC failure provides no chain evidence to replace the persisted status.
     if (!lookupFailed)
       await transactionsStore.updateTransactionStatus({ hash, status, timestamp })
 
@@ -2026,7 +1990,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         return
 
       const updatedTx = await transactionsStore.setSwapPreimage(hash, swapResult.preimage)
-      // A relay replacement may have renamed this hash while Fastspot was answering.
       if (!updatedTx)
         return
       await run(SQLQuery.DeleteSwapHtlcByTxHash, [hash, hash])
@@ -2089,7 +2052,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (storedTx)
         enrichedTx = storedTx as T
       const state = await getTransactionState(hash, true)
-      // Receipt lookup is best-effort; an absent receipt must not erase already-mined state.
       if (!state.lookupFailed && state.status !== 'pending') {
         await useTransactions().updateTransactionStatus({ hash, status: state.status, timestamp: state.timestamp })
         enrichedTx = {
@@ -2137,7 +2099,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       attempt.fee,
       status,
     )
-    // Keep the original hash recoverable until its pending row has been merged.
     if (attempt.relay_hash && attempt.relay_hash !== hash)
       await useTransactions().replacePolygonTransactionHash(attempt.relay_hash, hash)
     await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [hash, attempt.network, attempt.sender])
@@ -2427,8 +2388,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     return htlcFeeSnapshotPromise
   }
 
-  // A pending relay was accepted and can still mine, but getNonce reads the latest block. Keep its
-  // nonce reserved for the missing-relay grace unless the chain moves past it.
+  // A pending relay was accepted and can still mine, but getNonce reads the latest block.
   let pendingHtlcForwarderNonce: { from: string, nonce: bigint, at: number } | null = null
 
   async function relayHtlcTransaction(execution: RelayExecutionInput, callbacks: Omit<PolygonRelayCallbacks, 'validateReceipt'>) {
@@ -2485,9 +2445,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
     const swapStartedAt = Date.now()
     const swapContext = { asset: Asset.USDT, swap_id: swapKey }
-    // TODO: Validate USDT swap and refund telemetry on device once USDT payments work again.
     const confirm = startSwapStep('confirm', swapContext, undefined, swapStartedAt)
-    // The step in progress; the catch below reports a thrown error against it unless it already ended.
     let step: { fail: (error: unknown) => void } = confirm
     let fundingPossible = false
     let fundingRejected = false
@@ -2497,7 +2455,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
 
     try {
-      // Confirm swap with Fastspot
       const { useFastspotApiV1 } = await import('@/composables/useFastspotv1')
       const fastspotV1 = await useFastspotApiV1()
 
@@ -2524,7 +2481,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       }
       confirm.end(true, { already_confirmed: alreadyConfirmed, swap_status: swap.status })
 
-      // Verify swap hash against Lightning invoice
       const verify = startSwapStep('verify', swapContext)
       step = verify
       const { parseBitcoinLightningInvoice } = await import('@/composables/useBitcoinLightning')
@@ -2534,7 +2490,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         return { data: undefined, error: i18n.t('Invalid swap hash'), rejected: true }
       }
 
-      // Get USDT_MATIC contract from swap
       const usdtContract = swap.contracts[fastspotV1.SwapAsset.USDT_MATIC]
       if (!usdtContract) {
         verify.fail('missing_usdt_contract')
@@ -2552,7 +2507,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       let receipt: PolygonRelayOutcome
       try {
         receipt = await withHtlcForwarderNonce(async () => {
-          // Fetched under the lock so a wait behind another HTLC relay can't leave an expired fee.
           const feeSnapshot = await primeHtlcFee()
           if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
             throw new Error(i18n.t('Polygon fee changed; review the payment again'))
@@ -2671,7 +2625,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
       }
 
-      // Signal funding to Fastspot
       const { provideFundingProof } = await import('@/composables/useFastspotV2').then(m => m.useFastspotApiV2())
       const fundingProofStartedAt = Date.now()
       const patchedSwap = provideFundingProof(
@@ -2681,7 +2634,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       )
       trackFundingProof(patchedSwap, swapContext)
 
-      // State enrichment is best-effort after the relay hash and recovery data exist.
       tx = await enrichPersistedTransaction(tx, receipt.hash, 'swap transaction')
       if (tx.status === 'failed') {
         fundingRejected = true
@@ -2702,7 +2654,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       )
       settlement.end(source)
 
-      // Update transaction with secret
       const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
       const confirmedTx = persistedTx ?? { ...tx, meta: { ...tx.meta, secret }, status: 'confirmed' as const }
 
@@ -2711,7 +2662,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         asset: Asset.USDT,
       })
 
-      // Keep recovery until the completed payment and its replacement hash are durable.
       if (replacementPersisted && persistedTx) {
         await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
           .catch(error => logger.error('Failed to clean completed Polygon swap recovery', error))
@@ -2746,12 +2696,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
-  // Reclaims a Polygon HTLC whose Lightning leg never produced a preimage. Reuses the same OpenGSN
-  // relay envelope and signing wallet as the original funding tx, so the user spends no MATIC.
-  // Caller (sync sweep) wraps this in try/catch and only deletes the swap_htlcs row on success.
   const reportedRefundFailures = new Set<string>()
   async function refundPolygonSwapHtlc(htlc: SwapHtlc): Promise<{ refunded: boolean, preimage?: string, hash?: string }> {
-    // Every refund outcome is reported here; the sync sweep only retries.
     const refund = startSwapRefund({ asset: Asset.USDT, swap_id: htlc.swap_id }, reportedRefundFailures)
     try {
       const txHash = getSwapHtlcTxHash(htlc)
@@ -2761,7 +2707,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (swap && 'preimage' in swap && swap.preimage)
         return { refunded: false, preimage: swap.preimage }
 
-      // Pre-v8 rows lack htlc_id but are keyed by the funding tx hash, whose receipt carries the Open event.
       let maybeHtlcId = htlc.htlc_id
       if (!maybeHtlcId) {
         const receipt = await (await getClient()).provider.getTransactionReceipt(htlc.address)
@@ -2773,9 +2718,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         const htlcContract = getAddress(polygonUsdtConfig.htlcContract)
         const recoveredId = receipt.logs.find(log => getAddress(log.address) === htlcContract && log.topics[0] === htlcOpenTopicHash)?.topics[1]
         if (!recoveredId) {
-          // No HTLC was opened, so no funds are locked. Keep the row marked so the sweep stops retrying.
           logger.error('Polygon HTLC funding receipt has no Open event', htlc.address)
-          // Status first: a parked row leaves the sweep, so a later status failure would never be retried.
           await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'failed', timestamp: undefined })
           await run(SQLQuery.SetSwapHtlcIdRecoveryFailed, [htlc.address])
           refund.end(false, { tx_state: 'no_open_event' })
@@ -2784,7 +2727,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         await run(SQLQuery.SetRecoveredSwapHtlcId, [recoveredId, htlc.address])
         maybeHtlcId = recoveredId
       }
-      // Hoisted helpers below don't see narrowing on a reassigned binding.
       const htlcId = maybeHtlcId
 
       async function finishRefund(hash?: string) {
@@ -2834,12 +2776,10 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         wallet.address,
         BigInt(feeSnapshot.fee),
       ])
-      // Retain the earliest scan boundary until a Refund event or a successful receipt proves completion.
       const refundBlock = htlc.refund_block ?? await client.provider.getBlockNumber()
       async function persistRefundHash(refundHash: string) {
         await run(SQLQuery.SetSwapHtlcRefundHash, [refundHash, Date.now(), refundBlock, htlc.address])
       }
-      // Don't hold the sweep behind a user's swap funding; the next sweep retries.
       if (htlcForwarderRelay) {
         logger.log('Deferring Polygon HTLC refund while another HTLC relay is in flight', htlc.address)
         return { refunded: false }
@@ -2887,20 +2827,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     historySyncPromise = null
   }
 
-  // Real-time Transfer listener — fires per incoming USDT event so notifications
-  // don't depend on the poll interval (10s/30s) or the active-asset gate in
-  // usePolygonSync. The poll still runs for backfill on cold start / missed events.
   // Keeps the contract it was registered on: an RPC-URL change rebuilds the client,
   // and off() on the new contract would not remove a listener from the old one.
   let transferListener: { address: string, contract: Contract, listener: (...args: any[]) => void } | null = null
-  // Bumped per watcher run. A run superseded while awaiting a slow RPC stops instead of
-  // blocking newer runs or attaching after them (e.g. after a logout's detach).
   let transferListenerRun = 0
 
   async function attachTransferListener(address: string, run: number) {
     const normalized = getAddress(address)
-    // Another account's listener goes now; the same account's stays until the new client
-    // is up, so a failed RPC switch keeps the working one.
     if (transferListener?.address !== normalized)
       await detachTransferListener()
     const client = await getClient()
@@ -2936,7 +2869,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         if (!hash || !log || !from)
           return
 
-        // DB-presence dedup — the poll path will see this hash too and skip.
         const existing = await query<{ asset: string }>(
           SQLQuery.GetTransactionAssetByHash,
           [hash],
@@ -3000,8 +2932,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
-  // Re-attach on address or RPC-URL change. getEthAddress() reads ethWallet.value internally,
-  // so wrapping in computed makes the watch reactive without changing the store API.
   const ethAddress = computed(() => useLocalWallet().getEthAddress().data)
   watch([ethAddress, polygonRpcUrl], async ([addr]) => {
     if (isTestnet)

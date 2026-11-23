@@ -16,8 +16,6 @@ const logger = useLogger('useApp')
 
 export interface SavedAddress { address: string, alias?: string }
 
-// One-way migration: legacy `string[]` entries are rewritten as `{ address }`
-// on first read; the next write persists the new shape and the old form is gone.
 const savedAddressSerializer = {
   read: (raw: string): SavedAddress[] => {
     if (!raw)
@@ -66,8 +64,6 @@ export const DECIMALS: Record<Crypto, number> = {
   [Crypto.USDT]: 6,
 }
 
-// Min NIM (in luna) that must accumulate in the local staging wallet before a new HTLC is
-// created. Batches micro-payments into one HTLC instead of one per payment. 0 = create immediately.
 export const DEFAULT_HTLC_THRESHOLD_LUNA = 5 * 1e5
 
 export enum PushNotificationsStatus {
@@ -134,20 +130,14 @@ export const useApp = defineStore('app', () => {
   const localNotificationsStatus = useStorageAsync<LocalNotificationsStatus>('localNotificationsStatus', LocalNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
   const isBiometricEnabled = useStorageAsync('isBiometricEnabled', false, kvPreferences())
-  // TODO: maybe clean this from time to time?
   const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
   const showAnimations = useStorageAsync('showAnimations', !useReducedMotion().value, kvPreferences(), sharedOptions)
-  // Dev-menu reveal toggle for tx soft-hide feature (APP-132). Pre-login storage so it survives across logins.
   const showHiddenTransactions = useStorageAsync('showHiddenTransactions', false, kvPreferences(), sharedOptions)
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
   const htlcThreshold = useStorageAsync('htlcThreshold', DEFAULT_HTLC_THRESHOLD_LUNA, kv(), sharedOptions)
   const hasDismissedPendingNimHint = useStorageAsync('hasDismissedPendingNimHint', false, kv(), sharedOptions)
   const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
-  // Last app version whose changelog the user has seen. Pre-login storage so the
-  // "What's New" card/modal state survives across logins (see useChangelog).
   const lastSeenChangelogVersion = useStorageAsync('lastSeenChangelogVersion', '', kvPreferences(), sharedOptions)
-  // How many times the "What's New" card has been shown for changelogCardVersion, so it
-  // auto-hides after a few appearances even if the user never opens or dismisses it.
   const changelogCardVersion = useStorageAsync('changelogCardVersion', '', kvPreferences(), sharedOptions)
   const changelogCardShownCount = useStorageAsync('changelogCardShownCount', 0, kvPreferences(), sharedOptions)
 
@@ -157,21 +147,17 @@ export const useApp = defineStore('app', () => {
     logger.log('🌱 setEntropy: entry', { hasInMemoryEntropy: !!entropy.value })
     if (pendingReferralCode.value)
       await kv().setItem('referralCode', pendingReferralCode.value)
-    // This case only happen when importing from words (login)
     if (entropy.value) {
       await Promise.all([kv().setItem('entropy', entropy.value), kv().setItem('hasDoneBackup', 'true')])
       hasDoneBackup.value = true
       logger.log('🌱 setEntropy: done (imported)')
       return
     }
-    // Maybe we should revisit this later. Right now this will be in memory all the times
     const entropyDb = await kv().getItem('entropy')
     if (entropyDb) {
       entropy.value = entropyDb
     }
     else {
-      // Generating a brand-new wallet needs the Nimiq WASM CSPRNG. If WASM failed to instantiate
-      // this throws and the caller surfaces a recoverable error to the user — no silent fallback.
       Nimiq.Entropy.SIZE = 16
       entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
       await kv().setItem('entropy', entropy.value)
@@ -183,10 +169,7 @@ export const useApp = defineStore('app', () => {
     pendingReferralCode.value = referralCode
   }
 
-  // We track when the user has input the pin code for the last time
-  // We will use this to determine if we should ask for the pin code again
-  // when the user is about to do a sensitive operation
-  const MIN_PIN_INPUT_INTERVAL = 1000 * 60 * 5 // 5 minutes
+  const MIN_PIN_INPUT_INTERVAL = 1000 * 60 * 5
   const lastPinInputTs = ref(0)
   function clearPinInputTs() {
     lastPinInputTs.value = 0
@@ -198,10 +181,6 @@ export const useApp = defineStore('app', () => {
     return Date.now() - lastPinInputTs.value > MIN_PIN_INPUT_INTERVAL
   }
 
-  // One-time (APP-171): we no longer auto-save incoming-payment senders. Drop the old
-  // `topUpAddresses` list, but keep any user-set aliases by folding them into withdrawal
-  // history so they still label transactions. Deleting the KV key is the "already ran"
-  // marker → idempotent, no version flag needed.
   async function migrateTopUpAddresses() {
     const raw = await kv().getItem('topUpAddresses')
     if (raw == null)
@@ -251,8 +230,6 @@ export const useApp = defineStore('app', () => {
     )
   }
 
-  // Indexed map so per-tx alias lookups in transaction lists stay O(1)
-  // instead of re-scanning the saved-address list for every row.
   const aliasMap = computed(() => {
     const map = new Map<string, string>()
     for (const entry of withdrawalAddressesHistory.value) {

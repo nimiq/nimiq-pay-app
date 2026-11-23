@@ -43,8 +43,6 @@ let web3ProviderScript: Promise<string> | null = null
 
 function getWeb3ProviderScript(): Promise<string> {
   if (!web3ProviderScript) {
-    // Timeout so a hung fetch rejects (clearing the memoized promise) instead of
-    // wedging every future launch behind it.
     web3ProviderScript = fetch('/web3-provider.js', { signal: AbortSignal.timeout(10_000) })
       .then(res => res.text())
       .catch((err) => {
@@ -55,7 +53,6 @@ function getWeb3ProviderScript(): Promise<string> {
   return web3ProviderScript
 }
 
-/** Eagerly fetch the web3-provider script so the first mini-app open is instant. */
 export function warmUpWeb3ProviderScript(): void {
   void getWeb3ProviderScript()
 }
@@ -102,15 +99,9 @@ export interface LaunchMiniAppOptions {
   language?: string
   /** Fiat currency seeded into `window.__NIMIQ_PAY__`. Defaults to `Fiat.USD`. */
   userFiat?: Fiat
-  /** Relaunching the Mini App hidden before a resume reload: keep its login. */
   keepCookies?: boolean
 }
 
-/**
- * Shared entry point for opening a mini-app. Used by both the in-app `MiniAppsModal`
- * and external deeplinks, keeping cookie clearing, provider injection, analytics,
- * and lifecycle wiring in a single place.
- */
 export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void> {
   if (openingMiniAppUrl.value !== null) {
     logger.log('Launch suppressed; another mini-app is already opening:', openingMiniAppUrl.value)
@@ -127,9 +118,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   openingMiniAppUrl.value = targetUrl
   const toast = useToast()
   const icon = options.icon ?? getFaviconUrl(targetUrl)
-  // Upgrade + cache this site's real icon for opened/searched apps not resolved via the list.
   void useMiniApps().ensureBestIcon(targetUrl)
-  // Loading toast only for deeplinks; modal callers show per-button spinner via `openingMiniAppUrl`.
   const showLoadingToast = options.source === 'deeplink'
   if (showLoadingToast)
     toast.setToast({ message: `Opening ${appTitle}…`, type: 'spinner', keepOpen: true })
@@ -141,8 +130,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   let watchdog: ReturnType<typeof setTimeout> | null = null
   let guardCleared = false
   let openCalled = false
-  // Settles when the guard clears: true once the webview is on screen, false if the
-  // launch failed or closed first.
   let settlePresentation!: (presented: boolean) => void
   const presentation = new Promise<boolean>(resolve => settlePresentation = resolve)
   let presentationSettled = false
@@ -181,10 +168,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     pageErrorHandle = null
   }
 
-  // Failure paths share this: release the guard, tell the user, and kill the pending
-  // invisible webview (isPresentAfterPageLoad) so it can't pop up later or stack
-  // under a retry. If no webview exists, destroy the host directly — no closeEvent
-  // will ever fire for it.
   const failLaunch = (reason: string) => {
     logger.warn('Mini App launch failed:', reason, targetUrl)
     clearGuard()
@@ -192,15 +175,9 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     void closeActiveMiniApp().catch(() => host?.destroy())
   }
 
-  // Scheduled before any await so a hung fetch/native call can never wedge the guard
-  // (a wedged guard silently suppresses every future launch).
   watchdog = setTimeout(failLaunch, 15_000, 'timed out')
 
   try {
-    // Never stack webviews: a Mini App can be live in this session (isMiniAppActive)
-    // or surviving hidden from before a resume-reload (pending session marker). Close
-    // it and wait for its closeEvent-driven teardown, so the old host's destroy()
-    // cannot clobber the session state the new MiniAppHost is about to register.
     // Close without animation: on iOS an animated dismiss still runs after close()
     // resolves, and UIKit ignores presenting the new webview until it ends, which
     // leaves the new Mini App open but hidden.
@@ -217,8 +194,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     // The provider runs at documentStart, but Android shows the webview dialog only
     // after the page loads. A native sheet opened before that ends up under the
     // later-shown webview window, so hold sheets until the webview is presented.
-    // The deadline defaults to the request's arrival, not the end of the wait, so a
-    // held sheet still closes when the Mini App's request times out.
     host = new MiniAppHost(InAppBrowser, {
       url: targetUrl,
       title: appTitle,
@@ -257,7 +232,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       if (h === null)
         return
       handle = null
-      // clearGuard is a no-op after presentation; this drops sheets still in the iOS wait.
       settlePresentation(false)
       logger.log('Mini-app webview closed, destroying host')
       trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
@@ -285,12 +259,10 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     })
 
     // Keyboard must be hidden before present so the webview isn't sized to the
-    // above-keyboard area (the loading spinner already shows via openingMiniAppUrl).
+    // above-keyboard area.
     await dismissKeyboardBeforeOpen()
     const { androidSDKVersion = 0 } = await Device.getInfo()
 
-    // The watchdog may have fired while the awaits above were pending; opening now
-    // would pop an unexpected webview over whatever the user is doing by then.
     if (guardCleared) {
       await host.destroy()
       await handle?.remove()
@@ -316,10 +288,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       // bar. Older windows already sit above it, so this would add a second gap there.
       enabledSafeBottomMargin: androidSDKVersion >= 35,
     })
-    // Registers the main webview id before any of its events, so app-driven close/hide can target it.
     host.isMainWebview(mainId)
-    // Watchdog/pageLoadError may have failed this launch (and closed the webview)
-    // while openWebView was in flight; skip the success bookkeeping then.
     if (guardCleared)
       return
     opened = true
@@ -353,7 +322,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       try {
         await handle.remove()
       }
-      catch { /* listener may already be removed */ }
+      catch {}
     }
   }
 }

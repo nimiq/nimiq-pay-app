@@ -190,9 +190,8 @@ export const PaymentConfirmMessageSchema = v.pipe(
     ),
     timings: v.optional(v.pipe(
       v.object({
-        // All timestamps in milliseconds since UNIX epoch
-        timeStart: v.number(), // When the payment:request was received by the client
-        timeEnd: v.number(), // When the payment:confirm or payment:reject was sent by the client
+        timeStart: v.number(),
+        timeEnd: v.number(),
       }),
       v.description('Optional performance timings collected by the client'),
     )),
@@ -217,9 +216,8 @@ export const PaymentRejectMessageSchema = v.pipe(
     )),
     timings: v.optional(v.pipe(
       v.object({
-        // All timestamps in milliseconds since UNIX epoch
-        timeStart: v.number(), // When the payment:request was received by the client
-        timeEnd: v.number(), // When the payment:confirm or payment:reject was sent by the client
+        timeStart: v.number(),
+        timeEnd: v.number(),
       }),
       v.description('Optional performance timings collected by the client'),
     )),

@@ -10,7 +10,6 @@ import { kv, kvPreferences } from '@/stores/app'
 
 const REMOTE_JSON_URL = 'https://raw.githubusercontent.com/nimiq/awesome/main/src/data/dist/nimiq-mini-apps.json'
 
-// Base for the nimiq/awesome "report this Mini App" page: `${REPORT_BASE}/<type>/<slug>/report`.
 const REPORT_BASE = 'https://nimpay.app/miniapps'
 
 export type MiniAppType = 'nimiq' | 'evm'
@@ -48,8 +47,6 @@ interface BaseDApp {
 interface RemoteMiniApp {
   name: string
   url: string
-  // Always overwritten at flatten time from the source array key (nimiq/evm);
-  // raw upstream value is discarded.
   type: MiniAppType
   description: string
   logo: string
@@ -96,7 +93,6 @@ export function stripTrailingSlash(url: string): string {
 }
 
 export const useMiniApps = defineStore('mini-apps', () => {
-  // Cache remote apps list in Preferences (available pre-login, persists across launches)
   const cachedRemoteApps = useStorageAsync<RemoteMiniApp[]>(
     'miniAppsRemoteList',
     [],
@@ -104,8 +100,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
-  // Lazily-resolved best icon per origin, filling the fallback slot when awesome has no
-  // curated logo. Persisted so we don't re-scrape sites on every launch. See ensureBestIcon.
   const bestIcons = useStorageAsync<Record<string, string>>(
     'miniAppsBestIcons',
     {},
@@ -114,8 +108,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
   )
   const bestIconInFlight = new Set<string>()
 
-  // Fresh catalog from this session's fetch. Undefined until one succeeds, so the modal can
-  // retry after a failed launch fetch instead of staying empty until restart (APP-314).
   const fetchedRemoteApps = shallowRef<RemoteMiniApp[]>()
   const isFetchingRemoteApps = ref(false)
 
@@ -138,14 +130,13 @@ export const useMiniApps = defineStore('mini-apps', () => {
         cachedRemoteApps.value = apps
       }
     }
-    catch { /* keep showing the cached list */ }
+    catch { }
     finally {
       isFetchingRemoteApps.value = false
     }
   }
   void loadRemoteApps()
 
-  // Reactive on the cache, so a cached list shows even when it loads from Preferences after the fetch fails.
   const remoteApps = computed<RemoteMiniApp[]>(() => fetchedRemoteApps.value ?? cachedRemoteApps.value ?? [])
 
   const baseDApps = computed<BaseDApp[]>(() => {
@@ -170,7 +161,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
-  // kv() so consent clears on logout alongside other user data.
   const deviceIdConsent = useStorageAsync<Record<string, true>>(
     'miniAppDeviceIdConsent',
     {},
@@ -193,14 +183,12 @@ export const useMiniApps = defineStore('mini-apps', () => {
     deviceIdConsent.value = rest
   }
 
-  // In-memory description cache for recently-viewed dApps; keyed by raw stored url.
   const recentDescriptionCache = new Map<string, string | undefined>()
 
   function addRecentlyViewed(dapp: RecentDApp) {
     const current = recentlyViewedDApps.value
     const root = safeOrigin(dapp.url)
     const host = safeHostname(dapp.url)
-    // Collapse to one row per hostname; store the app's root URL (APP-166).
     if (current[0]?.url === root)
       return
     const filtered = current.filter(d => safeHostname(d.url) !== host)
@@ -226,11 +214,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     recentlyViewedDApps.value = filtered
   }
 
-  /**
-   * Trusted = curated remote list OR recently-viewed history.
-   * Path-scoped (not origin) so subpath phishing (`uniswap.org/swap?to=attacker`) still
-   * triggers the warning prompt.
-   */
   const trustedUrls = computed(() => {
     const set = new Set<string>()
     for (const r of remoteApps.value)
@@ -246,20 +229,11 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return trustedUrls.value.has(stripTrailingSlash(url))
   }
 
-  /**
-   * The single owner of icon precedence for any `url` (listed or not):
-   * curated awesome logo -> lazily-resolved best site icon -> /favicon.ico.
-   */
   function iconForUrl(url: string): string {
     const logo = remoteApps.value.find(r => stripTrailingSlash(r.url) === stripTrailingSlash(url))?.logo
     return logo || bestIcons.value[safeOrigin(url)] || getFaviconUrl(url)
   }
 
-  /**
-   * Lazily resolve & cache the best icon for a logo-less Mini App's own site (fetches the
-   * site HTML). Call only for on-screen / opened apps — never eagerly for the whole list.
-   * No-op when a curated awesome logo exists (source of truth), when already cached, or in-flight.
-   */
   async function ensureBestIcon(url: string) {
     const origin = safeOrigin(url)
     if (!origin.startsWith('http') || bestIcons.value[origin] || bestIconInFlight.has(origin))
@@ -278,21 +252,14 @@ export const useMiniApps = defineStore('mini-apps', () => {
     }
   }
 
-  /**
-   * Report-page URL for an awesome-list Mini App, or undefined when `url` isn't in the
-   * curated remote list (only those carry the `slug`/`type` the report endpoint needs).
-   */
   function getMiniAppReportUrl(url: string): string | undefined {
     const target = stripTrailingSlash(url)
     const remote = remoteApps.value.find(r => stripTrailingSlash(r.url) === target)
     return remote ? `${REPORT_BASE}/${remote.type}/${remote.slug}/report` : undefined
   }
 
-  /** Top-N slice of recently-viewed for the marketplace UI. */
   const recentDAppsForDisplay = computed(() => recentlyViewedDApps.value.slice(0, MAX_RECENT_DISPLAY))
 
-  // Each dApp gets its own computedAsync so descriptions load incrementally.
-  // If the remote JSON provides a description, use it directly; otherwise fall back to live scrape.
   const descriptions = computed(() => baseDApps.value.map((dapp) => {
     const remote = remoteApps.value.find(r => r.url === dapp.url)
     if (remote?.description)
@@ -316,10 +283,8 @@ export const useMiniApps = defineStore('mini-apps', () => {
     allDApps.value.filter(d => !d.featured),
   )
 
-  // Backward compat alias used by search and recently-viewed lookups
   const popularDApps = allDApps
 
-  // For searched URLs not in the app list
   const searchedDescriptions = reactive<Record<string, { status: SearchedDescriptionState, text?: string }>>({})
 
   async function ensureDescription(url: string) {
@@ -336,7 +301,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
   const recentDAppsWithDescriptions = computedAsync<RecentDApp[]>(async () => {
     const recentDApps = recentDAppsForDisplay.value ?? []
     return Promise.all(recentDApps.map(async (dapp): Promise<RecentDApp> => {
-      // First check if it's in allDApps to avoid unnecessary fetches, matching URLs with or without trailing slash
       const popular = allDApps.value.find(p =>
         p.url === dapp.url || stripTrailingSlash(p.url) === stripTrailingSlash(dapp.url),
       )
@@ -348,7 +312,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     }))
   }, recentlyViewedDApps.value ?? [])
 
-  // Used by useMiniAppSearch for fuzzy search indexing
   const descriptionTexts = computed(() => {
     const texts: Record<string, string> = {}
     for (const dapp of allDApps.value) {

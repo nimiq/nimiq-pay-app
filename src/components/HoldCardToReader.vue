@@ -6,13 +6,10 @@ import NfcCrossed from '@/components/icons/nfc-crossed.vue'
 import NfcPos from '@/components/icons/nfc-pos.vue'
 import PaymentCard from '@/components/PaymentCard.vue'
 
-// Tap-to-pay screen: shows the card and the NFC state. The caller owns NFC checks and payment handling.
 defineProps<{
   card?: { maskedPan: string, expiry: string }
   isReady: boolean
   isCardActive: boolean
-  // `null` means not checked yet. The template treats it like `false`, so keep `isReady` false until both
-  // are known, otherwise "NFC is not supported" / "Enable NFC" flashes before the first NFC check returns.
   isNfcSupported: boolean | null
   isNfcEnabled: boolean | null
   paymentSuccessful?: boolean

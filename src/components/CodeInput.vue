@@ -5,8 +5,6 @@ import { ref } from 'vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, backButtonText: { type: String }, stepName: { type: String, required: false } })
@@ -16,7 +14,6 @@ const { phoneNumber } = storeToRefs(useApp())
 
 const pinCodeInput = ref<string[]>([])
 
-// TODO: access SMS and auto get the access code
 function handleInput(payload: Event) {
   const target = payload.target as HTMLInputElement
   const value = target.value
@@ -34,7 +31,6 @@ function handleInput(payload: Event) {
   if (index === props.inputLength - 1 && value.length === 1) {
     emit('done', pinCodeInput.value.join(''))
   }
-  // Focus on the next input
   else {
     const nextInput = document.getElementById(Math.max(value.length, (index + 1)).toString())
     if (nextInput)

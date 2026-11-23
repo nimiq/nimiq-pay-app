@@ -10,8 +10,8 @@ export const walletUrl = new URL(`https://wallet.${nimiqDomainUrl}`)
 
 // Retired NAKA card refund senders. Sync skips them so past refunds are not re-imported as Top-Ups.
 export const nakaBufferAddresses = [
-  'NQ72 F16T 8H2C KVLQ 7QAJ DXA6 85BC E4QU FT7G', // Testnet
-  'NQ60 G92X YHN0 0369 U0L0 N9GU FA2Q GBKY UVHA', // Mainnet
+  'NQ72 F16T 8H2C KVLQ 7QAJ DXA6 85BC E4QU FT7G',
+  'NQ60 G92X YHN0 0369 U0L0 N9GU FA2Q GBKY UVHA',
 ]
 
 export const nimiqPayCosignerPublicKeys = isTestnet
@@ -24,5 +24,4 @@ export const nimiqPayCosignerPublicKeys = isTestnet
 export const debounceDelay = 1000
 export const debounceMaxWait = 3000
 
-// export const isBlueCodeEnabled = __ENABLE_BLUECODE__ && (useDevice().isIOS || isDev)
 export const isMiniAppsEnabled = __ENABLE_MINI_APPS__

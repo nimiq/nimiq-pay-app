@@ -1,7 +1,5 @@
 import * as v from 'valibot'
 
-// REST API
-
 export const ErrorResponseSchema = v.object({
   code: v.string(),
   result: v.string(),
@@ -79,8 +77,6 @@ export const StrippedCardSchema = v.object({
 export type StrippedCard = v.InferOutput<typeof StrippedCardSchema>
 
 export type Card = v.InferOutput<typeof CardSchema>
-
-// Clearing API
 
 const StringToNumberTransformer = v.pipe(v.string(), v.transform(val => Number(val)))
 

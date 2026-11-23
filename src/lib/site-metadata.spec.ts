@@ -13,7 +13,6 @@ function html(headInner: string): string {
   return `<!doctype html><html><head>${headInner}</head><body></body></html>`
 }
 
-/** Route CapacitorHttp.get by URL; unmapped URLs 404. */
 function mockResponses(map: Record<string, { status?: number, data?: unknown, headers?: Record<string, string> }>) {
   httpGet.mockImplementation((options) => {
     const hit = map[options.url]

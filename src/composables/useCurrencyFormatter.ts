@@ -6,36 +6,18 @@ import { toValue } from 'vue'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
 
 export interface FormatFiatOptions {
-  /**
-   * If true, the number of decimals is 0
-   * @default false
-   */
   short?: boolean
 
-  /**
-   * The currency to use
-   * @default selectedFiat.value
-   */
   currency?: MaybeRef<Fiat | string>
 
   locale?: MaybeRef<string>
 
-  /**
-   * If true, a minus sign is prepended
-   */
   isPayment?: boolean
 }
 
 export interface FormatCryptoOptions {
-  /**
-   * The currency to use
-   * @default NIM
-   */
   currency?: MaybeRef<Crypto>
 
-  /**
-   * @default 2
-   */
   maxDecimals?: number
 
   locale?: MaybeRef<string>

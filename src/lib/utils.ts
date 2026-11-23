@@ -3,7 +3,6 @@ import type { ExternalTransaction } from '@/types/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
 
-// Decodes a `GetTransactionByHash` row. Callers may re-save it, and upsertTx expects parsed JSON.
 export function parseStoredTransaction(tx: ExternalTransaction | null) {
   if (!tx)
     return null
@@ -26,7 +25,6 @@ export function getLegacyTransactionValidityStartHeight(
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     const dataLength = view.getUint16(0)
     const recipientDataEnd = 2 + dataLength
-    // The Core round-trip below validates the decoded fields and canonical encoding.
     if (bytes.length < recipientDataEnd + 65)
       return undefined
     const fields = new DataView(bytes.buffer, bytes.byteOffset + recipientDataEnd, 65)
@@ -76,9 +74,6 @@ export function getLegacyTransactionValidityStartHeight(
   }
 }
 
-/**
- * Execute a promise or throw an error if it takes longer than the specified timeout.
- */
 export function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId: number
 
@@ -94,7 +89,6 @@ export function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number): P
 
 export function base64ToImageData(base64Str: string): Promise<ImageData> {
   return new Promise((resolve, reject) => {
-    // If the base64 string is missing the prefix, assume it's a PNG.
     const dataURL = base64Str.startsWith('data:')
       ? base64Str
       : `data:image/png;base64,${base64Str}`
@@ -132,7 +126,6 @@ export function base64ToImageData(base64Str: string): Promise<ImageData> {
 }
 
 export function translateConsensus(consensusState: ConsensusState) {
-  // Define translations as record such that ts warns us if a translation for a consensus state is missing
   const consensusStateTranslations: Record<ConsensusState, string> = {
     established: i18n.t('Consensus established.'),
     syncing: i18n.t('Syncing with network.'),
@@ -162,21 +155,6 @@ export function calculateDisplayedDecimals(amount: number | null, currency: Cryp
     if (amount === 0)
       return maxDecimals
 
-    // if (btcUnit.value.ticker === 'mBTC') {
-    //   // For mBTC, make sure that 2 significant digits are always displayed
-    //   if (amount < 0.001 * 1e5)
-    //     return 5
-    //   if (amount < 0.01 * 1e5)
-    //     return Math.max(maxDecimals, 4)
-    //   if (amount < 0.1 * 1e5)
-    //     return Math.max(maxDecimals, 3)
-    //   if (amount < 1 * 1e5)
-    //     return Math.max(maxDecimals, 2)
-    //   if (amount < 10 * 1e5)
-    //     return Math.max(maxDecimals, 1)
-    // }
-    // else {
-    // For BTC, make sure that 3 significant digits are always displayed
     if (amount < 0.00001 * 1e8)
       return 8
     if (amount < 0.0001 * 1e8)
@@ -193,7 +171,6 @@ export function calculateDisplayedDecimals(amount: number | null, currency: Cryp
       return Math.max(maxDecimals, 2)
     if (amount < 100 * 1e8)
       return Math.max(maxDecimals, 1)
-    // }
     return maxDecimals
   }
 
@@ -216,7 +193,6 @@ export function calculateDisplayedDecimals(amount: number | null, currency: Cryp
     return maxDecimals
   }
 
-  // For NIM, make sure that 2 significant digits are always displayed
   if (amount === 0)
     return decimals
   if (amount < 0.001 * 1e5)

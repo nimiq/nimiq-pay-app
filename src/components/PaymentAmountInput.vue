@@ -54,8 +54,6 @@ const { remoteBalance } = storeToRefs(useRemoteSigner())
 const polygonUsdt = usePolygonUsdt()
 const { balance: usdtBalance, consensus: polygonConsensus } = storeToRefs(polygonUsdt)
 
-// Fetch crypto price in USD and fiat exchange rate separately, then combine
-// to get the price of 1 crypto coin in the user's selected fiat
 const priceApi = useCurrencyPriceApi()
 const { data: cryptoUsdPrice, fetch: fetchCryptoPrice } = useFetch(() => priceApi.getPriceNow({ currency: cryptoCurrency.value }))
 const { data: fiatUsdPrice, fetch: fetchFiatPrice } = useFetch(() =>
@@ -74,16 +72,9 @@ watch(height, () => {
 })
 const price = computed(() => (cryptoUsdPrice.value?.price || 0) * (fiatUsdPrice.value?.price || 0))
 
-// APP-169: the amount can be entered directly in the crypto unit (NIM/USDT) or in fiat. Crypto is the
-// default; in crypto mode the entered minor-unit value is the source of truth, in fiat mode it is
-// derived from the entered fiat value.
 type Denomination = 'crypto' | 'fiat'
 const denomination = ref<Denomination>('crypto')
 const fiatDecimals = 2
-// The entered crypto amount (luna) is the single source of truth; the fiat model is a synced view of
-// it. Toggling denomination must NOT re-derive the amount — round-tripping through a cents-rounded
-// fiat value drifts it lower on every toggle. Instead we keep both models in sync only on real edits
-// and make the toggle a pure view switch.
 const cryptoAmountModel = ref(0)
 const fiatAmountModel = ref(0)
 
@@ -108,7 +99,6 @@ function toggleDenomination() {
   denomination.value = denomination.value === 'crypto' ? 'fiat' : 'crypto'
 }
 
-// USDT quote
 const loading = ref(false)
 const currentUsdtQuoteRequest = computed<{
   amount: number
@@ -131,7 +121,6 @@ const {
   feeText: usdtFeeText,
 } = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
 
-// When Polygon fees are known, the helper amount should match the fee-inclusive total it describes.
 const fiatEquivalent = computed(() => {
   if (price.value <= 0)
     return null
@@ -139,7 +128,6 @@ const fiatEquivalent = computed(() => {
   return roundUpToTwoDecimals(units / factor.value * price.value)
 })
 
-// Balance check
 const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
 const hasEnoughAmount = computed(() => {
   if (!isNimiqAsset.value)
@@ -147,14 +135,12 @@ const hasEnoughAmount = computed(() => {
   return amountUnits.value <= spendableBalance.value
 })
 
-// Fee in fiat (convert USDT fee units → fiat using price)
 const feeInFiat = computed(() => {
   if (!usdtQuote.value?.fee || !price.value)
     return null
   return roundUpToTwoDecimals(usdtQuote.value.fee / factor.value * price.value)
 })
 
-// Error message
 const errorMessage = computed(() => {
   if (props.errorMsg)
     return props.errorMsg
@@ -172,7 +158,6 @@ const errorMessage = computed(() => {
   return ''
 })
 
-// Button state
 const disabled = computed(() => {
   const baseDisabled = amountUnits.value <= 0 || !hasEnoughAmount.value
   if (!isNimiqAsset.value)
@@ -184,21 +169,17 @@ function handlePay() {
   if (loading.value)
     return
 
-  // Flow keeps this step mounted on later steps; pausing here stops the USDT quote poller from
-  // refilling the shared fee snapshot the payment re-reads at submit time.
   loading.value = true
   emit('done', amountUnits.value)
 }
 
 watch(errorMessage, (value) => {
-  // The payment debits the balance while later steps are shown; that error must not resume quoting.
   if (value && props.isActive) {
     loading.value = false
     logger.error('Error in payment amount input:', value)
   }
 })
 
-// Reset the spinner and resume quoting when the user comes back from a later step.
 watch(() => props.isActive, (active) => {
   if (active)
     loading.value = false

@@ -6,8 +6,6 @@ export type TypeFilterValue = 'all' | MiniAppType
 
 const model = defineModel<TypeFilterValue>({ required: true })
 
-// "EVM" matches the upstream awesome-list grouping (the `evm` array key), so the
-// label stays correct if more EVM chains are added later.
 const options: { label: string, value: TypeFilterValue }[] = [
   { label: 'All', value: 'all' },
   { label: 'Nimiq', value: 'nimiq' },

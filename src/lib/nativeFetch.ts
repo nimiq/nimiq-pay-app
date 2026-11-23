@@ -26,7 +26,6 @@ export async function nativeFetch(url: URL | RequestInfo, options?: RequestInit)
       // 30s stays under Fastspot's 60s nginx 504 and the 120s Mini App RPC deadline.
       connectTimeout: 30_000,
       readTimeout: 30_000,
-      // webFetchExtra: options,
     })
   }
   catch (error) {

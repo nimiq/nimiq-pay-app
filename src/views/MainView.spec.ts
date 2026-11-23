@@ -486,7 +486,6 @@ describe('mainView', () => {
   })
 
   it('does not show "Processing funds" when accumulating below threshold onto an active HTLC', async () => {
-    // Below-threshold top-up onto an existing secured balance just accumulates (shown as "pending").
     isHtlcActive.value = true
     remoteBalance.value = 10 * 1e5
     localBalance.value = 2 * 1e5
@@ -499,7 +498,6 @@ describe('mainView', () => {
   })
 
   it('shows "Processing funds" for a below-threshold deposit when no secured balance exists yet', async () => {
-    // Fresh wallet: the deposit is forced into an HTLC immediately rather than kept pending.
     isHtlcActive.value = false
     remoteBalance.value = 0
     localBalance.value = 2 * 1e5
@@ -569,7 +567,6 @@ describe('mainView', () => {
     const wrapper = await mountComponent()
     await flushPromises()
     wrapper.findComponent({ name: 'PaymentRequestDetectedNotification' }).vm.$emit('onContinue')
-    // Leave transition removes the element on the next frame
     await vi.waitFor(() => expect(wrapper.find('[data-testid="payment-request-notification"]').exists()).toBe(false))
 
     const onResume = capacitor.addListener.mock.calls[0]![1] as () => Promise<void>

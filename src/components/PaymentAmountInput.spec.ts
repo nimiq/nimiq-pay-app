@@ -334,13 +334,12 @@ describe('paymentAmountInput', () => {
   })
 
   it('does not drift the amount when toggling denomination repeatedly (APP-169)', async () => {
-    // A price with a sub-cent remainder exposes the lossy fiat round-trip on each toggle.
     cryptoUsdPrice.value = { price: 0.0463, currency: 'USD' }
-    remoteBalance.value = 10_000_000 // enough balance so the Pay button stays enabled
+    remoteBalance.value = 10_000_000
 
     const wrapper = await mountComponent({ asset: Asset.NIM })
     await flushPromises()
-    await wrapper.get('[data-testid="amount-input"]').trigger('click') // crypto = 1_000_000 luna
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
     await flushPromises()
 
     for (let i = 0; i < 6; i++) {
@@ -348,7 +347,6 @@ describe('paymentAmountInput', () => {
       await flushPromises()
     }
 
-    // Back in crypto mode after 6 toggles; the amount must be exactly what was entered.
     await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
     expect(wrapper.emitted('done')?.at(-1)).toEqual([1_000_000])
   })
@@ -371,12 +369,10 @@ describe('paymentAmountInput', () => {
       await payButton(wrapper).trigger('click')
       expect(wrapper.emitted('done')).toHaveLength(1)
 
-      // Flow keeps the step mounted on later steps; a second click must not emit again.
       await payButton(wrapper).trigger('click')
       expect(wrapper.emitted('done')).toHaveLength(1)
 
       await wrapper.setProps({ isActive: false })
-      // The payment debits the balance while later steps are shown; that error must not resume quoting.
       usdtBalance.value = 0
       await flushPromises()
       await vi.advanceTimersByTimeAsync(60_000)
