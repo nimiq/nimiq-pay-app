@@ -73,7 +73,6 @@ export const recoveryWordsStep: StepInit = async () => ({
       err(error)
     }
     else {
-      // Clear recovery words from memory just in case
       state[StepName.RecoveryWordsStep] = []
       next()
     }
@@ -91,14 +90,10 @@ export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
     goBackBy,
     main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName), canUseBiometric: isTxFlow(flowName) || isPinRequired(flowName) })),
     beforeRender: async (state) => {
-      // We only care about login/setup flows
       if (isTxFlow(flowName) || flowName === Flow.ChangePin || isPinRequired(flowName))
         return
 
-      // If there is a pinHash, it means that the user is going backwards
       const { useApp } = (await import('@/stores/app'))
-      // Clear pin code from memory just in case
-      // Since state is a JSON object, we take advantage of the fact that it's a reference
       state[StepName.PinCode] = ''
       state[StepName.PinCodeConfirm] = ''
       useApp().clearPinInputTs()
@@ -113,8 +108,6 @@ export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
         err(i18n.t('Please enter a PIN code'))
       }
       else if (!PIN_CODE_REGEX.test(pinCode)) {
-        if (import.meta.env.DEV)
-          debugger // eslint-disable-line no-debugger
         err(i18n.t('Invalid PIN code'))
       }
       else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login && flowName !== FlowName.ChangePin) {
@@ -149,18 +142,15 @@ export const pinCodeConfirmStep: StepInit = async ({ flowName }) => {
         return
       }
 
-      // Don't nuke everything if we are changing the pin
       if (flowName === Flow.ChangePin)
         return next()
 
-      // Nuke everything in case there was a previous encryption db
       const { isWeb } = (await import('@/composables/useDevice')).useDevice()
       const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
 
       if (!isWeb) {
         await (await import('@/stores/conn')).useConn().deleteDatabase(false)
         await (await import('@/stores/conn')).useConn().resetSecret()
-        // Set it to false in case it was decrypted before, we are sure there's no encrypted db since we just deleted it
         decrypted.value = false
       }
 
@@ -180,8 +170,6 @@ export const pinCodeConfirmStep: StepInit = async ({ flowName }) => {
         next()
       }
       else {
-        // Clear pin code from memory just in case
-        // Since state is a JSON object, we take advantage of the fact that it's a reference
         state[StepName.PinCode] = ''
         state[StepName.PinCodeConfirm] = ''
 
@@ -197,8 +185,6 @@ export const pinCodeChange: StepInit = async () => {
     get title() { return i18n.t('Insert PIN to confirm') },
     main: markRaw(props => h(PinInput, { ...props, inputLength: 4, canUseBiometric: false })),
     beforeRender: async (state) => {
-      // Clear pin code from memory just in case
-      // Since state is a JSON object, we take advantage of the fact that it's a reference
       state[StepName.PinCodeChange] = ''
     },
     beforeNext: async ({ pinCodeChange }, { next, err }) => {
@@ -234,8 +220,6 @@ export const enableBiometricStep: StepInit = async ({ skipAheadBy = 1, goBackBy 
     }
     isBiometricEnabled.value = true
 
-    // Clear pin code from memory just in case
-    // Since state is a JSON object, we take advantage of the fact that it's a reference
     state[StepName.PinCode] = ''
     state[StepName.PinCodeConfirm] = ''
     next()
@@ -280,7 +264,6 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
       err(i18n.t('Please enter a verification code'))
     }
     else if (phoneNumberConfirm === 'back') {
-      // User clicked "Resend"
       prev()
     }
     else {
@@ -316,33 +299,6 @@ export const onBoardingPoints: StepInit = async () => ({
   main: markRaw(OnBoardingScreen),
 } satisfies Step)
 
-// export const onBoardingCashback1: StepInit = async () => ({
-//   step: StepName.OnBoardingCashback1,
-//   get title() { return i18n.t('What are Cryptocity Points?') },
-//   get description() { return i18n.t('Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM).') },
-//   main: markRaw(OnBoardingScreen),
-// } satisfies Step)
-
-// export const onBoardingCashback2: StepInit = async () => ({
-//   step: StepName.OnBoardingCashback2,
-//   get title() { return i18n.t('Pay with Cryptocity Points') },
-//   get description() { return i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.') },
-//   main: markRaw(OnBoardingScreen),
-// } satisfies Step)
-
-// export const onBoardingCashback3: StepInit = async () => ({
-//   step: StepName.OnBoardingCashback3,
-//   get title() { return i18n.t('Get Cryptocity Points') },
-//   get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
-//   main: markRaw(OnBoardingScreen),
-// } satisfies Step)
-
-// export const onBoardingCashback4: StepInit = async () => ({
-//   step: StepName.OnBoardingCashback4,
-//   get title() { return i18n.t('Find places to pay with, and earn Cryptocity Points') },
-//   main: markRaw(OnBoardingScreen),
-// } satisfies Step)
-
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
   get title() { return i18n.t('What is Bluecode?') },
@@ -374,15 +330,13 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
     main: markRaw(props => h(QRScanner, { ...props, ...defaultProps })),
     async beforeRender(state, { navigateTo }) {
       const { qrCodeScanner } = state
-      // If it's a string, assume that it's a payment request
       if (qrCodeScanner && typeof qrCodeScanner === 'string') {
         const { getPaymentRequestData } = (await import('@/composables/useStringParser')).useStringParser()
         const { data, error } = await getPaymentRequestData(qrCodeScanner)
         if (error || !data)
-          // We don't throw an error here, as we don't want to stop the flow. Let the user scan the QR code again.
           return console.error('Error parsing QR code/invoice when opening from appUrlOpen/detected invoice:', error)
         state[StepName.QRCodeScanner] = data
-        // TODO: idk why, but iOS needs to have the modal half open before scrolling works
+        // iOS needs to have the modal half open before scrolling works
         if (useDevice().isIOS)
           await sleep(100)
         if (data.amount === 0)
@@ -404,7 +358,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
       else if (defaultProps?.expect === QRDataFormat.NimCashlink) {
         await finalizeFlow()
       }
-      else { // For Top-Up and Withdrawal, we go back to the previous step
+      else {
         prev()
       }
     },
@@ -473,7 +427,6 @@ export const paymentAmountInputStep: StepInit = async () => {
       if (!amountUnits || amountUnits <= 0)
         return
 
-      // Update the payment request with the user-entered amount
       const request = state[StepName.QRCodeScanner]
       if (request && typeof request !== 'string') {
         state[StepName.QRCodeScanner] = { ...request, amount: amountUnits }
@@ -485,7 +438,6 @@ export const paymentAmountInputStep: StepInit = async () => {
 }
 
 export const paymentPreviewStep: StepInit = async () => {
-  // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
   const merchantCategory = ref<MerchantCategory>()
   const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: merchantCategory.value }))
@@ -495,7 +447,7 @@ export const paymentPreviewStep: StepInit = async () => {
     ariaLabel: 'Payment preview',
     titleIcon,
     main: markRaw(PaymentPreview),
-    autofocus: false, // Don't autofocus on the toggle button
+    autofocus: false,
     async beforeRender({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return
@@ -503,16 +455,13 @@ export const paymentPreviewStep: StepInit = async () => {
       merchantCategory.value = qrCodeScanner.merchantCategory
     },
     beforeNext: async ({ qrCodeScanner: request }, { navigateTo, finalizeFlow }) => {
-      // The request should be a PaymentRequestData, but we need to handle the case where it's a string
       if (typeof request === 'string') {
-        // No translation as not user-facing. Dev error which should not occur in production.
         const msg = `Request is a string: ${request}`
         const error = new Error(msg)
         reportCriticalError(error, { step: StepName.PaymentPreview })
         throw error
       }
 
-      // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
       if ((await import('@/stores/app')).useApp().shouldAskPin())
         navigateTo({ step: StepName.PinCode })
       else
@@ -563,14 +512,12 @@ export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
   ariaLabel: 'Choose an address',
   step: StepName.NimWithdrawalAddressSelectionStep,
   main: markRaw(WithdrawalAddressList),
-  autofocus: false, // Don't autofocus on the search bar
+  autofocus: false,
   beforeNext: async ({ nimWithdrawalAddressSelectionStep }, { next, finalizeFlow }) => {
     if (!nimWithdrawalAddressSelectionStep) {
-      // User clicked "Add another address"
       return next()
     }
     else {
-      // User selected an address
       const { useApp } = (await import('@/stores/app'))
       useApp().withdrawalAddress = nimWithdrawalAddressSelectionStep
       finalizeFlow()
@@ -578,7 +525,6 @@ export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-// Settings: each category is a step, so moving between them slides inside one sheet instead of stacking modals.
 function settingsStep(step: InfoStep['step'], getTitle: () => string, component: Component): StepInit {
   return async () => ({
     step,
@@ -611,20 +557,12 @@ export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions, 
   ariaLabel: props?.saveContact ? 'Add to address book' : 'Send to this address',
   get description() { return props?.saveContact ? i18n.t('Give it a name so you recognise it later') : i18n.t('Copy or scan the address') },
   main: markRaw(inner => h(NimAddressInput, { ...inner, saveContact: props?.saveContact })),
-  autofocus: false, // Usually the user will scan the QR code
+  autofocus: false,
   overrideHeight: props?.overrideHeight,
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
-    // Save-contact is a standalone single-step flow: the address is already saved on `done`,
-    // so finalize (next() on the last step closes the flow). The withdraw-flow path below
-    // instead calls prev() to return to the payment preview, which has no previous step here.
     if (props?.saveContact)
       return next()
 
-    // The NIM Address Step is a special step:
-    //   - if the address is ok, then we would go to the previous slide
-    //   - if the address is empty, then the user clicked "Scan QR code"
-
-    // Once the address is validated, go back to the previous step, which is the payment preview
     if (nimAddressInput) {
       if (!useApp().isNimiqAsset) {
         const { isValidEthAddress } = await import('@/lib/ethereum')
@@ -684,11 +622,10 @@ export const qrCodeDisplayStep: StepInit<{ stringToQr: string }> = async options
 export const transactionList: StepInit = async () => ({
   step: StepName.TransactionList,
   main: markRaw(TransactionList),
-  autofocus: false, // Don't autofocus on the search bar
+  autofocus: false,
 } satisfies Step)
 
 export const transactionDetail: StepInit = async () => {
-  // As refs to be reactive
   const tx = ref<ExternalTransaction>()
   const title = computed(() => (tx.value
     ? tx.value.merchantName || translateTransactionTitle(tx.value.title)
