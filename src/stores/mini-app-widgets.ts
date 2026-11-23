@@ -1,3 +1,4 @@
+import type { SavedWidget } from '@/lib/mini-app-widget-accounts'
 import type { WidgetChain } from '@/lib/mini-app-widget-chain'
 import type { FetchOutcome } from '@/lib/mini-app-widget-sources'
 import type {
@@ -15,6 +16,7 @@ import type {
   WidgetValue,
 } from '@/lib/mini-app-widgets'
 import type { NetworkMode } from '@/lib/network'
+import { KeychainAccess, SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, watch } from 'vue'
@@ -24,6 +26,7 @@ import { isTestnet } from '@/lib'
 import { sha256Hex } from '@/lib/crypto'
 import { hasMiniAppSession, isMiniAppActive } from '@/lib/mini-app-active'
 import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { accountKey, currentAccountKey, readSavedWidgets } from '@/lib/mini-app-widget-accounts'
 import { createWidgetChain, evaluateTrigger, needsLookup } from '@/lib/mini-app-widget-chain'
 import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
 import { fetchWidgetFile, fetchWidgetImage, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
@@ -128,6 +131,8 @@ const DOWNLOADS_AT_ONCE_PER_SITE = 3
 const IMAGE_RETRY_MS = 5 * 60_000
 const MAX_IMAGE_RETRY_MS = 6 * 60 * 60_000
 const WIDGETS_KEY = 'miniAppWidgets'
+// Read once per database: a widget whose removal was not saved must not come back on the next start.
+const RESTORED_KEY = 'miniAppWidgetsRestored'
 const IMAGE_FETCHES_KEY = 'miniAppWidgetImageFetches'
 const IMAGE_FAILURES_KEY = 'miniAppWidgetImageFailures'
 const imageKey = (id: string) => `miniAppWidgetImage:${id}`
@@ -149,6 +154,19 @@ const storedSerializer = {
     return REMOVED_VALUES_RE.test(raw) ? all.filter(widget => !REMOVED_VALUES_RE.test(JSON.stringify(widget))) : all
   },
   write: (all: HomeWidget[]) => JSON.stringify(all),
+}
+
+function toSaved(widget: HomeWidget): SavedWidget {
+  const { scope, widgetId, network, size, definition, grants, stopped, token, halted } = widget
+  return { scope, widgetId, network, size, definition, grants, stopped, connected: token || halted === 'reconnect' ? true : undefined, gone: halted === 'gone' ? true : undefined }
+}
+
+// The saved copy is input like any other: what does not fit Home is left out.
+function isSaved(raw: unknown): raw is SavedWidget {
+  const { scope, widgetId, network, size, definition, grants, stopped } = (raw ?? {}) as Partial<SavedWidget>
+  const strings = (list: unknown) => list === undefined || (Array.isArray(list) && list.every(item => typeof item === 'string'))
+  return typeof scope === 'string' && /^https?:\/\//.test(scope) && scope.endsWith('/') && !!safeOrigin(scope, '') && (network === 'mainnet' || network === 'testnet')
+    && typeof widgetId === 'string' && definition?.id === widgetId && Array.isArray(definition.sizes) && definition.sizes.includes(size!) && strings(grants) && strings(stopped)
 }
 
 function ungranted(widget: HomeWidget): WidgetPermission[] {
@@ -219,23 +237,111 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const network: NetworkMode = isTestnet ? 'testnet' : 'mainnet'
   // Home waits for the first read, so the empty state never flashes for someone who has widgets.
   const ready = ref(false)
-  // kv() so widgets clear on logout with the rest of the account.
+  // kv() so the list clears on logout with the rest of the account; each account's choices are saved apart, below.
   let lastRevision = Date.now()
+  let listRead = false
   let widgetsUnreadable = false
   const stored = useStorageAsync<HomeWidget[]>(WIDGETS_KEY, [], kv(), {
     writeDefaults: false,
     serializer: storedSerializer,
     onError(error) {
-      widgetsUnreadable ||= !ready.value
+      widgetsUnreadable ||= !listRead
       logger.warn('Could not read or store widgets', error)
     },
-    onReady(all) {
+    async onReady(all) {
+      listRead = true
       // Above every stored one, whatever the clock says, so that an answer under way never matches a later revision.
       lastRevision = Math.max(lastRevision, ...all.map(w => w.revision ?? 0))
+      if (!widgetsUnreadable)
+        await restoreForAccount()
       ready.value = true
       void keepImages()
     },
   })
+  // The account whose saved copy this list is written to, once it has been read.
+  const savedAs = ref<string>()
+  let saving = Promise.resolve()
+  // What the saved copy holds, once written.
+  let savedJson = ''
+  let saveFailed = false
+  // By reference: stringifying every definition at each change of the list would cost far more than the rare real change.
+  const savedList = computed<SavedWidget[]>((previous) => {
+    const list = stored.value.map(toSaved)
+    return list.length === previous?.length && list.every((w, i) => (Object.keys(w) as (keyof SavedWidget)[]).every(key => w[key] === previous[i]![key])) ? previous : list
+  })
+  watch([savedAs, savedList], saveForAccount)
+
+  function saveForAccount() {
+    const key = savedAs.value
+    if (!key)
+      return
+    const json = JSON.stringify(savedList.value)
+    saving = saving.then(async () => {
+      // Compared once the writes before it are done: a change undone meanwhile must still be written. A re-check copies a definition even when the file is unchanged.
+      if (key !== currentAccountKey() || json === savedJson)
+        return
+      await SecureStorage.set(key, JSON.parse(json), false, false, KeychainAccess.whenUnlockedThisDeviceOnly)
+      savedJson = json
+      saveFailed = false
+    }).catch((error) => {
+      // Tried again at each tick: a removal, or an address the user stopped sharing, must not come back at the next login.
+      saveFailed = true
+      logger.warn('Could not save the widgets of this account', error)
+    })
+  }
+
+  async function restoreForAccount() {
+    try {
+      const key = await accountKey()
+      if (await kv().getItem(RESTORED_KEY) == null) {
+        const at = Date.now()
+        const saved = await readSavedWidgets(key)
+        // Taken after the read, as a Mini App can add a widget meanwhile; Home's own come first within the limits.
+        const kept = [...stored.value]
+        const restored: HomeWidget[] = []
+        for (const raw of saved) {
+          const same = isSaved(raw) ? kept.filter(w => w.network === raw.network) : []
+          if (isSaved(raw) && !same.some(w => widgetKey(w.scope, w.widgetId) === widgetKey(raw.scope, raw.widgetId)) && same.length < WIDGET_LIMITS.widgetsOnHome
+            && same.filter(w => originOf(w.scope) === originOf(raw.scope)).length < WIDGET_LIMITS.widgetsPerMiniApp) {
+            restored.push(atRest(raw, at))
+            kept.push(restored.at(-1)!)
+          }
+        }
+        if (restored.length)
+          stored.value = [...restored, ...stored.value]
+        // The list first: with only the marker, this run's list would replace the saved copy.
+        if (!await saveWidgets() || !await Promise.resolve(kv().setItem(RESTORED_KEY, String(at))).then(() => true, () => false)) {
+          // Not restored after all, or a widget removed now would come back with the next restore.
+          const back = new Set(restored.map(w => w.revision))
+          stored.value = stored.value.filter(w => !back.has(w.revision))
+          return
+        }
+      }
+      savedAs.value = key
+    }
+    catch (error) {
+      logger.warn('Could not restore the widgets of this account', error)
+    }
+  }
+
+  function atRest({ scope, widgetId, network, size, definition, grants, stopped, connected, gone }: SavedWidget, at: number): HomeWidget {
+    return {
+      scope,
+      widgetId,
+      network,
+      size,
+      definition,
+      grants,
+      stopped,
+      definitionCheckedAt: 0,
+      failures: 0,
+      updatedAt: at,
+      revision: ++lastRevision,
+      refreshDueAt: definition.refresh && !gone ? at : undefined,
+      halted: gone ? 'gone' : connected ? 'reconnect' : undefined,
+    }
+  }
+
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
   // No refresh before the read: it would go past the budget, and its record would be overwritten by the read.
@@ -1150,6 +1256,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
   function tick(options: TickOptions = {}): Promise<void> {
+    if (saveFailed)
+      saveForAccount()
     if (!current) {
       current = step(options).finally(() => {
         current = undefined

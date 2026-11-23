@@ -53,7 +53,8 @@ vi.mock('@/stores/app', () => ({
         await storedRead.images
         return saved
       }
-      return memory.get(key) ?? null
+      // As kv() does: no row is undefined.
+      return memory.get(key)
     },
     setItem: async (key: string, value: string) => {
       if (key === storedRead.failingWrite)
@@ -84,6 +85,34 @@ vi.mock('@/stores/mini-apps', () => ({
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => nimiqNetwork }))
 vi.mock('@/lib/mini-app-widget-download', () => ({ canDownloadWidgets: () => downloader.available }))
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => flags }))
+const accounts = vi.hoisted(() => ({ key: 'account-a', saved: new Map<string, unknown[]>(), reads: 0, writes: [] as { key: string, widgets: Record<string, unknown>[], options: unknown[] }[], readError: undefined as Error | undefined, writeError: undefined as Error | undefined, identity: Promise.resolve() as Promise<unknown>, reading: Promise.resolve() as Promise<unknown>, writing: Promise.resolve() as Promise<unknown> }))
+vi.mock('@/lib/mini-app-widget-accounts', () => ({
+  accountKey: async () => {
+    await accounts.identity
+    return accounts.key
+  },
+  currentAccountKey: () => accounts.key,
+  readSavedWidgets: async (key: string) => {
+    accounts.reads++
+    const saved = structuredClone(accounts.saved.get(key) ?? [])
+    await accounts.reading
+    if (accounts.readError)
+      throw accounts.readError
+    return saved
+  },
+}))
+vi.mock('@aparajita/capacitor-secure-storage', async () => ({
+  ...await vi.importActual<typeof import('@aparajita/capacitor-secure-storage')>('@aparajita/capacitor-secure-storage'),
+  SecureStorage: {
+    set: async (key: string, widgets: Record<string, unknown>[], ...options: unknown[]) => {
+      await accounts.writing
+      if (accounts.writeError)
+        throw accounts.writeError
+      accounts.writes.push({ key, widgets: structuredClone(widgets), options })
+      accounts.saved.set(key, structuredClone(widgets))
+    },
+  },
+}))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 vi.mock('@/stores/polygon-usdt', () => ({}))
 vi.mock('@/stores/remote-signer', () => ({}))
@@ -158,6 +187,8 @@ beforeEach(() => {
   logged.mockClear()
   isMiniAppActive.value = false
   sessionStorage.clear()
+  Object.assign(accounts, { key: 'account-a', reads: 0, writes: [], readError: undefined, writeError: undefined, identity: Promise.resolve(), reading: Promise.resolve(), writing: Promise.resolve() })
+  accounts.saved.clear()
   fetchWidgetFile.mockReset()
   // The hourly re-check runs in any test that ticks past an hour.
   fetchWidgetFile.mockResolvedValue({ ok: false, error: 'offline', transient: true })
@@ -3405,5 +3436,291 @@ describe('discovery and gallery', () => {
     await store.discover('https://swap.example/')
     await flushPromises()
     expect(Object.keys(JSON.parse(memory.get('miniAppWidgetChecks')!)).sort()).toEqual(['https://new-miss.example/', 'https://old-found.example/', SCOPE])
+  })
+})
+
+describe('per account', () => {
+  const MARKER = 'miniAppWidgetsRestored'
+  // `@/lib` is mocked as mainnet.
+  const here = 'mainnet'
+  const elsewhere = 'testnet'
+  const saved = (extra: object = {}) => ({ scope: SCOPE, widgetId: 'swap', network: here, size: 'small', definition: definition({ refresh: { url: `${SCOPE}w`, every: 60 } }), grants: ['addresses'], stopped: [], ...extra })
+  const other = (extra: object = {}) => saved({ widgetId: 'other', definition: definition({ id: 'other', name: 'Other' }), grants: undefined, ...extra })
+
+  it('restores the account\'s widgets into a fresh database, at rest and asking nothing', async () => {
+    accounts.saved.set('account-a', [saved({ connected: true }), other({ size: 'medium', stopped: ['addresses'] }), saved({ network: elsewhere })])
+    const store = await setup()
+    expect(store.ready).toBe(true)
+    expect(store.widgets.map(w => [w.widgetId, w.size, w.grants, w.stopped])).toEqual([['swap', 'small', ['addresses'], []], ['other', 'medium', undefined, ['addresses']]])
+    const [swap] = store.widgets
+    expect(swap).toMatchObject({ definitionCheckedAt: 0, failures: 0, halted: 'reconnect', refreshDueAt: NOW })
+    expect(swap).not.toHaveProperty('state')
+    expect(swap).not.toHaveProperty('token')
+    expect(swap).not.toHaveProperty('pendingAppName')
+    expect(JSON.parse(memory.get('miniAppWidgets')!)).toHaveLength(3)
+    expect(memory.has(MARKER)).toBe(true)
+  })
+
+  it('is ready only once the account\'s widgets are in, waiting for the wallet', async () => {
+    const identity = deferred<void>()
+    accounts.identity = identity.promise
+    accounts.saved.set('account-a', [saved()])
+    const store = await setup()
+    expect(store.ready).toBe(false)
+    identity.resolve()
+    await flushPromises()
+    expect(store.ready).toBe(true)
+    expect(store.widgets).toHaveLength(1)
+  })
+
+  it('gives another account none, and leaves the first one\'s copy', async () => {
+    accounts.saved.set('account-a', [saved()])
+    accounts.key = 'account-b'
+    const store = await setup()
+    expect(store.widgets).toEqual([])
+    expect(accounts.saved.get('account-a')).toHaveLength(1)
+    expect(accounts.writes.every(({ key }) => key === 'account-b')).toBe(true)
+  })
+
+  it('reads the saved copy once per database', async () => {
+    memory.set(MARKER, String(NOW))
+    accounts.saved.set('account-a', [saved()])
+    const store = await setup()
+    expect(accounts.reads).toBe(0)
+    expect(store.widgets).toEqual([])
+  })
+
+  it('keeps a Home the user emptied empty after logging in again', async () => {
+    accounts.saved.set('account-a', [saved()])
+    const first = await setup()
+    first.remove(SCOPE, 'swap')
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toEqual([])
+    first.$dispose()
+    memory.clear()
+    const again = await setup()
+    expect(again.widgets).toEqual([])
+  })
+
+  it('restores nothing, sets no marker and saves nothing when the saved copy cannot be read', async () => {
+    accounts.readError = new Error('busy')
+    const store = await setup()
+    expect(store.ready).toBe(true)
+    expect(memory.has(MARKER)).toBe(false)
+    store.add(SCOPE, definition(), [])
+    await flushPromises()
+    expect(accounts.writes).toEqual([])
+  })
+
+  it('restores and saves nothing when this database\'s widgets cannot be read', async () => {
+    accounts.saved.set('account-a', [saved()])
+    storedRead.failingRead = 'miniAppWidgets'
+    const store = await setup()
+    expect(store.ready).toBe(true)
+    expect(accounts.reads).toBe(0)
+    expect(memory.has(MARKER)).toBe(false)
+    expect(accounts.writes).toEqual([])
+  })
+
+  it('keeps the list readable when a write fails during the restore', async () => {
+    accounts.saved.set('account-a', [saved()])
+    storedRead.failingWrite = 'miniAppWidgets'
+    const store = await setup()
+    storedRead.failingWrite = ''
+    expect(await store.update(SCOPE, 'swap', null)).toBe(true)
+  })
+
+  it('keeps a restored widget waiting for its token across another logout', async () => {
+    accounts.saved.set('account-a', [saved({ connected: true })])
+    await setup()
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toEqual([expect.objectContaining({ widgetId: 'swap', connected: true })])
+  })
+
+  it('sets no marker, saves nothing and shows nothing restored when the restored list could not be stored', async () => {
+    accounts.saved.set('account-a', [saved()])
+    storedRead.failingWrite = 'miniAppWidgets'
+    const store = await setup()
+    expect(store.ready).toBe(true)
+    expect(memory.has(MARKER)).toBe(false)
+    expect(accounts.writes).toEqual([])
+    expect(store.widgets).toEqual([])
+  })
+
+  it('takes the restored widgets back out when the marker could not be set, as the next start restores them', async () => {
+    accounts.saved.set('account-a', [saved()])
+    storedRead.failingWrite = MARKER
+    const store = await setup()
+    await flushPromises()
+    expect(store.widgets).toEqual([])
+    expect(JSON.parse(memory.get('miniAppWidgets') ?? '[]')).toEqual([])
+  })
+
+  it('adds a widget added during the read once', async () => {
+    const reading = deferred<void>()
+    accounts.reading = reading.promise
+    accounts.saved.set('account-a', [saved()])
+    const store = await setup()
+    store.add(SCOPE, definition(), [])
+    reading.resolve()
+    await flushPromises()
+    expect(store.widgets.map(w => w.widgetId)).toEqual(['swap'])
+  })
+
+  it('restores no more than Home and a Mini App may hold, Home\'s own first', async () => {
+    const many = (origin: string, count: number) => Array.from({ length: count }, (_, i) => saved({ scope: `https://${origin}.example/`, widgetId: `${origin}${i}`, definition: definition({ id: `${origin}${i}` }) }))
+    const first = await setup()
+    first.add('https://own.example/', definition({ id: 'own' }), [])
+    await flushPromises()
+    first.$dispose()
+    memory.delete(MARKER)
+    accounts.saved.set('account-a', [...many('a', 8), ...many('b', 8)])
+    const store = await setup()
+    const ids = store.widgets.map(w => w.widgetId)
+    expect(ids).toHaveLength(WIDGET_LIMITS.widgetsOnHome)
+    expect(ids).toContain('own')
+    expect(ids.filter(id => id.startsWith('a'))).toHaveLength(WIDGET_LIMITS.widgetsPerMiniApp)
+  })
+
+  it('keeps a widget its server ended ended', async () => {
+    accounts.saved.set('account-a', [saved({ gone: true })])
+    const store = await setup()
+    await flushPromises()
+    expect(store.widgets[0]).toMatchObject({ halted: 'gone' })
+    expect(store.widgets[0]!.refreshDueAt).toBeUndefined()
+    expect(accounts.saved.get('account-a')).toEqual([expect.objectContaining({ gone: true })])
+  })
+
+  it('leaves out saved entries that could not be a widget of Home', async () => {
+    accounts.saved.set('account-a', [
+      saved({ scope: 'data:x/' }),
+      saved({ widgetId: 'other', definition: definition({ id: 'other' }), grants: 'addresses' }),
+      saved({ widgetId: 'third', definition: definition({ id: 'third' }), stopped: [1] }),
+      null,
+      saved({ widgetId: 'kept', definition: definition({ id: 'kept' }) }),
+    ])
+    const store = await setup()
+    expect(store.widgets.map(w => w.widgetId)).toEqual(['kept'])
+  })
+
+  it('saves again at the next tick after a write failed, so a removal holds after a logout', async () => {
+    accounts.saved.set('account-a', [saved()])
+    accounts.writeError = new Error('locked')
+    const store = await setup()
+    store.remove(SCOPE, 'swap')
+    await flushPromises()
+    accounts.writeError = undefined
+    await store.tick({ chain: fakeChain(), at: NOW + 15_000 })
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toEqual([])
+  })
+
+  it('saves a removal made while the save of its adding was still under way', async () => {
+    const store = await setup()
+    await flushPromises()
+    const writing = deferred<void>()
+    accounts.writing = writing.promise
+    store.add(SCOPE, definition(), [])
+    await flushPromises()
+    store.remove(SCOPE, 'swap')
+    await flushPromises()
+    writing.resolve()
+    await flushPromises()
+    expect(accounts.saved.get('account-a')).toEqual([])
+  })
+
+  it('takes back only what it restored, not the same widget on the other network', async () => {
+    const first = await setup()
+    first.add(SCOPE, definition(), [])
+    await flushPromises()
+    first.$dispose()
+    memory.delete(MARKER)
+    accounts.saved.set('account-a', [saved({ network: elsewhere })])
+    storedRead.failingWrite = MARKER
+    const store = await setup()
+    await flushPromises()
+    expect(store.widgets.map(w => w.widgetId)).toEqual(['swap'])
+    expect(JSON.parse(memory.get('miniAppWidgets')!).map((w: { network: string }) => w.network)).toEqual([here])
+  })
+
+  it('saves on this device only, readable while it is unlocked', async () => {
+    const { KeychainAccess } = await import('@aparajita/capacitor-secure-storage')
+    const store = await setup()
+    store.add(SCOPE, definition(), [])
+    await flushPromises()
+    expect(accounts.writes.at(-1)!.options).toEqual([false, false, KeychainAccess.whenUnlockedThisDeviceOnly])
+  })
+
+  it('sets the marker without the saved copy, so a widget removed stays gone after a restart', async () => {
+    accounts.saved.set('account-a', [saved()])
+    accounts.writeError = new Error('keystore')
+    const first = await setup()
+    expect(memory.has(MARKER)).toBe(true)
+    first.remove(SCOPE, 'swap')
+    await flushPromises()
+    first.$dispose()
+    const again = await setup()
+    expect(again.widgets).toEqual([])
+  })
+
+  it('keeps a database from before as it is, and adds what is saved without doubling it', async () => {
+    const first = await setup()
+    first.add(SCOPE, definition(), [])
+    await flushPromises()
+    first.$dispose()
+    memory.delete(MARKER)
+    accounts.saved.set('account-a', [saved(), other()])
+    const store = await setup()
+    expect(store.widgets.map(w => [w.widgetId, w.size])).toEqual([['other', 'small'], ['swap', 'medium']])
+  })
+
+  it('saves the configuration only: not ticks, states or a token\'s value', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }), [])
+    await flushPromises()
+    const added = accounts.writes.length
+    expect(added).toBeGreaterThan(0)
+    await store.update(SCOPE, 'swap', live('Swap'))
+    await store.tick({ chain: fakeChain(), at: NOW + 1000 })
+    await flushPromises()
+    expect(accounts.writes).toHaveLength(added)
+    await store.setToken(SCOPE, 'swap', 'first-token')
+    await flushPromises()
+    const [connected] = accounts.writes.at(-1)!.widgets
+    expect(connected).toMatchObject({ connected: true })
+    expect(Object.keys(connected!)).not.toEqual(expect.arrayContaining(['token']))
+    expect(JSON.stringify(accounts.writes)).not.toContain('first-token')
+    const withToken = accounts.writes.length
+    await store.setToken(SCOPE, 'swap', 'second-token')
+    await flushPromises()
+    expect(accounts.writes).toHaveLength(withToken)
+    store.setSize(SCOPE, 'swap', 'small')
+    await flushPromises()
+    expect(accounts.writes).toHaveLength(withToken + 1)
+  })
+
+  it('saves nothing when the hourly re-check finds the same file', async () => {
+    const declared = definition()
+    const store = await setup()
+    store.add(SCOPE, declared, [])
+    await flushPromises()
+    const written = accounts.writes.length
+    fetchWidgetFile.mockResolvedValue({ ok: true, value: { widgets: [structuredClone(declared)] } })
+    vi.setSystemTime(NOW + 2 * 60 * 60_000)
+    await store.tick({ chain: fakeChain(), at: NOW + 2 * 60 * 60_000 })
+    await flushPromises()
+    expect(fetchWidgetFile).toHaveBeenCalled()
+    expect(accounts.writes).toHaveLength(written)
+  })
+
+  it('saves nothing once another account is unlocked', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition(), [])
+    await flushPromises()
+    const written = accounts.writes.length
+    accounts.key = 'account-b'
+    store.setSize(SCOPE, 'swap', 'small')
+    await flushPromises()
+    expect(accounts.writes).toHaveLength(written)
   })
 })
