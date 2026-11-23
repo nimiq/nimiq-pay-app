@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { useAsyncState } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { onMounted, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
@@ -36,6 +37,8 @@ async function handleDeletePointsAccount() {
 
   closeModal({ modal: selfModal })
 }
+
+const { isLoading: isDeleting, execute: deletePointsAccount } = useAsyncState(handleDeletePointsAccount, undefined, { immediate: false })
 </script>
 
 <template>
@@ -56,7 +59,7 @@ async function handleDeletePointsAccount() {
       {{ $t('Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold.') }}
     </p>
 
-    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base red-button" @click="handleDeletePointsAccount">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base red-button" :disabled="isDeleting" @click="deletePointsAccount()">
       <span>
         {{ $t('Delete Points Account') }}
       </span>

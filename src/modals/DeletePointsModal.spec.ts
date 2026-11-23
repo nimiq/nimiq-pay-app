@@ -72,6 +72,22 @@ describe('deletePointsModal', () => {
     expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
   })
 
+  it('ignores a second tap while the delete request is pending', async () => {
+    const wrapper = await mountModal()
+    const deleteButton = wrapper.find('button.red-button')
+
+    await deleteButton.trigger('click')
+    await deleteButton.trigger('click')
+
+    expect(deleteAccount).toHaveBeenCalledOnce()
+
+    resolveDelete({ success: true })
+    await flushPromises()
+
+    expect(setToast).toHaveBeenCalledOnce()
+    expect(closeModal).toHaveBeenCalledOnce()
+  })
+
   it('closes itself when X is tapped', async () => {
     const wrapper = await mountModal()
 
