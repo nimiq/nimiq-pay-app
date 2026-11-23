@@ -355,7 +355,7 @@ export function useNotifications() {
       }
       logger.log('🔔 Local notification tapped, opening tx detail', { hash })
       await waitForUnlock()
-      const tx = transactionsStore.transactions.find(t => t.hash === hash)
+      const tx = transactionsStore.transactions.find(t => t.hash === hash) ?? await transactionsStore.getStoredTransaction(hash)
       if (!tx) {
         logger.log('🔔 Tx hash not found in store, cannot open detail', { hash })
         return
