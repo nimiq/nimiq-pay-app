@@ -68,7 +68,6 @@ watchEffect(() => {
           }
           catch (e) {
             logger.error((e as Error).message)
-            // TODO: error handling
             isAlreadyClaimed.value = true
           }
         }
@@ -109,7 +108,6 @@ async function handleSubmit() {
         errorMsg.value = i18n.t('Wrong answer')
       return
     }
-    // Video playing will return in-progress
     if (task_status === 'in-progress')
       return
   }
@@ -131,7 +129,6 @@ async function handleSubmit() {
           {{ (task.reward_amount / 1e5).toLocaleString() }}
         </template>
       </i18n-t>
-      <!-- Text Input -->
       <!-- Not self-closing: the i18n extractor would skip the rest of the template (see AGENTS.md) -->
       <!-- eslint-disable vue/html-self-closing -->
       <textarea
@@ -142,7 +139,6 @@ async function handleSubmit() {
         @focus="errorMsg = ''"
       ></textarea>
       <!-- eslint-enable vue/html-self-closing -->
-      <!-- Radio Input -->
       <IonRadioGroup
         v-else-if="type === 'question'"
         @ion-change="{ errorMsg = ''; radioValueChecked = $event.detail.value }"
@@ -153,7 +149,6 @@ async function handleSubmit() {
           </p>
         </IonRadio>
       </IonRadioGroup>
-      <!-- Video -->
       <div
         v-else-if="type === 'yt-video'"
         id="yt-player"
@@ -164,8 +159,6 @@ async function handleSubmit() {
     <p v-if="errorMsg" class="text-center text-pumpkin">
       {{ errorMsg }}
     </p>
-    <!-- Margin Top needed when the text area is focused, this causes the button to be too close to the text area leaving no space.
-      With the margin top it leaves some space to click safely in either the text area or the button -->
     <IonButton class="self-end w-full mt-8" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
       {{ $t('Submit') }}
     </IonButton>

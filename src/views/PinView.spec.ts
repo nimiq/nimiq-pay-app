@@ -66,20 +66,16 @@ let wrapper: VueWrapper
 
 async function mountPinView() {
   const { default: PinView } = await import('./PinView.vue')
-  // Attached so focus assertions can read document.activeElement.
   wrapper = mount(PinView, { attachTo: document.body, global: { mocks: { $t: (s: string) => s } } })
   await flushPromises()
 }
 
-// Types into PinInput's own input, so its done emit and loading state run as on device.
 async function typePin(pin = '1111') {
-  // Let PinInput's delayed clearInput() run first, otherwise the same value doesn't re-trigger done.
   await vi.advanceTimersByTimeAsync(300)
   await wrapper.find('input').setValue(pin)
   await flushPromises()
 }
 
-// Same done emit a biometric result produces while a typed PIN is still unlocking.
 async function emitDone(pin = '1111') {
   wrapper.findComponent(PinInput).vm.$emit('done', pin)
   await flushPromises()
@@ -135,7 +131,6 @@ describe('pinView', () => {
     expect(state.decrypt).toHaveBeenLastCalledWith('1111')
     expect(state.replace).toHaveBeenCalledTimes(1)
 
-    // The timed-out attempt finishing late must not navigate or show its error.
     wrong.resolve('Invalid PIN')
     await flushPromises()
     expect(state.replace).toHaveBeenCalledTimes(1)
@@ -180,7 +175,6 @@ describe('pinView', () => {
     await typePin()
 
     expect(state.launchMiniApp).not.toHaveBeenCalled()
-    // Closed here, not left to the link: a Lightning link would otherwise orphan the hidden webview.
     expect(state.clearSession).toHaveBeenCalledOnce()
     expect(state.closeActiveMiniApp).toHaveBeenCalledOnce()
     expect(state.replace).toHaveBeenCalledWith('/app')
@@ -208,7 +202,6 @@ describe('pinView', () => {
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)
     expect(document.activeElement).toBe(wrapper.find('input').element)
 
-    // Retry before PinView's 2s timer resets errorMsg, so the message is identical.
     await typePin()
     expect(state.decrypt).toHaveBeenCalledTimes(2)
     expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(false)

@@ -11,8 +11,6 @@ import { useLogger } from '@/composables/useLogger'
 import { useSharedPinInput } from '@/composables/useSharedPinInput'
 import { stepEmits } from '@/lib/flows/steps.types'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
@@ -31,21 +29,15 @@ const emit = defineEmits(stepEmits)
 const logger = useLogger('PinInput')
 const { updateBiometryInfo, addBiometricResumeListener, removeBiometricResumeListener, getPinFromSecureStorage, isBiometricEnabled, isBiometricSupported, BiometryErrorType } = useBiometric()
 const inputRef = ref<HTMLInputElement | null>(null)
-// Focus state of the standalone local input; flow steps derive focus from isActive (see isInputFocused).
 const localFocused = ref(false)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 const isLoading = ref(false)
-// Delay the spinner so a fast result (wrong PIN) doesn't blur the input and flash the keyboard.
 const LOADING_DELAY = 500
 let loadingTimer: number | undefined
 const customError = ref('')
 
-// Flow steps (which pass a stepName) share a single hidden <input> so focus never has to hand off between the
-// enter-PIN and confirm-PIN slides. Standalone usages keep their own local <input> (rendered below).
 const isFlowStep = !!props.stepName
-// Drives the dot bounce animation: flow steps have no local input, so focus tracks isActive; standalone tracks
-// the local input's focus/blur.
 const isInputFocused = computed(() => (isFlowStep ? !!props.isActive : localFocused.value))
 const sharedPin = useSharedPinInput()
 const receiver: PinReceiver = {
@@ -59,8 +51,6 @@ const receiver: PinReceiver = {
 if (isFlowStep)
   sharedPin.register(receiver)
 
-// Route the shared input to whichever step is active. isActive is set synchronously on navigation (step ===
-// activeStep), so it never depends on the IntersectionObserver and can't leave input permanently blocked.
 watch(() => props.isActive, (isActive) => {
   if (!isFlowStep)
     return
@@ -83,9 +73,6 @@ watch(pinCodeInput, async (pin) => {
       }, LOADING_DELAY)
     }
 
-    // Clear input when component is invisible, this will allow to clear the input without the user seeing it
-    // and when the users goes back to this component, the input will be empty.
-    // Only do this if the stepName is defined, as this is a step in a flow, and not a standalone component.
     if (props.stepName && !props.errorMsg) {
       await until(() => props.isScrolling).toBe(true, { timeout: 1000 })
       await until(() => props.isScrolling).toBe(false, { timeout: 1000 })
@@ -102,7 +89,6 @@ watch(() => props.errorMsg, (msg) => {
     }, 300)
     window.clearTimeout(loadingTimer)
     isLoading.value = false
-    // Loading blurred the standalone input; refocus so the user can retype without tapping.
     inputRef.value?.focus()
     clearInput()
     customError.value = msg
@@ -117,8 +103,6 @@ watch(isLoading, (loading) => {
 
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement
-  // Standalone-only local input. Ignore keystrokes during the error wiggle and reset the DOM value so a
-  // stray tap can't leak into the next accepted keystroke.
   if (wiggle.value) {
     target.value = pinCodeInput.value
     return
@@ -134,7 +118,6 @@ function focusInput() {
 }
 
 function handleInputClick(i: number) {
-  // Editing pinCodeInput triggers the watcher above, which pushes the change to the shared input via syncValue.
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
   focusInput()
@@ -198,7 +181,6 @@ onBeforeUnmount(() => {
       {{ customError }}
     </p>
   </div>
-  <!-- Standalone usages keep a local input; flow steps use the shared hidden input (useSharedPinInput). -->
   <input
     v-if="!stepName"
     ref="inputRef" type="password" inputmode="numeric" class="caret-transparent sr-only" pattern="[0-9]*"

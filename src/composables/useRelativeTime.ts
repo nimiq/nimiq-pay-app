@@ -3,7 +3,6 @@ import { computed, getCurrentScope, onScopeDispose, ref, toValue, watchEffect } 
 import { useApp } from '@/stores/app'
 import { toMs } from './useTime'
 
-// Formatter for current language.
 const timeFormatter = computed(() => new Intl.RelativeTimeFormat(useApp().language, { numeric: 'auto' }))
 
 type Unit = Intl.RelativeTimeFormatUnitSingular
@@ -18,14 +17,10 @@ const DEFAULT_UNITS: { unit: Unit, max: number, unitMs: number }[] = [
 ]
 
 export interface UseRelativeTimeOptions {
-  /**
-   * The timestamp to format. In ms or s. Reactive if passed as a ref.
-   * @default time when useRelativeTime was called, if timestamp is undefined or 0.
-   */
   timestamp?: MaybeRef<number | undefined>
 }
 export function useRelativeTime({ timestamp: timestampMsOrS }: UseRelativeTimeOptions = {}) {
-  const defaultTime = Date.now() // Default to time when useRelativeTime was called, if timestamp is undefined or 0
+  const defaultTime = Date.now()
   const timestamp = computed(() => toMs(toValue(timestampMsOrS) || defaultTime))
 
   const formatted = ref('')
@@ -38,27 +33,8 @@ export function useRelativeTime({ timestamp: timestampMsOrS }: UseRelativeTimeOp
 
     clearTimeout(updateTimeout)
     if (['second', 'minute', 'hour', 'day'].includes(unit)) {
-      // Schedule next update to be shortly after when we should be rounding to the next number (i.e. to the earliest
-      // time the number is changing).
-      // Note that the next rounding point would in terms of absolute value depend on whether the time diff is negative
-      // or positive, it does however not differ when not working with absolute values, in the sense of in which
-      // direction the next rounding point is: as the next rounding point is in the future, and Date.now() is subtracted
-      // in diff, the diff gets smaller regardless of whether diff is/was positive or negative. For illustration:
-      // - If the timestamp is 4.2 seconds in the past, diff is -4200, rounded to "4 seconds ago" (represented in
-      //   roundedToUnitsMs below), and rounding to "5 seconds ago" begins at <=-4500 (called roundingPoint below),
-      //   i.e. in >=300ms (called timeToRoundingPoint below).
-      // - If the timestamp is 4.2 seconds in the future, diff is 4200, rounded to "in 4 seconds" (represented in
-      //   roundedToUnitsMs below), and rounding to "in 3 seconds" begins at <3500 (called roundingPoint below),
-      //   i.e. in >700ms (called timeToRoundingPoint below).
-      // To cover both, the >= for negative diff, and > for positive diff, we simply add a small fixed value of 10 to
-      // get the final wait time (called waitTime below).
       const roundedToUnitsMs = Math.round(diff / unitMs) * unitMs
-      // The point where rounding changes the formatted result next time in the future, is in the middle of the unit
-      // (unitMs / 2). As Date.now() is subtracted in diff, the diff becomes smaller in the future, which is why the
-      // half unit needs to be subtracted here.
       const roundingPoint = roundedToUnitsMs - unitMs / 2
-      // timeToRounding point is the delta or distance in time between current diff and roundingPoint. As roundingPoint
-      // is smaller than diff as it's in the future (see above), no Math.abs() is required here.
       const timeToRoundingPoint = diff - roundingPoint
       const waitTime = timeToRoundingPoint + 10
       updateTimeout = window.setTimeout(updateRelativeTime, waitTime)

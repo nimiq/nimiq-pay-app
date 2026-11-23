@@ -16,11 +16,6 @@ export function useCameraFeed(cameraFeedContainer: Ref<HTMLElement>) {
 function useCameraFeedMobile() {
   const hasPermission = ref(false)
 
-  /**
-   * The camera feed is displayed behind the WebView. This function will open a "hole" in the WebView to display the camera feed.
-   * First, we make a hole in the Modal and then we make the main view invisible.
-   * To fake the modal, we create an huge white outline around the hole and make the element inside transparent.
-   */
   async function setUpCameraFeed() {
     const { Camera } = await import('@capacitor/camera')
 
@@ -30,7 +25,6 @@ function useCameraFeedMobile() {
   }
 
   async function tearDownCameraFeed() {
-    // Nothing to do.
   }
 
   return {
@@ -48,7 +42,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
   function getVideoElement() {
     const video = cameraFeedContainer.value.querySelector('video')
     if (!video)
-      throw new Error('There is no video element in the cameraFeedContainer') // no translation as not user-facing text
+      throw new Error('There is no video element in the cameraFeedContainer')
     return video as HTMLVideoElement
   }
 
@@ -60,7 +54,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
         video: {
           width: 512,
           height: 512,
-          facingMode: 'environment', // Select the back camera
+          facingMode: 'environment',
         },
       })
       hasPermission.value = true

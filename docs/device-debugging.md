@@ -22,7 +22,7 @@ The sync/transactions/remote-signer paths emit emoji-prefixed events at every si
 |---|---|
 | `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransactions` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
 | `grep -E "♻️.*replacing"` | `addTransactions` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
-| `grep -E "🧹 filterDisplayableTxs dropped"` | Read-side filter (`selectTxs` / `refreshFromDb`) removed an own-HTLC `UserReceipt` already in DB. Lists hashes. |
+| `grep -E "🧹 filterDisplayableTxs dropped"` | Read-side filter (`refreshFromDb`) removed an own-HTLC `UserReceipt` already in DB. Lists hashes. |
 | `grep -E "🧹 filterUnseen"` | Recursive HTLC traversal filter dropped reclaim-to-local txs and dup hashes. Tags origin as `outer:<addr>` or `nested:<addr>`. |
 | `grep -E "📦 categorize"` | Per-remote-signer bucket distribution from `categorizeTransactions` (htlcExt/swap/withdraw/staking/unknown counts). Sanity-check whether traversal is finding what you expect. |
 | `grep -E "💸 toUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by remote-signer history sync. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |

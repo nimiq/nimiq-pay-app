@@ -23,16 +23,10 @@ const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
 const errorMsg = ref('')
 
-// Each unlock phase must finish within this window; a hang past it surfaces a visible error
-// instead of a silently stuck PIN screen. Generous so slow devices / DB migrations don't trip it.
 const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
 
-// Biometric and manual entry can both emit done, so a second submit must not start while one runs.
 let isSubmitting = false
 
-// Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
-// title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
-// stealing the pointermove — can't cancel it (the old 3s + default threshold was unreliable).
 const titleRef = ref<HTMLElement | null>(null)
 onLongPress(titleRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
@@ -40,13 +34,9 @@ async function handleSubmit(pin: string) {
   if (pin.length < 4 || isSubmitting)
     return false
   isSubmitting = true
-  // Reset so a repeated identical error still reaches PinInput's watcher and clears its spinner.
   errorMsg.value = ''
 
   logger.log('🔓 handleSubmit: PIN submitted', { length: pin.length })
-  // Anything that throws OR hangs here (decrypt, mini-app reconnect, navigation) must surface as a
-  // visible, recoverable error — otherwise the failure is swallowed and the user is left silently
-  // stuck on the PIN screen. Each phase is timeout-guarded so a hang cannot wedge the screen.
   try {
     logger.log('🔓 handleSubmit: decrypt start')
     const error = await promiseWithTimeout(decrypt(pin), UNLOCK_PHASE_TIMEOUT)
@@ -66,8 +56,6 @@ async function handleSubmit(pin: string) {
     sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
     const session = getSession()
     if (session && deferredDeepLink) {
-      // A deeplink held across the resume reload replaces the hidden Mini App. Close it here
-      // rather than in the link's launch: the link may not open a Mini App (Lightning, declined prompt).
       await clearSession()
       await closeActiveMiniApp().catch(() => {})
     }
@@ -135,7 +123,6 @@ function shown() {
 
 onMounted(async () => {
   if (!dbExists.value) {
-    // No wallet — clear any stale session and close orphaned webview
     await clearSession()
     void closeActiveMiniApp().catch(() => {})
     router.replace('/setup')
@@ -144,7 +131,6 @@ onMounted(async () => {
     router.replace('/app')
   }
   else {
-    // PIN screen shown — only close webview if there's no pending session to preserve
     if (!hasPendingSession())
       void closeActiveMiniApp().catch(() => {})
   }

@@ -10,27 +10,18 @@ import { useConn } from '@/stores/conn'
 
 const logger = useLogger('useDecrypt')
 
-// Must be defined outside the useDecrypt scope, to be shared between calls
 const decrypted = ref(false)
-// Tail of the decrypt queue. A PIN re-submit after a UI timeout or a biometric autofill can land
-// while one is running; a second run would close the db under the first and race its open.
 let decrypting: Promise<unknown> = Promise.resolve()
 
-/**
- * Once the db is initialized, the database needs to be decrypted to make operations on it
- *
- * We need to decrypt the db on mobile, but on web we fake it
- */
 export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
   const { isOpen } = storeToRefs(useConn())
   const { pinHash } = storeToRefs(useApp())
 
-  // No encryption on web, but we simulate PIN requirement
   async function decryptWeb(inputPin: string, inputHash: string): Promise<Option<string>> {
     if (!isWeb)
-      throw new Error('This method is not supported in mobile.') // no translation as not user-facing
+      throw new Error('This method is not supported in mobile.')
 
     if (!isOpen.value)
       await openDb()
@@ -47,10 +38,9 @@ export function useDecrypt() {
 
   async function decryptMobile(pin: string): Promise<Option<string>> {
     if (isWeb)
-      throw new Error('This method is not supported in web.') // no translation as not user-facing
+      throw new Error('This method is not supported in web.')
 
     logger.log('🔑 decryptMobile: entry', { isOpen: isOpen.value })
-    // FIXME try to do this without closing the db
     if (isOpen.value) {
       logger.log('🔑 decryptMobile: closing existing db')
       await closeDb()
@@ -84,16 +74,8 @@ export function useDecrypt() {
     }
   }
 
-  /**
-   * Decrypts the database with the pin. If the database has been created but not encrypted yet, it will encrypt it.
-   *
-   * @param pin
-   * @returns An error message if there was an error, undefined otherwise
-   */
   async function decrypt(pin: string): Promise<Option<string>> {
     logger.log('🔓 decrypt: entry')
-    // Queue rather than share: a later call may carry a different PIN, so it only reuses a success.
-    // Chained on the real run, not a caller's timeout wrapper, since promiseWithTimeout doesn't cancel.
     const run = decrypting.catch(() => {}).then(async (): Promise<Option<string>> => {
       const inputHash = sha256Hex(pin)
       if (decrypted.value) {
@@ -113,8 +95,6 @@ export function useDecrypt() {
       logger.log('🔓 decrypt: setEntropy done')
       updatePinInputTs()
 
-      // One-time (APP-171): fold aliased top-up entries into withdrawal history, drop the rest.
-      // Guarded so a migration failure never blocks unlock.
       try {
         await migrateTopUpAddresses()
       }
@@ -131,16 +111,6 @@ export function useDecrypt() {
     return run
   }
 
-  /**
-   * Resets the decrypted state and the pin hash. This is useful when the user reset the password.
-   *
-   * For example, in the setup flow, the user can go do:
-   *   1. pin code & pin code confirm
-   *   2. Once in the phon input step, click 'back'
-   *   3. Redo the whole flow
-   *
-   * In this case, we need to reset the state of this composable to make it work
-   */
   function reset() {
     decrypted.value = false
     pinHash.value = ''
@@ -157,7 +127,6 @@ export function useDecrypt() {
       logger.error(e)
       ok = false
     }
-    // Reopen even if the rekey failed (with the still-stored old secret), or queries wait forever.
     try {
       await openDb()
     }
@@ -172,7 +141,7 @@ export function useDecrypt() {
 
   function hasPin() {
     if (!isWeb)
-      throw new Error('This method is not supported in mobile.') // no translation as not user-facing
+      throw new Error('This method is not supported in mobile.')
     return useApp().pinHash !== ''
   }
 

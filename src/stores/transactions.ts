@@ -1,7 +1,6 @@
 import type { Transaction as NimiqTransaction, PlainTransactionDetails } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
-import type { DbPagination } from '@/lib/sql-queries'
 import type { WalletContext } from '@/stores/remote-signer'
 import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
@@ -14,7 +13,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
-import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
+import { SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
 import { waitForSwapPreimage } from '@/lib/swap-preimage'
 import { startSwapSettlement, startSwapStep, trackFundingProof } from '@/lib/swap-telemetry'
 import { getSignedTx, toAccountType } from '@/lib/tx'
@@ -68,16 +67,12 @@ export function getSwapHtlcKey(tx: Pick<ExternalTransaction, 'chain' | 'hash' | 
 }
 
 export enum TransactionListState {
-  // There are no transactions to show
   Empty = 'empty',
 
-  // Showing the transactions that are in the database
   Showing = 'showing',
 
-  // There are transaction in the database, but the search query does not match any of them
   NoResults = 'no-results',
 
-  // There are transactions in the database, and the search query matches some of them
   ShowingResults = 'showing-results',
 }
 
@@ -103,13 +98,6 @@ export const useTransactions = defineStore('transactions', () => {
 
   const transactions = shallowRef<ExternalTransaction[]>([])
 
-  /**
-   * Select transactions from the database using a basic pagination system. Loads the newest transactions first.
-   * If you need to load more transactions, use loadMoreTxs.
-   */
-  // UserReceipts whose sender is one of our remote-signer HTLCs are drains, not real Top-Ups —
-  // mis-recording them as receipts would bump the original deposit to the top of the home list with
-  // a recent (drain block) timestamp. Foreign HTLC senders (other Nimiq Pay users paying us) stay.
   async function filterDisplayableTxs<T extends Pick<ExternalTransaction, 'transfer' | 'sender' | 'hash'>>(txs: T[]): Promise<T[]> {
     const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
     const dropped: string[] = []
@@ -125,23 +113,7 @@ export const useTransactions = defineStore('transactions', () => {
     return result
   }
 
-  async function selectTxs(options?: DbPagination) {
-    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactionsByAsset, [activeAsset.value, options?.limit || DEFAULT_LIMIT, options?.offset || 0])
-    const filteredTxs = await filterDisplayableTxs(txs)
-
-    // Convert JSON strings to objects
-    txs.forEach((tx) => {
-      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
-      tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
-    })
-
-    // Hash and status only: full rows repeat the whole page on every refresh. filterDisplayableTxs logs what it dropped.
-    logger.log(`📚 Selected ${txs.length} transactions, ${filteredTxs.length} displayable`, filteredTxs.map(tx => `${tx.hash}:${tx.status}`))
-    return filteredTxs
-  }
-
   function getUpsertTxValues(tx: Transaction) {
-    // Store the untranslated title so it follows the user's current language at display time.
     return [
       tx.hash,
       tx.timestamp,
@@ -190,14 +162,11 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
   }
 
-  // One native call and one SQL transaction per chunk instead of one per tx.
   // executeSet rolls back the whole chunk when one row fails, so retry its rows one by one to keep the valid ones.
-  // Returns the txs that were written.
   async function upsertTxs<T extends Transaction>(txs: T[]): Promise<T[]> {
     logger.log(`📚 Upsert-ing ${txs.length} transactions`, txs.map(tx => tx.hash))
     const written: T[] = []
     let firstError: unknown
-    // Chunks keep each native bridge message bounded when a remote signer returns thousands of txs.
     for (let start = 0; start < txs.length; start += UPSERT_CHUNK_SIZE) {
       const chunk = txs.slice(start, start + UPSERT_CHUNK_SIZE)
       try {
@@ -218,7 +187,6 @@ export const useTransactions = defineStore('transactions', () => {
           logger.error(`📚 Upsert-ing transaction ${tx.hash} failed`, result.reason)
       })
     }
-    // Nothing written (e.g. DB locked): fail like a single write would.
     if (txs.length && !written.length)
       throw firstError
     return written
@@ -230,7 +198,6 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function clearTxHistory() {
     await run(SQLQuery.ClearTxHistory)
-    // Also reset Polygon history scan state so the next sync re-scans all blocks
     const { usePolygonUsdt } = await import('@/stores/polygon-usdt')
     await usePolygonUsdt().resetHistoryState()
   }
@@ -429,8 +396,6 @@ export const useTransactions = defineStore('transactions', () => {
     finally {
       syncState.pendingPaymentTransactions = []
       isSendingTx.value = false
-      // Lightning settlement can take until the HTLC expires. Funds already moved, so other sends and
-      // reclaims may run; callers without onSubmitted still wait until settlement ends.
       if (!onSubmitted)
         await swapSettlement
     }
@@ -754,7 +719,6 @@ export const useTransactions = defineStore('transactions', () => {
           catch (error) {
             canClearPending = false
             logger.error('Failed to activate included HTLC signer', error, { transactionHash: staged.tx.hash })
-            // The error message goes out with the logger.error report above.
             syncState.reportFundsBlocked('activation_failed', { tx_hash: staged.tx.hash, transfer: partialTx.transfer })
           }
         }
@@ -801,7 +765,6 @@ export const useTransactions = defineStore('transactions', () => {
         }
         else if (
           remoteSigner.isWalletContextCurrent(sendContext)
-          // Remove-stake is paid from the stake, not the HTLC
           && staged.tx.sender === remoteSigner.remoteAddress?.toUserFriendlyAddress()
           && staged.tx.transfer !== Transfer.LocalToRemote
           && staged.tx.transfer !== Transfer.ExtendRemote
@@ -815,7 +778,6 @@ export const useTransactions = defineStore('transactions', () => {
       if (!remoteSigner.isWalletContextCurrent(sendContext))
         return staleContextResult(i18n.t('Wallet or network changed before sending'))
 
-      // Let Mini Apps return at confirmed NIM submission while swap settlement continues below.
       await onSubmitted?.(staged.tx.hash)
 
       if (patchedSwap && swapContext) {
@@ -832,15 +794,12 @@ export const useTransactions = defineStore('transactions', () => {
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            // The preimage proves payment; bookkeeping failures below must not change its settlement outcome.
             settlement.end(source)
             trackSwapCompleted({
               swap_duration_ms: Date.now() - swapStartedAt,
               asset: Asset.NIM,
             })
-            // Update only the swap result; other writers may have changed the row while settlement was pending.
             const storedTx = await setSwapPreimage(staged.tx.hash, secret)
-            // A removed row is recreated, or the secret would be lost once the swap bookkeeping is deleted below.
             if (!storedTx)
               await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
@@ -883,14 +842,7 @@ export const useTransactions = defineStore('transactions', () => {
   const activeAssetTransactions = computed(() => transactions.value.filter(tx => (tx.asset || Asset.NIM) === activeAsset.value))
   const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch(activeAssetTransactions)
 
-  /**
-   * Reload transactions from DB, merging with any in-memory transactions
-   * that might not have been persisted yet (e.g. pending transactions).
-   * This ensures the in-memory list stays in sync with the database.
-   */
   async function refreshFromDb() {
-    // `transactions` is exported readonly, so mock injection must happen inside the store.
-    // This covers boot hydration (immediate watch below), asset switches and pull-to-refresh.
     if (isMockEnabled) {
       const { getMockTransactions } = await import('@/lib/mock-data')
       transactions.value = getMockTransactions()
@@ -905,7 +857,6 @@ export const useTransactions = defineStore('transactions', () => {
       tx.executionResult = transactions.value.find(existing => existing.hash === tx.hash && existing.status === tx.status)?.executionResult
     })
     const knownHashes = new Set(dbTxs.map(tx => tx.hash))
-    // Keep any in-memory transactions not yet in DB (e.g. just-added pending txs)
     const memoryOnlyTxs = activeAssetTransactions.value.filter(tx => !knownHashes.has(tx.hash))
     transactions.value = [...dbTxs, ...memoryOnlyTxs].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
@@ -916,13 +867,10 @@ export const useTransactions = defineStore('transactions', () => {
     await refreshFromDb()
   }, { immediate: true })
 
-  // Resolves true only when every receipt that should be stored was written and published.
   async function addReceiptTransactions(txs: UserReceiptTransaction[], expectedContext?: WalletContext) {
     const context = expectedContext ?? remoteSigner.getWalletContext()
-    // Polygon receipts can arrive before a Nimiq client exists.
     if (context && !remoteSigner.isWalletContextCurrent(context))
       return false
-    // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
     const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
     const receipts = txs.filter((tx) => {
       if (tx.senderType !== Nimiq.AccountType.HTLC || !ourSigners.has(tx.sender))
@@ -941,7 +889,6 @@ export const useTransactions = defineStore('transactions', () => {
     return written.length === receipts.length
   }
 
-  // Resolves true only when every tx was written.
   async function saveTransactions(txs: ExternalTransaction[]) {
     if (!txs.length)
       return true
@@ -979,7 +926,6 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
-    // Merge persisted state before the hash update removes a conflicting replacement row.
     const statements: Parameters<typeof runSet>[0] = [
       { statement: SQLQuery.MergeReplacementTxState, values: [newHash, newHash, newHash, newHash, oldHash] },
       { statement: SQLQuery.UpdateTxHash, values: [newHash, oldHash] },
@@ -1026,10 +972,8 @@ export const useTransactions = defineStore('transactions', () => {
       executionResult: tx.executionResult,
       timestamp: tx.timestamp,
       validityStartHeight: tx.validityStartHeight,
-      title: 'Payment', // translated at display time
+      title: 'Payment',
       fee: tx.fee,
-      // proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
-      // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
       proofSize: remoteSigner.remoteProofSize,
       isCashbackClaimed: true,
       merchantName: '',
@@ -1072,12 +1016,9 @@ export const useTransactions = defineStore('transactions', () => {
     addTransactions([tx])
   }
 
-  // Merges a whole batch with one list update and one sort: history sync can add thousands of txs.
   function addTransactions(txs: ExternalTransaction[]) {
     if (!txs.length)
       return
-    // Same hash can arrive via multiple paths (incoming-tx listener + recursive HTLC traversal +
-    // periodic refresh) — replace any existing entry instead of stacking duplicates.
     const incoming = new Map(txs.map(tx => [tx.hash, tx]))
     const others: ExternalTransaction[] = []
     for (const existing of transactions.value) {
@@ -1092,7 +1033,6 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  // An array is written with one native call and merged with one sort: periodic refreshes can update many txs.
   async function updateTransactionStatus(input: TransactionStatusUpdate | TransactionStatusUpdate[]) {
     const updates = Array.isArray(input) ? input : [input]
     if (!updates.length)
@@ -1144,19 +1084,16 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function setSwapHtlcRefunded(htlcAddress: string) {
-    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
     await run(SQLQuery.SetSwapTxRefundedByHtlc, [htlcAddress])
     mergeLoadedTxMeta(tx => tx.recipient === htlcAddress, { refunded: true })
   }
 
-  // Loaded rows are plain objects in a shallowRef, so replace them to re-run the list computeds.
   function mergeLoadedTxMeta(matches: (tx: ExternalTransaction) => boolean, meta: Record<string, unknown>) {
     if (transactions.value.some(matches))
       transactions.value = transactions.value.map(tx => matches(tx) ? { ...tx, meta: { ...tx.meta, ...meta } } : tx)
   }
 
   async function setSwapPreimage(txHash: string, secret: string) {
-    // A replacement may rename this hash while Fastspot is resolving; never recreate the old row.
     await run(SQLQuery.SetSwapPreimage, [secret, txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (storedTx && transactions.value.some(tx => tx.hash === txHash))
@@ -1165,7 +1102,6 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function setPolygonSwapHtlcRefunded(txHash: string) {
-    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
     await run(SQLQuery.SetTxRefunded, [txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (!storedTx)
@@ -1180,8 +1116,6 @@ export const useTransactions = defineStore('transactions', () => {
     return true
   }
 
-  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). The flag lives in tx.meta;
-  // transactionsToShow filters it out unless the dev-menu reveal toggle is on.
   async function setTxHidden(hash: string, hidden: boolean) {
     if (!transactions.value.some(tx => tx.hash === hash))
       return
@@ -1224,7 +1158,6 @@ export const useTransactions = defineStore('transactions', () => {
     clearTxHistory,
     refreshFromDb,
 
-    // Search for transactions
     transactionsToShow: computed(() => {
       const base = searchQuery.value ? filteredTransactions.value : activeAssetTransactions.value
       if (showHiddenTransactions.value)
@@ -1237,19 +1170,5 @@ export const useTransactions = defineStore('transactions', () => {
     searchQuery,
 
     status,
-
-    // Function to run when the user scrolls to the bottom of the list
-    loadMoreTxs: async () => {
-      const nextTransactions = await selectTxs({ offset: activeAssetTransactions.value.length })
-      const knownHashes = new Set(activeAssetTransactions.value.map(tx => tx.hash))
-      const newTransactions = nextTransactions.filter(tx => !knownHashes.has(tx.hash))
-      if (newTransactions.length)
-        transactions.value = [...transactions.value, ...newTransactions]
-      return newTransactions.length
-    },
-
-    // A function that returns true if there are more transactions to load
-    // FIXME: This is not exactly true, because if there is exactly DEFAULT_LIMIT transactions, it will return true, but there are no more transactions to load
-    canLoadMore: () => (isMockEnabled || searchQuery.value) ? false : activeAssetTransactions.value.length % DEFAULT_LIMIT === 0,
   }
 })

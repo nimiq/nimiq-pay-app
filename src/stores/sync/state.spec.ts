@@ -81,14 +81,14 @@ describe('useSyncState', () => {
 
   it('blocksUntilNextMacroBlock surfaces blocks left when within 50-block window', async () => {
     state.lastMacroBlockHeight = 100
-    state.height = 110 // 100 + 32 - 110 = 22 (< 50)
+    state.height = 110
     const { useSyncState } = await import('./state')
     expect(useSyncState().blocksUntilNextMacroBlock).toBe(22)
   })
 
   it('blocksUntilNextMacroBlock returns 0 once remaining blocks exceed the 50-block window', async () => {
     state.lastMacroBlockHeight = 1000
-    state.height = 900 // 1000 + 32 - 900 = 132 (>= 50)
+    state.height = 900
     const { useSyncState } = await import('./state')
     expect(useSyncState().blocksUntilNextMacroBlock).toBe(0)
   })

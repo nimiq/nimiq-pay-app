@@ -89,7 +89,6 @@ describe('nimWithdrawConfirm', () => {
     expect(wrapper.emitted('done')).toHaveLength(1)
     expect(wrapper.emitted('done')![0][0]).toMatchObject({ polygonQuote: { fee: 10_000 } })
 
-    // Flow moves on to the PIN step, where signing fails because the Polygon fee went up
     await wrapper.setProps({ isVisible: false })
     refreshTransferQuote.mockResolvedValue(quote(50_000))
     await wrapper.setProps({ isVisible: true })

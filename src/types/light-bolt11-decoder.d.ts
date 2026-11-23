@@ -69,7 +69,7 @@ interface PaymentSecretSection {
 interface FeatureBitsSection {
   name: 'feature_bits'
   letters: string
-  value: any // TODO
+  value: any
   tag: string
 }
 

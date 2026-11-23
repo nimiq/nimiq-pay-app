@@ -156,7 +156,6 @@ describe('theHomeFooter', () => {
 
     const icons = wrapper.findAll('img').map(img => img.attributes('src'))
 
-    // Only the most recent (r1) leads; r2 is excluded, the other two slots are featured.
     expect(icons).toEqual(['r1.png', 'f1.png', 'f2.png'])
   })
 
@@ -175,7 +174,6 @@ describe('theHomeFooter', () => {
       },
     })
 
-    // The most-recent app (zeta) leads; its icon fails to load first.
     const img = wrapper.find('img')
     await img.trigger('error')
     expect(img.attributes('src')).toBe(getGoogleFaviconUrl('https://zeta.app'))

@@ -38,7 +38,15 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Comments
 
-- Comment complex/non-obvious code. Concise, explain *why* not *what*.
+- Default: no comments. Code must explain itself.
+- Allowed only:
+  - Legal or license headers.
+  - Non-obvious behavior forced by an external dependency, platform, vendor, or protocol we cannot change.
+  - `// prettier-ignore`, and lint suppressions for faulty, pedantic, or style-only rules.
+  - Doc comments that define a public API contract.
+  - Issue or RFC links for a constraint the code cannot express.
+- Surprising behavior in our own code: fix it with a rename, extract, type, or reshape. Never explain it in prose.
+- Never suppress a lint or TS rule that catches real bugs or protects correctness or safety (`eslint-disable`, `@ts-ignore`, `@ts-expect-error`). Fix the code.
 
 ## Error messages
 

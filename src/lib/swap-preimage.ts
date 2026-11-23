@@ -11,8 +11,6 @@ const REQUEST_TIMEOUT_MS = 30e3
 // setTimeout overflows above this and would fire immediately.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1
 
-// Funds already sit in the swap HTLC while this waits, so transient errors retry. Hung requests time
-// out and the deadline ends the wait; the expired-swap sweep refunds the HTLC afterwards.
 export function waitForSwapPreimage(
   swapId: string,
   fundingProof: Promise<Swap>,
@@ -52,7 +50,6 @@ export function waitForSwapPreimage(
       Math.min(Number.isFinite(timeoutAt) ? Math.max(timeoutAt - Date.now(), 60_000) : 60_000, MAX_TIMEOUT_MS),
     )
 
-    // The funding proof response rarely has the preimage yet, so polling does not wait for it.
     void fundingProof.then(swap => handleSwap(swap, 'funding_proof'), () => {})
 
     async function checkSecret() {

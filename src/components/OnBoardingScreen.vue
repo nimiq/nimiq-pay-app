@@ -10,8 +10,6 @@ import { useCarousel } from '@/composables/useCarousel'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({ isVisible: Boolean })
@@ -122,7 +120,6 @@ watch(pressure, (value) => {
     </li>
   </ul>
   <div class="sticky z-10 flex items-end pb-6">
-    <!-- w-screen wont work, it will cause the setup flow to scroll into view too fast -->
     <IonButton class="w-[calc(100vw-64px)] text-base font-bold uppercase" style="max-width: var(--width);" @click.prevent="() => $emit('done', false)">
       {{ $t('Got it') }}
     </IonButton>

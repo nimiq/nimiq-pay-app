@@ -7,22 +7,15 @@ export interface HostCharAnalysis {
 }
 
 export interface UrlSafetyAnalysis {
-  /** Original URL string as received. */
   url: string
   /** Parsed hostname, or the raw input when the URL is unparseable. */
   host: string
   hostChars: HostCharAnalysis[]
   isSuspicious: boolean
   isParseable: boolean
-  /** Human-readable warnings aggregated over the hostname. */
   warnings: string[]
 }
 
-/**
- * Code points that should be rendered as a visible placeholder (e.g. `␣`) in UI,
- * because rendering them verbatim would hide them from the user. Covers zero-width,
- * bidi controls, and general ASCII/Unicode control ranges.
- */
 export function isNonRenderableCodePoint(code: number): boolean {
   if (code < 0x20 || code === 0x7F)
     return true
@@ -39,15 +32,15 @@ export function isNonRenderableCodePoint(code: number): boolean {
 
 const ZERO_WIDTH_CODEPOINTS = new Set([0x200B, 0x200C, 0x200D, 0xFEFF, 0x2060])
 const BIDI_OVERRIDE_CODEPOINTS = new Set([
-  0x202A, // left-to-right embedding
-  0x202B, // right-to-left embedding
-  0x202C, // pop directional formatting
-  0x202D, // left-to-right override
-  0x202E, // right-to-left override
-  0x2066, // left-to-right isolate
-  0x2067, // right-to-left isolate
-  0x2068, // first strong isolate
-  0x2069, // pop directional isolate
+  0x202A,
+  0x202B,
+  0x202C,
+  0x202D,
+  0x202E,
+  0x2066,
+  0x2067,
+  0x2068,
+  0x2069,
 ])
 
 function toHex(code: number): string {
@@ -60,7 +53,6 @@ function classifyChar(ch: string): { suspicious: boolean, reason?: string } {
     return { suspicious: true, reason: 'zero-width character (invisible)' }
   if (BIDI_OVERRIDE_CODEPOINTS.has(code))
     return { suspicious: true, reason: 'direction-override / bidi control character' }
-  // Standard ASCII printable range — everything we expect in a hostname.
   if (code >= 0x20 && code <= 0x7E)
     return { suspicious: false }
   return { suspicious: true, reason: 'non-ASCII character (may impersonate Latin letters)' }
@@ -73,17 +65,12 @@ function extractRawHost(raw: string): string | null {
   const rest = raw.slice(schemeIdx + 3)
   const end = rest.search(/[/?#]/)
   const authority = end === -1 ? rest : rest.slice(0, end)
-  // Strip optional userinfo (`user:pass@`) and port so the analysis focuses on the hostname.
   const afterUser = authority.slice(authority.lastIndexOf('@') + 1)
   const portIdx = afterUser.indexOf(':')
   return portIdx === -1 ? afterUser : afterUser.slice(0, portIdx)
 }
 
 export function analyzeUrlSafety(raw: string): UrlSafetyAnalysis {
-  // Deeplink params often arrive without a scheme (e.g. `example.com/path`). Prepending
-  // `https://` lets us parse and isolate the hostname instead of treating the whole
-  // string as the host (which would mis-flag path/query characters and always emit
-  // "URL could not be parsed.").
   const hasScheme = /^[a-z][a-z0-9+\-.]*:\/\//i.test(raw)
   const candidate = hasScheme ? raw : `https://${raw}`
 
@@ -131,7 +118,6 @@ const PRIVATE_HOST_TLDS = new Set(['local', 'localhost', 'lan', 'internal', 'int
 
 export const IPV4_RE = /^\d{1,3}(?:\.\d{1,3}){3}$/
 
-/** Best-effort hostname extraction with a fallback for unparseable URLs. */
 export function safeHostname(url: string, fallback: string = url): string {
   try {
     return new URL(url).hostname || fallback
@@ -141,7 +127,6 @@ export function safeHostname(url: string, fallback: string = url): string {
   }
 }
 
-/** Best-effort origin (root URL) with a fallback for unparseable URLs. */
 export function safeOrigin(url: string, fallback: string = url): string {
   try {
     return new URL(url).origin || fallback
@@ -178,11 +163,6 @@ export function isPrivateOrReservedIPv4(host: string): boolean {
   )
 }
 
-/**
- * Hard-fail safety verdict for URLs delivered through external/untrusted channels
- * (deeplinks, share-sheets, QR codes). Refuses non-https, userinfo, IP literals,
- * loopback, and private/reserved TLDs to block SSRF and LAN-pivot tricks.
- */
 export function isExternalDeepLinkUrlSafe(url: string): { ok: boolean, reasons: string[] } {
   const reasons: string[] = []
   let parsed: URL | null = null

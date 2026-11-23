@@ -27,7 +27,6 @@ function readOverrideSync(): string | null {
   }
 }
 
-// Resolved once at module import to match the network-override pattern.
 export const polygonRpcOverride: string | null = readOverrideSync()
 
 /**
@@ -43,7 +42,6 @@ export function setPolygonRpcOverride(url: string | null): void {
       globalThis.localStorage?.setItem(POLYGON_RPC_OVERRIDE_KEY, url)
   }
   catch (error) {
-    // Surface private-mode / quota failures so a silently-failing toggle is debuggable.
     console.warn('[polygon-rpc-override] Failed to persist override', error)
   }
 }

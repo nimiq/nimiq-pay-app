@@ -13,7 +13,6 @@ vi.mock('@/composables/useLogger', () => ({
   useLogger: () => state.logger,
 }))
 
-// Translate by echoing the key with interpolated params, so assertions stay readable.
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: {
     t: (key: string, params?: Record<string, unknown>) =>

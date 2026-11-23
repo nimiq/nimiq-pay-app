@@ -71,21 +71,11 @@ function isLnurl(url: string) {
   return LNURL_REGEX.test(url.toLowerCase())
 }
 
-/**
- * Returns the LNURL part of a URL or null if it's not a valid LNURL. Accepts http(s), lightning: and basic lnurl URLs.
- * @param url
- * @returns LNURL or null
- */
 function parseLnUrl(url: string): string | null {
   const result = LNURL_REGEX.exec(url.toLowerCase())
   return result ? result[1] : null
 }
 
-/**
- * Decodes the callback URL from a LNURL.
- * @param url
- * @returns Callback URL
- */
 async function decodeCallbackUrl(url: string) {
   const parsedUrl = parseLnUrl(url)
   if (!parsedUrl)
@@ -97,11 +87,6 @@ async function decodeCallbackUrl(url: string) {
   return callbackUrl
 }
 
-/**
- * Parses the response from a LNURL pay request. Response includes the lightning invoice (pr) for future decoding.
- * @param response
- * @returns Parsed response
- */
 async function parseServiceResponse(response: Partial<LNServiceResponse>) {
   if (response.tag !== TAG_PAY_REQUEST)
     return null
@@ -118,7 +103,6 @@ async function parseServiceResponse(response: Partial<LNServiceResponse>) {
   const max = Number(response.maxSendable)
   if (!(min && max) || min > max)
     return null
-  // We only support fixed amounts for now
   if (min !== max)
     throw new Error(i18n.t('Lightning request is for a variable payment amount, but variable amounts are not supported'))
 
@@ -136,7 +120,6 @@ async function parseServiceResponse(response: Partial<LNServiceResponse>) {
     description = descMeta?.[1] || ''
   }
   catch {
-    // Ignore failing metadata parsing, as it only means we'd have no description
   }
 
   const callbackUrl = new URL(callback)
@@ -164,11 +147,9 @@ async function parseServiceResponse(response: Partial<LNServiceResponse>) {
 }
 
 async function parseLnurlPayRequest(url: string) {
-  // First we get the callback URL from the LNURL
   const callbackUrl = await decodeCallbackUrl(url)
   let serviceResponse: unknown
   try {
-    // Then we fetch the data from that callback
     const res = await fetch(callbackUrl)
     if (!res.ok)
       throw new Error(`Failed to fetch LNURL service: ${JSON.stringify({ status: res.status, statusText: res.statusText, url: res.url })}`)
@@ -180,16 +161,13 @@ async function parseLnurlPayRequest(url: string) {
     logger.error((error as Error).message)
     throw new Error(i18n.t('Failed to fetch LNURL service'))
   }
-  // And parse the response, fetching the lightning invoice from the callback
   return await parseServiceResponse(serviceResponse)
 }
 
 export async function parseBitcoinLightningInvoice(url: string) {
-  // BOLT11 payment requests don't require any further processing
   if (!isLnurl(url))
     return await decodeOffThread('invoice', url)
 
-  // But LNURL need to be decoded first, get the payment requests from the service and then decode the lightning invoice
   const invoice = await parseLnurlPayRequest(url)
   if (invoice === null)
     throw new Error(i18n.t('Invalid LNURL'))

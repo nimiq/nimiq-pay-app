@@ -57,7 +57,7 @@ const formattedValue = computed({
     }
 
     value = value.replace(/,/, '.')
-    const regExp = new RegExp(`(\\d*)(\\.(\\d{0,${decimals}}))?`, 'g') // Backslashes are escaped
+    const regExp = new RegExp(`(\\d*)(\\.(\\d{0,${decimals}}))?`, 'g')
     const regExpResult = regExp.exec(value)!
     if (regExpResult[1] || regExpResult[2]) {
       liveValue.value = `${regExpResult[1] ? regExpResult[1] : '0'}${regExpResult[2] ? regExpResult[2] : ''}`
@@ -87,7 +87,7 @@ function updateValue(newValue: number) {
 }
 
 async function updateWidth() {
-  await nextTick() // Await updated DOM
+  await nextTick()
   if (!widthPlaceholder.value || !widthValue.value)
     return
   const placeholderWidth = widthPlaceholder.value.offsetWidth - 40

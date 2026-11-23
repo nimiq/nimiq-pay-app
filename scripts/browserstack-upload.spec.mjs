@@ -27,7 +27,6 @@ it('passes shell metacharacters in checkout paths and credentials literally to c
   writeFileSync(join(checkout, 'package.json'), JSON.stringify({ type: 'module', version: '1.0.0' }))
   const build = join(builds, 'NimiqPay-1.0.0.aab')
   writeFileSync(build, 'test build')
-  // Capture the actual process arguments without sending credentials or builds to BrowserStack.
   writeFileSync(join(binaries, 'curl'), `#!${process.execPath}
 require('node:fs').writeFileSync(process.env.TEST_CURL_ARGS, JSON.stringify(process.argv.slice(2)));
 process.stdout.write(JSON.stringify({ app_url: 'bs://test' }));

@@ -194,9 +194,9 @@ describe('trackTopUpReceived', () => {
 
   it('resolves an undefined asset to NIM and buckets luna amount and balance', async () => {
     const { Asset } = await import('@/lib/assets')
-    const receipt = await makeReceipt(undefined, 500_000) // 5 NIM
+    const receipt = await makeReceipt(undefined, 500_000)
 
-    trackTopUpReceived(receipt, 5_000_000) // 50 NIM
+    trackTopUpReceived(receipt, 5_000_000)
 
     expect(state.capture).toHaveBeenCalledWith({
       event: 'top_up_received',
@@ -206,9 +206,9 @@ describe('trackTopUpReceived', () => {
 
   it('buckets a USDT deposit and balance from 6-decimal base units', async () => {
     const { Asset } = await import('@/lib/assets')
-    const receipt = await makeReceipt(Asset.USDT, 50_000_000) // 50 USDT
+    const receipt = await makeReceipt(Asset.USDT, 50_000_000)
 
-    trackTopUpReceived(receipt, 1_000_000_000) // 1000 USDT
+    trackTopUpReceived(receipt, 1_000_000_000)
 
     expect(state.capture).toHaveBeenCalledWith({
       event: 'top_up_received',
@@ -331,7 +331,6 @@ describe('core analytics events', () => {
 })
 
 describe('reportCriticalError', () => {
-  // Reports go through the logger's sink, which sends after a microtask.
   const flushReports = async () => {
     await Promise.resolve()
     await Promise.resolve()

@@ -129,7 +129,6 @@ jobs:
           set -euo pipefail
           : "${APP_ID:?Missing ota-build APP_ID}"
 
-          # The infrastructure test targets only the synthetic native version 0.0.0.
           if ! jq -e '.compatibleNativeVersions == ["0.0.0"]' ota.json > /dev/null; then
             for NAME in VITE_WALKIE_TALKIE_URL VITE_WALKIE_TALKIE_API_KEY; do
               if [ -z "${!NAME}" ]; then

@@ -12,8 +12,6 @@ import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false }, isVisible: { type: Boolean, default: false } })
@@ -53,7 +51,6 @@ const countries = computed(() => {
     .filter(country => country.countryName.toLowerCase().includes(countryFilter.value.toLowerCase()))
     .sort((a, b) => a.countryName.localeCompare(b.countryName))
 })
-// Set current country (based on device language) as default or first country in list
 const selectedCountry = ref(countries.value.find(country => country.countryCode === (new Intl.Locale(navigator.language)).region) || countries.value[0])
 const phoneNumber = computed(() => `+${selectedCountry.value.callingCode} ${phoneNumberInput.value}`)
 
@@ -81,11 +78,9 @@ watch(() => props.errorMsg, () => {
     return
   }
 
-  // Try to parse server error message from message prop in server response json in (potentially translated) api() error
-  // message. Note that the server error message itself has also been translated on the server.
   const serverErrorMessageMatch = errorMsg.match(/"message":\s*("(?:\\"|[^"])+")/i)
   errorMessage.value = serverErrorMessageMatch
-    ? JSON.parse(serverErrorMessageMatch[1]) as string // decode json encoded message string, resolving potential escape sequences
+    ? JSON.parse(serverErrorMessageMatch[1]) as string
     : errorMsg
 })
 

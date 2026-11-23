@@ -26,14 +26,13 @@ import { useTransactions } from '@/stores/transactions'
 const { isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
 const { showAnimations, isNimiqAsset, activeAsset } = storeToRefs(useApp())
 const { transactionsToShow: transactions } = storeToRefs(useTransactions())
-const { loadMoreTxs, canLoadMore, setTxHidden } = useTransactions()
+const { setTxHidden } = useTransactions()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { hasLoadedHistory: hasLoadedPolygonHistory } = storeToRefs(usePolygonUsdt())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 
 const faucetAddress = computed(() => localAddress.value.toUserFriendlyAddress())
-// Only offer the faucet to a truly empty account: no transactions, no displayed (remote) balance, no local funds.
 const showFaucet = computed(() => isTestnet && isNimiqAsset.value && transactions.value.length === 0 && remoteBalance.value === 0 && localBalance.value === 0)
 
 const SKELETON_COUNT = 4
@@ -41,23 +40,14 @@ const SKELETON_COUNT = 4
 const showSingleTxSkeleton = computed(() => isConsensusNeeded.value && consensus.value !== 'established')
 const showSingleTxSkeletonDebounced = refDebounced(showSingleTxSkeleton, debounceDelay, { maxWait: debounceMaxWait })
 const showTransactionsSkeleton = computed(() => isUpdatingTransactions.value && (isNimiqAsset.value || !hasLoadedPolygonHistory.value))
-const isExhausted = ref(false)
-// The store holds the whole history; mounting every row at once froze the UI for over a second
-// on large accounts, so rows are rendered a page at a time as the user scrolls.
 const renderLimit = ref(DEFAULT_LIMIT)
 const visibleTransactions = computed(() => transactions.value.slice(0, renderLimit.value))
-const hasMore = computed(() => renderLimit.value < transactions.value.length || (!isExhausted.value && canLoadMore()))
+const hasMore = computed(() => renderLimit.value < transactions.value.length)
 watch(activeAsset, () => {
-  isExhausted.value = false
   renderLimit.value = DEFAULT_LIMIT
 })
 
-async function onInfiniteScroll(event: InfiniteScrollCustomEvent) {
-  if (renderLimit.value >= transactions.value.length) {
-    const added = await loadMoreTxs()
-    if (added === 0)
-      isExhausted.value = true
-  }
+function onInfiniteScroll(event: InfiniteScrollCustomEvent) {
   renderLimit.value += DEFAULT_LIMIT
   event.target.complete()
 }

@@ -352,7 +352,6 @@ describe('useSync remote signer reconciliation', () => {
     state.consensus = 'established'
     state.isSendingTx = false
     state.isProcessingRemote = false
-    // These tests drive reconciliation methods directly; suppress lifecycle's independent readiness pass.
     state.isSyncingWallets = true
     state.isUpdatingTransactions = false
     state.headChangePendingDrainLock = false
@@ -708,8 +707,6 @@ describe('useSync remote signer reconciliation', () => {
     }) as any)
     state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
 
-    // Force the swap handler down its catch path so we can observe the leaf
-    // reaching it without wiring up a Fastspot mock.
     vi.doMock('@/composables/useFastspotv1', () => ({
       useFastspotApiV1: vi.fn(() => Promise.resolve({
         getContract: vi.fn(() => Promise.reject(new Error('mocked fastspot failure'))),

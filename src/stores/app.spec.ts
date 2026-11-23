@@ -5,7 +5,6 @@ import { Asset } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
 
 vi.mock('@vueuse/core', () => ({
-  // useLogger (imported by app.ts) debounces its log flush at module load.
   useDebounceFn: <T>(fn: T) => fn,
   useStorageAsync: <T>(_key: string, defaultValue: T) => {
     const value = Array.isArray(defaultValue)
@@ -119,8 +118,6 @@ describe('useApp withdrawal storage', () => {
     expect(app.withdrawalAddressesHistory).toEqual([{ address: 'NQ77 BOB', alias: 'Bob' }])
   })
 
-  // New-wallet entropy needs the Nimiq WASM CSPRNG. When the global is unavailable (undefined in
-  // this spec) setEntropy must reject — no silent fallback — so the caller surfaces an error.
   it('rejects entropy generation when the Nimiq global is unavailable', async () => {
     const { useApp } = await import('./app')
     const app = useApp()
@@ -154,7 +151,6 @@ describe('useApp withdrawal storage', () => {
     })
 
     it('does not clobber existing history and is a no-op when the key is gone', async () => {
-      // queryMock defaults to undefined → no topUpAddresses key
       const { useApp } = await import('./app')
       const app = useApp()
       app.addNewWithdrawalAddress('NQ11 EXISTING', 'Existing')

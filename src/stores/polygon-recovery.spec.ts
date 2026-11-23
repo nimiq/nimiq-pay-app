@@ -1082,7 +1082,6 @@ describe('polygon payment submission through the store', () => {
     expect(result.error).toBeUndefined()
     expect(mocks.relayTransaction).toHaveBeenCalledTimes(2)
     expect(mocks.signTypedData).toHaveBeenCalledTimes(3)
-    // Swap signing starts only after the refund relay was released and broadcast.
     expect(mocks.signTypedData.mock.invocationCallOrder[1]).toBeGreaterThan(mocks.provider.broadcastTransaction.mock.invocationCallOrder[0]!)
   })
 
@@ -1106,7 +1105,6 @@ describe('polygon payment submission through the store', () => {
     }, 'Payment')
     await vi.waitFor(() => expect(mocks.provideFundingProof).toHaveBeenCalledOnce())
 
-    // The funding is unmined, so the forwarder nonce read is unchanged.
     await expect(store.refundPolygonSwapHtlc(expiredHtlc)).rejects.toThrow('A transaction is already in progress')
     expect(mocks.relayTransaction).toHaveBeenCalledOnce()
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.SetSwapHtlcRefundAttempt, expect.anything())
@@ -1144,7 +1142,6 @@ describe('polygon payment submission through the store', () => {
     const result = await payment
     expect(result.error).toBeUndefined()
 
-    // The lock is free, but the unconfirmed funding nonce stays reserved.
     await expect(store.refundPolygonSwapHtlc(expiredHtlc)).rejects.toThrow('A transaction is already in progress')
     expect(mocks.relayTransaction).toHaveBeenCalledOnce()
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.SetSwapHtlcRefundAttempt, expect.anything())
@@ -1159,7 +1156,6 @@ describe('polygon payment submission through the store', () => {
     await expect(store.refundPolygonSwapHtlc(expiredHtlc)).rejects.toThrow('timeout')
     expect(mocks.run).toHaveBeenCalledWith(SQLQuery.SetSwapHtlcRefundAttempt, expect.anything())
 
-    // The refund may have been broadcast, so the forwarder nonce read is unchanged.
     const result = await store.sendSwapPayment({
       recipient: 'lnbc-invoice',
       amount: 1_000_000,
@@ -1417,7 +1413,6 @@ describe('polygon initial history scan through the store', () => {
 
   it('decides canStopEarly from a fresh balance read, not a stale store balance', async () => {
     const store = recreateStore()
-    // updateBalance swallowed its RPC error, so the store still shows the initial 0
     expect(store.balance).toBe(0)
     mocks.balanceOf.mockResolvedValue(5_000_000n)
 

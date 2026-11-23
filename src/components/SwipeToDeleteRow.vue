@@ -18,11 +18,9 @@ const emit = defineEmits<{
   (e: 'launch'): void
 }>()
 
-// Drag tuning. MAX = elastic floor, ARM = haptic-armed point, COMMIT = release-to-delete.
 const MAX_SWIPE = 132
 const ARM_AT = 80
 const COMMIT_AT = 96
-// Below this absolute drag, treat the gesture as a tap.
 const TAP_TOLERANCE = 4
 
 const reducedMotion = useReducedMotion()
@@ -34,10 +32,7 @@ const exiting = ref(false)
 const armed = ref(false)
 let dragMoved = false
 
-// Curtain comes alive only after the row has actually moved a few px so a tap
-// never tints red.
 const curtainOpacity = useTransform(x, [-MAX_SWIPE, -10, 0], [1, 0.05, 0])
-// Trash icon: small + faded + tilted at rest, full size + opaque + upright at MAX.
 const trashOpacity = useTransform(x, [-MAX_SWIPE, -32, 0], [1, 0.2, 0])
 const trashScale = useTransform(x, [-MAX_SWIPE, 0], [1.18, 0.55])
 const trashRotate = useTransform(x, [-MAX_SWIPE, 0], [0, -18])
@@ -65,7 +60,6 @@ async function onDragEnd() {
     await commitDelete()
     return
   }
-  // Snap back. Mass tuned so the row doesn't feel sluggish on quick flicks.
   animate(x, 0, { type: 'spring', stiffness: 460, damping: 38, mass: 0.55 })
   armed.value = false
 }
@@ -80,8 +74,6 @@ async function commitDelete() {
     animate(x, -360, { duration: fast ? 0.12 : 0.26, ease: [0.16, 1, 0.3, 1] }),
     animate(opacity, 0, { duration: fast ? 0.12 : 0.2, ease: 'linear' }),
   ])
-  // Collapse the row's vertical footprint via transform so the rows below take
-  // its place without animating layout properties.
   await animate(scaleY, 0, { duration: fast ? 0.08 : 0.16, ease: [0.16, 1, 0.3, 1] })
   emit('delete')
 }
@@ -162,7 +154,6 @@ function onRowClick() {
 
 <style scoped>
 .swipe-row {
-  /* Allow vertical scroll while we own horizontal swipe. */
   touch-action: pan-y;
 }
 </style>

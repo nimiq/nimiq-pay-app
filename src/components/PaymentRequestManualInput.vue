@@ -31,7 +31,6 @@ const payment = computedAsync(async () => {
 const amounts = computedAsync(async () => {
   if (!payment.value)
     return null
-  // Otherwise, use the API to get the fiat values
   const cryptoCurrency = assetToCrypto(payment.value.asset ?? Asset.NIM)
   const fiatAmount = usePrice(payment.value.amount, { cryptoCurrency })
   const fiatFeeAmount = usePrice(payment.value.fee, { cryptoCurrency })
@@ -108,7 +107,6 @@ textarea::-webkit-scrollbar {
   background: white;
 }
 
-/* Removing leave transition */
 .slide-fade-leave-active {
   transition: none;
 }

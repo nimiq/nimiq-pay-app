@@ -49,7 +49,6 @@ onMounted(async () => {
     logger.error('Failed to get app version', error)
   }
 
-  // Stop scanning in case it was still active
   document.body.classList.remove('native-qr-scanner-modal-open')
   try {
     await CameraPreview.stop()
@@ -69,7 +68,6 @@ onMounted(async () => {
     }
   }
 
-  // Moved here because it was not locking if calling lock too early
   if (!useDevice().isWeb) {
     try {
       await ScreenOrientation.lock({ orientation: 'portrait' })
@@ -88,8 +86,7 @@ let isReloadingAfterResume = false
 App.addListener('appUrlOpen', async (event) => {
   // Hold a link that wakes the app until resume decides on the reload (iOS fires appUrlOpen first). The
   // reload drops every plugin listener (Capacitor resets the bridge on navigation), so a Mini App launched
-  // on this page never reports it loaded and gets closed. Resume opens the link if it doesn't reload;
-  // otherwise PinView opens it after unlock on the new page.
+  // on this page never reports it loaded and gets closed.
   if (isReloadingAfterResume || lastPauseTimestamp !== 0) {
     logger.log('Deeplink held until resume')
     sessionStorage.setItem(DEFERRED_DEEPLINK_KEY, event.url)
@@ -111,13 +108,11 @@ App.addListener('resume', async () => {
   const now = Date.now()
   const timeInBackground = now - lastPauseTimestamp
   logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
-  // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
   if (shouldReloadAppAfterBackground(lastPauseTimestamp, now)) {
     isReloadingAfterResume = true
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
 
-    // If a mini-app webview is open, keep it only when auto-reopen is enabled
     const { closeActiveMiniApp, getActiveMiniAppSession, hideActiveMiniApp } = await import('@/composables/useMiniAppHost')
     const { clearSession, saveSession } = await import('@/composables/useMiniAppSession')
     const activeSession = getActiveMiniAppSession()
@@ -156,10 +151,7 @@ App.addListener('resume', async () => {
     router.go(0)
     return
   }
-  // This pause is used up: a deeplink arriving later in the foreground opens right away
   lastPauseTimestamp = 0
-  // While locked, PinView opens the held link after unlock. Taking it here would park it in memory,
-  // and a later resume reload before unlock would lose it.
   const heldDeepLink = useDecrypt().decrypted.value ? sessionStorage.getItem(DEFERRED_DEEPLINK_KEY) : null
   if (heldDeepLink) {
     sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
@@ -178,10 +170,6 @@ App.addListener('resume', async () => {
 
   trackCurrentAppOpen('resume')
 
-  // Show cached txs right away on resume, then refresh history in the background (APP-159).
-  // Skip while locked: closing the biometric prompt resumes the app on the PIN screen, and a load
-  // there reads the wallet address before its keys are loaded, leaving the home list empty. Home
-  // loads both after unlock.
   if (useDecrypt().decrypted.value) {
     const { useTransactions } = await import('@/stores/transactions')
     const { useSync } = await import('@/stores/sync')
@@ -189,7 +177,6 @@ App.addListener('resume', async () => {
     void useSync().updateTransactionHistory()
   }
 
-  // Flags may change while backgrounded; refresh without delaying the reconnect check below
   void Posthog.reloadFeatureFlags()
     .then(() => Promise.all([useFeatureFlags().refreshUsdtMaintenance(), useFeatureFlags().refreshCryptocityPoints()]))
     .catch(error => logger.error('Failed to reload feature flags', error))
@@ -212,19 +199,15 @@ App.addListener('resume', async () => {
   <IonApp>
     <IonRouterOutlet />
     <NetworkOverrideBadge />
-    <!-- DEV -->
-    <!-- Hidden in mock mode (clean screenshots); DevModal stays reachable via the menu header long-press -->
     <IonFab v-if="isDev && !isDevFabHidden && !isMockEnabled" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
       <IonFabButton ref="devFabRef" @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>
-    <!-- !DEV -->
   </IonApp>
 </template>
 
 <style>
-/* TODO: move this to variables or something */
 ion-toolbar {
   --background: transparent;
 }
@@ -239,7 +222,6 @@ input.phone {
   font-size: 20px;
 }
 
-/* iOS shit... */
 .ios ion-modal {
   --border-radius: 20px;
 }
@@ -308,7 +290,6 @@ body.scanner-active ion-content, body.scanner-active .ion-page, body.scanner-act
     --background: none;
 }
 
-/* TODO: Remove this */
 p, a, h1, h2, h3, h4, h5, h6 {
   @apply text-space;
 }

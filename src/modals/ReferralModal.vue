@@ -49,7 +49,6 @@ function handleShare() {
   Share.share({
     // Title if sharing via email
     title: 'Nimiq Pay App',
-    // Text to share via all the apps
     text: i18n.t(
       'Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! '
       + 'Use my code {code} to earn {amount} in Cryptocity Points at registration.',
@@ -79,7 +78,6 @@ function handleShare() {
       </p>
       <p v-else class="flex flex-col text-3xl font-semibold">
         {{ referralInfo?.id }}
-        <!-- TODO: replace 10 with data from API -->
         <span class="text-space/60 mt-2 text-sm">{{
           referralInfo?.claims_remaining < 10
             ? $t('Only {count} out of {total} remaining.', { count: referralInfo?.claims_remaining.toLocaleString(), total: 10 })

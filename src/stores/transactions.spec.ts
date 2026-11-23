@@ -5,7 +5,7 @@ import { createPinia, defineStore, disposePinia, getActivePinia, setActivePinia 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, customRef, defineComponent, nextTick, ref, shallowReactive, watch } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
-import { DEFAULT_LIMIT, migrations, SQLQuery } from '@/lib/sql-queries'
+import { migrations, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx } from '@/lib/tx'
 import { Transfer } from '@/types/transactions'
 
@@ -475,28 +475,6 @@ describe('useTransactions', () => {
     expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['expired', timestamp ?? null, 'timestamp'])
   })
 
-  it('loads active-asset transaction pages with an asset-specific query', async () => {
-    state.activeAsset = Asset.USDT
-    state.query.mockResolvedValue([])
-
-    const { useTransactions } = await import('./transactions')
-    let store!: ReturnType<typeof useTransactions>
-
-    mount(defineComponent({
-      setup() {
-        store = useTransactions()
-        return () => null
-      },
-    }))
-
-    await nextTick()
-    state.query.mockClear()
-
-    await store.loadMoreTxs()
-
-    expect(state.query).toHaveBeenCalledWith(SQLQuery.SelectPaginationTransactionsByAsset, [Asset.USDT, DEFAULT_LIMIT, 0])
-  })
-
   it('shows only transactions for the current active asset', async () => {
     state.activeAsset = Asset.USDT
     state.query.mockResolvedValue([])
@@ -708,7 +686,7 @@ describe('useTransactions', () => {
         hash: 'hash-default',
         timestamp: 1,
         sender: ourHtlc,
-        senderType: 2, // Nimiq.AccountType.HTLC
+        senderType: 2,
         recipient: state.localAddress.toUserFriendlyAddress(),
         recipientType: 0,
         amount: 100,
@@ -929,7 +907,6 @@ describe('useTransactions', () => {
       await store.refreshFromDb()
       state.runSet.mockClear()
       state.run.mockClear()
-      // Second chunk fails as a set; its rows still write one by one.
       state.runSet.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('constraint failed'))
 
       await store.addReceiptTransactions(Array.from({ length: 450 }, (_, index) =>
@@ -2162,7 +2139,6 @@ describe('useTransactions', () => {
     it('keeps cosigner acceptance authoritative when atomic-swap bookkeeping fails', async () => {
       const { useTransactions } = await import('./transactions')
       const { signedTx } = createSignedTransaction('accepted-swap')
-      // getSwap keeps failing, so settlement retries until the HTLC deadline ends it.
       vi.useFakeTimers()
       mockRemoteSigning(signedTx, {
         outcome: 'signed',
@@ -2557,7 +2533,6 @@ describe('useTransactions', () => {
       )
       const { useTransactions } = await import('./transactions')
 
-      // setSwapPreimage only touches meta and returns the stored row.
       await expect(useTransactions().setSwapPreimage('nim-staking', 'preimage')).resolves.toMatchObject({
         senderData: 'aabb',
         recipientData: '',

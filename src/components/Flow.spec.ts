@@ -7,7 +7,6 @@ import { FlowName, StepName } from '@/lib/flows/steps.types'
 
 const state = vi.hoisted(() => ({
   closeModal: vi.fn(async () => {}),
-  // Resolves the slide animation waits in performNavigation; replace with a pending promise to hold a navigation
   scrollDone: Promise.resolve(),
   setToast: vi.fn(),
   logger: {
@@ -56,7 +55,6 @@ vi.mock('ionicons/icons', () => ({
 }))
 
 vi.mock('@/composables/useCarousel', () => ({
-  // Like the real goToSlide, switch the active slide synchronously before the scroll animation
   useCarousel: (_scroller: unknown, { activeIndex }: { activeIndex: Ref<number> }) => ({
     goToSlide: vi.fn((index: number) => activeIndex.value = index),
     isScrolling: ref(false),
@@ -967,13 +965,11 @@ describe('flow', () => {
 
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.PinCode)
 
-    // The inactive preview rolls back to the scanner, and the scroll animation is still running
     state.scrollDone = new Promise(resolve => finishScroll = resolve)
     await wrapper.get('[data-testid="preview-back"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.get('[data-testid="active-step"]').text()).toBe(StepName.QRCodeScanner)
-    // Hidden until the slide settles, so the scanner can't start and emit a scan that would be dropped
     expect(wrapper.get('[data-testid="qr-step"]').attributes('data-visible')).toBe('false')
 
     await wrapper.get('[data-testid="qr-manual"]').trigger('click')

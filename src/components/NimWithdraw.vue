@@ -30,8 +30,6 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
 import ShortAddressDisplay from './ShortAddressDisplay.vue'
 
-// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
-// being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, isVisible: { type: Boolean, default: false }, state: { type: Object as PropType<State>, required: true } })
@@ -42,8 +40,6 @@ const logger = useLogger('NimWithdraw')
 
 const { withdrawalAddress, withdrawalDenomination: denomination, selectedFiat, isNimiqAsset, activeAsset } = storeToRefs(useApp())
 
-// APP-91: derive purely from `withdrawalAddress` — the previous ref + bidirectional watcher
-// raced with the address-selection sub-flow finalize and sent to the wrong recipient.
 const selected = computed(() => {
   const value = withdrawalAddress.value
   if (!value)
@@ -74,32 +70,19 @@ const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ curre
 watch([height, cryptoCurrency], fetch)
 const price = computed(() => data.value?.price || 0)
 
-// This component allows the user to either withdraw a specific Fiat amount or all available funds.
-// For a successful full withdrawal, it's crucial to know the user's exact fund balance.
-// The precision of the set Fiat value directly impacts the accuracy of the fund calculation.
 const fiatDecimals = 6
 
 const fiatAmount = ref(0)
-// TODO: replace comma with dot
 const fiatAmountModel = ref(0)
-// APP-178: when the user taps "All" for NIM, send the exact integer luna balance instead of the
-// fiat-derived amount. The fiat round-trip floors twice, which otherwise leaves dust behind.
 const sendMaxNim = ref(false)
 watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
 watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fiatDecimals)
 
-// APP-169: the user can enter the amount either in fiat or directly in the crypto unit (NIM/USDT).
-// In crypto mode the entered minor-unit value (luna/USDT units) is the source of truth; in fiat mode
-// it stays derived from the fiat value as before.
 const cryptoAmountModel = ref(0)
 
-// JS and their precision issues...
-// Lunas are integers, so no problem in rounding down to the nearest integer.
 const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
 const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
 const amountUnits = computed(() => {
-  // APP-178/APP-169: "All" pins the exact integer luna balance, so no dust is left and the amount
-  // stays valid regardless of the entry denomination or later price drift (avoids the double-tap).
   if (isNimiqAsset.value && sendMaxNim.value)
     return spendableBalance.value
   if (denomination.value === 'crypto')
@@ -176,7 +159,6 @@ const errorMessage = computed(() => {
     return ''
   if (!isNimiqAsset.value && usdtQuoteError.value)
     return usdtQuoteError.value
-  // If the HTLC has expired, we need to wait for consensus before withdrawing because the server cannot access to the funds anymore, only the user.
   if (hasHtlcExpired.value && consensus.value !== 'established')
     return i18n.t('Wait for consensus before withdrawing')
   if (!isRemoteOk.value && !hasHtlcExpired.value)
@@ -242,7 +224,7 @@ function withdraw() {
 async function fillMaxAmount() {
   if (isNimiqAsset.value) {
     sendMaxNim.value = true
-    fiatAmount.value = remoteBalanceFiat.value // display only; withdraw() sends the exact luna balance
+    fiatAmount.value = remoteBalanceFiat.value
     if (denomination.value === 'crypto')
       cryptoAmountModel.value = spendableBalance.value
     return
@@ -274,7 +256,6 @@ watch(errorMessage, (value) => {
   logger.error('Error message when trying to withdraw:', value)
 })
 
-// Reset stuck spinner when user returns from confirm/PIN — also un-pauses USDT quote refresh.
 watch(() => props.isVisible, (visible) => {
   if (visible)
     loading.value = false
@@ -330,7 +311,6 @@ watch(() => props.isVisible, (visible) => {
       <TriangleIcon class="h-[10px] ml-4 text-space/30 justify-self-end" />
     </div>
 
-    <!-- Only render when set: its empty margin pushed the submit button under the keyboard -->
     <span v-if="errorMessage" class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
     <div class="flex w-full mt-auto pt-4 mb-4 justify-evenly">

@@ -23,13 +23,9 @@ export const usePoints = defineStore('points', () => {
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
   const nextRequestCapTs = ref(0)
-  const incrementalRequestCap = ref(1e3 * 30) // 30 seconds
+  const incrementalRequestCap = ref(1e3 * 30)
   const isCampaignActive = ref(false)
 
-  /**
-   * Send wallet public key and phone number to get access code
-   * Access code is sent to phone number via SMS
-   */
   async function authorize(phoneNumberInput: string) {
     const { error, hasError } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
     if (hasError) {
@@ -38,19 +34,13 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error: error?.message || i18n.t('Something went wrong authorizing the phone number') }
     }
     else {
-      // Prevents spamming the server with requests
       nextRequestCapTs.value = Date.now() + incrementalRequestCap.value
-      // 5 minutes max
       incrementalRequestCap.value = Math.min(incrementalRequestCap.value * 2, 1e3 * 60 * 5)
     }
 
     phoneNumber.value = phoneNumberInput
   }
 
-  /**
-   * Check if access code from SMS matches server code
-   * Gets the token that is used for all other requests
-   */
   async function verify(accessCodeInput: string) {
     if (!phoneNumber.value)
       return { data: undefined, error: i18n.t('Phone number missing') }
@@ -70,10 +60,6 @@ export const usePoints = defineStore('points', () => {
     updateTasks()
   }
 
-  /**
-   * Deletes the account from the server, it will be kept for 12 months in the server
-   * @returns success: true, if the account was deleted successfully
-   */
   async function deleteAccount() {
     if (!pointsToken.value)
       return { success: true, error: undefined }
@@ -124,7 +110,6 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    // TODO: add types to this
     const { data, error, hasError } = await api.getTaskById({ id, token: pointsToken.value })
     if (hasError)
       return { data: undefined, error: error?.message || i18n.t('Something went wrong updating the tasks') }
@@ -165,10 +150,6 @@ export const usePoints = defineStore('points', () => {
     return { data, error: undefined }
   }
 
-  /**
-   * Get referral code for current user
-   * Also returns the claims remaining and the amount of points per claim
-   */
   async function getReferralInfo() {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
@@ -180,11 +161,6 @@ export const usePoints = defineStore('points', () => {
     return { data, error: undefined }
   }
 
-  /**
-   * Same as getReferralCode but for a specific referral code
-   * and without needing to authorize the petition with the token.
-   * Used to get the info before the user has created an account
-   */
   async function getReferralInfoById(id: string) {
     const { data, error, status, hasError } = await api.getReferralById({ id })
 
@@ -205,7 +181,6 @@ export const usePoints = defineStore('points', () => {
     if (!referralCode.value)
       return { data: undefined, error: i18n.t('Promo code missing') }
 
-    // TODO: if error, check code next time
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''
     window.setTimeout(() => {
@@ -254,7 +229,6 @@ export const usePoints = defineStore('points', () => {
       merchantName: merchantName || i18n.t('Purchase'),
       proofSize: -1,
       raw: JSON.stringify(request),
-      // Payments using points are only possible with CPL
       rail: Rail.CryptoPaymentLink,
       paymentRef: paymentRef!,
       paymentMethod: PaymentMethod.Points,

@@ -103,8 +103,6 @@ describe('transaction recovery queries', () => {
   })
 
   it.each([
-    [SQLQuery.SelectPaginationTransactions, [10, 0]],
-    [SQLQuery.SelectPaginationTransactionsByAsset, ['NIM', 10, 0]],
     [SQLQuery.SelectAllTransactions, []],
     [SQLQuery.SelectTransactionsByAsset, ['NIM']],
   ])('includes staking in transaction reads %#', (query, values) => {
@@ -225,7 +223,6 @@ describe('polygon recovery migrations', () => {
       for (const migration of migrations.filter(migration => migration.toVersion <= 7))
         legacyDb.exec(migration.statements.join(';'))
       const insert = legacyDb.prepare('INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)')
-      // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; Nimiq rows store a block height.
       insert.run('0xrecoverable', 1, 1_700_000_000, 'swap-1', 'pending')
       insert.run('0xunrecoverable', 2, 1_700_000_000, 'swap-2', 'pending')
       insert.run('NQ00 NATIVE', 3, 3_000_000, 'swap-3', 'pending')
@@ -234,7 +231,6 @@ describe('polygon recovery migrations', () => {
 
       legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('htlc-id', '0xrecoverable')
       legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xunrecoverable')
-      // A recovered id is never overwritten, and a recovered row is never parked.
       legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('other-id', '0xrecoverable')
       legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xrecoverable')
 

@@ -48,7 +48,6 @@ const category = computed(() => {
   return MerchantCategory.Shop
 })
 
-// Successful execution clears the indicator while sync continues tracking finality.
 const hasSettledListAppearance = computed(() =>
   props.tx.status === 'confirmed'
   || (['included', 'mined'].includes(props.tx.status) && (!isPaymentTx(props.tx) || props.tx.executionResult === true)),
@@ -81,7 +80,6 @@ const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
         {{ new FormattableNumber(crypto.total).toString({ maxDecimals: 2, useGrouping: true }) }}
       </time>
       <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
-        <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
         <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" />
       </time>
     </div>

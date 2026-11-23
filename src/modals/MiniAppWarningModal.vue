@@ -18,7 +18,6 @@ interface SuspiciousCharRow {
 }
 
 const props = defineProps<{
-  /** Normalized URL the user will open if they confirm. */
   url: string
   /**
    * Original pre-normalization input. Analyzed for homograph/zero-width/bidi
@@ -47,8 +46,6 @@ const suspiciousChars = computed<SuspiciousCharRow[]>(() =>
 )
 
 const generalWarnings = computed(() => {
-  // url-safety emits per-character reasons as `Contains <reason>.`. Strip those
-  // from the general list so the position-aware breakdown below isn't duplicated.
   const charReasonSet = new Set(
     analysis.value.hostChars
       .filter(c => c.suspicious && c.reason)

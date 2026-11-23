@@ -2,7 +2,6 @@ import type { MiniAppWarningDismissPayload } from '@/modals/MiniAppWarningModal.
 import { Modal, useModal } from '@/composables/useModal'
 
 /**
- * Show the anti-scam warning for a mini-app URL the user has never opened before.
  * `rawUrl` is the pre-normalization input — preserved so the modal can analyze
  * homograph / zero-width / bidi payloads that WHATWG URL parsing would strip.
  * Resolves `true` only if the user taps "Open anyway".

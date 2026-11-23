@@ -47,33 +47,21 @@ const state = ref({ ...emptyState, ...props.initialState })
 
 const { setToast } = useToast()
 
-let lock = Promise.resolve() // Initially unlocked
-const hasRunSuccessfully = new Map<string, boolean>() // Flag to track if the hook has run successfully
+let lock = Promise.resolve()
+const hasRunSuccessfully = new Map<string, boolean>()
 
-/**
- * Extends the flow handler to ensure that it only executes successfully once.
- * Once the handler has completed successfully (without errors), it prevents further execution.
- * This avoids re-calling onDone or onCancel after either has already been executed,
- * in particular to prevent onCancel from being executed on modal dismissal if onDone or onCancel has been
- * has already been triggered. Implements a promise-based locking system to manage execution flow and enforce a single
- * enforce a single successful execution.
- */
 function makeFlowHandler(originalHandler?: FlowHookCb, role?: CloseRole): () => Promise<void> {
-  // If no custom handler is not provided, the default behavior is to close the modal.
   if (!originalHandler)
     originalHandler = async () => {}
 
   const fn = async function (_err = defaultErrorHandler) {
-    // Wait for the lock to be released before proceeding.
     await lock
 
-    // Prevent execution if the hook has already run successfully.
     if (hasRunSuccessfully.get(flowName)) {
       logger.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
       return
     }
 
-    // Lock the execution by replacing the lock promise with a new, unresolved promise.
     let unlock
     lock = new Promise(resolve => unlock = resolve)
 
@@ -84,24 +72,19 @@ function makeFlowHandler(originalHandler?: FlowHookCb, role?: CloseRole): () => 
         hasError = true
       }
 
-      // Execute the original handler with the provided state and utilities.
       const { prevent } = await originalHandler(state.value, { err, setToast }) || { prevent: false }
       if (!hasError)
         hasRunSuccessfully.set(flowName, true)
 
-      // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing && !prevent)
         await useModal().closeModal({ role })
     }
     catch (error) {
-      // Without this, a throwing hook never reaches the step's error state and the PIN/Pay spinner never stops
       logger.error(`Unhandled error in ${flowName} ${role === 'cancel' ? 'onCancel' : 'onDone'} hook`, error)
-      // A failed closeModal after a successful hook must not report the completed action as failed
       if (!hasRunSuccessfully.get(flowName))
         _err(i18n.t('Something went wrong'))
     }
     finally {
-      // Release the lock for subsequent operations and reset the lock state.
       unlock!()
     }
   }
@@ -114,13 +97,7 @@ const onFlowCancel = makeFlowHandler(originalOnFlowCancel, 'cancel')
 watch(() => props.isClosing, async () => {
   if (!props.isClosing)
     return
-  // The flow's modal is being dismissed.
-  // Invoke onFlowCancel for the case that no onFlowDone/onFlowCancel handler was invoked yet, e.g. if the flow/modal
-  // dismissal was not triggered by a handler but, for example, a swipe gesture or modal.dismiss()
   await onFlowCancel()
-  // Out of abundance of caution, clear the state to clear any potential secrets. After the flow unmounts, the state
-  // will be garbage collected anyway, but just for the case that some code still retains a reference to it, clear its
-  // content.
   for (const stepName of Object.keys(state.value))
     delete state.value[stepName as keyof typeof state.value]
 })
@@ -129,9 +106,6 @@ const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
 const { goToSlide, isScrolling } = useCarousel(scroller, { activeIndex })
 
-// The single hidden input shared by the PIN steps (see useSharedPinInput). Only rendered/provided for flows
-// that actually contain a PIN step, so non-PIN flows don't carry the input in their DOM. Kept in this modal so
-// it is never inside a scrolling slide nor in the modal's inert background.
 const hasPinStep = stepsInFlow.some(s => ([StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange] as StepName[]).includes(s.step))
 const sharedPin = useSharedPinInput()
 const sharedPinInputEl = ref<HTMLInputElement>()
@@ -145,7 +119,6 @@ onBeforeUnmount(() => {
 })
 
 const activeStep = computed(() => historyStack.value[activeIndex.value])
-// Get the element in screen knowing the active step using the li key
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 
 const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1 && activeStep.value?.allowGoBack !== false)
@@ -170,9 +143,6 @@ watchEffect(() => errors.value = reactive(Object.fromEntries(historyStack.value.
 
 const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next: () => navigateTo(1), prev: () => navigateTo(-1) }))
 const stepCompletionInProgress = ref<StepName | null>(null)
-// performNavigation yields for the slide animation and then writes back values computed before it. A navigation
-// started meanwhile (e.g. QR "Enter manually" tapped mid back-animation) would be overwritten, so serialise them.
-// Steps also count as not visible meanwhile, so e.g. the QR scanner doesn't start and emit a scan that gets dropped.
 const navigationInProgress = ref(false)
 
 function getInputStepError(stepName: StepName) {
@@ -195,20 +165,16 @@ function canHandleInactiveBackEvent(stepName: StepName, targetStep: StepName) {
   const stepVisitedIndex = getVisitedStepIndex(stepName)
   const targetVisitedIndex = getVisitedStepIndex(targetStep)
 
-  // Some steps intentionally stay mounted to monitor state after navigation and may still need to force
-  // an explicit rollback. Only allow those inactive emits to navigate backwards within the visited history.
   return stepVisitedIndex !== -1
     && targetVisitedIndex !== -1
     && targetVisitedIndex <= stepVisitedIndex
 }
 
 function defaultErrorHandler(errorMessage: string) {
-  // Allow retry after a beforeNext error that doesn't navigate
   stepCompletionInProgress.value = null
   const activeStepName = activeStep.value.step
   if (isInputStep(activeStepName) && !props.isClosing) {
     errors.value[activeStepName] = errorMessage
-    // Clear the error message after 10 seconds
     window.setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
   else { setToast({ message: errorMessage, type: 'error', duration: 10 * 1e3 }) }
@@ -241,7 +207,6 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     let newIndex: number = currentIndex + 1
 
     if (typeof options === 'number') {
-      // prev()/navigateTo(-n) walk back through the visited steps like goBackBy, so a skipped step stays skipped
       newIndex = options < 0 ? activeIndex.value + options : currentIndex + options
     }
     else if ('step' in options) {
@@ -264,9 +229,6 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     else if (newIndex >= stepsInFlow.length)
       return await onFlowDone()
 
-    // For goBackBy, newIndex is a historyStack position — look up the step from historyStack
-    // (not stepsInFlow) so we navigate to the step the user actually visited, even when
-    // steps were skipped via navigateTo({ step }).
     const isGoBackBy = typeof options === 'number' ? options < 0 : 'goBackBy' in options
     const newActiveStep = isGoBackBy
       ? historyStack.value[newIndex] ?? stepsInFlow.at(newIndex)
@@ -274,8 +236,6 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
     if (!newActiveStep)
       return
 
-    // Except for goBackBy, newIndex is a stepsInFlow position, but historyStack omits skipped steps. Resolve the
-    // historyStack position by step identity; an unvisited earlier step goes right before the current one.
     const visitedIndex = getVisitedStepIndex(newActiveStep.step)
     const isGoingForward = visitedIndex === -1 && newIndex > currentIndex
     const targetIndex = visitedIndex === -1 ? activeIndex.value : visitedIndex
@@ -291,26 +251,18 @@ async function performNavigation(options: NavigateToOptions = 1, { allowDuringSt
       goToSlide(activeIndex.value)
     }
     else {
-      // If the jump is more than one step, we remove the middle slides from the animation.
       if (activeIndex.value - targetIndex > 1) {
-        // Save the current step.
         const currentStep = historyStack.value[activeIndex.value]
-        // Temporarily set history to only include the target and the current step.
         historyStack.value = [newActiveStep, currentStep]
-        // The current slide is now at index 1.
         activeIndex.value = 1
         await nextTick()
-        // Animate from slide 1 (current) to slide 0 (target).
         goToSlide(0)
-        // Wait for the scroll to start and finish.
         await until(isScrolling).toBe(true, { timeout: 1000 })
         await until(isScrolling).toBe(false, { timeout: 1000 })
-        // Once finished, update historyStack to only contain the target.
         historyStack.value = [historyStack.value[0]]
         activeIndex.value = 0
       }
       else {
-        // For adjacent navigation, ensure the target is in the history.
         if (visitedIndex === -1)
           historyStack.value.splice(targetIndex, 0, newActiveStep)
         await nextTick()
@@ -362,7 +314,7 @@ function makeSkipOrBackHandler(stepName: StepName, defaultNavigation: Pick<Navig
     else if (isBackEvent)
       navigateToVisitedStep(stepCountOrName)
     else
-      navigateTo({ step: stepCountOrName }) // note that this does not guarantee navigation in the desired direction
+      navigateTo({ step: stepCountOrName })
   }
 }
 
@@ -412,7 +364,6 @@ const activeStepHandlers = computed(() => ({
   navigateTo: makeStepNavigateHandler(activeStep.value.step),
 }))
 
-// TODO revise this
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
 onMounted(async () => {
@@ -441,22 +392,18 @@ async function onStepDone(stepName: StepName, value: OnDoneStepValue) {
     if (isInputStep(activeStepName)) {
       // @ts-expect-error If the emit value is well typed, this should work
       state.value[activeStepName] = value
-      errors.value[activeStepName] = '' // Clear error message
+      errors.value[activeStepName] = ''
     }
     if (activeStep.value.beforeNext)
       await activeStep.value.beforeNext(state.value, stepDoneCallbacks)
     else
-      // Next step
       await stepDoneCallbacks.next()
   }
   catch (error) {
     logger.error(`Unhandled error while completing step ${stepName}`, error)
-    // Step emits ignore the returned promise, so rethrowing would leave the step spinner on with no message
     defaultErrorHandler(i18n.t('Something went wrong'))
   }
   finally {
-    // Some steps intentionally no-op from beforeNext until input becomes valid. Release the guard if no
-    // navigation, error, or flow-finalization path was started so the user can retry.
     if (!completionStarted && stepCompletionInProgress.value === stepName)
       stepCompletionInProgress.value = null
   }
@@ -469,46 +416,30 @@ async function onCancel() {
 }
 
 const isActiveStepFullyVisible = ref(false)
-// We track the intersection of each step, with 1 meaning the step is fully visible.
 useIntersectionObserver(
   activeStepScrollerItem,
   ([{ intersectionRatio }]) => {
     isActiveStepFullyVisible.value = intersectionRatio === 1
     if (isActiveStepFullyVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
       focus()
-    // If it's not input step or autofocus is false, blur the input previously focused
     else if (isActiveStepFullyVisible.value)
       blur()
 
-    // TODO: remove when focus is working in every device (mobile + tablet)
     logger.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
   },
-  // Note: previously, we used [0, 0.5, 1] as threshold, meaning that the observer should be called whenever any of
-  // those values is reached/passed. However, occasionally but seldom it happened that the callback for reaching 1 was
-  // not called, but only a callback for example at 0.9xxx, which probably is the callback for passing the 0.5 threshold
-  // just invoked late. It seemed like in such cases a separate callback for threshold 1 might have been skipped,
-  // although I'm not sure why that should be. This caused isActiveStepFullyVisible not becoming true on rare occasion,
-  // and for example the QRScanner of the pay flow not starting in such case.
-  // Since setting 1 as single threshold, this issue was not observed anymore. But just 1 also results in less callbacks
   { threshold: 1, root: scroller },
 )
 
 function isStepVisible(stepName: StepName) {
   return ((activeIndex.value === 0 && stepName === stepsInFlow.at(0)?.step) || (stepName === activeStep.value?.step && isActiveStepFullyVisible.value))
-    // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
-    // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
-    // the background page on native, before the modal unveils the background.
     && !props.isClosing
     && !navigationInProgress.value
 }
 
 function focus() {
   const input = activeStepScrollerItem.value?.querySelector('input')
-  // TODO: remove when focus is working in every device (mobile + tablet)
   logger.log('focus', input)
   input?.focus()
-  // PIN steps render no input in the slide — their input is the shared one (useSharedPinInput). Open it here,
-  // when the step is fully visible, so the keyboard auto-opens like other input steps.
   sharedPin.focusActive()
 }
 
@@ -521,7 +452,6 @@ function blur() {
 }
 
 watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
-  // If going from full to max, wait for scrolling to finish to prevent popping
   if (
     (oldHeight === 'h-full' && newHeight === 'h-max')
     || (oldHeight === 'h-full' && newHeight === undefined)
@@ -531,7 +461,7 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
     await until(isScrolling).toBe(false, { timeout: 1000 })
   }
 
-  const modal = scroller.value?.parentElement?.parentElement // ion-page -> ion-modal
+  const modal = scroller.value?.parentElement?.parentElement
   if (!modal)
     return logger.warn('Cannot find modal element to override height')
 
@@ -541,7 +471,6 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
   if (newHeight)
     modal.style.setProperty('--height', newHeight === 'h-full' ? fullHeight : 'auto')
   else
-    // Reset to default height
     modal.style.setProperty('--height', props.height === 'h-full' ? fullHeight : 'auto')
 })
 </script>
@@ -587,9 +516,8 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
     </div>
   </ul>
 
-  <!-- Single hidden input shared by the PIN steps. Lives here (inside the modal, outside the slide carousel)
-       so focus never has to hand off between two inputs and the numeric keyboard appears (APP-157). Only
-       rendered for flows that contain a PIN step. -->
+  <!-- Lives here (inside the modal, outside the slide carousel) so focus never has to hand off between two inputs
+       and the numeric keyboard appears (APP-157). -->
   <input
     v-if="hasPinStep"
     ref="sharedPinInputEl" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
@@ -600,7 +528,6 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
 </template>
 
 <style scoped>
-/* When we call initializeFlow we setup some css classes */
 :global(ion-modal.nimiq-modal-h-max) {
   --height: auto;
 }

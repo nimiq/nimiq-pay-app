@@ -15,7 +15,6 @@ const props = withDefaults(defineProps<{
   opening?: boolean
   disabled?: boolean
   removable?: boolean
-  // When false, the open area is a plain div so a parent (e.g. SwipeToDeleteRow) owns the tap.
   tappable?: boolean
   descriptionLoading?: boolean
   buttonTestid?: string
@@ -35,8 +34,6 @@ const emit = defineEmits<{
   (e: 'menu', context: MiniAppMenuContext): void
 }>()
 
-// Kebab is always shown: Share applies to every Mini App; Report/Remove are gated per-row.
-// reportUrl is resolved lazily at tap time — no per-row store lookup during list render.
 function onMenu() {
   emit('menu', {
     app: { name: props.dapp.name, url: props.dapp.url, icon: props.dapp.icon },
@@ -45,8 +42,6 @@ function onMenu() {
   })
 }
 
-// Resolve the site's own best icon only once this row scrolls into view (never eagerly for
-// the whole list). No-op for apps with a curated awesome logo; the store dedupes/caches.
 const rootEl = ref<HTMLElement>()
 const { stop } = useIntersectionObserver(rootEl, ([entry]) => {
   if (entry?.isIntersecting) {
