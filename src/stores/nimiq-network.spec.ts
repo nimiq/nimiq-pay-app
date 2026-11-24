@@ -6,12 +6,13 @@ const state = vi.hoisted(() => ({
   isNetworkReconnecting: false,
   logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
   trackConsensusSlow: vi.fn(),
+  reportCriticalError: vi.fn(),
 }))
 
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast: vi.fn(), clearToast: vi.fn() }) }))
 vi.mock('@/lib', () => ({ isTestnet: true }))
-vi.mock('@/lib/analytics', () => ({ reportCriticalError: vi.fn(), trackConsensusEstablished: vi.fn(), trackConsensusSlow: state.trackConsensusSlow }))
+vi.mock('@/lib/analytics', () => ({ reportCriticalError: state.reportCriticalError, trackConsensusEstablished: vi.fn(), trackConsensusSlow: state.trackConsensusSlow }))
 vi.mock('@/stores/locks', () => {
   const useLocks = defineStore('locks', () => ({
     isNetworkReconnecting: computed({
@@ -31,6 +32,7 @@ describe('useNimiqNetwork', () => {
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
+    state.reportCriticalError.mockReset()
     vi.stubGlobal('Nimiq', {
       default: vi.fn(() => Promise.resolve()),
       Client: { create: vi.fn() },
@@ -47,6 +49,24 @@ describe('useNimiqNetwork', () => {
     vi.useRealTimers()
   })
 
+  it('loads the wasm without creating a client', async () => {
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+
+    await expect(store.initWasm()).resolves.toBe(true)
+    expect(store.networkName).toBe('testalbatross')
+    expect(Nimiq.Client.create).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed wasm load and resolves false', async () => {
+    const error = new Error('WebAssembly unavailable')
+    vi.mocked(Nimiq.default).mockRejectedValueOnce(error)
+    const { useNimiqNetwork } = await import('./nimiq-network')
+
+    await expect(useNimiqNetwork().initWasm()).resolves.toBe(false)
+    expect(state.reportCriticalError).toHaveBeenCalledWith(error, { context: 'nimiq-wasm-init', network: 'testalbatross' })
+  })
+
   async function initWithConsensusListener() {
     let onConsensusChanged!: (consensus: string) => Promise<void>
     vi.mocked(Nimiq.Client.create).mockResolvedValue({
@@ -57,7 +77,7 @@ describe('useNimiqNetwork', () => {
       addPeerChangedListener: vi.fn(),
     } as any)
     const { useNimiqNetwork } = await import('./nimiq-network')
-    await useNimiqNetwork().init()
+    await useNimiqNetwork().initClient()
     return { onConsensusChanged }
   }
 
@@ -96,7 +116,7 @@ describe('useNimiqNetwork', () => {
     vi.mocked(Nimiq.Client.create).mockResolvedValue(client as any)
     const { useNimiqNetwork } = await import('./nimiq-network')
     const store = useNimiqNetwork()
-    await store.init()
+    await store.initClient()
     return { store, onHeadChanged, pendingBlocks }
   }
 
@@ -348,7 +368,7 @@ describe('useNimiqNetwork', () => {
       .mockResolvedValueOnce(retryClient as any)
     const { useNimiqNetwork } = await import('./nimiq-network')
     const store = useNimiqNetwork()
-    const init = store.init()
+    const init = store.initClient()
 
     await vi.advanceTimersByTimeAsync(30_000)
     expect(Nimiq.Client.create).toHaveBeenCalledOnce()
@@ -374,7 +394,7 @@ describe('useNimiqNetwork', () => {
       .mockResolvedValueOnce(client as any)
     const { useNimiqNetwork } = await import('./nimiq-network')
     const store = useNimiqNetwork()
-    const init = store.init()
+    const init = store.initClient()
 
     await vi.advanceTimersByTimeAsync(999)
     expect(Nimiq.Client.create).toHaveBeenCalledOnce()
@@ -387,6 +407,6 @@ describe('useNimiqNetwork', () => {
 
     expect(Nimiq.Client.create).toHaveBeenCalledTimes(3)
     expect(store.client).toStrictEqual(client)
-    expect(Nimiq.default).toHaveBeenCalledOnce()
+    expect(Nimiq.default).not.toHaveBeenCalled()
   })
 })

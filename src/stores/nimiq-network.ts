@@ -60,21 +60,21 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return config.build()
   }
 
-  async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
+  async function initWasm() {
     networkName.value = isTestnet ? 'testalbatross' : 'MainAlbatross'
 
     try {
       await Nimiq.default()
+      return true
     }
     catch (error) {
       reportCriticalError(error, { context: 'nimiq-wasm-init', network: networkName.value })
       logger.error('Nimiq WASM init failed; running without the PoS client', error)
-      return
+      return false
     }
+  }
 
-    if (!options.launchNimiqClient)
-      return
-
+  async function initClient() {
     const clientConfig = buildClientConfig()
     logger.log('Creating Nimiq client with config', clientConfig)
     const consensusStartedAt = Date.now()
@@ -358,7 +358,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     height,
     lastMacroBlockHeight,
     peerCount,
-    init,
+    initWasm,
+    initClient,
     claimCashlink,
     getAccount,
     getAccounts,
