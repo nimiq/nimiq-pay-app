@@ -70,3 +70,6 @@ nimiq-pay-tests/**/.mutants/
 
 # Agent worktrees created by the ship skill
 .claude/worktrees/
+
+# Local Maestro HTML reports
+nimiq-pay-tests/tests_output/

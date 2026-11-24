@@ -46,7 +46,7 @@ cd android && ./gradlew assembleDebug #creates the APK
 
 # INSTALLATION
 Now install the app on the emulator
-adb install /Users/franciscodiaz/Desktop/Repo_Pay_APP/nimiq-pay-app/android/app/build/outputs/apk/debug/app-debug.apk
+adb install android/app/build/outputs/apk/debug/app-debug.apk
 
 Open the app
 adb shell am start -n com.nimiq.pay.debug/com.nimiq.pay.MainActivity
@@ -90,7 +90,11 @@ maestro test \
 
 
 # Upload Pay App in APK to BrowserStack
-pnpm release:browserstack:apk
+# The suite needs the debug test APK (com.nimiq.pay.debug, Mini Apps on, over-the-air updates off), not the
+# release APK that `pnpm release:browserstack:apk` uploads by default. Build it, then upload it and record it in
+# the BROWSERSTACK_ANDROID_DEBUG_APP repo variable that the CI workflow reads:
+node scripts/build-test-apk.mjs
+pnpm exec dotenv -- node scripts/browserstack-apk-upload.js --apk android/app/build/outputs/apk/debug/app-debug.apk --set-repo-variables
 
 # Upload Maestro Test Suite to BrowserStack
 pnpm upload:browserstack:maestro
