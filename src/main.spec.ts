@@ -2,14 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   device: { isIOS: false, isWeb: false },
+  use: vi.fn(),
   mount: vi.fn(),
   notifyAppReady: vi.fn(),
   initDb: vi.fn(),
-  routerReady: vi.fn(),
+  initWasm: vi.fn(),
+  initClient: vi.fn(),
+  router: { beforeEach: vi.fn(), beforeResolve: vi.fn(), onError: vi.fn(), isReady: vi.fn() },
   isWasmAvailable: vi.fn(),
   error: vi.fn(),
   identifyUser: vi.fn(),
   trackCurrentAppOpen: vi.fn(),
+  reportCriticalError: vi.fn(),
 }))
 
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => !mocks.device.isWeb } }))
@@ -18,31 +22,24 @@ vi.mock('@ionic/vue', () => ({ IonicVue: {} }))
 vi.mock('@vue/devtools', () => ({ devtools: { connect: vi.fn() } }))
 vi.mock('capacitor-lockdown-mode', () => ({ LockdownMode: { isLockdownModeEnabled: async () => ({}) } }))
 vi.mock('jeep-sqlite/dist/components/jeep-sqlite', () => ({ JeepSqlite: class {} }))
-vi.mock('vue', () => ({ createApp: () => ({ use: vi.fn(), mount: mocks.mount }) }))
+vi.mock('vue', () => ({ createApp: () => ({ use: mocks.use, mount: mocks.mount }) }))
 vi.mock('pinia', () => ({ createPinia: vi.fn(), storeToRefs: () => ({ language: { value: 'en' } }) }))
 vi.mock('vue-virtual-scroller', () => ({ default: {} }))
 vi.mock('@/composables/useDecrypt', () => ({ useDecrypt: vi.fn() }))
 vi.mock('@/composables/useDevice', () => ({ useDevice: () => mocks.device }))
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ init: vi.fn(), log: vi.fn(), error: mocks.error }) }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18nRegistration: {}, setLanguage: vi.fn().mockResolvedValue(undefined) }))
-vi.mock('@/lib/analytics', () => ({ identifyUser: mocks.identifyUser, trackCurrentAppOpen: mocks.trackCurrentAppOpen }))
+vi.mock('@/lib/analytics', () => ({ identifyUser: mocks.identifyUser, reportCriticalError: mocks.reportCriticalError, trackCurrentAppOpen: mocks.trackCurrentAppOpen }))
 vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
 vi.mock('@/lib/node-globals', () => ({ installNodeGlobals: vi.fn() }))
 vi.mock('@/lib/utils', () => ({ isWasmAvailable: mocks.isWasmAvailable }))
 vi.mock('@/stores/app', () => ({ useApp: vi.fn() }))
 vi.mock('@/stores/conn', () => ({ useConn: () => ({ init: mocks.initDb }) }))
-vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => ({ init: vi.fn() }) }))
+vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => ({ initWasm: mocks.initWasm, initClient: mocks.initClient }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: vi.fn() }))
 vi.mock('./App.vue', () => ({ default: {} }))
 vi.mock('./views/LockdownScreen.vue', () => ({ default: {} }))
-vi.mock('./router', () => ({
-  default: {
-    beforeEach: vi.fn(),
-    beforeResolve: vi.fn(),
-    onError: vi.fn(),
-    isReady: mocks.routerReady,
-  },
-}))
+vi.mock('./router', () => ({ default: mocks.router }))
 
 describe('ota startup confirmation', () => {
   let startup: () => Promise<void>
@@ -54,7 +51,8 @@ describe('ota startup confirmation', () => {
     mocks.device.isWeb = false
     mocks.initDb.mockResolvedValue(undefined)
     mocks.identifyUser.mockResolvedValue(undefined)
-    mocks.routerReady.mockResolvedValue(undefined)
+    mocks.initWasm.mockResolvedValue(true)
+    mocks.router.isReady.mockResolvedValue(undefined)
     mocks.notifyAppReady.mockResolvedValue({})
     mocks.isWasmAvailable.mockReturnValue(true)
     vi.spyOn(customElements, 'define').mockImplementation(() => {})
@@ -80,10 +78,10 @@ describe('ota startup confirmation', () => {
 
   it('confirms a native bundle only after routing and mounting succeed', async () => {
     const ready = Promise.withResolvers<void>()
-    mocks.routerReady.mockReturnValue(ready.promise)
+    mocks.router.isReady.mockReturnValue(ready.promise)
 
     const boot = startup()
-    await vi.waitFor(() => expect(mocks.routerReady).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(mocks.router.isReady).toHaveBeenCalledOnce())
     expect(mocks.notifyAppReady).not.toHaveBeenCalled()
     expect(mocks.mount).not.toHaveBeenCalled()
 
@@ -91,6 +89,41 @@ describe('ota startup confirmation', () => {
     await boot
     expect(mocks.notifyAppReady).toHaveBeenCalledOnce()
     expect(mocks.mount.mock.invocationCallOrder[0]).toBeLessThan(mocks.notifyAppReady.mock.invocationCallOrder[0]!)
+  })
+
+  it('loads the Nimiq wasm alongside the database and routes only after it is ready', async () => {
+    const wasm = Promise.withResolvers<boolean>()
+    mocks.initWasm.mockReturnValue(wasm.promise)
+
+    const boot = startup()
+    await vi.waitFor(() => expect(mocks.router.onError).toHaveBeenCalledOnce())
+    await new Promise(resolve => setTimeout(resolve))
+    expect(mocks.use).not.toHaveBeenCalledWith(mocks.router)
+    expect(mocks.router.isReady).not.toHaveBeenCalled()
+    expect(mocks.initClient).not.toHaveBeenCalled()
+    expect(mocks.initWasm.mock.invocationCallOrder[0]).toBeLessThan(mocks.initDb.mock.invocationCallOrder[0]!)
+
+    wasm.resolve(true)
+    await boot
+    expect(mocks.use).toHaveBeenCalledWith(mocks.router)
+    expect(mocks.initClient).toHaveBeenCalledOnce()
+    expect(mocks.mount).toHaveBeenCalledOnce()
+  })
+
+  it('mounts without the Nimiq client when the wasm fails to load', async () => {
+    mocks.initWasm.mockResolvedValue(false)
+
+    await startup()
+    expect(mocks.mount).toHaveBeenCalledOnce()
+    expect(mocks.initClient).not.toHaveBeenCalled()
+  })
+
+  it('reports failed navigations', async () => {
+    await startup()
+    const error = new Error('undefined is not an object (evaluating \'wasm.policy_blocks_per_batch\')')
+
+    mocks.router.onError.mock.calls[0]![0](error)
+    expect(mocks.reportCriticalError).toHaveBeenCalledWith(error, { context: 'router-navigation' })
   })
 
   it('leaves a failed startup unconfirmed so native rollback can recover', async () => {

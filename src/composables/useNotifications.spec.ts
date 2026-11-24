@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   initializeFlow: vi.fn(),
   waitForUnlock: vi.fn(async () => undefined),
   transactions: [] as Array<{ hash: string }>,
+  getStoredTransaction: vi.fn(async (_hash: string): Promise<{ hash: string, asset: string } | null> => null),
   formatUsdtAmount: vi.fn((_amount: number) => '5.00 USDT'),
   formatCrypto: vi.fn((_amount?: number, _options?: object) => '123.456 NIM'),
   pushListeners: [] as string[],
@@ -125,6 +126,7 @@ vi.mock('@/stores/conn', () => ({
 vi.mock('@/stores/transactions', () => ({
   useTransactions: () => ({
     get transactions() { return state.transactions },
+    getStoredTransaction: state.getStoredTransaction,
   }),
 }))
 
@@ -168,6 +170,8 @@ describe('useNotifications — local notifications', () => {
     state.waitForUnlock.mockReset()
     state.waitForUnlock.mockResolvedValue(undefined)
     state.transactions = []
+    state.getStoredTransaction.mockReset()
+    state.getStoredTransaction.mockResolvedValue(null)
     state.formatUsdtAmount.mockClear()
     state.formatCrypto.mockClear()
     state.formatCrypto.mockReturnValue('123.456 NIM')
@@ -403,10 +407,24 @@ describe('useNotifications — local notifications', () => {
       expect(state.tapCallback).toBeTypeOf('function')
       await state.tapCallback!({ notification: { extra: { hash: 'abc-123' } } })
       expect(state.waitForUnlock).toHaveBeenCalledTimes(1)
+      expect(state.getStoredTransaction).not.toHaveBeenCalled()
       expect(state.closeActiveMiniApp).toHaveBeenCalledTimes(1)
       expect(state.initializeFlow).toHaveBeenCalledWith(
         'viewTransactionDetail',
         { initialState: { transactionList: { hash: 'abc-123' } } },
+      )
+    })
+
+    it('on tap: opens a tx of the inactive asset from the DB', async () => {
+      state.transactions = []
+      state.getStoredTransaction.mockResolvedValue({ hash: 'nim-hash', asset: 'NIM' })
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().installLocalNotificationsTapHandler()
+      await state.tapCallback!({ notification: { extra: { hash: 'nim-hash' } } })
+      expect(state.getStoredTransaction).toHaveBeenCalledWith('nim-hash')
+      expect(state.initializeFlow).toHaveBeenCalledWith(
+        'viewTransactionDetail',
+        { initialState: { transactionList: { hash: 'nim-hash', asset: 'NIM' } } },
       )
     })
 
@@ -418,11 +436,13 @@ describe('useNotifications — local notifications', () => {
       expect(state.closeActiveMiniApp).not.toHaveBeenCalled()
     })
 
-    it('on tap: hash not found in store is a no-op (no flow opened)', async () => {
+    it('on tap: hash not found in store or DB is a no-op (no flow opened)', async () => {
       state.transactions = []
+      state.getStoredTransaction.mockResolvedValue(null)
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().installLocalNotificationsTapHandler()
       await state.tapCallback!({ notification: { extra: { hash: 'missing' } } })
+      expect(state.getStoredTransaction).toHaveBeenCalledWith('missing')
       expect(state.initializeFlow).not.toHaveBeenCalled()
     })
 
