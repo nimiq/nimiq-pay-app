@@ -349,7 +349,6 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     isSendingTx.value = true
-    let swapSettlement: Promise<unknown> | undefined
     try {
       if (expectedContext && !remoteSigner.isWalletContextCurrent(expectedContext)) {
         return {
@@ -388,7 +387,7 @@ export const useTransactions = defineStore('transactions', () => {
         }
       }
 
-      return await _sendTx(partialTx, sendContext, onSubmitted, settlement => swapSettlement = settlement)
+      return await _sendTx(partialTx, sendContext, onSubmitted)
     }
     catch (error) {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
@@ -396,8 +395,6 @@ export const useTransactions = defineStore('transactions', () => {
     finally {
       syncState.pendingPaymentTransactions = []
       isSendingTx.value = false
-      if (!onSubmitted)
-        await swapSettlement
     }
   }
 
@@ -405,7 +402,6 @@ export const useTransactions = defineStore('transactions', () => {
     partialTx: PartialSendTxArgs,
     sendContext: WalletContext,
     onSubmitted: ((hash: string) => Promise<void>) | undefined,
-    onSwapSettlement: (settlement: Promise<unknown>) => void,
   ): Promise<TransactionSendResult> {
     const localWallet = useLocalWallet()
     const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
@@ -780,9 +776,11 @@ export const useTransactions = defineStore('transactions', () => {
 
       await onSubmitted?.(staged.tx.hash)
 
+      let swapSettlement: Promise<boolean> | undefined
       if (patchedSwap && swapContext) {
         const finishSwap = async () => {
           const settlement = startSwapSettlement(swapContext, swapStartedAt)
+          let settled = false
           try {
             const { preimage: secret, source } = await waitForSwapPreimage(
               (partialTx as MerchantTransaction).paymentRef,
@@ -791,9 +789,10 @@ export const useTransactions = defineStore('transactions', () => {
               () => remoteSigner.isWalletContextCurrent(sendContext),
               status => settlement.poll(status),
             )
+            settled = true
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+              return settled
             settlement.end(source)
             trackSwapCompleted({
               swap_duration_ms: Date.now() - swapStartedAt,
@@ -803,13 +802,11 @@ export const useTransactions = defineStore('transactions', () => {
             if (!storedTx)
               await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+              return settled
             await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
             if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+              return settled
             await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
           }
           catch (error) {
             logger.error('Failed to finish accepted swap bookkeeping', error)
@@ -818,14 +815,16 @@ export const useTransactions = defineStore('transactions', () => {
           finally {
             settlement.stop()
           }
+          return settled
         }
-        onSwapSettlement(finishSwap())
+        swapSettlement = finishSwap()
       }
 
       return {
         outcome: 'submitted',
         tx: staged.tx,
         serialized: staged.serialized!,
+        swapSettlement,
       }
     }
     catch (error) {

@@ -2162,8 +2162,10 @@ describe('useTransactions', () => {
           transfer: Transfer.UserPaymentToAtomicSwap,
           paymentRef: 'payment-ref',
         } as any)
-        await vi.advanceTimersByTimeAsync(60_000)
         result = await send
+        const settlement = (result as { swapSettlement: Promise<boolean> }).swapSettlement
+        await vi.advanceTimersByTimeAsync(60_000)
+        await expect(settlement).resolves.toBe(false)
       }
       finally {
         vi.useRealTimers()
@@ -2210,7 +2212,7 @@ describe('useTransactions', () => {
       await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
     })
 
-    it('releases the send lock while the caller waits for Lightning settlement', async () => {
+    it('returns submitted before Lightning settlement and reports settlement separately', async () => {
       const { useTransactions } = await import('./transactions')
       const { signedTx } = createSignedTransaction('awaiting-lightning')
       let settleSwap!: (value: { preimage: string }) => void
@@ -2226,16 +2228,16 @@ describe('useTransactions', () => {
         },
       } as any)
 
-      let settled = false
-      const send = useTransactions().sendTx({
+      const result = await useTransactions().sendTx({
         transfer: Transfer.UserPaymentToAtomicSwap,
         paymentRef: 'swap-id',
-      } as any).finally(() => settled = true)
-      await vi.waitFor(() => expect(state.isSendingTx).toBe(false))
-      expect(settled).toBe(false)
+      } as any)
+      expect(result).toMatchObject({ outcome: 'submitted', swapSettlement: expect.any(Promise) })
+      expect(state.isSendingTx).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
 
       settleSwap({ preimage: 'secret' })
-      await expect(send).resolves.toMatchObject({ outcome: 'submitted' })
+      await expect((result as { swapSettlement: Promise<boolean> }).swapSettlement).resolves.toBe(true)
       expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array))
     })
 
@@ -2256,10 +2258,12 @@ describe('useTransactions', () => {
         swap: { id: 'swap-id', status: 'pending', contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } } },
       })
 
-      await expect(useTransactions().sendTx({
+      const result = await useTransactions().sendTx({
         transfer: Transfer.UserPaymentToAtomicSwap,
         paymentRef: 'swap-id',
-      } as any)).resolves.toMatchObject({ outcome: 'submitted' })
+      } as any)
+      expect(result).toMatchObject({ outcome: 'submitted' })
+      await expect((result as { swapSettlement: Promise<boolean> }).swapSettlement).resolves.toBe(true)
 
       expect(state.trackSwapStep).toHaveBeenCalledWith(expect.objectContaining({
         step: 'settlement',

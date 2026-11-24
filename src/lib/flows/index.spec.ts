@@ -464,8 +464,119 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.polygonSendSwapPayment).toHaveBeenCalledWith(
       expect.objectContaining({ paymentRef: 'swap-ref' }),
       expect.anything(),
-      { maxFee: 4_000_000 },
+      expect.objectContaining({ maxFee: 4_000_000 }),
     )
+  })
+
+  describe('lightning settlement wait', () => {
+    const settlementPendingToast = { message: 'Payment sent. Waiting for Lightning confirmation; it will be refunded automatically if it fails.' }
+    const successToast = { message: 'Payment successful' }
+    const nimSwapState = {
+      [StepName.QRCodeScanner]: {
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        recipient: 'lnbc1atomicswapinvoice',
+        amount: 10,
+        paymentRef: 'swap-ref',
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+      },
+    }
+    const usdtSwapState = {
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        recipient: 'lnbc1atomicswapinvoice',
+        amount: 1_000_000,
+        paymentRef: 'swap-ref',
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+        usdtFeeAllowance: 4_000_000,
+      },
+    }
+
+    async function finishPayment(flowState: Record<string, unknown>) {
+      vi.useFakeTimers()
+      try {
+        const { initializeFlow } = await import('./index')
+        await initializeFlow(FlowName.Payment)
+        const err = vi.fn()
+        const done = getLastCreatedFlow().onDone(flowState, { err, setToast: vi.fn() })
+        await vi.advanceTimersByTimeAsync(60_000)
+        await done
+        await vi.advanceTimersByTimeAsync(1_000)
+        return err
+      }
+      finally {
+        vi.useRealTimers()
+      }
+    }
+
+    it('reports a NIM Lightning payment as successful when it settles in time', async () => {
+      state.isNimiqAsset = true
+      state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'swap-hash' }, serialized: 'swap', swapSettlement: Promise.resolve(true) })
+
+      const err = await finishPayment(nimSwapState)
+
+      expect(err).not.toHaveBeenCalled()
+      expect(state.trackPaymentCompleted).toHaveBeenCalledOnce()
+      expect(state.setToast).toHaveBeenCalledWith(successToast)
+    })
+
+    it.each([
+      ['still pending after the wait', new Promise<boolean>(() => {})],
+      ['failed', Promise.resolve(false)],
+    ])('closes a NIM Lightning payment as pending when settlement is %s', async (_, swapSettlement) => {
+      state.isNimiqAsset = true
+      state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'swap-hash' }, serialized: 'swap', swapSettlement })
+
+      const err = await finishPayment(nimSwapState)
+
+      expect(err).not.toHaveBeenCalled()
+      expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+      expect(state.setToast).toHaveBeenCalledWith(settlementPendingToast)
+      expect(state.setToast).not.toHaveBeenCalledWith(successToast)
+    })
+
+    it('closes a funded USDT Lightning payment as pending when settlement outlasts the wait', async () => {
+      state.activeAsset = Asset.USDT
+      state.polygonSendSwapPayment.mockImplementationOnce(async (_request, _title, options) => {
+        await options.onSubmitted('0xfunding')
+        return new Promise(() => {})
+      })
+
+      const err = await finishPayment(usdtSwapState)
+
+      expect(err).not.toHaveBeenCalled()
+      expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+      expect(state.setToast).toHaveBeenCalledWith(settlementPendingToast)
+      expect(state.setToast).not.toHaveBeenCalledWith(successToast)
+    })
+
+    it('closes a USDT Lightning payment as pending when settlement fails with funds in the HTLC', async () => {
+      state.activeAsset = Asset.USDT
+      state.polygonSendSwapPayment.mockResolvedValueOnce({ data: undefined, error: 'Swap timed out waiting for Lightning payment confirmation', rejected: false })
+
+      const err = await finishPayment(usdtSwapState)
+
+      expect(err).not.toHaveBeenCalled()
+      expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+      expect(state.setToast).toHaveBeenCalledWith(settlementPendingToast)
+      expect(state.setToast).not.toHaveBeenCalledWith(successToast)
+    })
+
+    it('fails a USDT Lightning payment that was rejected before funding', async () => {
+      state.activeAsset = Asset.USDT
+      state.polygonSendSwapPayment.mockResolvedValueOnce({ data: undefined, error: 'Invalid swap hash', rejected: true })
+
+      const err = await finishPayment(usdtSwapState)
+
+      expect(err).toHaveBeenCalledWith('Invalid swap hash')
+      expect(state.setToast).not.toHaveBeenCalled()
+    })
   })
 
   it('blocks a USDT payment when maintenance begins during the flow', async () => {

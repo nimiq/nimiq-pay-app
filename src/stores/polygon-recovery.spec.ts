@@ -1019,6 +1019,36 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.provideFundingProof).toHaveBeenCalledWith('swap-id', 'contract-id', mocks.relayHash)
   })
 
+  it('reports mined swap funding before waiting for Lightning settlement', async () => {
+    persistedHtlc = null
+    const store = recreateStore()
+    const receipt = relayReceipt(polygonUsdtConfig.htlcContract, refundInterface.getFunction('openWithApproval')!.selector)
+    mocks.wait.mockResolvedValueOnce(receipt)
+    mocks.provider.getTransactionReceipt.mockResolvedValueOnce(receipt)
+    let settleSwap!: (value: { preimage: string }) => void
+    mocks.provideFundingProof.mockReturnValueOnce(new Promise((resolve) => {
+      settleSwap = resolve
+    }))
+    const onSubmitted = vi.fn(async () => {})
+    let finished = false
+
+    const payment = store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment', { onSubmitted }).finally(() => finished = true)
+
+    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledWith(mocks.relayHash))
+    expect(finished).toBe(false)
+    expect(persistedHtlc).toMatchObject({ address: mocks.htlcId, tx_hash: mocks.relayHash })
+
+    settleSwap({ preimage: 'secret' })
+    expect((await payment).data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed' })
+  })
+
   it('defers the expiry refund while swap funding holds the HTLC forwarder nonce', async () => {
     const expiredHtlc = { ...persistedHtlc!, address: `0x${'9a'.repeat(32)}`, htlc_id: `0x${'9a'.repeat(32)}` }
     persistedHtlc = null
