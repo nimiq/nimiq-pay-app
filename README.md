@@ -20,7 +20,7 @@ pnpm dev
 If you cloned without submodules, run `git submodule update --init --recursive`
 before `pnpm install`.
 
-Create a `.env` file with the values for the features you work on. [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) lists the build variables.
+Copy `.env.example` to `.env` and fill in the values for the features you work on.
 
 After a pull that moves `vendor/trust-web3-provider`, run
 `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
