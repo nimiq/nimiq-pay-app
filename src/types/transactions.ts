@@ -294,6 +294,7 @@ export type TransactionSendResult
     outcome: 'submitted'
     tx: TransactionSentByUser
     serialized: string
+    swapSettlement?: Promise<boolean>
   }
   | {
     outcome: 'rejected'

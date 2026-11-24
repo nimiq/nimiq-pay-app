@@ -28,6 +28,8 @@ import { isPaymentTransferType, PaymentMethod, Transfer } from '@/types/transact
 
 const logger = useLogger('flows/index.ts')
 
+const LIGHTNING_SETTLEMENT_WAIT_MS = 45_000
+
 const FEATURE_FLOW_MAP: Partial<Record<FlowName, FeatureName>> = {
   [FlowName.Payment]: 'pay',
   [FlowName.NimTopUp]: 'top_up',
@@ -269,6 +271,22 @@ const paymentFlow: FlowInit = async () => {
       trackPaymentFailed({ ...analyticsProps, error_reason: errorMessage })
       return err(errorMessage)
     }
+    const settleWithinWait = <T>(settlement: Promise<T>) => Promise.race([
+      settlement,
+      new Promise<undefined>(resolve => setTimeout(resolve, LIGHTNING_SETTLEMENT_WAIT_MS)),
+    ])
+    const showSettlementPending = async (reason: string) => {
+      setPaymentAnalyticsStatus('unknown')
+      trackPaymentUnknown({
+        ...analyticsProps,
+        error_reason: reason,
+        duration_ms: Date.now() - (previewState?.paymentAnalytics?.startedAt || Date.now()),
+      })
+      const { useToast } = await import('@/composables/useToast')
+      useToast().setToast({
+        message: i18n.t('Payment sent. Waiting for Lightning confirmation; it will be refunded automatically if it fails.'),
+      })
+    }
 
     logger.log(`🤑  Initializing payment process with ${payment.method}`, payment)
     switch (payment.method) {
@@ -297,6 +315,11 @@ const paymentFlow: FlowInit = async () => {
             return
           }
           case 'submitted':
+            if (result.swapSettlement) {
+              const settled = await settleWithinWait(result.swapSettlement)
+              if (!settled)
+                return showSettlementPending(settled === false ? 'lightning_settlement_failed' : 'lightning_settlement_pending')
+            }
             break
         }
         break
@@ -325,13 +348,24 @@ const paymentFlow: FlowInit = async () => {
           : 'Payment'
 
         if (request.transfer === Transfer.UserPaymentToAtomicSwap) {
-          const { error } = await usePolygonUsdt().sendSwapPayment(
+          let markFunded = () => {}
+          const funded = new Promise<void>(resolve => markFunded = resolve)
+          const swapPayment = usePolygonUsdt().sendSwapPayment(
             polygonRequest,
             polygonTitle,
-            { maxFee: state[StepName.PaymentPreview]?.usdtFeeAllowance },
+            {
+              maxFee: state[StepName.PaymentPreview]?.usdtFeeAllowance,
+              onSubmitted: async () => markFunded(),
+              onFundingUncertain: async () => markFunded(),
+            },
           )
-          if (error)
-            return failPayment(error)
+          const swapResult = await Promise.race([swapPayment, funded.then(() => settleWithinWait(swapPayment))])
+          if (!swapResult)
+            return showSettlementPending('lightning_settlement_pending')
+          if (swapResult.error && !swapResult.rejected)
+            return showSettlementPending('lightning_settlement_failed')
+          if (swapResult.error)
+            return failPayment(swapResult.error)
         }
         else {
           const result = await usePolygonUsdt().sendPayment(
