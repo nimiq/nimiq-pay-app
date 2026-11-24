@@ -1,3 +1,4 @@
+import { Preferences } from '@capacitor/preferences'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { computedAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
@@ -8,21 +9,32 @@ import { isTestnet } from '@/lib'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { polygonRpcOverride } from '@/lib/polygon/rpc-override'
 import { safeOrigin } from '@/lib/url-safety'
+import { promiseWithTimeout } from '@/lib/utils'
 
 const logger = useLogger('FeatureFlagsStore')
 
-function parseBlockedOrigins(raw: unknown): string[] {
+const BLOCKED_WIDGET_ORIGINS_KEY = 'blockedWidgetOrigins'
+
+/** Undefined when the payload holds no list: only a list, even an empty one, replaces the last one. */
+function parseBlockedOrigins(raw: unknown): string[] | undefined {
   let payload = raw
   try {
     payload = typeof raw === 'string' ? JSON.parse(raw) : raw
   }
   catch {
-    logger.error('The blocked widget origins are not JSON')
-    return []
+    // Android hands an object payload over as Java's text for a map: {blockedOrigins=[https://a.example, *]}.
+    const listed = /(?:^\{|, )blockedOrigins=\[([^\]]*)\]/.exec(raw as string)
+    if (!listed) {
+      logger.error('The blocked widget origins are not JSON')
+      return undefined
+    }
+    payload = { blockedOrigins: listed[1] ? listed[1].split(', ') : [] }
   }
   const origins = (payload as { blockedOrigins?: unknown } | null | undefined)?.blockedOrigins
   // Normalised, so that "https://Bad.Example/" still blocks the site during an incident.
-  return Array.isArray(origins) ? origins.filter(origin => typeof origin === 'string').map(origin => safeOrigin(origin)) : []
+  const normalised = Array.isArray(origins) ? origins.map(origin => origin === '*' ? origin : typeof origin === 'string' ? safeOrigin(origin, '') : '') : undefined
+  // One entry that is neither "*" nor a site keeps the last list, so that a typo never lifts a block.
+  return normalised?.every(origin => origin === '*' || /^https?:\/\//.test(origin)) ? normalised : undefined
 }
 
 export const useFeatureFlags = defineStore('featureFlags', () => {
@@ -72,16 +84,54 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   }
   void refreshCryptocityPoints()
 
-  // Fails open: with no answer from PostHog, widgets keep working as last known.
+  // Saved: a block holds until PostHog sends another list, also offline, after a restart or with the flag turned off.
   const blockedWidgetOrigins = ref<string[]>([])
+  // Until then widgets count every site as blocked, so a cold start reaches no blocked one.
+  const blockedWidgetOriginsKnown = ref(false)
+  let appliedBlockRefresh = 0
+  let blockRefreshes = 0
+  let savedBlock: string | null = null
+  let blockSaved = false
+  const savedBlockRead = Preferences.get({ key: BLOCKED_WIDGET_ORIGINS_KEY })
+    .then(({ value }) => {
+      if (!blockSaved)
+        savedBlock = value
+      const saved = parseBlockedOrigins(value)
+      if (saved && !appliedBlockRefresh)
+        blockedWidgetOrigins.value = saved
+    })
+    .catch(error => logger.error('Error reading the saved blocked widget origins:', error))
+  const savedBlockWait = promiseWithTimeout(savedBlockRead, 5000)
+    .catch(() => logger.error('Gave up waiting for the saved blocked widget origins'))
+  void savedBlockWait.finally(() => {
+    blockedWidgetOriginsKnown.value = true
+  })
+  let savingBlock: Promise<void> = savedBlockWait
   async function refreshBlockedWidgetOrigins() {
+    const refresh = ++blockRefreshes
+    let origins: string[] | undefined
     try {
-      const { value } = await Posthog.getFeatureFlagPayload({ key: 'mini-app-widgets' })
-      blockedWidgetOrigins.value = parseBlockedOrigins(value)
+      origins = parseBlockedOrigins((await Posthog.getFeatureFlagPayload({ key: 'mini-app-widgets' })).value)
     }
     catch (error) {
       logger.error('Error fetching blocked widget origins:', error)
     }
+    if (!origins || refresh < appliedBlockRefresh)
+      return
+    appliedBlockRefresh = refresh
+    blockedWidgetOriginsKnown.value = true
+    const block = JSON.stringify({ blockedOrigins: origins })
+    if (block !== JSON.stringify({ blockedOrigins: blockedWidgetOrigins.value }))
+      blockedWidgetOrigins.value = origins
+    // In turn, so that overlapping refreshes leave the latest list saved.
+    savingBlock = savingBlock.then(async () => {
+      if (block === savedBlock)
+        return
+      blockSaved = true
+      await Preferences.set({ key: BLOCKED_WIDGET_ORIGINS_KEY, value: block })
+      savedBlock = block
+    }).catch(error => logger.error('Error saving the blocked widget origins:', error))
+    await savingBlock
   }
   void refreshBlockedWidgetOrigins()
 
@@ -119,6 +169,7 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
     isCryptocityPointsEnabled,
     refreshCryptocityPoints,
     blockedWidgetOrigins,
+    blockedWidgetOriginsKnown,
     refreshBlockedWidgetOrigins,
     polygonRpcUrl,
   }

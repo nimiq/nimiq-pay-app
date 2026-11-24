@@ -11,7 +11,7 @@ import { WIDGET_LIMITS } from '@/lib/mini-app-widgets'
 
 const flags = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
-  return reactive({ blockedWidgetOrigins: [] as string[], refreshBlockedWidgetOrigins: () => {} })
+  return reactive({ blockedWidgetOrigins: [] as string[], blockedWidgetOriginsKnown: true, refreshBlockedWidgetOrigins: () => {} })
 })
 const app = await vi.hoisted(async () => {
   const { reactive } = await import('vue')
@@ -181,6 +181,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW)
   memory.clear()
   flags.blockedWidgetOrigins = []
+  flags.blockedWidgetOriginsKnown = true
   nimiqNetwork.height = 1000
   storedRead.imageFetches = storedRead.images = storedRead.imageSaves = Promise.resolve()
   downloader.available = true
@@ -673,6 +674,19 @@ describe('removing and previewing', () => {
 
   it('is ready once the stored widgets have been read', async () => {
     expect((await setup()).ready).toBe(true)
+  })
+
+  it('counts every site as blocked until the saved block list is known, so a cold start reaches none', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ refresh: { url: `${SCOPE}w`, every: 60 } }))
+    flags.blockedWidgetOriginsKnown = false
+    await store.tick({ chain: fakeChain(), at: NOW + 120_000, force: true })
+    expect(fetchWidgetRefresh).not.toHaveBeenCalled()
+    expect((await store.discover(`${SCOPE}page`)).ok).toBe(false)
+    flags.blockedWidgetOriginsKnown = true
+    fetchWidgetRefresh.mockResolvedValue({ ok: true, value: null })
+    await store.tick({ chain: fakeChain(), at: NOW + 240_000, force: true })
+    expect(fetchWidgetRefresh).toHaveBeenCalled()
   })
 
   it('builds a preview view of a definition without adding it', async () => {

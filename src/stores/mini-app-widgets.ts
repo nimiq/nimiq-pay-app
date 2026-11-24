@@ -372,9 +372,10 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const widgets = computed(() => stored.value.filter(w => w.network === network))
   const canAdd = computed(() => widgets.value.length < WIDGET_LIMITS.widgetsOnHome)
   function isBlocked(scope: string): boolean {
-    if (!canDownloadWidgets())
+    const flags = useFeatureFlags()
+    if (!canDownloadWidgets() || !flags.blockedWidgetOriginsKnown)
       return true
-    const blocked = useFeatureFlags().blockedWidgetOrigins
+    const blocked = flags.blockedWidgetOrigins
     return blocked.includes('*') || blocked.includes(safeOrigin(scope))
   }
   const running = computed(() => widgets.value.filter(w => !isBlocked(w.scope) && w.halted !== 'gone'))
