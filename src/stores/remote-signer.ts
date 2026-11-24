@@ -45,15 +45,12 @@ export interface RemoteSignerDiscoveryResult {
   alreadyKnown: number
   localComplete: boolean
   errors: string[]
-  // Funding HTLCs seen in local history, even those whose cosigner metadata could not be resolved.
   createdHtlcs: string[]
-  // Every local history page was read, so createdHtlcs lists all funding HTLCs.
   historyComplete: boolean
 }
 
 export interface LocalHtlcHistoryScan {
   context: WalletContext
-  // Funding HTLC creations from local history, newest first.
   creations: PlainTransactionDetails[]
   historyComplete: boolean
   sawHtlcTransaction: boolean
@@ -131,7 +128,6 @@ function useRemoteSignerDb() {
   let signerWriteQueue = Promise.resolve()
   let signerWriteRevision = 0
 
-  // Serialize wallet changes so an obsolete write cannot finish after the current one.
   function enqueueSignerWrite<T>(write: () => Promise<T>) {
     const queuedWrite = signerWriteQueue.then(write)
     signerWriteQueue = queuedWrite.then(() => undefined, () => undefined)
@@ -175,21 +171,15 @@ function useRemoteSignerDb() {
           { statement: SQLQuery.DeactivateRemoteSigners, values: [] },
           { statement: SQLQuery.InsertRemoteSigner, values: [addressString, balance, proofSize, publicKey, start, end, active] },
         ])
-        // Later same-wallet writes are queued behind this commit, not evidence that it was stale.
         if (isCurrent())
           return true
 
-        // Never persist an active signer from a wallet that changed during the native DB write.
         await run(SQLQuery.DeactivateRemoteSigners)
         return false
       })
       return write
     },
 
-    /**
-     * Adds a new remote signer to the database, but doesn't set it as active.
-     * Used when we get an old remote signer from the blockchain.
-     */
     async insertInactiveRemoteSigner(
       { balance, end, proofSize, start, publicKey, address }: RemoteSigner,
       isCurrent: () => boolean = () => true,
@@ -201,7 +191,6 @@ function useRemoteSignerDb() {
         logger.log('✒️ Adding Remote Signer', { address: addressString, balance, proofSize, publicKey, start, end })
         const result = await run(SQLQuery.InsertInactiveRemoteSigner, [addressString, balance, proofSize, publicKey, start, end, false])
         const inserted = (result.changes?.changes ?? 0) > 0
-        // The history walk re-adds every known HTLC. A no-op must not abort an activation in progress.
         if (inserted)
           signerWriteRevision += 1
         if (!inserted || isCurrent())
@@ -222,7 +211,6 @@ function useRemoteSignerDb() {
         if (!isCurrent())
           return
         await run(SQLQuery.InsertSettledHtlcCreation, [transactionHash])
-        // Logout may have wiped the DB meanwhile; a stale mark would hide this chain after a restore.
         if (!isCurrent())
           await run(SQLQuery.DeleteSettledHtlcCreation, [transactionHash])
       })
@@ -269,7 +257,6 @@ function useRemoteSignerDb() {
 
     async purgeRemoteSigners() {
       signerWriteRevision += 1
-      // The check vouched for the purged signer set; the next one must be checked again.
       const write = enqueueSignerWrite(() => runSet([
         { statement: SQLQuery.PurgeRemoteSigners, values: [] },
         { statement: SQLQuery.PurgeSettledHtlcCreations, values: [] },
@@ -401,26 +388,18 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = ref(0)
-  // Last positive balance, in-memory only — cold start is covered by DB hydration in init().
-  // Lets the home screen keep showing a number while the HTLC is drained/recreated.
   const lastKnownRemoteBalance = ref(0)
   watch(remoteBalance, (balance) => {
     if (balance > 0)
       lastKnownRemoteBalance.value = balance
   })
   const homeBalanceState = ref<HomeBalanceState>('loading')
-  // const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 98)
   const remoteProofSize = ref(98)
 
-  // Checks if the remote is in the validity window, which means that the remote
-  // wallet and the local wallet have currently an active HTLC.
   const isHtlcActive = ref(false)
-  // An expired HTLC with no balance is inert: nothing to recover, so it must not drive the
-  // recovery / "Updating connection" UI. Require funds, mirroring checkRemoteValidity's gate.
   const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value && remoteBalance.value > 0)
   const isHtlcPending = computed(() => start.value > headTimestamp.value)
   const isHtlcRecreating = ref(false)
-  // immediate so the flag is correct when the app starts in an already-expired state.
   watch([hasHtlcExpired, isHtlcPending, isProcessingRemote], ([expired, pending, processing]) => {
     if (expired)
       isHtlcRecreating.value = true
@@ -439,9 +418,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   const isRemoteOk = computed(() => status.value === RemoteStatus.Good || false)
 
-  // Ticks fire without awaiting the callback. Keep one poll in flight, bounded to two intervals
-  // (the default WS read timeout is 30s), so a slow or hung cosigner demotes the status instead of
-  // keeping the last Good, and polls cannot pile up or settle out of order.
   let isPollingStatus = false
   useIntervalFn(async () => {
     if (isPollingStatus)
@@ -539,10 +515,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   interface SignerMetadataOptions {
-    // Creation already read from chain history; spares a lookup when the cosigner has no hash.
     knownCreation?: PlainTransactionDetails
-    // Discovery of old HTLCs: ask the cosigner for retired wallets too, and build the metadata from
-    // our own on-chain creation when the cosigner can't answer. Never for activating a signer.
     allowRetired?: boolean
   }
 
@@ -599,7 +572,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (typeof remoteSignerApi.servicePublicKey !== 'string' || !remoteSignerApi.servicePublicKey.trim())
       return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
 
-    // A known creation answers both a missing hash and a matching one; a different hash is looked up and rejected below.
     let creationTransaction = options.knownCreation
       && (creationTransactionHash == null || creationTransactionHash === options.knownCreation.transactionHash)
       ? options.knownCreation
@@ -642,8 +614,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     })
   }
 
-  // The HTLC must be our own successful creation to a configured cosigner key, the same evidence discovery
-  // scans for. Proof size is the one every current cosigner key uses.
   function signerMetadataFromChain(address: Address, context: WalletContext, creation: PlainTransactionDetails): AddressSpecificSignerMetadataResult {
     const data = creation.data
     if (data.type !== 'htlc')
@@ -725,7 +695,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     expectedSignerRevision = getSignerWriteRevision(),
   ) {
     const context = expectedContext ?? getWalletContext()
-    // Each check names its reason: the shared message alone can't tell them apart in PostHog (APP-336).
     if (!context || !isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
       throw new Error('Cannot activate remote signer from invalid HTLC transaction: stale context before metadata')
 
@@ -835,7 +804,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
 
     const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), client.value?.getAccount(newRemoteSigner.address)])
-    // Don't replace remote signer if old balance is higher than 0 and new balance is 0
     if (oldRemoteBalance.status === 'fulfilled' && newRemoteAccount.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteAccount.value && newRemoteAccount.value.balance === 0)
       return
 
@@ -850,15 +818,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const context = expectedContext || getWalletContext()
     if (!context)
       return
-    // Check newer remote signer in db first, in case the cosigner server doesn't have it in the db
     const remoteSigners = (await getAllRemoteSigners()).sort((a, b) => b.start - a.start)
     if (!isWalletContextCurrent(context))
       return
-    // Get the last stored remote signer and check if it's the same as the one active
     const newerRemoteSigner = remoteSigners.length > 0 ? remoteSigners[0] : undefined
     if (newerRemoteSigner && (!remoteSigner.value || !newerRemoteSigner.address.equals(remoteSigner.value.address))) {
       logger.log('📡 Found a newer remote signer that is not the active one')
-      // Tell the cosigner the new address, in case it's not known for whatever reason
       await getRemoteSigner({ address: newerRemoteSigner.address })
       if (!isWalletContextCurrent(context))
         return
@@ -905,9 +870,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       remoteSigner: remoteSignerPlain,
       newRemoteSigner: newRemoteSignerPlain,
     })
-    // Cross-network mismatch detector: stored signer's cosigner publicKey differs from the API
-    // response's. Likely cause: switched networks without purging remote_signers (or migration
-    // bug). Surface as a warning so cross-network bugs aren't silent in logs.
     if (remoteSigner.value && remoteSigner.value.publicKey !== newRemoteSigner.publicKey) {
       logger.warn(`⚠️ remote signer publicKey mismatch — stored=${remoteSigner.value.publicKey} api=${newRemoteSigner.publicKey}. Likely stale cross-network state.`)
     }
@@ -915,7 +877,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address, 'htlc'), getBalance(newRemoteSigner.address, 'htlc')])
       if (!isWalletContextCurrent(context))
         return
-      // Don't replace remote signer if old balance is higher than 0 and new balance is 0
       logger.log({ oldRemoteBalance, newRemoteBalance })
       if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled') {
         if (!oldRemoteBalance.value.error && !newRemoteBalance.value.error) {
@@ -971,7 +932,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       if (remoteSigner.value || transactions.some(tx => tx.recipientType === 'htlc'))
         return setResolvedState('resolved-remote')
 
-      // A full page can hide older HTLCs, so only a final partial page proves empty history.
       if (!error && localMainBalance === 0 && (historyProvesNoHtlc || transactions.length < HISTORY_PAGE_SIZE))
         return setResolvedState('resolved-empty')
     }
@@ -982,9 +942,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return setResolvedState('loading')
   }
 
-  /**
-   * Fetches all the remote signers from the database and updates their balance from the blockchain
-   */
   async function updateSignersTableBalance(expectedContext = getWalletContext()) {
     if (!expectedContext || consensus.value !== 'established')
       return
@@ -1014,7 +971,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       if (!isWalletContextCurrent(expectedContext) || consensus.value !== 'established')
         return
 
-      // Assuming accounts are in the same order as addresses
       for (let i = 0; i < accounts.length; i++) {
         const account = accounts[i]
         const remoteSigner = remoteSignerBatch[i]
@@ -1030,15 +986,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
   }
 
-  /**
-   * Fetches all the remote signers from the blockchain and saves them in the database as inactive
-   * The updateRemoteFromApi will set the active one
-   */
-  // Cached set of our remote-signer addresses, invalidated whenever the remote_signers table is mutated.
-  // Avoids hitting SQLite on every incoming tx / paginated read / 30s refresh.
   let cachedRemoteSignerAddresses: Set<string> | undefined
   let cachedRemoteSignerContext: string | undefined
-  // Invalidations during an awaited DB read must prevent that stale snapshot from becoming the cache.
   let remoteSignerCacheGeneration = 0
   let remoteSignerAddressLookup: {
     context: string | undefined
@@ -1075,7 +1024,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       logger.log(`🔄 ourRemoteSignerAddresses cache rebuilt: ${cachedRemoteSignerAddresses.size} signer(s)`, [...cachedRemoteSignerAddresses])
       return cachedRemoteSignerAddresses
     }).finally(() => {
-      // An older lookup must not clear a replacement started after invalidation or a wallet switch.
       if (remoteSignerAddressLookup?.promise === promise)
         remoteSignerAddressLookup = undefined
     })
@@ -1214,7 +1162,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return current
   }
 
-  // Remote wallets are HTLCs redeemable by a Nimiq Pay cosigner. Swap HTLCs (e.g. to Fastspot) share their shape but not this recipient.
   // The live cosigner key covers a rotation not yet shipped in the config list.
   function isCosignerAddress(address: string) {
     const keys = remotePublicKey.value ? [...nimiqPayCosignerPublicKeys, remotePublicKey.value] : nimiqPayCosignerPublicKeys
@@ -1228,13 +1175,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     })
   }
 
-  // Refunded non-cosigner HTLCs found by `registerOwnHtlcIfMissing`; avoids a history lookup on every refresh.
   const foreignHtlcAddresses = new Set<string>()
+  const resolvedSwapHtlcAddresses = new Set<string>()
 
-  // Self-healing: when we observe a drain whose proof.creator is our local address (verified upstream),
-  // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
-  // without re-reading the proof. Covers extension HTLCs that `discoverRemoteSignersFromBlockchain`
-  // misses because it only walks first-hop HTLCs.
   async function registerOwnHtlcIfMissing(
     htlcAddress: string,
     expectedContext?: WalletContext,
@@ -1245,15 +1188,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!remotePublicKey.value)
       return
     const address = Nimiq.Address.fromUserFriendlyAddress(htlcAddress)
-    // Account may already be pruned if the HTLC has been fully drained — in that case we still
-    // register with zero balance/timeout so the cached set short-circuits future drains from
-    // this address instead of looping through getAccount on every periodic refresh.
     const { data: account } = await useNimiqNetwork().getAccount(address)
     if (!isCurrent())
       return
 
-    // A refunded swap HTLC also drains to us with our address as creator, but its redeem address
-    // is not a cosigner. Pruned accounts need the creation tx for that; without it, register anyway.
     let htlcRecipient = account?.type === 'htlc' ? account.recipient : undefined
     if (!htlcRecipient) {
       const history = await getAllTransactionsForAddress(address)
@@ -1379,7 +1317,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       }
     }
 
-    // A replacement belongs only to the client and network whose history call stalled.
     if (replacementHistoryClient
       && (replacementHistoryClient.baseClient !== context.client || replacementHistoryClient.network !== context.network)) {
       void replacementHistoryClient.client.disconnectNetwork().catch(error => logger.error('Failed to disconnect stale history client', error))
@@ -1458,7 +1395,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
   }
 
-  // One cosigner DB query per wallet and network per session; a failure waits before asking again.
   let cosignerListing: { identity: WalletIdentity, request?: Promise<string[] | undefined>, retryAt?: number } | undefined
 
   /**
@@ -1518,15 +1454,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return promise
   }
 
-  /**
-   * Pages through all local history for HTLC creations without asking the cosigner, so callers can
-   * act on funded HTLCs in seconds while the slow per-HTLC metadata validation runs afterwards.
-   */
   async function scanLocalHtlcCreations(): Promise<LocalHtlcHistoryScan | undefined> {
     const context = getWalletContext()
     if (!context)
       return undefined
-    // Startup discovery and DB verification both scan; share one pass over the whole history.
     if (scanRequest && sameWalletContext(scanRequest.context, context))
       return scanRequest.promise
     const promise = runScanLocalHtlcCreations(context).finally(() => {
@@ -1555,7 +1486,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const seenCursors = new Set<string>()
     let startAt: string | undefined
 
-    // Old funding HTLCs may be beyond the first page, so scan until history is exhausted.
     while (true) {
       let transactions: PlainTransactionDetails[]
       try {
@@ -1587,7 +1517,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && isCosignerAddress(data.recipient)
       })
       scan.creations.push(...pageCreations)
-      // Full pages are ~150 KB each; logging them filled the 5 MB log in a few sessions and rotated swaps out.
       logger.log('All Transactions from Blockchain', {
         count: transactions.length,
         startAt: startAt ?? null,
@@ -1657,7 +1586,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         continue
       }
 
-      // Extensions are only reachable through this root, so one open HTLC keeps the whole chain walking.
       let chainSettled = true
       const signersToScan = [rootResult.metadata]
       while (signersToScan.length > 0) {
@@ -1679,7 +1607,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             && account.sender === owner
             && account.recipient === metadata.cosignerRecipient
             && account.timeout === metadata.end)) {
-          // Keep validated, drained HTLCs so wallet restores can import their outgoing history.
           const insertResult = await upsertInactiveRemoteSigner({
             active: false,
             balance: account?.type === 'htlc' ? account.balance : 0,
@@ -1718,6 +1645,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         }
         chainSettled &&= history.complete && drained && received > 0 && received === spent
 
+        const swapExtensions: PlainTransactionDetails[] = []
         for (const extension of history.transactions) {
           const extensionData = extension.data
           if (!isSuccessfulHistoricalHtlcTransaction(extension)
@@ -1730,9 +1658,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             continue
           }
           if (!isCosignerAddress(extensionData.recipient)) {
-            // Swaps land here for good, with a real hash root. An all-zero one is a deposit HTLC of
-            // ours under a key this build doesn't know, so a later walk must still reach it.
-            chainSettled &&= !/^0+$/.test(extensionData.hashRoot)
+            if (/^0+$/.test(extensionData.hashRoot)) {
+              chainSettled = false
+              continue
+            }
+            if (!resolvedSwapHtlcAddresses.has(extension.recipient))
+              swapExtensions.push(extension)
             continue
           }
 
@@ -1761,15 +1692,37 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           }
           signersToScan.push(childResult.metadata)
         }
+
+        for (let offset = 0; offset < swapExtensions.length; offset += REMOTE_SIGNER_BALANCE_BATCH_SIZE) {
+          const batch = swapExtensions.slice(offset, offset + REMOTE_SIGNER_BALANCE_BATCH_SIZE)
+          let accounts: PlainAccount[]
+          try {
+            accounts = await promiseWithTimeout(context.client.getAccounts(batch.map(swap => Nimiq.Address.fromString(swap.recipient))), DISCOVER_TIMEOUT_MS)
+            if (accounts.length !== batch.length)
+              throw new Error(`Expected ${batch.length} accounts, got ${accounts.length}`)
+          }
+          catch (error) {
+            logger.error('Swap HTLC account lookup failed', error)
+            chainSettled = false
+            result.errors.push(`Swap HTLC account lookup failed: ${metadata.addressString}`)
+            continue
+          }
+          if (!isWalletContextCurrent(context))
+            return { ...result, errors: ['Wallet changed during discovery'] }
+          for (const [i, swap] of batch.entries()) {
+            const account = accounts[i]
+            if (account?.type === 'htlc' && account.balance > 0)
+              await useConn().run(SQLQuery.InsertRecoveredSwapHtlc, [swap.recipient, swap.value, account.timeout])
+            resolvedSwapHtlcAddresses.add(swap.recipient)
+          }
+        }
       }
 
-      // Recorded per chain so a walk killed mid-way resumes instead of starting over.
       if (chainSettled)
         await markHtlcCreationSettled(transaction.transactionHash, () => isWalletContextCurrent(context))
     }
 
     result.localComplete = localScan.historyComplete && !evidenceIncomplete
-    // Partial history must not decide which recovered signer becomes active.
     if (result.localComplete && isWalletContextCurrent(context))
       await updateRemoteFromApi(!localScan.sawHtlcTransaction, context)
     return result
@@ -1795,15 +1748,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   let staleHeadListeners: HeadListener[] = []
   let initGeneration = 0
 
-  /**
-   * Initializes the remote signer variables with the following algorithm:
-   * 1. Check if we have a local wallet:
-   *    - If we don't have, do nothing
-   * 2. Check if we have a remote signer in the database:
-   * 3. Get the remote signer from the API:
-   * 4. Update the remote signer in the database
-   * 5. Set the remote signer in the store
-   */
   async function init() {
     const generation = ++initGeneration
     const identity = getWalletIdentity()
@@ -1817,13 +1761,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       const activeRemoteSigner = await getActiveRemoteSigner()
       if (!isCurrentInit())
         return
-      // Reconciliation may have activated another signer while SQLite returned this snapshot.
       if (signerRevision === getSignerWriteRevision()) {
         remoteSigner.value = activeRemoteSigner
         remoteBalance.value = activeRemoteSigner?.balance ?? 0
         homeBalanceState.value = activeRemoteSigner ? 'resolved-remote' : 'loading'
-        // Reconciliation needs consensus. Until then, trust the stored validity window so a
-        // cold start doesn't report a funded, valid HTLC as "Processing funds".
         if (consensus.value !== 'established') {
           isHtlcActive.value = !!activeRemoteSigner
             && remoteBalance.value > 0
@@ -1834,7 +1775,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       logger.log('📡 Remote Signer from DB', remoteSigner.value ? { ...remoteSigner.value, address: remoteSigner.value.address.toUserFriendlyAddress() } : null)
       const context = getWalletContext()
 
-      // Failed removals keep their handles so later initialization can retry cleanup.
       const stillStale: HeadListener[] = []
       for (const staleListener of staleHeadListeners) {
         try {
@@ -1886,8 +1826,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       const listenerId = await context.client.addHeadChangedListener(async () => {
         if (!isWalletContextCurrent(context))
           return
-        // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
-        // Mainly for the case when the user recovers the wallet from the words
         if ((remoteBalance.value === 0 || homeBalanceState.value === 'loading') && height.value % (10 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0) {
           logger.log('📡👀 Searching for new remote wallets')
           await updateRemoteFromApi(false, context)
@@ -1900,7 +1838,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         }
         catch (error) {
           logger.error('Failed to remove superseded remote signer head listener', error)
-          // Retain the handle so a later initialization can retry cleanup.
           staleHeadListeners.push(supersededListener)
         }
         return

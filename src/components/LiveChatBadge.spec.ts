@@ -73,7 +73,6 @@ describe('liveChatBadge polling', () => {
     expect(state.conversationEnded.value).toBe(true)
     expect(state.sessionId.value).toBe('session-1')
 
-    // Polling stops with the session
     await vi.advanceTimersByTimeAsync(15_000)
     expect(mocks.getHistory).toHaveBeenCalledTimes(2)
   })

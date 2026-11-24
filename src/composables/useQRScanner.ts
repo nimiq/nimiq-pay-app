@@ -48,9 +48,6 @@ interface UseQRScannerOptions<T = QRDataFormat> {
 }
 
 export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: UseQRScannerOptions) {
-  // Block parallel invocations, as multiple parallel successful scans would lead to the onData success callback being
-  // called multiple times, which can lead to problems for example in Flow.vue where goToNext would be called multiple
-  // times. Additionally also add throttling to avoid spamming the apis also on failing api calls.
   let isParsingString = false
   let hasSuccessfulScan = false
   let isEmittingSuccessfulScan = false
@@ -64,7 +61,6 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     try {
       await onData(data)
       hasSuccessfulScan = true
-      // Stop scanner after the success callback settles so failed callbacks can still retry within the same session.
       stop().catch(e => logger.error('Scanner cleanup failed', e))
     }
     finally {
@@ -107,8 +103,6 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           }
         }
         else if (expect === QRDataFormat.PaymentRequest) {
-          // If a plain address is scanned, treat it as a payment request with amount=0
-          // so the payment flow routes to the amount input step
           const { data: nimAddress } = getNimAddress(raw)
           if (nimAddress) {
             useApp().activeAsset = Asset.NIM
@@ -133,12 +127,10 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           const { data, error } = getCashlink(raw)
           if (error || !data)
             throw new Error(error)
-          // TODO: move this to step
           await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
           useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
           await emitSuccessfulScan('')
         }
-        // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
         else {
           throw new Error(`Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`)
         }
@@ -151,8 +143,8 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       }
     },
     1500,
-    /* trailing */ false, // ignore repeated call and do not schedule it to run after throttle time
-    /* leading */ true, // run immediately on first call
+    false,
+    true,
   )
 
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
@@ -177,8 +169,6 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
         state.value = QRScannerState.Scanning
       }
       catch (e) {
-        // stop() skips non-scanning states, so release here what was acquired before the failure (e.g. play() aborted
-        // by unmount after getUserMedia, or the model download failing after the native camera started).
         await Promise.all([tearDownCameraFeed(), stopScan()])
         throw e
       }
@@ -197,7 +187,6 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     })
   }
 
-  // setDummyData is only used in development mode to test the scanner. In production, it's a no-op.
   let setDummyData = () => {}
   if (isDev) {
     setDummyData = () => {
@@ -240,7 +229,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 
   async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
     if (!video.videoWidth || !video.videoHeight)
-      return // video not ready yet
+      return
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
@@ -258,7 +247,6 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
       return
     }
 
-    // The first time, we need to download the model, so it will take some time
     let didTimeout = false
     const timeout = window.setTimeout(() => {
       didTimeout = true
@@ -267,7 +255,6 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     await ready()
     clearTimeout(timeout)
     if (didTimeout)
-      // Clear error message
       onError?.('')
 
     const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: true })
@@ -277,7 +264,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 
   return {
     startScan,
-    stopScan: () => stopScan?.(), // invoke stopScan if set
+    stopScan: () => stopScan?.(),
   }
 }
 
@@ -301,7 +288,6 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
           disableAudio: true,
           aspectMode: 'cover',
           x: 0,
-          // Set to 0 to avoid rendering in status bar
           y: 0,
           lockAndroidOrientation: true,
           rotateWhenOrientationChanged: false,
@@ -318,7 +304,6 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
         return
       }
     }
-    // The first time, we need to download the model, so it will take some time
     let didTimeout = false
     const timeout = window.setTimeout(() => {
       didTimeout = true
@@ -327,7 +312,6 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
     await ready()
     clearTimeout(timeout)
     if (didTimeout)
-    // Clear error message
       onError?.('')
 
     const { pause } = useIntervalFn(async () => {

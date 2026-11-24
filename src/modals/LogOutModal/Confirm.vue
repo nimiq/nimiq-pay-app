@@ -40,10 +40,7 @@ async function handleConfirm() {
   let isEmpty = false
   if (!hasDoneBackup.value && isNimEmpty()) {
     let isUsdtEmpty = usdtBalance.value === 0
-    // USDT only exists on mainnet; mock mode seeds `balance` itself and has no RPC client.
     if (!isTestnet && !isMockEnabled) {
-      // `balance` is only refreshed while the USDT tab polls, so it can be a stale 0. Read it from the RPC now;
-      // if that read fails the USDT balance is unknown, so warn instead of risking USDT funds.
       isCheckingUsdt.value = true
       try {
         isUsdtEmpty = await usdtStore.updateBalance() && usdtBalance.value === 0
@@ -51,11 +48,9 @@ async function handleConfirm() {
       finally {
         isCheckingUsdt.value = false
       }
-      // The user can close the sheet while the RPC read is pending; never delete the wallet after that.
       if (isUnmounted)
         return
     }
-    // NIM can arrive during the read, so check it again.
     isEmpty = isUsdtEmpty && isNimEmpty()
   }
   logger.log('handleConfirm', {
@@ -66,7 +61,6 @@ async function handleConfirm() {
     isEmpty,
   })
   if (hasDoneBackup.value || isEmpty) {
-    // TODO: ask for pin
     await deleteDatabase()
     router.replace('/setup')
   }

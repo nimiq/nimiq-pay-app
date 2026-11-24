@@ -20,8 +20,6 @@ const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
 
-// Failure logs end up in the shareable log file, so only these body fields are logged. Phone numbers, SMS access
-// codes, public keys and task answers stay out, and the Points token header is never logged.
 const LOGGABLE_BODY_FIELDS = ['type', 'reference', 'destination', 'tx_hash']
 
 async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
@@ -46,7 +44,6 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
         responseBody = await response.json() as E
       }
       catch (e) {
-      // If the response is not JSON or not exist, we don't do anything
         logger.error('Error parsing response', e, { ...loggedRequest, status: response.status })
       }
       return {
@@ -94,7 +91,6 @@ export function usePointsApi() {
   interface VerifyPaymentRes { valid: boolean, reason: string, cashback: { percentage: number, amountInLuna: number } }
   interface BalanceRes { balance: number }
   type PayWithPointsRes = undefined
-  // TODO: Get more errors from the puntos server code
   type ClaimCashbackRes = undefined | { statusCode: number, error: 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED', message: string }
 
   interface ParticipantReferralRes { id: string, claims_remaining: number, reward: number }
@@ -120,7 +116,6 @@ export function usePointsApi() {
     timestamp?: number
   }
 
-  // Just remap the JSON object from the API to a TS object
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResultApi<VerifyPaymentRes, PointsErrorRes> {
     const { data, error, hasError, status } = await api<any>(new URL('payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (hasError) {
@@ -219,7 +214,6 @@ const remoteSignerWsApi = (function () {
       pendingRequests.set(id, { id, requestObject, replayed: false, resolve })
       send(JSON.stringify(requestObject))
     })
-    // Sends retain their recovery anchor; only read requests can be discarded on timeout.
     if (event.startsWith('wallet-send-'))
       return response
     return promiseWithTimeout(response, timeoutMs)
@@ -327,8 +321,6 @@ export function useRemoteSignerApi() {
   }
 
   async function getStatus(timeoutMs?: number): AsyncResultApi<StatusRes, RemoteErrorRes> {
-    // No cosigner in mock mode: report Good here so every consumer (cosigner poll,
-    // resume height check) behaves without needing its own mock guard.
     if (isMockEnabled)
       return { data: { status: RemoteStatus.Good, blockHeight: 0, servicePublicKey: '', network: '' }, status: 200, hasError: false, error: undefined }
 
@@ -347,7 +339,6 @@ export function useRemoteSignerApi() {
     return { data, error: undefined, status, hasError }
   }
 
-  // Every wallet the cosigner created for an owner, retired ones included, without balances.
   async function getOwnerWallets({ owner }: GetOwnerWalletsArg): AsyncResultApi<Pick<GetRemoteSignerRes, 'address'>[], RemoteErrorRes> {
     const { data, error, status, hasError } = await remoteSignerWsApi<Pick<GetRemoteSignerRes, 'address'>[], RemoteErrorRes>('owner-wallets', { owner: v(owner).toUserFriendlyAddress() })
     if (error || !Array.isArray(data) || hasError)
@@ -380,7 +371,6 @@ export function useCurrencyPriceApi() {
   }
 
   if (isMockEnabled) {
-    // Historical lookups get a slightly lower price so PriceChange renders a believable +%.
     const mockPrice = async (currency: MaybeRef<string>, timestamp?: number): Promise<ResultApi<PriceNowRes, PriceErrorRes>> => {
       const { getMockUsdPrice } = await import('@/lib/mock-data')
       const nowSeconds = Math.round(Date.now() / 1e3)
@@ -426,7 +416,6 @@ export function useCplApi() {
   }
 
   async function getOrderById({ id }: OrderByIdArg): AsyncResultApi<OrderByIdRes, PointsCplFirestoreRes> {
-    // The response from the API is verbose. We parse it here and return a simpler object.
     interface OrderByIdFirestoreRes {
       name: string
       createTime: string

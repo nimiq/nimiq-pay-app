@@ -11,8 +11,6 @@ const isFullscreen = shallowRef<boolean | null>(null)
 const fullscreenError = shallowRef('')
 let stopFullscreenChanges: (() => void) | undefined
 
-// Host-selected user language (Nimiq Pay). Falls back to the browser language
-// when the mini-app runs outside of Nimiq Pay (e.g. local dev in a regular browser).
 const hostLanguage = computed((): string => {
   const hostLang = window.nimiqPay?.language
   if (hostLang)
@@ -20,13 +18,10 @@ const hostLanguage = computed((): string => {
   return navigator.language.split('-')[0] || 'en'
 })
 
-// Host-selected fiat currency (Nimiq Pay). Falls back to USD outside of Nimiq Pay.
 const hostFiat = computed((): string => window.nimiqPay?.userFiat ?? 'USD')
 
-// Nimiq network Nimiq Pay runs on. Falls back to mainnet outside of Nimiq Pay.
 const hostNetwork = computed((): string => window.nimiqPay?.network ?? 'mainnet')
 
-// Running Nimiq Pay version. Missing outside Nimiq Pay and on older hosts.
 const hostVersion = computed((): string => window.nimiqPay?.version ?? 'unknown')
 
 interface I18nEntry { greeting: string, tagline: string }

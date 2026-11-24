@@ -48,7 +48,6 @@ function onRemove() {
   close()
 }
 
-// Color tokens differ per row; the shared layout classes live on the button in the template.
 const actions = computed(() => {
   const context = props.context
   if (!context)
@@ -64,7 +63,6 @@ const actions = computed(() => {
   ]
 })
 
-// Light tap when the sheet appears, matching SwipeToDeleteRow's haptic vocabulary.
 watch(() => props.open, (isOpen) => {
   if (isOpen)
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
@@ -163,7 +161,6 @@ watch(() => props.open, (isOpen) => {
   to { transform: translateY(100%); }
 }
 
-/* Reduced motion: cross-fade only, no vertical travel. */
 @media (prefers-reduced-motion: reduce) {
   .mini-app-sheet[data-state="open"] {
     animation: mini-app-sheet-fade-in 150ms ease-out;

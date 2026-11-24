@@ -46,11 +46,9 @@ async function completeWalletSetup(
     { useDecrypt },
     { useApp },
   ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
-  // pinCodeConfirmStep already unlocked the db; the PIN in state may be wiped by now (biometric step).
   if (!useDecrypt().decrypted.value)
     return err(i18n.t('Something went wrong decrypting the database'))
 
-  // Clear the setup PIN from memory after it has been persisted.
   state[StepName.PinCode] = ''
   state[StepName.PinCodeConfirm] = ''
 
@@ -68,7 +66,7 @@ async function completeWalletSetup(
 }
 
 const loginFlow: FlowInit = async () => {
-  const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
+  const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep } = await import('./steps')
   const flowName = FlowName.Login
   const steps = await Promise.all([
     recoveryWordsStep,
@@ -76,7 +74,6 @@ const loginFlow: FlowInit = async () => {
     pinCodeConfirmStep,
     enableBiometricStep,
     getNotifiedStep,
-    /* onBoardingPoints */
   ].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async (state, { err }) => {
     const [
@@ -84,14 +81,11 @@ const loginFlow: FlowInit = async () => {
       { useDecrypt },
       { useApp },
     ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
-    // pinCodeConfirmStep already unlocked the db; the PIN in state may be wiped by now (biometric step).
     if (!useDecrypt().decrypted.value) {
       err(i18n.t('Something went wrong decrypting the database'))
       return
     }
 
-    // Clear pin code from memory just in case
-    // Since state is a JSON object, we take advantage of the fact that it's a reference
     state[StepName.PinCode] = ''
 
     await router.replace('/app')
@@ -115,14 +109,13 @@ const loginFlow: FlowInit = async () => {
 }
 
 const setupFlow: FlowInit = async () => {
-  const { pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
+  const { pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep } = await import('./steps')
   const flowName = FlowName.Setup
   const steps = await Promise.all([
     pinCodeStep,
     pinCodeConfirmStep,
     enableBiometricStep,
     getNotifiedStep,
-    /* onBoardingPoints */
   ].map(s => s({ flowName })))
   const onDone: FlowHookCb = async (state, options) => completeWalletSetup(state, 'create', options)
   const onCancel: Flow['onCancel'] = async () => {
@@ -138,12 +131,11 @@ const setupFlow: FlowInit = async () => {
 }
 
 const verifyPhoneFlow: FlowInit = async () => {
-  const { phoneNumberStep, phoneNumberConfirmStep /* onBoardingPoints */ } = await import('./steps')
+  const { phoneNumberStep, phoneNumberConfirmStep } = await import('./steps')
   const flowName = FlowName.VerifyPhone
   const steps = await Promise.all([
     phoneNumberStep,
     phoneNumberConfirmStep,
-    /* onBoardingPoints */
   ].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async () => {
     useModal().showModal(Modal.Points)
@@ -153,7 +145,7 @@ const verifyPhoneFlow: FlowInit = async () => {
 }
 
 const setupWithPromoCodeFlow: FlowInit = async () => {
-  const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
+  const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep } = await import('./steps')
   const flowName = FlowName.SetupWithPromoCode
   const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
   const steps = await Promise.all([
@@ -164,8 +156,6 @@ const setupWithPromoCodeFlow: FlowInit = async () => {
     (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }),
     phoneNumberConfirmStep,
     getNotifiedStep,
-    // TODO: Re-enable when cc points are back
-    // onBoardingPoints,
   ].map(s => s({ flowName })))
   const onDone: FlowHookCb = async (state, options) => completeWalletSetup(state, 'create_with_promo_code', options)
   const onCancel: Flow['onCancel'] = async () => {
@@ -196,13 +186,6 @@ const onBoardingPointsFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
-// const onBoardingCashbackFlow: FlowInit = async () => {
-//   const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
-//   const flowName = FlowName.OnBoardingCashback
-//   const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
-//   return { flowName, steps }
-// }
-
 const onBoardingBluecodeFlow: FlowInit = async () => {
   const { onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3 } = await import('./steps')
   const flowName = FlowName.OnBoardingBluecode
@@ -210,17 +193,6 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
-/**
- *
-   ┌───Can go to───────┬───or go to───┐
-   │                   │              ▼
-┌──┐ ┌────────┐ ┌──────┴────┐ ┌──────────────┐
-│QR│ │Bluecode│ │ManualInput│ │PaymentPreview┼──►beforeNext() -> PayLogic
-└──┘ └────┬───┘ └───────────┘ └──────────────┘
-          │                         ▲
-          └─────────skips─to────────┘
- * We have in the state 3 input steps used in the beforeNext to make the payment
- */
 const paymentFlow: FlowInit = async () => {
   const [
     { qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentAmountInputStep, paymentPreviewStep, pinCodeStep },
@@ -258,8 +230,6 @@ const paymentFlow: FlowInit = async () => {
     const nimPaymentRequest = state[StepName.QRCodeScanner]
     const payWithPuntos = state[StepName.PaymentPreview]?.payWithPuntos
 
-    // 1. Check wether the user has done the flow as expected and we don't have a surprise in the params
-
     const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
 
     if (typeof nimPaymentRequest === 'string' || !nimPaymentRequest)
@@ -267,7 +237,6 @@ const paymentFlow: FlowInit = async () => {
 
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
 
-    // No translation as not user-facing. Dev error which should not occur in production.
     if (payWithPuntos && !isNimPaymentRequest) {
       const msg = 'User can only pay with puntos if they have scanned a payment request'
       const error = new Error(msg)
@@ -275,15 +244,11 @@ const paymentFlow: FlowInit = async () => {
       throw error
     }
 
-    // 2. Parse the payments parameters
-
     let payment: { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
     if (isNimPaymentRequest)
       payment = { method: (payWithPuntos ? PaymentMethod.Points : assetToPaymentMethod(nimPaymentRequest.asset || Asset.NIM)) as PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: nimPaymentRequest }
     else
       throw new Error(`Unexpected payment method. Expected one of ${JSON.stringify({ payWithPuntos })}`)
-
-    // 3. Do the payment
 
     const request = 'request' in payment ? payment.request : undefined
     const previewState = state[StepName.PaymentPreview]
@@ -313,7 +278,7 @@ const paymentFlow: FlowInit = async () => {
           ...payment.request,
           title: payment.request.merchantName
             ? markAsUnknownTransactionTitle(payment.request.merchantName)
-            : 'Payment', // translated at display time
+            : 'Payment',
         } as PartialSendTxArgs)
         switch (result.outcome) {
           case 'rejected':
@@ -386,7 +351,6 @@ const paymentFlow: FlowInit = async () => {
       }
       case PaymentMethod.Points: {
         if (!payment.request.rail || !payment.request.paymentRef) {
-          // No translation as not user-facing. Dev error which should not occur in production.
           const msg = `You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(payment.request)}`
           const error = new Error(msg)
           reportCriticalError(error, { flow: flowName })
@@ -411,13 +375,12 @@ const paymentFlow: FlowInit = async () => {
     const { useToast } = await import('@/composables/useToast')
     setTimeout(() => {
       useToast().setToast({ message: i18n.t('Payment successful') })
-    }, 1000) // Allow the paymentPreview step to animate out before presenting the toast
+    }, 1000)
   }
   const onCancel: Flow['onCancel'] = async (state) => {
     document.body.classList.remove('native-qr-scanner-modal-open')
     logger.log('🤑  Cancelling payment process')
 
-    // Track cancellation only for attempts that were started and have not reached another terminal state.
     const previewState = state[StepName.PaymentPreview]
     if (previewState?.paymentAnalytics.status === 'started') {
       const qrData = state[StepName.QRCodeScanner]
@@ -447,30 +410,6 @@ const paymentFlow: FlowInit = async () => {
 }
 
 const nimWithdrawFlow: FlowInit = async () => {
-  /**
-   *    - User can input the amount in selection Step.
-   *    - User can select the address or it can select "Add new", which triggers the nimAddressInputStep.
-   *    - User can read a QR code with the address, which triggers the
-   *      qrCodeScannerStep. Reading the QR code will autofill the value in the
-   *      nimAddressInputStep.
-   *    - The user then can select "Continue" from the nimAddressInputStep to go
-   *      to selectionStep.
-   *    - Clicking "Send" in selection Step might:
-   *        - Open the pinCodeStep if the user is required to put the pin code.
-   *          Check useApp().
-   *        - Finish the flow if the user is not required to put the pin code.
-   *  The flow looks like this:
-                                   ┌────────┐
-                                   │        ▼
-       ┌────────► nimAddressInputStep      qrCodeScannerStep
-       │           │               ▲        │
-       │           │               └────────┘
-       │           │
-selectionStep ◄────┘
-        │
-        │
-        └────► pinCodeStep
-   */
   const [
     { nimWithdrawalAmountSelectionStep, nimWithdrawalConfirmStep, pinCodeStep },
   ] = await Promise.all([import('./steps')])
@@ -484,7 +423,7 @@ selectionStep ◄────┘
       import('@/stores/transactions').then(t => t.useTransactions()),
     ])
 
-    const title = 'Withdrawal' // translated at display time
+    const title = 'Withdrawal'
     if (useApp().isNimiqAsset) {
       const result = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
       if (result.outcome === 'rejected')
@@ -522,7 +461,6 @@ const addressSelectionFlow: FlowInit = async () => {
   ].map(s => s({ flowName }))))
 
   const onCancel: Flow['onCancel'] = async () => {
-    // Remove transparency before closing to prevent the camera view to be visible behind the modal
     document.body.classList.remove('native-qr-scanner-modal-open')
   }
 
@@ -532,7 +470,6 @@ const addressSelectionFlow: FlowInit = async () => {
 const settingsFlow: FlowInit = async () => {
   const { settingsRootStep, settingsGeneralStep, settingsSecurityStep, settingsPaymentsStep, settingsSavedAddressesStep, settingsMiniAppsStep, settingsAccountStep } = await import('./steps')
   const flowName = FlowName.Settings
-  // Root first; a sub-page (saved addresses) after its parent, so navigateTo({ step }) always slides forward.
   const steps = await Promise.all([settingsRootStep, settingsGeneralStep, settingsSecurityStep, settingsPaymentsStep, settingsSavedAddressesStep, settingsMiniAppsStep, settingsAccountStep].map(s => s({ flowName })))
   return { flowName, steps, backButtonNavigates: true }
 }
@@ -544,9 +481,6 @@ const addressDeletionFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
-// Single-step flow to add a known address (e.g. an incoming payment's sender) to the
-// address book. Reuses NimAddressInput in save-contact mode: address prefilled read-only,
-// user adds an optional name.
 const saveAddressFlow: FlowInit = async () => {
   const { nimAddressInputStep } = await import('./steps')
   const flowName = FlowName.SaveAddress
@@ -578,7 +512,6 @@ const nimTopUpFlow: FlowInit = async () => {
       ].map(s => s({ flowName }))))
 
   const onCancel: Flow['onCancel'] = async () => {
-    // Remove transparency before closing to prevent the camera view to be visible behind the modal
     document.body.classList.remove('native-qr-scanner-modal-open')
   }
 
@@ -607,7 +540,7 @@ const backupFlow: FlowInit = async () => {
     const { useApp } = await import('@/stores/app')
     useApp().hasDoneBackup = true
     const { useToast } = await import('@/composables/useToast')
-    setTimeout(() => useToast().setToast({ message: i18n.t('Backup successful') }), 400) // Delay to allow the last step to animate out
+    setTimeout(() => useToast().setToast({ message: i18n.t('Backup successful') }), 400)
   }
   return { flowName, steps, onDone }
 }
@@ -663,7 +596,6 @@ const flows = {
   [FlowName.VerifyPhone]: verifyPhoneFlow,
   [FlowName.SetupWithPromoCode]: setupWithPromoCodeFlow,
   [FlowName.OnBoardingPoints]: onBoardingPointsFlow,
-  // [FlowName.OnBoardingCashback]: onBoardingCashbackFlow,
   [FlowName.OnBoardingBluecode]: onBoardingBluecodeFlow,
   [FlowName.Payment]: paymentFlow,
   [FlowName.NimWithdraw]: nimWithdrawFlow,
@@ -678,7 +610,6 @@ const flows = {
   [FlowName.Settings]: settingsFlow,
   [FlowName.SaveAddress]: saveAddressFlow,
   [FlowName.AskForPin]: askForPinFlow,
-
 }
 
 export type flowHeightOptions = 'h-full' | 'h-max'
@@ -686,11 +617,6 @@ export type flowHeightOptions = 'h-full' | 'h-max'
 interface InitializeFlowOptions {
   initialState?: Partial<State>
 
-  /**
-   * The height of the flow. In the future, if we want screen full height, we can add `h-screen` and modify
-   * the logic in the modalControll.create to return `undefined`
-   * @default 'h-full'
-   */
   height?: flowHeightOptions
   isFullscreen?: boolean
   preventSwipe?: boolean
@@ -698,14 +624,9 @@ interface InitializeFlowOptions {
   analyticsSource?: string
 }
 
-/**
- * It initializes the flow given the name opening a new modal with the flow component
- * which handles the carousel of steps.
- */
 export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
   const { initialState, height = 'h-full', isFullscreen = false, preventSwipe = false, isOnTop = false, analyticsSource } = options
 
-  // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   if (!isOnTop)
     await useModal().closeModal()
 
@@ -715,12 +636,8 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
 
   const isClosing = ref(false)
 
-  // This function goes through the slot props and looks for any keys that start with "on:".
-  // For each such key, we create a new key in camelCase (e.g. "on:navigateTo" becomes "onNavigateTo").
-  // This is needed so that when we pass the props to Flow.vue, the events are received correctly.
   function processEventProps(props: any) {
     const newProps = { ...props }
-    // Loop through keys that start with "on:" and create a new key for each event.
     for (const key in props) {
       if (key.startsWith('on:')) {
         const eventName = key.slice(3)
@@ -730,14 +647,9 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
     return newProps
   }
 
-  // Here we check if the flow has a slot component.
-  // If it does, we need to pass the slotProps to it.
-  // We use the processEventProps function to transform the events properly.
-  // Without this, the events coming from Flow.vue might not work as expected.
   const slots = flow.slotComponent !== undefined
     ? {
       default: (slotProps) => {
-        // Transform the event keys in slotProps so that events like "on:navigateTo" become "onNavigateTo"
         const newSlotProps = processEventProps(slotProps)
         return [h(flow.slotComponent!, newSlotProps)]
       },
@@ -747,22 +659,13 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
   const modal = await modalController.create({
     // Pass a render function that includes props for FlowCmp, instead of FlowCmp as component and the component's props
     // via componentProps, to make the props reactive. Passing the props to componentProps as reactive() did not work.
-    // isClosing could also be passed as ref, but having a ref as a prop instead of the actual value is not the typical
-    // vue way of doing things.
     component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value, height }, slots),
     cssClass: `nimiq-modal-${height}`,
     handle: false,
 
-    /**
-     * This function is called when the modal is about to be dismissed.
-     * It can be triggered by the user or programmatically by a flow.
-     *
-     * At the moment, we don't prevent any modal of being dismissed, so
-     * all the triggers will return true, closing the modal.
-     */
     canDismiss: async (data?: any, role?) => {
       if (preventSwipe && role === 'gesture')
-        return false // Prevent swipe to close if preventSwipe is true
+        return false
 
       logger.log('🌊 Dismissing flow', flow)
       isClosing.value = true

@@ -11,9 +11,8 @@ const props = withDefaults(defineProps<{
   animate: true,
 })
 
-const GROUP_SEPARATOR = ' ' // narrow no-break space, matches FiatAmount/FormattableNumber
+const GROUP_SEPARATOR = '\u202F'
 
-// Match FiatAmount's currency→locale derivation so symbol placement and grouping don't change.
 function localeFor(currency: string): string {
   switch (currency.toLowerCase()) {
     case 'eur':
@@ -50,7 +49,6 @@ const cells = computed<Cell[]>(() => {
   for (const part of parts) {
     if (part.type === 'integer') {
       for (const ch of part.value) {
-        // place-value key so a new leading digit (999→1000) mounts cleanly and lower digits keep identity
         const power = intCount - 1 - seenInt++
         out.push({ key: `i${power}`, digit: Number(ch), order: order++ })
       }
@@ -63,10 +61,10 @@ const cells = computed<Cell[]>(() => {
       out.push({ key: `g${out.length}`, char: GROUP_SEPARATOR })
     }
     else if (part.type === 'decimal') {
-      out.push({ key: `d${out.length}`, char: '.' }) // normalize to dot like FiatAmount
+      out.push({ key: `d${out.length}`, char: '.' })
     }
     else {
-      out.push({ key: `s${out.length}`, char: part.value }) // currency / literal / minusSign
+      out.push({ key: `s${out.length}`, char: part.value })
     }
   }
   return out

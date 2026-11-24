@@ -36,13 +36,9 @@ const usdtQuoteRequest = computed(() => {
     return null
   return { amount: selection.value.amount, recipient: selection.value.recipient, transfer: Transfer.UserPayment as const }
 })
-// Keep the fee shown here live: the quote confirmed on this screen is the one signed after the PIN step,
-// and a "fee changed" failure there sends the user back here to review the new fee.
 const { quote: liveQuote, refresh: refreshUsdtQuote } = useUsdtQuoteRefresh(usdtQuoteRequest, loading, { autoRefresh: true })
 const polygonQuote = computed(() => liveQuote.value ?? selection.value?.polygonQuote)
 
-// USDT path shows totalDebit (amount + fee) so the user sees exactly what leaves their wallet;
-// NIM uses a hardcoded fee of 0 in the flow's onDone, so the gross amount is the total.
 const cryptoTotal = computed(() => {
   if (isNimiqAsset.value)
     return selection.value?.amount ?? 0
@@ -57,7 +53,6 @@ watch(() => props.errorMsg, (message) => {
     loading.value = false
 })
 
-// A failure on the PIN step puts its error there; reset when the user comes back and fetch the current fee.
 watch(() => props.isVisible, (visible) => {
   if (!visible || !loading.value)
     return

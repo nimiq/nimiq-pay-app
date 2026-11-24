@@ -18,9 +18,9 @@ export interface ChainApprovalRequest {
 export interface NativeFunctions {
   handleRequest: (params: RequestParams) => Promise<unknown>
   requestChainApproval: (request: ChainApprovalRequest) => Promise<boolean>
-  onChainChanged: (chainId: string) => void // fire-and-forget event
-  onChainAdded: (chainId: string, rpcUrl: string) => void // fire-and-forget event
-  onUnsupportedChain: (chainId: string) => void // fire-and-forget event
+  onChainChanged: (chainId: string) => void
+  onChainAdded: (chainId: string, rpcUrl: string) => void
+  onUnsupportedChain: (chainId: string) => void
 }
 
 /** Functions the webview exposes (called by native) */

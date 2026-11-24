@@ -34,7 +34,6 @@ const referralInfo = computedAsync(async () => {
   return data
 })
 const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward || 0, Crypto.NIM))
-// const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 async function handleRefresh(event: CustomEvent) {
   await Promise.all([
@@ -46,7 +45,6 @@ async function handleRefresh(event: CustomEvent) {
 }
 
 onMounted(async () => {
-  // If phone number is not verified, show the modal
   if (!phoneNumberVerified.value) {
     initializeFlow(FlowName.VerifyPhone)
     return
@@ -86,12 +84,11 @@ onMounted(async () => {
           {{ fiat.formatted }}
         </p>
         <button class="flex items-center text-base font-bold normal-case text-sky gap-x-2" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
-          <!-- Use three different message versions depending on whether amount is 0, 1, or more -->
-          <i18n-t slot="start" keypath="No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon" :plural="0 /* TODO use actual amount */">
+          <i18n-t slot="start" keypath="No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon" :plural="0">
             <template #amount>
               <CryptoCityLogo class="h-4" />
               <span>
-                {{ 0 /* TODO display actual amount. Remember to use toLocaleString() */ }}
+                {{ 0 }}
               </span>
             </template>
           </i18n-t>
@@ -99,14 +96,12 @@ onMounted(async () => {
         </button>
       </IonRow>
       <div v-if="isCampaignActive">
-        <!-- Featured -->
         <IonRow>
           <p class="ml-1 text-sm font-bold uppercase text-space/60">
             {{ $t('Featured') }}
           </p>
         </IonRow>
 
-        <!-- Referral -->
         <IonRow class="mb-8">
           <TaskCard
             large
@@ -118,17 +113,14 @@ onMounted(async () => {
           </TaskCard>
         </IonRow>
 
-        <!-- Earn Points -->
         <IonRow>
           <p class="ml-1 text-sm font-bold uppercase text-space/60">
             {{ $t('Earn Points') }}
           </p>
         </IonRow>
-        <!-- Tasks -->
         <Transition name="slide-fade" mode="out-in">
           <IonRow v-if="tasks" class="grid grid-cols-2 gap-2">
             <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
-              <!-- TODO: Do we really need different bg? -->
               <TaskCard :task="task" class="h-full text-white" style="background: var(--radial-gradient-light-blue);">
                 {{ task.description }}
               </TaskCard>

@@ -22,6 +22,16 @@ const primeHtlcFee = vi.fn()
 const getSwapLimits = vi.fn()
 const getEthAddress = vi.fn()
 const loggerError = vi.fn()
+const goCryptoMonitoringError = ref<string>()
+const useGoCryptoMonitoring = vi.fn(() => ({
+  error: goCryptoMonitoringError,
+  remainingTimeExpiryEarly: ref(1),
+  remainingTimeExpiryFinal: ref(1),
+}))
+
+vi.mock('@/composables/useGoCryptoMonitoring', () => ({
+  useGoCryptoMonitoring,
+}))
 
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: {
@@ -279,6 +289,8 @@ describe('paymentPreview', () => {
     isRemoteOk.value = true
     selectedFiat.value = 'EUR'
     checkPointsPaymentValidity.mockClear()
+    useGoCryptoMonitoring.mockClear()
+    goCryptoMonitoringError.value = undefined
     setToast.mockClear()
     loggerError.mockClear()
     usePrice.mockReset()
@@ -375,7 +387,6 @@ describe('paymentPreview', () => {
     await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
     expect(wrapper.emitted('done')).toHaveLength(1)
 
-    // Flow moves on to the PIN step, where the payment fails with the error attached to that step
     await wrapper.setProps({ isVisible: false })
     refreshTransferQuote.mockResolvedValueOnce({
       ...(await refreshTransferQuote.getMockImplementation()?.()),
@@ -738,7 +749,6 @@ describe('paymentPreview', () => {
     })
     await flushPromises()
 
-    // The inline fee label renders (uses totalPreviewFeeFiat which includes swapFee when resolved)
     const feeLabel = wrapper.find('[aria-label="Fee included"]')
     expect(feeLabel.exists()).toBe(true)
   })
@@ -769,7 +779,6 @@ describe('paymentPreview', () => {
     await flushPromises()
 
     const details = wrapper.get('[data-testid="swap-preview-details"]')
-    // The popover renders the swap description and fee breakdown structure
     expect(details.text()).toContain('When paying with BTC Lightning, USDT are swapped to BTC.')
     expect(details.text()).toContain('This conversion and the operation of a BTC Lightning channel require fees.')
   })
@@ -810,12 +819,97 @@ describe('paymentPreview', () => {
         },
       },
     })
-    // Settle chained computedAsync evaluations (htlcFeeSnapshot, swapAddressLimits,
-    // remainingFiatLimits) — each needs a microtask flush + Vue reactivity tick.
     await flushPromises()
     await nextTick()
     await flushPromises()
     const remainingLimitPriceCall = usePrice.mock.calls.find(([amount]) => amount === 99_000_000)
     expect(remainingLimitPriceCall?.[1]?.cryptoCurrency.value).toBe('USDT')
+  })
+  it('returns to the scanner when another payment settles the GoCrypto request during PIN entry', async () => {
+    const wrapper = await mountComponent({
+      state: {
+        [StepName.QRCodeScanner]: {
+          amount: 116_440_000,
+          asset: Asset.USDT,
+          chain: Chain.Polygon,
+          fee: 0,
+          feeIncludedInAmount: true,
+          fiatCurrency: 'EUR',
+          fiatFeeAmount: 0.25,
+          merchantCategory: MerchantCategory.Shop,
+          merchantName: 'The Barn',
+          paymentRef: 'payment-ref',
+          rail: Rail.GoCrypto,
+          recipient: '0x0000000000000000000000000000000000000001',
+          transfer: Transfer.UserPaymentToMerchant,
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+    expect(wrapper.emitted('done')).toHaveLength(1)
+    setToast.mockClear()
+
+    goCryptoMonitoringError.value = 'Already paid'
+    await flushPromises()
+
+    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Already paid', type: 'error' }))
+    expect(wrapper.emitted('back')).toEqual([[StepName.QRCodeScanner]])
+  })
+
+  it('reports a GoCrypto request that expires while the user is paying', async () => {
+    const wrapper = await mountComponent({
+      state: {
+        [StepName.QRCodeScanner]: {
+          amount: 116_440_000,
+          asset: Asset.USDT,
+          chain: Chain.Polygon,
+          fee: 0,
+          feeIncludedInAmount: true,
+          fiatCurrency: 'EUR',
+          fiatFeeAmount: 0.25,
+          merchantCategory: MerchantCategory.Shop,
+          merchantName: 'The Barn',
+          paymentRef: 'payment-ref',
+          rail: Rail.GoCrypto,
+          recipient: '0x0000000000000000000000000000000000000001',
+          transfer: Transfer.UserPaymentToMerchant,
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+    setToast.mockClear()
+
+    goCryptoMonitoringError.value = 'Payment expired'
+    await flushPromises()
+
+    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Payment expired', type: 'error' }))
+  })
+
+  it('starts GoCrypto monitoring when the payment rail is GoCrypto at mount', async () => {
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    const base = {
+      amount: 116_440_000,
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+      fee: 0,
+      feeIncludedInAmount: true,
+      fiatCurrency: 'EUR',
+      fiatFeeAmount: 0.25,
+      merchantCategory: MerchantCategory.Shop,
+      merchantName: 'The Barn',
+      paymentRef: 'payment-ref',
+      recipient: '0x0000000000000000000000000000000000000001',
+      transfer: Transfer.UserPaymentToMerchant,
+    }
+    await mountComponent({ state: { [StepName.QRCodeScanner]: { ...base, rail: Rail.GoCrypto } } })
+    await flushPromises()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    process.off('unhandledRejection', unhandled)
+
+    expect(useGoCryptoMonitoring).toHaveBeenCalledOnce()
+    expect(unhandled).not.toHaveBeenCalled()
   })
 })

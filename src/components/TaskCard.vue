@@ -50,7 +50,6 @@ async function handleClick() {
   isLoading.value = true
   const { data: task, error } = await getTaskById(props.task.id)
 
-  // TODO: show error
   if (error) {
     logger.error(error)
     return

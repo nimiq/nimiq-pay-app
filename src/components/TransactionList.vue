@@ -11,14 +11,13 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 defineEmits(stepEmits)
 
-const { loadMoreTxs, canLoadMore } = useTransactions()
 const { transactionsToShow: storeTransactions } = storeToRefs(useTransactions())
 const { showAnimations } = storeToRefs(useApp())
 
 // Need to use computed to force reactivity with RecycleScroller
 const transactions = computed(() => [...storeTransactions.value])
 
-const itemHeight = 42 /* Height */ + 24 /* padding-y */
+const itemHeight = 42 + 24
 </script>
 
 <template>
@@ -28,7 +27,6 @@ const itemHeight = 42 /* Height */ + 24 /* padding-y */
       :items="transactions"
       :item-size="itemHeight"
       key-field="hash"
-      @scroll-end="() => canLoadMore() && loadMoreTxs()"
     >
       <motion.div
         :initial="{ opacity: 0, x: -20 }"

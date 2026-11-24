@@ -12,24 +12,13 @@ const logger = useLogger('ValidateWords')
 
 const QUESTION_COUNT = 3
 
-/**
- * After showing the user the 12 words, we ask the user to write them down.
- * Then, we ask to the user 3 words.
- * For each word, the user will select the correct word from a list of 6 words.
- */
-type Word = [number /* index */, string /* word */]
+type Word = [number, string]
 interface TestWord {
-  // The word to guess
   correctWord: Word
-  // The list of words to choose from. We include the correct word in the list
   options: Word[]
 }
 const randomWords = ref<TestWord[]>([])
 
-/**
- * Selects `amount` random words from the given array.
- * We use a Set to avoid duplicates.
- */
 function getRandomWords(words: string[], amount: number): Word[] {
   const selectedIndices = new Set<number>()
   while (selectedIndices.size < amount)
@@ -42,15 +31,13 @@ async function setRandomWords() {
   if (error)
     logger.error(error)
 
-  // Select QUESTION_COUNT random indices from the list of words sorted in ascending order
   const testWords = getRandomWords(words!, QUESTION_COUNT).sort((a, b) => a[0] - b[0])
 
   for (const word of testWords) {
-    // remove the correct word from the list of words
     const wordsCopy = [...words!]
     wordsCopy.splice(word[0], 1)
     const options = getRandomWords(wordsCopy, 5)
-    options.splice(Math.floor(Math.random() * 6), 0, word) // put the the correct word in a random position
+    options.splice(Math.floor(Math.random() * 6), 0, word)
     randomWords.value.push({ correctWord: word, options })
   }
 }

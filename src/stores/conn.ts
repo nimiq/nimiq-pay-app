@@ -13,9 +13,6 @@ const logger = useLogger('useConn')
 
 const DB_NAME = 'storage'
 const DB_VERSION = migrations.at(-1)!.toVersion
-// Cap open() (connection, keying + migrations). Without it, a stalled open never resolves and
-// resolveUnlockDb() is never reached, so every later query() awaits the unlock promise forever — a
-// silent app-wide wedge with no error. The timeout turns that into a surfaced, recoverable error.
 const DB_OPEN_TIMEOUT = 20 * 1e3
 
 export const useConn = defineStore('conn', () => {
@@ -25,28 +22,21 @@ export const useConn = defineStore('conn', () => {
   const db = ref<SQLiteDBConnection>()
 
   const locked = ref(true)
-  // Resolved by open(). close() and deleteDatabase() re-arm it, so queries issued while the db is
-  // closed wait for the next open() instead of hitting a dead or missing handle.
   let resolveUnlockDb!: () => void
   let unlockPromise = new Promise<void>(resolve => resolveUnlockDb = resolve)
   function lock() {
-    // Keep the pending promise when already locked: callers may be awaiting it.
     if (locked.value)
       return
     locked.value = true
     unlockPromise = new Promise<void>(resolve => resolveUnlockDb = resolve)
   }
-  // Waits until the db is open, including across close()/reopen cycles.
   async function waitForUnlock(): AsyncOption<string> {
-    // Loop: the db can be locked again between open() resolving and this waiter resuming.
     while (locked.value)
       await unlockPromise
     if (!db.value) {
       logger.error('The db instance is not defined')
-      return 'The db instance is not defined' // no translation as not user-facing; just a dev error
+      return 'The db instance is not defined'
     }
-    // if (locked.value)
-    //   return 'The db is locked' // no translation as not user-facing; just a dev error
   }
 
   const dbExists = ref(false)
@@ -77,14 +67,13 @@ export const useConn = defineStore('conn', () => {
   // Overlapping callers share one open: two runs would both see no connection, both call
   // createConnection (the second fails on the existing name) and run the migration chain twice.
   let opening: Promise<void> | undefined
-  // Bumped when `opening` is cleared, so a timed-out attempt can tell it was abandoned.
   let openGeneration = 0
 
   async function open() {
     if (!opening) {
       const generation = openGeneration
       opening = (async () => {
-        const encrypted = !isWeb // Only encrypt on mobile
+        const encrypted = !isWeb
         const mode = encrypted ? 'secret' : 'no-encryption'
         logger.log('🗄️ open: resolving connection')
         const conn = (await sqlite.checkConnectionsConsistency()).result && (await sqlite.isConnection(DB_NAME, false)).result
@@ -106,14 +95,11 @@ export const useConn = defineStore('conn', () => {
         db.value = conn
         dbExists.value = exists
         locked.value = false
-        // No await after the check, so the timeout can't report a failure after the db unlocked.
         resolveUnlockDb()
         logger.log('🗄️ open: unlocked')
       })()
     }
     const current = opening
-    // Timeout so a keying/migration stall surfaces as an error (caught by the decrypt caller)
-    // instead of silently leaving `locked` true forever. Clearing on timeout abandons the attempt.
     await promiseWithTimeout(current, DB_OPEN_TIMEOUT).finally(() => {
       if (opening === current) {
         opening = undefined
@@ -128,7 +114,6 @@ export const useConn = defineStore('conn', () => {
     if (locked.value)
       return
     lock()
-    // Yield once so queries already past waitForUnlock() dispatch before the native close.
     await Promise.resolve()
     await db.value!.close()
   }

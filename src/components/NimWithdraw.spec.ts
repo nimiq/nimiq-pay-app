@@ -100,8 +100,6 @@ vi.mock('@/composables/useApi', () => ({
   useCurrencyPriceApi: () => ({
     getPriceNow: vi.fn(async () => ({ price: 1 })),
   }),
-  // Snapshot priceData per useFetch() call so each mount gets its own ref;
-  // prevents stale wrappers from prior tests reacting to module-shared state.
   useFetch: () => ({
     data: ref(priceData.value),
     fetch: vi.fn(),
@@ -213,10 +211,6 @@ async function mountComponent(
 ) {
   const { default: NimWithdraw } = await import('./NimWithdraw.vue')
 
-  // Component derives `selected` from the `withdrawalAddress` store ref (APP-91);
-  // seed it here so tests that supply an address don't have to do it manually.
-  // Empty `address` is treated as "leave the store value alone" so tests can pre-seed
-  // a persisted address (e.g. a stale NIM address while USDT is active) before mounting.
   if (address)
     withdrawalAddress.value = address
 
@@ -242,9 +236,6 @@ async function mountComponent(
 }
 
 describe('nimWithdraw', () => {
-  // Module-level reactive refs are shared across tests; without auto-unmount, stale
-  // wrappers keep firing autoRefresh watchers when `withdrawalAddress` is reset/seeded
-  // in the next test, polluting spy call counts.
   enableAutoUnmount(afterEach)
 
   beforeEach(() => {
@@ -436,17 +427,14 @@ describe('nimWithdraw', () => {
 
     const wrapper = await mountComponent('')
 
-    // Enter 5 in fiat minor units (6 decimals) → 5 NIM at price 1 → 500000 luna
     await wrapper.get('[data-testid="amount-input"]').setValue('5000000')
     await flushPromises()
 
     await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
     await flushPromises()
 
-    // Big input now holds the NIM amount in luna (5 NIM = 500000 luna)
     expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('500000')
 
-    // Toggling back restores the fiat value
     await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
     await flushPromises()
     expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('5000000')
@@ -472,13 +460,11 @@ describe('nimWithdraw', () => {
 
     const wrapper = await mountComponent('')
 
-    // Enter crypto mode, then tap All
     await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="nim-withdraw-max"]').trigger('click')
     await flushPromises()
 
-    // Exact integer luna balance, not a floored fiat round-trip
     expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('123456789')
   })
 })

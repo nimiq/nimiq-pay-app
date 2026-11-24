@@ -555,7 +555,6 @@ describe('dev modal OTA update', () => {
     expect(state.updater.getLatest).not.toHaveBeenCalled()
   })
 
-  // Rejection is what the production server produces: it sends `error` without `kind`.
   it('treats the no-update rejection as a normal result, not an error', async () => {
     state.updater.getLatest.mockRejectedValueOnce(new Error('no_new_version_available'))
     const wrapper = await mountModal()

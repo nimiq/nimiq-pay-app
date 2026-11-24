@@ -103,8 +103,6 @@ describe('transaction recovery queries', () => {
   })
 
   it.each([
-    [SQLQuery.SelectPaginationTransactions, [10, 0]],
-    [SQLQuery.SelectPaginationTransactionsByAsset, ['NIM', 10, 0]],
     [SQLQuery.SelectAllTransactions, []],
     [SQLQuery.SelectTransactionsByAsset, ['NIM']],
   ])('includes staking in transaction reads %#', (query, values) => {
@@ -153,10 +151,25 @@ describe('polygon recovery migrations', () => {
       'refund_block',
       'htlc_id_recovery_failed',
     ])
-    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
     expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
       SQLQuery.AddValidityStartHeightToTxsTable,
     ])
+  })
+
+  it('clears settled HTLC chains once on upgrade so swap HTLCs are restored', () => {
+    const upgraded = new DatabaseSync(':memory:')
+    try {
+      for (const migration of migrations.filter(migration => migration.toVersion <= 15))
+        upgraded.exec(migration.statements.join(';'))
+      upgraded.prepare(SQLQuery.InsertSettledHtlcCreation).run('creation-hash')
+      for (const migration of migrations.filter(migration => migration.toVersion > 15))
+        upgraded.exec(migration.statements.join(';'))
+      expect(upgraded.prepare(SQLQuery.GetSettledHtlcCreations).all()).toEqual([])
+    }
+    finally {
+      upgraded.close()
+    }
   })
 
   it('stores one ordinary Polygon payment attempt per network and sender', () => {
@@ -210,7 +223,6 @@ describe('polygon recovery migrations', () => {
       for (const migration of migrations.filter(migration => migration.toVersion <= 7))
         legacyDb.exec(migration.statements.join(';'))
       const insert = legacyDb.prepare('INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)')
-      // Pre-v8 Polygon rows stored the Fastspot timeout in seconds; Nimiq rows store a block height.
       insert.run('0xrecoverable', 1, 1_700_000_000, 'swap-1', 'pending')
       insert.run('0xunrecoverable', 2, 1_700_000_000, 'swap-2', 'pending')
       insert.run('NQ00 NATIVE', 3, 3_000_000, 'swap-3', 'pending')
@@ -219,7 +231,6 @@ describe('polygon recovery migrations', () => {
 
       legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('htlc-id', '0xrecoverable')
       legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xunrecoverable')
-      // A recovered id is never overwritten, and a recovered row is never parked.
       legacyDb.prepare(SQLQuery.SetRecoveredSwapHtlcId).run('other-id', '0xrecoverable')
       legacyDb.prepare(SQLQuery.SetSwapHtlcIdRecoveryFailed).run('0xrecoverable')
 

@@ -64,10 +64,6 @@ export function fastspotFeeTickerToCrypto(ticker: string): Crypto | null {
   }
 }
 
-/**
- * Formats a USDT amount from minor units (6 decimals) into a human-readable string.
- * Uses the app's current locale by default.
- */
 export function formatUsdtAmount(amount: number, locale?: string) {
   const safeAmount = Number.isFinite(amount) ? amount / 1e6 : 0
   return `${new Intl.NumberFormat(locale ?? i18n.locale, {
@@ -76,9 +72,6 @@ export function formatUsdtAmount(amount: number, locale?: string) {
   }).format(safeAmount)} USDT`
 }
 
-/**
- * Formats a USDT amount from minor units for preview display (rounded up to 2 decimals).
- */
 export function formatUsdtPreviewAmount(amount: number, suffix = 'USDT') {
   const roundedAmount = Number.isFinite(amount) ? Math.ceil(amount / 10_000) / 100 : 0
   return `${new Intl.NumberFormat(i18n.locale, {

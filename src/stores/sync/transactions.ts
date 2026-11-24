@@ -48,7 +48,6 @@ interface PendingTransactionContext {
 
 // HTLC drains back to local carry the original creator's address inside the proof.
 // For our own HTLCs (including extension chains) the creator is always the local wallet.
-// Used by both batch refresh and the live tx listener to skip mis-categorized "Top-Up" entries.
 export function isOwnHtlcDrain(tx: PlainTransactionDetails, localUserFriendly: string): boolean {
   return tx.senderType === 'htlc'
     && (tx.proof.type === 'timeout-resolve' || tx.proof.type === 'early-resolve')
@@ -72,22 +71,13 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     updateTransactionStatus,
   } = useTransactions()
 
-  // Lets periodic history runs skip already-synced history. Set only after a run that fetched and saved
-  // everything, and kept in memory so every app start, login or wallet switch runs one full sync.
   let historyCursor: {
     context: WalletContext
-    // Final (macro) block height known when that run started.
     height: number
-    // Remote signers fully scanned by that run.
     signers: Set<string>
-    // Extension HTLCs found per signer. Their creating txs are older than the cursor,
-    // so incremental runs would no longer find them.
     extensionHtlcs: Map<string, Set<string>>
   } | undefined
 
-  // Discovery reads all local history and asks the cosigner about every HTLC, so it runs once per
-  // wallet context instead of on every poll. Old HTLCs can keep it incomplete for good (the cosigner
-  // answers "Wallet no longer active"), so an incomplete one retries after a delay, not every poll.
   let discovery: { context: WalletContext, isComplete: boolean, at: number } | undefined
 
   function getPendingTransactionContext(): PendingTransactionContext | undefined {
@@ -149,7 +139,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
       if (typeof transaction.validityStartHeight === 'number'
         && Number.isSafeInteger(transaction.validityStartHeight) && transaction.validityStartHeight >= 0) {
-        // Save chain evidence before a reorg can make the transaction unavailable.
         await run(SQLQuery.BackfillTxValidityStartHeight, [transaction.validityStartHeight, hash])
         if (!isPendingTransactionContextCurrent(context))
           return
@@ -168,7 +157,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         removeCurrentPendingHash(hash, context)
       }
 
-      // The app may have been closed while the swap settled, so ask Fastspot for the preimage it missed.
       const tx = parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
       if (!isPendingTransactionContextCurrent(context))
         return
@@ -178,7 +166,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         const swap = await promiseWithTimeout(useFastspotApiV2().then(({ getSwap }) => getSwap(tx.paymentRef!)), TRANSACTION_LOOKUP_TIMEOUT_MS)
         if (!isPendingTransactionContextCurrent(context) || !('preimage' in swap) || !swap.preimage)
           return
-        // A replacement may have renamed this hash while Fastspot was answering.
         if (!await useTransactions().setSwapPreimage(hash, swap.preimage) || !isPendingTransactionContextCurrent(context))
           return
         await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
@@ -197,7 +184,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
     const current = useTransactions().transactions.find(transaction => transaction.hash === hash)
     if (current && ['failed', 'invalidated'].includes(current.status)) {
-      // Batch refresh can persist failure before the pending-send entry is reconciled.
       removeCurrentPendingHash(hash, context)
       return
     }
@@ -270,9 +256,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     return reconcile({ state: 'expired', timestamp: pending.timestamp })
   }
 
-  /**
-   * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
-   */
   async function updateTransactionHistory() {
     if (isMockEnabled)
       return
@@ -295,7 +278,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     // One batch of overlap covers history peers that lag behind our head.
     const sinceHeight = cursor ? Math.max(0, cursor.height - Nimiq.Policy.BLOCKS_PER_BATCH) : 0
     const nextCursorHeight = lastMacroBlockHeight.value
-    // Any failed fetch or write keeps the old cursor, so the next run fetches that range again.
     let isComplete = true
     try {
       const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
@@ -313,9 +295,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
-            // Staking signals (sent by the local wallet, the staker) and staking contract payouts.
-            // A row the send staged keeps its Mini App details and status; only missing ones are rebuilt.
-            // Check the DB: the store holds only the active asset's rows.
             if ((tx.sender === context.owner && tx.recipientType === 'staking') || tx.senderType === 'staking') {
               const saved = await query<{ hash: string }>(SQLQuery.GetTransactionByHash, [tx.transactionHash], { single: true })
               if (!saved)
@@ -349,8 +328,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             logger.log(`📬 New ${tx.state} transaction received with ${tx.value / 1e5} NIM`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
             receipts.push(await buildTopUpReceipt(tx))
           }))
-          // Publish recent receipts before fetching older pages or reconciling HTLCs.
-          // One write per page: per-tx writes queue hundreds of native calls and re-sort the list each time.
           if (!isLocalCurrent())
             return
           if (receipts.length && !await useTransactions().addReceiptTransactions(receipts, context))
@@ -359,12 +336,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             return
           if (!await saveTransactions(stakingTxs))
             isComplete = false
-          // Register own HTLCs once per page after publishing incoming receipts.
           const ownHtlcSenders = new Set<string>()
           for (const tx of page) {
             if (isOwnHtlcDrain(tx, context.owner))
               ownHtlcSenders.add(tx.sender)
-            // A cosigner HTLC we don't know yet (e.g. created on another device) needs discovery again.
             if (discovery
               && tx.sender === context.owner
               && tx.recipientType === 'htlc'
@@ -453,9 +428,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       const scannedSigners = new Set<string>()
       const nextExtensionHtlcs = new Map<string, Set<string>>()
       if (remoteSigners && remoteSigners.length) {
-        // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already
-        // categorized — both filters apply at the outer level AND to recursive traversal results
-        // (which can otherwise yield the same hash twice via overlapping extension chains).
         const localUserFriendly = localAddress.value.toUserFriendlyAddress()
         const seenHashes = new Set<string>(allTransactions.map(tx => tx.hash))
         const filterUnseen = (txs: PlainTransactionDetails[], origin: string) => {
@@ -480,7 +452,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
         for (const remoteSigner of remoteSigners.sort((a, b) => b.end - a.end)) {
           const signerLabel = remoteSigner.address.toUserFriendlyAddress()
-          // Only empty, expired signers already scanned in full skip old history; active ones are always scanned in full.
           const isIncremental = !!cursor?.signers.has(signerLabel)
             && remoteSigner.balance === 0
             && remoteSigner.end < headTimestamp.value
@@ -529,7 +500,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      // lastMacroBlockHeight stays 0 until the first macro block after startup.
       if (isComplete && nextCursorHeight > 0 && isCurrent()) {
         historyCursor = { context, height: nextCursorHeight, signers: scannedSigners, extensionHtlcs: nextExtensionHtlcs }
         logger.log(`📍 History cursor set to block ${nextCursorHeight}`, { sinceHeight, signers: scannedSigners.size })
@@ -543,13 +513,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
   }
 
-  /**
-   * Updates the transactions in the db if they have a different status or timestamp.
-   */
   async function updateTransactionsInDb() {
     const context = getPendingTransactionContext()
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
-    // Written together after all lookups: one native call and one list sort instead of one per tx.
     const statusUpdates: TransactionStatusUpdate[] = []
 
     await Promise.all(dbTxs.map(async (dbTx) => {
@@ -574,7 +540,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       }
 
       if (dbTx.status === 'confirmed' && dbTx.timestamp) {
-        // A swap that settled while the app was closed is final on chain but still lacks its preimage; reconcile asks Fastspot.
         const stored = parseStoredTransaction({ ...dbTx } as ExternalTransaction)
         if (stored && isPendingAtomicSwapTransaction(stored) && (dbTx.chain || Chain.Nimiq) === Chain.Nimiq && dbTx.paymentRef)
           await updateSingleTransaction(dbTx.hash)
@@ -634,7 +599,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
               return
           }
           const current = useTransactions().transactions.find(transaction => transaction.hash === dbTx.hash)
-          // Another refresh may record failure while this lookup is pending.
           if (current && ['failed', 'invalidated'].includes(current.status)
             && !['failed', 'invalidated'].includes(state) && executionResult !== true) {
             return
@@ -652,7 +616,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
     if (context && !isPendingTransactionContextCurrent(context))
       return
-    // Another refresh may have recorded a failure while the lookups ran.
     const transactions = useTransactions().transactions
     const updates = statusUpdates.filter((update) => {
       const current = transactions.find(transaction => transaction.hash === update.hash)
@@ -716,7 +679,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       validityStartHeight: tx.validityStartHeight,
       title: 'Withdrawal',
       fee: tx.fee,
-      // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
       proofSize: useRemoteSigner().remoteProofSize,
     }
   }

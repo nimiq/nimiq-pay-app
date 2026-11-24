@@ -462,7 +462,6 @@ describe('staking signals with real Core', () => {
     state.localBalance = 100
   })
 
-  // A staked-out HTLC is pruned on chain, so the signal must come from the local wallet, which holds no NIM
   it.each([
     ['set-active-stake', { type: 'set-active-stake', newActiveBalance: 0 }],
     ['retire-stake', { type: 'retire-stake', retireStake: 100000 }],

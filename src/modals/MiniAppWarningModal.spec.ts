@@ -92,8 +92,7 @@ describe('miniAppWarningModal', () => {
   })
 
   it('lists each suspicious character with position and reason', async () => {
-    // U+0430 Cyrillic 'а' impersonates Latin 'a'
-    const wrapper = await mountModal({ url: 'https://exаmple.com/' })
+    const wrapper = await mountModal({ url: 'https://ex\u0430mple.com/' })
 
     const list = wrapper.find('[data-test="suspicious-chars"]')
     expect(list.exists()).toBe(true)
@@ -161,7 +160,7 @@ describe('miniAppWarningModal', () => {
   })
 
   it('hides decorative icons from assistive technology', async () => {
-    const wrapper = await mountModal({ url: 'https://exаmple.com/' })
+    const wrapper = await mountModal({ url: 'https://ex\u0430mple.com/' })
 
     const icons = wrapper.findAll('span').filter(el => el.attributes('icon') === 'warning-outline-icon')
     expect(icons.length).toBeGreaterThan(0)

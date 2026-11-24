@@ -17,7 +17,6 @@ const LOCKS = [
   'isUpdatingTransactions',
 ] as const
 
-/** Logs app state useful for support, so exported logs include it */
 export async function logDiagnostics() {
   const locks = useLocks()
   logger.log(Object.fromEntries(LOCKS.map(key => [key, locks[key]])))

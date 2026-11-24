@@ -3,7 +3,6 @@ import type { Step, StepName } from '@/lib/flows/steps.types'
 import { computed, useTemplateRef } from 'vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 
-// Pill toggle that switches between alternative input steps of a flow (e.g. scan QR vs. tap card).
 const { activeStep, options } = defineProps<{
   activeStep?: Step
   options: { label: string, value: StepName }[]
@@ -37,7 +36,6 @@ function onClick(optionValue: StepName, e: PointerEvent) {
   >
     <div v-if="shouldBeDisplayed" class="w-full h-max bg-white flex items-center justify-center bottom-bar">
       <div class="w-max p-1 my-2 bg-space/10 h-full rounded-full">
-        <!-- Base buttons -->
         <ul class="relative grid grid-cols-2 justify-center items-center gap-x-0 p-1">
           <span ref="pillSlider" class="absolute h-full w-1/2 rounded-full left-0 transition-all translate-x-0 duration-[350ms]" style="background: var(--radial-gradient-light-blue);" />
           <li v-for="(option, index) in options" :key="option.label" class="w-full z-10">

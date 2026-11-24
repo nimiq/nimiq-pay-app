@@ -10,8 +10,6 @@ import { Crypto, DECIMALS, useApp } from '@/stores/app'
 const { closeModal } = useModal()
 const { htlcThreshold } = storeToRefs(useApp())
 
-// AmountInput works in luna (smallest units): it displays value / 10^decimals and emits luna.
-// Edit a local copy so closing without saving discards the change.
 const valueLuna = ref(htlcThreshold.value)
 
 function save() {
@@ -47,13 +45,10 @@ function save() {
 </template>
 
 <style scoped>
-/* AmountInput defaults to a very large (text-7xl) number; tone it down for the settings input. */
 .threshold-input {
   font-size: 2.75rem;
 }
 
-/* AmountInput sets an inline width that grows with the typed value; floor it so it never collapses
-   to a sliver when empty/short, while still widening as more digits are entered. */
 .threshold-input :deep(input) {
   min-width: 4rem;
 }

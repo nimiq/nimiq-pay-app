@@ -288,7 +288,6 @@ export async function getBestRelay(options: RelaySelectionOptions): Promise<Rela
     if (registrations.length === 0)
       continue
 
-    // Shared abort: cancel remaining pings once we have a validated relay
     const abortController = new AbortController()
     const abortCheckInterval = setInterval(() => {
       if (acceptedRelays.length >= 1)
@@ -309,7 +308,6 @@ export async function getBestRelay(options: RelaySelectionOptions): Promise<Rela
       if (!relay)
         continue
 
-      // Early exit: if fees are within acceptable thresholds, return immediately
       if (relay.pctRelayFee <= DEFAULT_MAX_PCT_RELAY_FEE && relay.baseRelayFee <= DEFAULT_MAX_BASE_RELAY_FEE)
         return relay
 

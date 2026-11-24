@@ -6,7 +6,7 @@ import EyeCrossedIcon from '@/components/icons/eye-crossed.vue'
 import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 
-type CardColor = 'blue' | 'gold' | 'green' // | 'purple'
+type CardColor = 'blue' | 'gold' | 'green'
 
 const {
   color = 'blue',
@@ -37,23 +37,19 @@ const colors: Record<CardColor, string[]> = {
   blue: ['#1473AA', '#265DD7', '#0582CA'],
   gold: ['', '#EC991C', '#E9B213'],
   green: ['#F8F8F8', '#41A38E', '#21BCA5'],
-  // purple: TODO - The SVG is not the same :/
 }
 
 function formatPan(pan: string) {
   if (pan.includes('*')) {
-    // Mask everything except the last 4 digits
     pan = `************${pan.slice(-4)}`
   }
   if (reducedLayout) {
-    // In reduced layout, only show the last 8 characters (e.g. '**** 1234')
     pan = pan.slice(-8)
   }
   return pan.match(/.{1,4}/g)?.join(' ') ?? ''
 }
 
 function formatExpiry(expiry: string) {
-  // Format expiry from MMYY to MM/YY
   if (expiry.length !== 4)
     return expiry
   return `${expiry.slice(0, 2)}/${expiry.slice(2)}`
@@ -64,7 +60,6 @@ function formatExpiry(expiry: string) {
   <div class="relative overflow-hidden rounded-[14px]">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 310 196" class="w-full">
       <g clip-path="url(#a)">
-        <!-- <rect width="310" height="195.9" :fill="colors[color][0]" rx="13.6"/> -->
         <g clip-path="url(#b)">
           <path fill="url(#c)" d="M-82 0h392v196H-82z" />
           <path fill="url(#d)" d="m11.3 123.3 58.8 105.1c4.3 7.6 12 12.2 20.4 12.2h117.7c8.3 0 16.1-4.6 20.3-12.2l58.8-105.1a25 25 0 0 0 0-24.3L228.5-6.2a23.3 23.3 0 0 0-20.3-12.1H90.5c-8.4 0-16.1 4.6-20.3 12.1L11.4 99a24.9 24.9 0 0 0 0 24.3Z" />
@@ -94,10 +89,8 @@ function formatExpiry(expiry: string) {
         </clipPath>
       </defs>
     </svg>
-    <!-- Blocked overlay -->
     <div v-if="blocked" class="absolute z-10 left-0 right-0 top-1/2 transform -translate-y-1/2 bg-tomato h-16 shadow-blocked" />
 
-    <!-- Blocked/Loading overlay -->
     <div
       class="absolute z-10 inset-0 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 will-change-[opacity] transition-opacity duration-300 flex justify-center items-center opacity-0 pointer-events-none"
       :class="{

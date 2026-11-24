@@ -59,7 +59,6 @@ describe('useSyncLifecycle', () => {
       state.consensus = 'connecting'
       state.kvGetItem.mockImplementation(key => Promise.resolve(key === 'htlcHistoryChecked' ? stored : undefined))
       const { useSyncState } = await import('./state')
-      // Logout and restore reload the page, so a sync starts from unloaded state.
       useSyncState().htlcHistoryChecked = undefined
       const { useSyncLifecycle } = await import('./lifecycle')
 
@@ -126,7 +125,6 @@ describe('useSyncLifecycle', () => {
       state.isHtlcActive = false
       state.htlcThreshold = 500_000
       state.initRemoteSigner.mockImplementation(async () => {
-        // Reproduce the initial reconciliation finishing before signer hydration.
         await flushPromises()
         state.remoteBalance = 10_000_000
       })
@@ -147,7 +145,6 @@ describe('useSyncLifecycle', () => {
         expect(state.isSyncingWallets).toBe(true)
         expect(state.isHtlcActive).toBe(true)
         state.isSendingTx = sending
-        // Startup extends the HTLC alongside verification; only the head listener's send is under test.
         state.sendTx.mockClear()
 
         const onHead = state.client.addHeadChangedListener.mock.calls[1][0]
@@ -319,8 +316,6 @@ describe('useSyncLifecycle', () => {
       const { useSyncLifecycle } = await import('./lifecycle')
       await useSyncLifecycle().syncWallets()
       expect(state.client.addHeadChangedListener).toHaveBeenCalledTimes(2)
-      // One for local address (handleIncomingTransaction); the remote address listener
-      // is registered by an immediate watch on remoteAddress that fires when the store is created.
       const localListenerCalls = state.client.addTransactionListener.mock.calls.filter((call: any[]) =>
         call[1]?.[0]?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS',
       )
@@ -418,7 +413,6 @@ describe('useSyncLifecycle', () => {
       state.initPolygon.mockRejectedValueOnce(new Error('boom'))
       const { useSyncLifecycle } = await import('./lifecycle')
       await useSyncLifecycle().syncWallets()
-      // Allow the catch handler microtask to run.
       await Promise.resolve()
       await Promise.resolve()
       expect(state.logger.error).toHaveBeenCalledWith('Failed to initialize Polygon sync', expect.any(Error))
@@ -782,10 +776,8 @@ describe('useSyncLifecycle', () => {
     it('kicks off checkExpiredSwapHtlcs on store creation when consensus is established', async () => {
       const { useSyncLifecycle } = await import('./lifecycle')
       useSyncLifecycle()
-      // The immediate consensus watch dispatches checkExpiredSwapHtlcs.
       await Promise.resolve()
       await Promise.resolve()
-      // checkExpiredSwapHtlcs reads the expired swap HTLC table.
       const querySqls = state.query.mock.calls.map(c => c[0] ?? '')
       expect(querySqls.some(sql => sql.includes('swap_htlcs'))).toBe(true)
     })
@@ -1033,7 +1025,6 @@ describe('useSyncLifecycle', () => {
       const { useSyncState } = await import('./state')
       useSyncState().htlcHistoryChecked = checked
       state.remoteBalance = 100_000
-      // A deposit waiting to be secured is what the faster retry is for.
       state.localBalance = local
       state.height = 10
       verifyRemoteSignersDb.mockClear()
@@ -1066,7 +1057,6 @@ describe('useSyncLifecycle', () => {
       state.remoteBalance = 100_000
       const { useSyncHtlc } = await import('./htlc')
       const { useSyncState } = await import('./state')
-      // A staged send makes a verification that hasn't started yet skip itself as "pending".
       let verifyingWhenSent: boolean | undefined
       vi.spyOn(useSyncHtlc(), 'extendValidity').mockImplementation(async () => {
         verifyingWhenSent = useSyncState().isVerifyingRemoteSignersDb
@@ -1143,12 +1133,10 @@ describe('useSyncLifecycle', () => {
       checkRemoteValidity.mockClear()
       extendValidity.mockClear()
 
-      // Less than a batch after the startup check.
       state.height = 1_020
       await headListener()
       expect(checkRemoteValidity).not.toHaveBeenCalled()
 
-      // Over a batch later, on a height that is not a batch boundary: a busy listener skipped the ones between.
       state.height = 1_061
       await headListener()
       expect(checkRemoteValidity).toHaveBeenCalledOnce()

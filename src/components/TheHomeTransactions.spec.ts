@@ -6,8 +6,6 @@ import TheHomeTransactions from './TheHomeTransactions.vue'
 
 const state = vi.hoisted(() => ({
   transactions: [] as { hash: string, timestamp: number }[],
-  loadMoreTxs: vi.fn(async () => 0),
-  canLoadMore: vi.fn(() => false),
 }))
 
 function passthrough(tag: string) {
@@ -45,8 +43,6 @@ vi.mock('@/stores/remote-signer', () => ({ useRemoteSigner: defineStore('remote-
 vi.mock('@/stores/transactions', () => ({
   useTransactions: defineStore('transactions', () => ({
     transactionsToShow: ref(state.transactions),
-    loadMoreTxs: state.loadMoreTxs,
-    canLoadMore: state.canLoadMore,
     setTxHidden: vi.fn(),
   })),
 }))
@@ -65,8 +61,6 @@ async function scrollToEnd(wrapper: ReturnType<typeof mount>) {
 describe('theHomeTransactions', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    state.loadMoreTxs.mockReset().mockResolvedValue(0)
-    state.canLoadMore.mockReset().mockReturnValue(false)
   })
 
   it('renders only the first page of a long history', () => {
@@ -84,17 +78,23 @@ describe('theHomeTransactions', () => {
     await scrollToEnd(wrapper)
 
     expect(wrapper.findAll('[data-testid="tx"]')).toHaveLength(60)
-    expect(state.loadMoreTxs).not.toHaveBeenCalled()
   })
 
-  it('loads from the database once every row in memory is rendered', async () => {
+  it('stops infinite scroll when the history is exactly one page', () => {
     state.transactions.splice(0, state.transactions.length, ...createTransactions(30))
-    state.canLoadMore.mockReturnValue(true)
+    const wrapper = mount(TheHomeTransactions)
+
+    expect(wrapper.findAll('[data-testid="tx"]')).toHaveLength(30)
+    expect(wrapper.find('[data-testid="infinite"]').attributes('data-disabled')).toBe('true')
+  })
+
+  it('stops infinite scroll once every transaction is rendered', async () => {
+    state.transactions.splice(0, state.transactions.length, ...createTransactions(45))
     const wrapper = mount(TheHomeTransactions)
 
     await scrollToEnd(wrapper)
 
-    expect(state.loadMoreTxs).toHaveBeenCalledOnce()
+    expect(wrapper.findAll('[data-testid="tx"]')).toHaveLength(45)
     expect(wrapper.find('[data-testid="infinite"]').attributes('data-disabled')).toBe('true')
   })
 })

@@ -8,7 +8,6 @@ import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
-// TODO: lazy load
 import AlertIcon from '@/components/icons/alert.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
@@ -65,16 +64,12 @@ const isConsensusMessageShown = computed(() =>
 )
 const isConsensusMessageShownDebounced = refThrottled(isConsensusMessageShown, debounceDelay)
 
-// Local funds are just accumulating (shown as "pending"), not processing, only while they're
-// below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
-// with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
 const isProcessingFunds = computed(() =>
   ((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value)
   || isProcessingRemote.value
   || hasPendingHtlcCreation.value,
 )
 
-// A processing banner past a few blocks means funds are stuck; report it, and its duration once it clears.
 const FUNDS_STUCK_MS = 2 * 60 * 1e3
 function trackFundsProcessingState(state: 'stuck' | 'resolved', durationMs: number) {
   trackFundsProcessing(state, {
@@ -90,7 +85,6 @@ function trackFundsProcessingState(state: 'stuck' | 'resolved', durationMs: numb
     pending_htlc_creation_hashes: pendingHtlcCreationTransactions.value.map(tx => tx.transactionHash),
   })
 }
-// NIM funds keep processing while another asset is selected; keep the same telemetry episode alive.
 watch(isProcessingFunds, (processing, _, onCleanup) => {
   if (!processing)
     return
@@ -102,7 +96,6 @@ watch(isProcessingFunds, (processing, _, onCleanup) => {
   }, FUNDS_STUCK_MS)
   onCleanup(() => {
     clearTimeout(timeout)
-    // Unmounting does not mean the funds finished processing.
     if (reported && !isProcessingFunds.value)
       trackFundsProcessingState('resolved', Date.now() - startedAt)
   })
@@ -127,7 +120,6 @@ watchEffect(async () => {
       statusMessageIcon.value = markRaw(InfoIcon)
       isStatusMessageShown.value = true
     }
-    // Mock mode fakes a working USDT setup even on testnet dev builds
     else if (isTestnet && !isMockEnabled) {
       statusMessageText.value = i18n.t('USDT is only available on mainnet. Switch to mainnet to use USDT.')
       statusMessageBgColor.value = 'bg-[#F9EDE1]'
@@ -151,7 +143,6 @@ watchEffect(async () => {
   }
 
   if (!isRemoteOk.value) {
-    // Give it some time to really check if the server is down or if it's just fetching the status
     await until(isRemoteOk).toBe(true, { timeout: 5000 })
     if (!isRemoteOk.value) {
       statusMessageText.value = i18n.t('Server not available')
@@ -162,7 +153,6 @@ watchEffect(async () => {
       isStatusMessageShown.value = true
     }
   }
-  // handleFunds is holding new funds while a fresh database checks for older HTLCs.
   else if (htlcCheckHoldStartedAt.value !== undefined && !htlcHistoryChecked.value) {
     statusMessageText.value = i18n.t('Checking your account')
     statusMessageBgColor.value = 'bg-[#F9EDE1]'
@@ -194,7 +184,6 @@ const statusMessageIconColorDebounced = refDebounced(statusMessageIconColor, deb
 const statusMessageIconDebounced = refDebounced(statusMessageIcon, debounceDelay, { maxWait: debounceMaxWait })
 const isStatusMessageShownDebounced = refThrottled(isStatusMessageShown, debounceDelay)
 
-// Payment Request Notification
 const prNotificationRef = ref<HTMLDivElement | null>(null)
 const detectedPaymentRequest = ref<string | null>('')
 const { lengthX, isSwiping } = useSwipe(prNotificationRef, {
@@ -242,7 +231,6 @@ watch(consensus, (value) => {
 watch([hasHtlcExpired], ([expired]) => {
   if (expired)
     isConsensusNeeded.value = true
-  // Reset after htlc recreated and consensus established
   else if (consensus.value === 'established')
     isConsensusNeeded.value = false
 }, { immediate: true })
@@ -262,11 +250,8 @@ async function isOwnRecipient({ recipient, chain }: PaymentRequestData) {
   return false
 }
 
-// Requests being validated (false) or validated and waiting for consensus (true).
-// Resumes before consensus would otherwise re-fetch and push the same request again.
 const pendingPaymentRequests = new Map<string, boolean>()
 
-// Invoice could be expired, so we don't want to show the notification if it's invalid
 async function isValidPaymentRequest(pr: string) {
   const { useStringParser } = await import('@/composables/useStringParser')
   const { isPaymentRequest, getPaymentRequestData } = useStringParser()
@@ -286,7 +271,6 @@ async function detectPaymentRequest() {
       return
     const isValidated = pendingPaymentRequests.get(pr)
     if (isValidated !== undefined) {
-      // Dismissed while waiting for consensus: show it again if still valid
       if (!isValidated || detectedPaymentRequest.value === pr)
         return
       pendingPaymentRequests.set(pr, false)
@@ -295,7 +279,6 @@ async function detectPaymentRequest() {
           detectedPaymentRequest.value = pr
       }
       finally {
-        // Consensus may have arrived meanwhile and cleared the entry
         if (pendingPaymentRequests.has(pr))
           pendingPaymentRequests.set(pr, true)
       }
@@ -306,11 +289,8 @@ async function detectPaymentRequest() {
       if (await isValidPaymentRequest(pr)) {
         pendingPaymentRequests.set(pr, true)
         detectedPaymentRequest.value = pr
-        // Wait for the animation to start before vibrating
-        // It feels weird if the vibration happens before the notification is even shown
         await sleep(100)
         Haptics.impact({ style: ImpactStyle.Light })
-        // If no consensus user might close the app before even opening the notification and wants to see it again
         await until(consensus).toBe('established')
         displayedPaymentRequests.value.push(pr)
       }
@@ -377,11 +357,9 @@ onUnmounted(() => resumeListener.then(listener => listener.remove()))
   <IonPage>
     <IonTabs>
       <IonRouterOutlet v-show="!isScannerActive" />
-      <!-- Floating notifications -->
       <div
         class="absolute left-0 w-full bottom-0"
       >
-        <!-- Payment Request from Clipboard -->
         <Transition name="slide-left" style="--slide-left-distance: 100vw">
           <div
             v-if="detectedPaymentRequest"
@@ -393,7 +371,6 @@ onUnmounted(() => resumeListener.then(listener => listener.remove()))
           </div>
         </Transition>
 
-        <!-- Status -->
         <Transition name="slide-fade">
           <StatusMessage
             v-if="isStatusMessageShownDebounced"
@@ -406,11 +383,9 @@ onUnmounted(() => resumeListener.then(listener => listener.remove()))
           />
         </Transition>
 
-        <!-- Consensus -->
         <Transition name="slide-fade">
           <div v-if="isConsensusMessageShownDebounced" class="flex justify-center items-center font-semibold gap-2 pt-3 bg-white">
             <!-- Using rem breaks the svg in iOS -->
-
             <WorldIcon class="size-[16px]" />
             <span class="text-space/50">
               {{ `${$t('Establishing consensus')}...` }}

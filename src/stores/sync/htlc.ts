@@ -63,15 +63,11 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
   const { loadHtlcHistoryFlags, reportFundsBlocked } = useSyncState()
 
-  // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
   watch(remoteBalance, (balance) => {
     if (balance > 0)
       htlcCheckHoldStartedAt.value = undefined
   })
 
-  /**
-   * If the local wallet gets some funds, move them to the remote wallet immediately.
-   */
   async function handleFunds(bypassThreshold = false) {
     if (localBalance.value === 0)
       return
@@ -87,13 +83,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     }
 
-    // Let micro-payments accumulate in the local wallet until they reach the threshold before
-    // topping up the HTLC, instead of creating/topping-up an HTLC for every payment. Only applies
-    // once a secured balance exists: with remoteBalance 0 there's nothing to batch onto, so a
-    // below-threshold deposit would otherwise sit pending forever — secure it immediately instead.
-    // Gated before the remote-balance RPC below so an accumulating top-up skips it.
-    // Expired signers must still hit the RPC: the cosigner can lag behind a timeout reclaim.
-    // (localBalance is already > 0 here, so a threshold of 0 keeps the previous immediate behavior.)
     if (!bypassThreshold && !hasHtlcExpired.value && remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
       logger.log(`💤 Local balance ${localBalance.value / 1e5} NIM below HTLC threshold ${htlcThreshold.value / 1e5} NIM — accumulating, skipping HTLC create/top-up`)
       return
@@ -113,10 +102,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'New HTLC needed' : 'Top-up needs liquidation'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
 
-    // A fresh database (install, restore, re-login) does not know older HTLCs yet, so a new HTLC could
-    // land beside a funded one. That includes a top-up, which liquidates the active HTLC to recreate it.
-    // Wait for the first clean sweep, bounded because payments need an HTLC.
-    // Mock mode never verifies remote signers, so it has no sweep to wait for.
     if (!isMockEnabled && !isHtlcPending.value && !(await loadHtlcHistoryFlags()).checked) {
       try {
         let startedAt = htlcCheckHoldStartedAt.value ?? (Number(await kv().getItem(HTLC_CHECK_HOLD_STARTED_KV_KEY)) || undefined)
@@ -126,10 +111,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           await kv().setItem(HTLC_CHECK_HOLD_STARTED_KV_KEY, String(startedAt))
         }
         if (Date.now() - startedAt < HTLC_HISTORY_CHECK_HOLD_MS) {
-          // Only unsecured funds need the explanation; with a funded HTLC the deposit just stays pending.
           if (remoteBalanceOnChain === 0 && htlcCheckHoldStartedAt.value !== startedAt) {
             htlcCheckHoldStartedAt.value = startedAt
-            // handleFunds may not run again at the limit (pending tx, RPC error), so release the explanation here.
             setTimeout(() => {
               if (htlcCheckHoldStartedAt.value === startedAt)
                 htlcCheckHoldStartedAt.value = undefined
@@ -139,12 +122,10 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           reportFundsBlocked('history_check_hold')
           return
         }
-        // Not marked checked: the sweep keeps following extensions and merges a split HTLC once found.
         logger.warn('🧲 HTLC history check did not finish in time. Securing funds anyway')
         htlcCheckHoldStartedAt.value = undefined
       }
       catch (error) {
-        // A DB error must not release the hold; retry on the next head.
         logger.error('Error while checking the HTLC history hold', error)
         reportFundsBlocked('history_check_error')
         return
@@ -152,7 +133,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     }
 
     if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
-      // Nothing holds the funds now. Cleared before sending so a failure inside the send (activation_failed) stays.
       lastFundsBlockReason.value = undefined
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.LocalToRemote })
@@ -245,9 +225,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     }
   }
 
-  /**
-   * If the server misses the deadline to finalize the HTLC, the local wallet has to recover the funds.
-   */
   async function checkRemoteValidity() {
     if (remoteBalance.value === 0)
       return
@@ -372,7 +349,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         if (error && error !== NO_ACCOUNT_ERROR)
           return false
         if (!error && typeof balance === 'number' && balance > 0) {
-          // An extension spends the previous HTLC, so its sender is the only safe rollback target.
           await updateRemoteSigner({ ...predecessor, address, active: true, balance }, context)
           return isWalletContextCurrent(context)
         }
@@ -454,7 +430,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         if ((hasValidityHeight && !validityExpired) || !pending.sender)
           continue
         try {
-          // Only a complete sender-history scan can distinguish an absent creation from an accepted HTLC that was later drained.
           transaction = await findTransactionInHistory(Nimiq.Address.fromString(pending.sender), pending.transactionHash)
           if (!isHtlcContextCurrent(context))
             return
@@ -527,7 +502,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           const currentWalletContext = getCurrentWalletContext(context)
           if (!currentWalletContext)
             return
-          // Keep finality monitoring separate from activation of an already superseded signer.
           const alreadyActivated = pending.state === 'included' && remoteAddress.value
             && (remoteAddress.value.toUserFriendlyAddress() === transaction.recipient
               || (typeof transaction.timestamp === 'number' && start.value >= transaction.timestamp))
@@ -544,7 +518,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             return
         }
         catch (error) {
-          // Keep DB status selectable so restart recovery retries after account or cosigner metadata becomes ready.
           logger.error('Error activating pending HTLC transaction', error)
           if (!upsertPendingHtlcCreation({ ...pending, state: 'pending' }, context))
             return
@@ -555,10 +528,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         if (!upsertPendingHtlcCreation({ ...pending, ...transaction }, context))
           return
         try {
-          // Persist the reorg before rollback so a restart cannot restore an included, spendable state.
           if (pending.state !== transaction.state)
             await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
-          // Creation is not accepted yet, so keep any funded predecessor as active signer.
           const currentWalletContext = getCurrentWalletContext(context)
           if (!currentWalletContext)
             return
@@ -619,7 +590,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   }
 
   const reportedRefundFailures = new Set<string>()
-  // Records a refund confirmed as executed together with its swap step.
   async function markSwapHtlcRefunded(htlc: SwapHtlc, step: SwapRefundTracker, refund: PlainTransactionDetails, extra?: { rebroadcast: boolean }) {
     step.end(true, { tx_state: refund.state, execution_result: true, ...extra })
     await useTransactions().setSwapHtlcRefunded(htlc.address)
@@ -641,7 +611,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
 
       const hasPolygonRows = expiredSwapHtlcs.some(htlc => htlc.address.startsWith('0x'))
-      // Loaded once per sweep — dynamic import breaks a polygon-usdt → useSync circular import.
       const polygonUsdt = hasPolygonRows ? (await import('@/stores/polygon-usdt')).usePolygonUsdt() : null
 
       for (const htlc of expiredSwapHtlcs) {
@@ -669,7 +638,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             if (refund && refund.executionResult !== false)
               continue
             refundUnproven = !refund
-            // Until its validity window ends, a refund that can't be found may still be included.
             refundWindowOpen = refundUnproven && localHeight.value <= (htlc.refund_block ?? 0) + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
           }
 
@@ -681,15 +649,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
                 logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
                 continue
               }
-              // Past its window, only a complete history scan tells whether the refund drained the HTLC.
               const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
               if (landedRefund?.executionResult === true) {
                 await markSwapHtlcRefunded(htlc, refundStep, landedRefund)
                 refundProven = true
               }
             }
-            if (!refundProven) {
-              // Fastspot may have redeemed it while the app was closed, so the preimage was never saved.
+            if (!refundProven && htlc.swap_id) {
               const swap = await promiseWithTimeout(useFastspotApiV2().then(({ getSwap }) => getSwap(htlc.swap_id)), HTLC_CALL_TIMEOUT_MS).catch((error) => {
                 logger.warn('Swap lookup for empty HTLC failed; retrying next sweep', htlc.swap_id, error)
                 return undefined
@@ -744,7 +710,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
               await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
           }
           else {
-            // Pending broadcasts have no outcome yet; the next sweep's lookup reports their confirmed execution.
             logger.warn('Swap HTLC refund has no execution result yet; next sweep checks its hash', txDetails)
           }
         }

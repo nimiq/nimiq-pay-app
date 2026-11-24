@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * Code originally from https://github.com/nimiq/vue3-componenets
- * Adapted because: we don't use 8px base font size, we don't have nimiq-styles, we want to use w-full on the button and IonButton
- */
-
 import type { Component } from 'vue'
 import { onLongPress, useTimeoutFn } from '@vueuse/core'
 import { ref } from 'vue'
@@ -54,14 +49,13 @@ onLongPress(componentRef, (e) => {
     @keydown.enter.space.prevent="isPressed = true; /* also prevent triggering clicks */"
     @touchend="isPressed = false"
     @keyup.enter.space="isPressed = false"
-    @click.prevent.stop="$event.stopImmediatePropagation(); /* don't trigger handlers */"
-    @submit.prevent.stop="$event.stopImmediatePropagation(); /* don't trigger handlers and default behavior */"
+    @click.prevent.stop="$event.stopImmediatePropagation();"
+    @submit.prevent.stop="$event.stopImmediatePropagation();"
   >
     <span class="mix-blend-mode-mask">
       <transition name="transition-indicator">
         <div v-if="isPressed" class="indicator" :style="`--transition-time: ${duration}ms`" />
       </transition>
-      <!-- Both labels remain in the DOM to avoid layout changes -->
       <label :class="{ show: !showPrompt, center: isPressed && $slots.subline }">
         <slot />
       </label>

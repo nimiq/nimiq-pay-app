@@ -32,19 +32,15 @@ const topDAppIcons = computed(() => {
       if (icons.length >= 3)
         return
 
-      // Recent entries differ only by trailing slash, so normalize before dedupe.
       const key = stripTrailingSlash(dapp.url)
       if (selectedDApps.has(key))
         continue
 
       selectedDApps.add(key)
-      // Prefer the curated awesome icon: recently-viewed entries persist whatever icon
-      // was supplied at launch (deeplinks fall back to favicon).
       icons.push({ icon: miniApps.iconForUrl(dapp.url) ?? dapp.icon, url: dapp.url })
     }
   }
 
-  // Lead with the most recent Mini App; fill the other two from featured, then non-featured.
   appendIcons(recentlyViewedDApps.value.slice(0, 1))
   appendIcons(featuredDApps.value)
   appendIcons([...nonFeaturedDApps.value].sort((a, b) => a.name.localeCompare(b.name)))

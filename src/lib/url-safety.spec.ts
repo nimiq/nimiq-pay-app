@@ -16,8 +16,7 @@ describe('analyzeUrlSafety', () => {
   })
 
   it('flags Cyrillic characters that imitate Latin letters', () => {
-    // The first `е` is Cyrillic (U+0435) — visually identical to Latin `e`.
-    const result = analyzeUrlSafety('https://еxample.com/')
+    const result = analyzeUrlSafety('https://\u0435xample.com/')
     expect(result.isSuspicious).toBe(true)
     expect(result.hostChars[0].suspicious).toBe(true)
     expect(result.hostChars[0].reason).toMatch(/non-ascii/i)
@@ -70,16 +69,14 @@ describe('analyzeUrlSafety', () => {
   })
 
   it('still flags homograph attacks when the input lacks a scheme', () => {
-    // First `е` is Cyrillic U+0435.
-    const result = analyzeUrlSafety('еxample.com/path')
+    const result = analyzeUrlSafety('\u0435xample.com/path')
     expect(result.isParseable).toBe(true)
     expect(result.isSuspicious).toBe(true)
-    expect(result.host).toBe('еxample.com')
+    expect(result.host).toBe('\u0435xample.com')
     expect(result.hostChars[0].suspicious).toBe(true)
   })
 
   it('does not analyze characters outside the hostname (path / query stay untouched)', () => {
-    // The path contains a Cyrillic char; the host is pure ASCII. Path is not part of host analysis.
     const result = analyzeUrlSafety('example.com/раth?q=1')
     expect(result.host).toBe('example.com')
     expect(result.hostChars.every(c => !c.suspicious)).toBe(true)
@@ -181,7 +178,6 @@ describe('isExternalDeepLinkUrlSafe', () => {
   })
 
   it('rejects host with a trailing dot pointing at a private zone', () => {
-    // Trailing dot: WHATWG `URL` keeps it; treat as an explicit public-suffix bypass attempt.
     const v = isExternalDeepLinkUrlSafe('https://localhost./')
     expect(v.ok).toBe(false)
   })

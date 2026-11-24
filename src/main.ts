@@ -4,7 +4,6 @@ import { IonicVue } from '@ionic/vue'
 import { devtools } from '@vue/devtools'
 import { LockdownMode } from 'capacitor-lockdown-mode'
 
-// import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 import { createPinia, storeToRefs } from 'pinia'
 import { createApp } from 'vue'
@@ -21,7 +20,6 @@ import { isMockEnabled } from '@/lib/mock-mode'
 import { installNodeGlobals } from '@/lib/node-globals'
 import { isWasmAvailable } from '@/lib/utils'
 import { useApp } from '@/stores/app'
-/* Libs */
 import { useConn } from '@/stores/conn'
 
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -29,35 +27,30 @@ import App from './App.vue'
 import router from './router'
 import { useMiniApps } from './stores/mini-apps'
 import LockdownScreen from './views/LockdownScreen.vue'
-/* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
-/* Basic CSS for apps built with Ionic */
 import '@ionic/vue/css/normalize.css'
 
 import '@ionic/vue/css/structure.css'
 
 import '@ionic/vue/css/typography.css'
-/* Optional CSS utils that can be commented out */
 import '@ionic/vue/css/padding.css'
 import '@ionic/vue/css/float-elements.css'
 import '@ionic/vue/css/text-alignment.css'
 import '@ionic/vue/css/text-transformation.css'
 import '@ionic/vue/css/flex-utils.css'
 import '@ionic/vue/css/display.css'
-/* Theme variables */
 import './theme/variables.css'
 
 if (import.meta.env.DEV)
   devtools.connect(`http://${window.location.hostname}`, 8098)
 
-// applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
 installNodeGlobals()
 
 const isAlertRoute = window.location.pathname.startsWith('/alert')
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // Legacy PWA SW from pre-plugin builds keeps stale precache after a binary update, hanging the first launch. Clean up once.
+  // Legacy PWA SW keeps stale precache after a binary update, hanging the first launch. Clean up once.
   if ('serviceWorker' in navigator) {
     try {
       const regs = await navigator.serviceWorker.getRegistrations()
@@ -75,9 +68,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // iOS Lockdown Mode disables WebAssembly, which the Nimiq client needs. Without this gate
-  // `nimiq-network.ts` would throw on `Nimiq.default()` and retry forever, hanging the app.
-  // Show a blocking screen instead of booting the normal flow.
+  // iOS Lockdown Mode disables WebAssembly, which the Nimiq client needs.
   if (useDevice().isIOS && !isWasmAvailable()) {
     const lockdownApp = createApp(LockdownScreen)
     lockdownApp.use(IonicVue)
@@ -91,7 +82,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       await CapacitorUpdater.notifyAppReady()
         .catch(e => useLogger('CapacitorUpdater').error('Failed to confirm OTA startup', e))
     }
-    // Classify the cause (true Lockdown Mode vs other WASM failure) for diagnostics only.
     LockdownMode.isLockdownModeEnabled()
       .then(result => useLogger('LockdownMode').log('WebAssembly unavailable on iOS', result))
       .catch(() => {})
@@ -105,34 +95,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!isAlertRoute)
     app.use(VueVirtualScroller)
 
-  // load and set the initial language
   const { language } = storeToRefs(useApp())
   setLanguage(language.value)
 
-  /**
-   * Ensures that all the streams which the app relies on are initialized.
-   * This is called from:
-   *    - When the app is initialized AND the local wallet exists
-   *    - When the setup flow is finished
-   */
-
   if (!isAlertRoute)
     await useConn().init()
-  // Mock mode never launches the client: WASM still loads (address parsing needs the Nimiq global),
-  // but no consensus/sync is started.
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
-  // Lets device tests prove which source is running (.claude/skills/ship/scripts/verify-build.sh). One string, because
-  // the log file writes each arg on its own line. Every build logs it, so the newest line always describes the live JS.
   useLogger('build').log(`🏷️ Build stamp ${__BUILD_STAMP__}`)
-  // Identify user as early as possible to capture all analytics events, including those during app initialization.
-  // app_opened waits so the first launch after an OTA reports the new bundle_version, not the previous one.
   void identifyUser().then(() => {
     if (!isAlertRoute)
       trackCurrentAppOpen('cold_start')
   })
   if (!isAlertRoute) {
-    useMiniApps() // store creation starts the Mini Apps catalog fetch
+    useMiniApps()
   }
 
   const { isWeb } = useDevice()
@@ -142,16 +118,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       const isWebAndNoPin = isWeb && !useDecrypt().hasPin()
       const isMobileAndNoDb = !isWeb && !useConn().dbExists
 
-      // Check if setup is completed
       if (isWebAndNoPin || isMobileAndNoDb) {
-        // Only PinView replays a link held across the resume reload; drop it so it can't fire after onboarding
         sessionStorage.removeItem(DEFERRED_DEEPLINK_KEY)
         if (to.name === 'Setup')
           return next()
         return next({ name: 'Setup', replace: true })
       }
 
-      // Check if the db is unlocked
       if (!useDecrypt().decrypted.value) {
         if (to.name === 'Pin')
           return next()
@@ -162,8 +135,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // This router navigation guard is to prevent switching to the new route before the language file finished loading.
-  // If there are any routes which do not require translations, they can be skipped here.
   // A rejected setLanguage (e.g. a failed locale chunk import) must still call next(), otherwise the
   // navigation wedges forever and the user is stuck on the current screen (e.g. the PIN view).
   router.beforeResolve((to, from, next) => {
@@ -174,7 +145,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Routes are lazy-loaded. A failed dynamic import (stale hashed chunk after a binary update) otherwise
   // aborts navigation silently — with no onError handler the user is left stuck on the current route.
-  // Log every navigation error, and recover from chunk-load failures with a single fresh reload.
   router.onError((err) => {
     const message = err instanceof Error ? err.message : String(err)
     useLogger('router').error('Navigation error', message)

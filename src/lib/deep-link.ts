@@ -13,11 +13,6 @@ import { isExternalDeepLinkUrlSafe } from './url-safety'
 
 const logger = useLogger('DeepLink')
 
-/**
- * Route Capacitor `appUrlOpen` events. Parses up-front so malformed URLs don't
- * block the listener task on PIN entry; waits for decrypt only when the routed
- * action needs wallet access.
- */
 export async function handleDeepLink(event: URLOpenListenerEvent): Promise<void> {
   let url: URL
   try {
@@ -57,13 +52,11 @@ export async function handleDeepLink(event: URLOpenListenerEvent): Promise<void>
         logger.log('Unhandled deeplink host:', url.host)
         return
       }
-      // Counterpart of miniAppOpenDeeplink (src/lib/mini-app-deeplink.ts) — keep in lockstep.
       const match = url.pathname.match(/^\/miniapps\/open\/(.+)$/)
       if (!match) {
         logger.log('Unhandled nimpay.app path:', url.pathname)
         return
       }
-      // Decoded segment may itself contain a path; preserve original search/hash.
       const raw = decodeURIComponent(match[1]) + url.search + url.hash
       await openMiniAppFromDeeplink(raw)
       return
@@ -80,8 +73,6 @@ async function openMiniAppFromDeeplink(raw: string): Promise<void> {
     logger.warn('Invalid mini-app url in deeplink:', raw)
     return
   }
-  // Reject before the user-facing trust gate so "Open anyway" can never reach
-  // a LAN/SSRF target, regardless of what the user taps.
   const safety = isExternalDeepLinkUrlSafe(normalized)
   if (!safety.ok) {
     logger.warn('Refused unsafe mini-app deeplink:', normalized, safety.reasons)
@@ -96,8 +87,6 @@ async function openMiniAppFromDeeplink(raw: string): Promise<void> {
       return
     }
   }
-  // launchMiniApp owns the never-stack-webviews invariant (closes live webviews and
-  // clears preserved sessions before opening) for every caller, this one included.
   const app = useApp()
   await launchMiniApp({ url: normalized, source: 'deeplink', language: app.language, userFiat: app.selectedFiat })
 }

@@ -17,7 +17,6 @@ const { showAnimations } = storeToRefs(useApp())
 const inputText = ref('')
 const showEndConfirm = ref(false)
 const chatEnded = computed(() => conversationEnded.value && messages.value.length > 0)
-// Support closed the session (e.g. from Slack): keep the history visible so the user can read the last reply
 const closedBySupport = computed(() => isSessionClosed(messages.value))
 const messageListRef = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -27,11 +26,8 @@ const sendingLogs = ref(false)
 const sendLogsFailed = ref(false)
 const dismissedLogsRequestId = ref('')
 
-// "log"/"logs" as a word, but not "log in" / "log out"
 const LOGS_REQUEST = /\blogs?\b(?!\s+(?:in|into|out)\b)/i
 
-// Latest agent message asking for logs, unless logs were attached after it (backend records
-// uploads in history as a user message starting with 📎) or the notice was dismissed
 const logsRequestId = computed(() => {
   const index = messages.value.findLastIndex(m => m.sender.startsWith('agent:') && LOGS_REQUEST.test(m.content))
   if (index < 0)
@@ -84,7 +80,6 @@ async function handleSendLogs() {
   sendLogsFailed.value = false
   try {
     await livechat.sendLogs()
-    // Hide the notice right away instead of waiting for the 📎 message to arrive via polling
     dismissedLogsRequestId.value = logsRequestId.value
   }
   catch (e) {
@@ -121,7 +116,6 @@ function formatTime(timestamp: string): string {
   <div class="overlay" :class="{ visible: shown }">
     <div class="shrink-0 w-6 h-6 ml-24 border-[12px] border-l-transparent border-r-transparent border-t-transparent border-b-white" />
     <div class="bg-white rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0 relative">
-      <!-- Toolbar -->
       <IonToolbar>
         <IonTitle slot="start" class="font-bold text-2xl tracking-normal">
           <span class="flex items-center gap-2">
@@ -160,18 +154,15 @@ function formatTime(timestamp: string): string {
         @confirm="handleSendLogs"
       />
 
-      <!-- Loading state -->
       <div v-if="loading" class="text-center mb-10 flex flex-row gap-2 h-full items-center justify-center">
         <LoadingSpinnerIcon class="size-6 opacity-50" />
         <span class="text-space/50 text-xl font-semibold">{{ $t('Loading...') }}</span>
       </div>
 
-      <!-- Error state -->
       <div v-else-if="error" class="flex-grow flex flex-col items-center justify-center gap-3 p-6 text-center">
         <span class="text-space/50 text-sm">{{ $t('Could not connect to support. Please try again later.') }}</span>
       </div>
 
-      <!-- Chat ended thank-you screen -->
       <div v-else-if="chatEnded && !closedBySupport" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
         <div class="size-14 rounded-full bg-green-500 flex items-center justify-center">
           <IonIcon :icon="checkmarkCircle" class="text-white text-4xl" />
@@ -184,16 +175,12 @@ function formatTime(timestamp: string): string {
         </p>
       </div>
 
-      <!-- Normal message list + input (chat in progress) -->
       <template v-else>
-        <!-- Message list -->
         <div ref="messageListRef" class="flex-grow overflow-y-auto p-4 flex flex-col gap-3">
-          <!-- Empty state -->
           <div v-if="messages.length === 0" class="flex-grow flex items-center justify-center text-space/40 text-sm">
             {{ $t('Start a conversation...') }}
           </div>
 
-          <!-- Messages -->
           <template v-for="msg in messages" :key="msg.id || `pending-${msg.timestamp}`">
             <div
               v-if="msg.event === 'session_closed'"
@@ -265,10 +252,7 @@ function formatTime(timestamp: string): string {
           </motion.div>
         </AnimatePresence>
 
-        <!-- Input area. After support closed the session, sending starts a new one -->
         <div v-if="!chatEnded || closedBySupport" class="border-t border-neutral-100 p-3 flex gap-2 items-end">
-          <!-- Logs go to an existing session, so only offer them once the first message started one.
-               Same height as the single-line textarea, so the icon lines up with its last line -->
           <div v-if="sessionId && !closedBySupport" class="h-12 flex items-center shrink-0">
             <IonButton
               fill="clear"

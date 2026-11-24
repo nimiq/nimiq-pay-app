@@ -37,7 +37,6 @@ function handleInput(event: Event) {
   const index = Number.parseInt(target.id)
 
   if (value.length > 4) {
-    // Remove spaces and split every 4 characters
     const array = value.replace(/\s/g, '').match(/.{1,4}/g)
     if (!array)
       return
@@ -53,7 +52,6 @@ function handleInput(event: Event) {
     inputAddress.value[index] = value
   }
 
-  // Focus on the next input
   if (index < 8 && value.length >= 4) {
     const nextInput = document.getElementById((index + 1).toString())
     if (nextInput)
@@ -97,7 +95,6 @@ function handleKeydown(event: KeyboardEvent) {
       class="flex items-center"
       :class="{ 'justify-end': i % 3 === 0 }"
     >
-      <!-- Only show horizontal lines in the middle element, that's the best way I found in my extend research (2 minutes) to prevent hacking too many things -->
       <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
       <input
         :id="i.toString()"

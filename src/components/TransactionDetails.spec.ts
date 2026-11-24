@@ -218,8 +218,6 @@ describe('transactionDetails', () => {
     expect(wrapper.text()).toContain('Polygon')
   })
 
-  // APP-170: for an incoming payment, show the sender + message and offer to save the sender.
-  // The recipient (the user's own address) must be hidden — showing it was the reported bug.
   it('shows the sender and message and hides the own-address recipient for an incoming payment', async () => {
     const { default: TransactionDetails } = await import('./TransactionDetails.vue')
     const wrapper = mount(TransactionDetails, {
@@ -248,7 +246,6 @@ describe('transactionDetails', () => {
     expect(wrapper.text()).toContain('Message')
     expect(wrapper.text()).toContain('Thanks for lunch')
 
-    // Tapping the sender opens the save-to-address-book flow prefilled with the sender.
     initializeFlow.mockClear()
     await wrapper.get('[aria-label="Add sender to address book"]').trigger('click')
     expect(initializeFlow).toHaveBeenCalledWith(

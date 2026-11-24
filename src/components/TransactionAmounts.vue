@@ -40,7 +40,6 @@ function slotHasContent(nodes?: VNode[]): boolean {
 }
 
 // Parent components can always provide a slot, even when nested `v-if`s render nothing.
-// Check the rendered slot output so separator dots only appear next to visible content.
 const isInvoicedVisible = computed(() => slotHasContent(slots.invoiced?.()))
 const isFeeVisible = computed(() => slotHasContent(slots.fee?.()))
 const isCryptoAfterVisible = computed(() => slotHasContent(slots['crypto-after']?.()))

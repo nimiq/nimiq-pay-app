@@ -313,11 +313,6 @@ function getHardwareBackHandler() {
 
 describe('mini apps modal', () => {
   beforeEach(() => {
-    // Reset module-scoped guard so prior tests can't leak `openingMiniAppUrl` and
-    // short-circuit subsequent launches (production behavior holds the guard until
-    // `browserPageLoaded`/`pageLoadError`/`closeEvent` fires, which the mocks never do).
-    // Use the static import so we hit the same module instance as MiniAppsModal even
-    // after `vi.resetModules()` runs in another test.
     openingMiniAppUrl.value = null
 
     openWebView.mockReset()
@@ -663,13 +658,10 @@ describe('mini apps modal', () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    // Featured section should show EVM Mini Wallet (featured: true)
     expect(wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
 
-    // Non-featured section should show Uniswap (featured: false)
     expect(wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]').exists()).toBe(true)
 
-    // Section labels
     const headings = wrapper.findAll('p.text-lg.font-bold')
     const headingTexts = headings.map(h => h.text())
     expect(headingTexts).toContain('Featured Apps')
@@ -680,7 +672,6 @@ describe('mini apps modal', () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    // EVM Mini Wallet has description 'Test wallet' in mock data
     const featuredButton = wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]')
     expect(featuredButton.text()).toContain('Test wallet')
   })
@@ -759,7 +750,6 @@ describe('mini apps modal', () => {
     const store = useMiniApps()
 
     expect(store.getMiniAppReportUrl('https://evm-mini-wallet.vercel.app/')).toBe('https://nimpay.app/miniapps/evm/evm-mini-wallet/report')
-    // Matches regardless of trailing slash, mirroring iconForUrl / isTrustedMiniAppUrl.
     expect(store.getMiniAppReportUrl('https://evm-mini-wallet.vercel.app')).toBe('https://nimpay.app/miniapps/evm/evm-mini-wallet/report')
     expect(store.getMiniAppReportUrl('https://not-in-the-list.example/')).toBeUndefined()
   })

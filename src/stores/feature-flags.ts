@@ -41,10 +41,8 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
       logger.error('Error fetching USDT maintenance notice:', error)
     }
   }
-  // Cold start read; App.vue refreshes again on resume
   void refreshUsdtMaintenance()
 
-  // Points backend disabled for now; hide the entry point unless the flag is on
   const isCryptocityPointsEnabled = ref(false)
   async function refreshCryptocityPoints() {
     try {
@@ -58,12 +56,10 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   void refreshCryptocityPoints()
 
   const polygonRpcUrl = computedAsync(async () => {
-    // Dev override (set via DevModal) wins over everything else.
     if (polygonRpcOverride) {
       logger.log('Polygon RPC override active', polygonRpcOverride)
       return polygonRpcOverride
     }
-    // Testnet override supersedes the mainnet PostHog flag.
     if (isTestnet) {
       logger.log('Testnet override active — using Polygon testnet RPC', polygonUsdtConfig.rpcUrl)
       return polygonUsdtConfig.rpcUrl

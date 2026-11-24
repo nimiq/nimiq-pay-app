@@ -5,12 +5,9 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-// Everything counts except what can't reach the JS bundle. Counting these would flag a correct build as stale, e.g. the
-// temporary versionCode bump for the Capgo OTA trap, or agent docs edited during a device test.
 const NOT_BUNDLED = ['android', 'ios', 'docs', 'scripts', 'tests', 'nimiq-pay-tests', 'fastlane', '.claude', '.codex', '.agents', '.github', '*.md']
 const PATHSPEC = ['.', ...NOT_BUNDLED.map(path => `:(exclude)${path}`)]
 
-// Uncommitted changes count: device tests run before the commit, when Before and After builds share the same HEAD.
 export function buildStamp(cwd = process.cwd()) {
   const git = (...args) => execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 2 ** 30 })
   try {

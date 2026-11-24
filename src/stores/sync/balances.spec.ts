@@ -11,7 +11,7 @@ describe('useSyncBalances', () => {
 
   it('warns about missing remote address every BLOCKS_PER_BATCH', async () => {
     state.remoteAddress = undefined
-    state.height = 64 // multiple of 32
+    state.height = 64
     const { useSyncBalances } = await import('./balances')
     await useSyncBalances().updateBalances()
     expect(state.logger.warn).toHaveBeenCalledWith('Remote address not found')
@@ -116,7 +116,6 @@ describe('useSyncBalances', () => {
   })
 
   it('reads the remote balance as an HTLC only', async () => {
-    // A drained HTLC that later receives NIM is a basic account: its balance can't be reclaimed.
     state.remoteSigner = { ...{ active: true, balance: 0, address: state.remoteAddress, publicKey: 'k', start: 0, end: 0, proofSize: 98 } }
     state.getBalance.mockImplementation((address: any, type?: string) => {
       if (address?.toUserFriendlyAddress?.() === 'NQ11 TEST REMOTE ADDRESS')
@@ -147,7 +146,6 @@ describe('useSyncBalances', () => {
     }
     state.remoteBalance = 10_000
     state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([extensionTx] as any)
-    // Second pass returns the newly discovered address to break the rerun loop.
     state.getAllRemoteSigners
       .mockResolvedValueOnce([])
       .mockResolvedValue([{ address: createAddress('NQ44 EXTENSION HTLC ADDRESS') }] as any)
@@ -264,7 +262,6 @@ describe('useSyncBalances', () => {
     state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 123_000, timeout: 300_000 })) as any
     const { useSyncBalances } = await import('./balances')
     await useSyncBalances().updateBalances()
-    // Local + remote getBalance pairs across the two update passes (initial + rerun).
     expect(state.getBalance.mock.calls.length).toBeGreaterThanOrEqual(3)
   })
 })

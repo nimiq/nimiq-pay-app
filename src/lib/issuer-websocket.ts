@@ -9,9 +9,6 @@ import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import { useRemoteSigner } from '../stores/remote-signer'
 import {
-
-  // type PaymentTriggerMessage,
-
   ServerMessageSchema,
 } from './issuer-schemas/ws.schema'
 import { signMessage } from './issuer-utils'
@@ -42,7 +39,6 @@ export function useIssuerWebSocket() {
   watch(status, (newStatus) => {
     logger.log('Status:', newStatus)
     if (newStatus === 'OPEN') {
-      // Kick off the authentication handshake
       const msg: AuthenticateStartMessage = {
         type: 'authenticate:start',
         address: useLocalWallet().localAddress.toUserFriendlyAddress(),
@@ -76,7 +72,6 @@ export function useIssuerWebSocket() {
     }
   })
 
-  // Internal queue of pending payments, not exposed
   const pendingPayments = new Map<PaymentConfirmMessage['id'], {
     resolve: (msg: PaymentSuccessMessage) => void
     reject: (reason: string) => void
@@ -89,15 +84,10 @@ export function useIssuerWebSocket() {
     }
   }
 
-  /**
-   * The return value `boolean` is used to typecheck that all message types are handled.
-   * The return type can therefore not be `undefined`.
-   */
   function handleIssuerMessage(msg: ServerMessage): boolean {
     switch (msg.type) {
       case 'authenticate:challenge': {
         logger.log('Received challenge:', msg.challenge)
-        // Sign challenge and respond with signature
         const { localWallet } = useLocalWallet()
         signMessage(localWallet, msg.challenge).then((signature) => {
           const response: AuthenticateConfirmMessage = {
@@ -128,14 +118,12 @@ export function useIssuerWebSocket() {
         return true
       case 'payment:ready':
         logger.log('Payments ready')
-        // TODO: Verify returned rails, address and balance?
         paymentReady.value = true
         return true
       case 'payment:abort': {
         logger.error('Payments aborted:', msg.message)
         paymentReady.value = false
         cancelPendingPayments(msg.message)
-        // Try to restart payment session
         const { remoteAddress, remoteBalance } = storeToRefs(useRemoteSigner())
         if (remoteAddress.value) {
           const response: PaymentAcceptMessage = {
@@ -166,8 +154,6 @@ export function useIssuerWebSocket() {
         return true
       }
       case 'payment:rejected': {
-        // Payment request from NAKA rejected server-side, not even forwarded to app
-        // If this happens, we want to show this to the user, because she's waiting for feedback from the NFC scan
         logger.error('Payment rejected:', msg)
         paymentRejection.value = msg.code
         return true
@@ -257,16 +243,6 @@ export function useIssuerWebSocket() {
     send(JSON.stringify(msg))
   }
 
-  // async function triggerPayment(recipient: string, amount: bigint) {
-  //   const message: PaymentTriggerMessage = {
-  //     type: 'payment:trigger',
-  //     rail: 'naka-card',
-  //     recipient,
-  //     amount: amount.toString(10),
-  //   }
-  //   send(JSON.stringify(message))
-  // }
-
   return {
     isReady,
     paymentRequest,
@@ -274,6 +250,5 @@ export function useIssuerWebSocket() {
     paymentRejectionMessage,
     confirmPayment,
     rejectPayment,
-    // triggerPayment,
   }
 }

@@ -3,7 +3,6 @@ import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { nativeFetch } from '@/lib/nativeFetch'
 
-// Testnet-only faucet. Mirrors the mechanism used by the Nimiq Wallet.
 const FAUCET_ENDPOINT = 'https://faucet.pos.nimiq-testnet.com'
 
 const logger = useLogger('faucet')
@@ -12,7 +11,6 @@ type FaucetTapResponse
   = | { success: true }
     | { success: false, error: string, wait?: number }
 
-/** POST /tapit — dispenses free NIM to `address`. Rate-limit/geoblock enforced server-side. */
 export async function tapFaucet(address: string): Promise<Result<true, string>> {
   try {
     const res = await nativeFetch(`${FAUCET_ENDPOINT}/tapit`, {

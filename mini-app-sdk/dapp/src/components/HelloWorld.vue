@@ -66,9 +66,6 @@ async function sendBasicTransaction() {
   output.value = await provider.value.sendBasicTransaction({
     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
     value: 100e5,
-    // merchant: {
-    //   name: 'Nimiq Mini-App Donation',
-    // },
   })
 }
 
@@ -77,9 +74,6 @@ async function sendBasicTransactionWithData() {
     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
     value: 100e5,
     data: 'Hello from mini-app!',
-    // merchant: {
-    //   name: 'Nimiq Mini-App Donation',
-    // },
   })
 }
 

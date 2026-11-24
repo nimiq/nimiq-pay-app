@@ -8,13 +8,9 @@ const logger = useLogger('useTime')
 
 const defaultFormatter: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' }
 
-const twentyFirstCentury = 1000000000000 /* 17:46:40 20/11/2001 GMT */
+const twentyFirstCentury = 1000000000000
 
 type UseFormatTimeOptions = {
-  /**
-   * The locale to use when formatting the relative time.
-   * @default useApp().language
-   */
   locale?: string
 } & Intl.DateTimeFormatOptions
 
@@ -22,7 +18,6 @@ export function useFormatTime(timestamp: number, { locale = useApp().language, .
   return new Intl.DateTimeFormat(locale, { ...defaultFormatter, ...options }).format(toMs(timestamp))
 }
 
-// Detects if it is sec and converts to ms. We assume that the timestamps are always from the 2020s.
 export function toMs(_maybeSec: MaybeRef<number>) {
   const maybeSec = toValue(_maybeSec)
   return maybeSec < twentyFirstCentury ? maybeSec * 1000 : maybeSec
@@ -43,7 +38,6 @@ export function countdownTo(timestamp: number, target = Date.now()) {
 let serverTimeOffset: number | undefined
 let serverTimeOffsetResetTimeout = -1
 
-/** Get the server time in ms, for the case that the user's system time is wrong */
 export async function getServerTime() {
   if (serverTimeOffset === undefined)
     await updateServerTimeOffset()
@@ -72,7 +66,6 @@ async function updateServerTimeOffset() {
       throw new Error('Failed to read server time')
     serverTimeOffset = serverTime - Date.now()
     if (Math.abs(serverTimeOffset) < 1500) {
-      // If deviation from server time is minimal, ignore it as it might be coming just from network delays.
       serverTimeOffset = 0
     }
 
