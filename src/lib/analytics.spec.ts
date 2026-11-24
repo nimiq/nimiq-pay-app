@@ -1,5 +1,5 @@
 import type { UserReceiptTransaction } from '@/types/transactions'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
@@ -15,6 +15,7 @@ import {
   trackSwapFailed,
   trackSwapStep,
   trackTopUpReceived,
+  trackUpdatingConnection,
   trackWalletCreated,
   trackWalletEntrySelected,
   trackWalletImported,
@@ -405,6 +406,33 @@ describe('trackFundsBlocked', () => {
     trackFundsBlocked('activation_failed', { tx_hash: 'abc' })
 
     expect(state.capture).toHaveBeenCalledWith({ event: 'funds_blocked', properties: { reason: 'activation_failed', tx_hash: 'abc' } })
+  })
+})
+
+describe('trackUpdatingConnection', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it.each([
+    ['confirm', 'auto'],
+    ['cancel', 'close_button'],
+    ['gesture', 'other'],
+    [undefined, 'other'],
+  ])('reports how long the modal stayed open and that dismiss role %s closed it by %s', async (role, closedBy) => {
+    vi.useFakeTimers()
+    let dismiss!: (detail: { role?: string }) => void
+    const modal = { onDidDismiss: () => new Promise(resolve => dismiss = resolve) } as unknown as HTMLIonModalElement
+
+    trackUpdatingConnection(modal)
+    expect(state.capture).toHaveBeenCalledWith({ event: 'updating_connection_opened', properties: {} })
+
+    vi.advanceTimersByTime(45_000)
+    dismiss({ role })
+    await Promise.resolve()
+
+    expect(state.capture).toHaveBeenCalledTimes(2)
+    expect(state.capture).toHaveBeenLastCalledWith({ event: 'updating_connection_closed', properties: { duration_ms: 45_000, closed_by: closedBy } })
   })
 })
 

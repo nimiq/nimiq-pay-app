@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { useAsyncState } from '@vueuse/core'
 import { close } from 'ionicons/icons'
+import { onMounted, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
@@ -10,6 +12,13 @@ import { usePoints } from '@/stores/points'
 const { closeModal } = useModal()
 const { deleteAccount } = usePoints()
 const logger = useLogger('DeletePointsModal')
+
+const content = ref<HTMLElement>()
+// Ionic mounts contents before presentation, so getTop() can still return an underlying modal.
+let selfModal: HTMLIonModalElement | undefined
+onMounted(() => {
+  selfModal = content.value?.closest('ion-modal') ?? undefined
+})
 
 async function handleDeletePointsAccount() {
   const { success, error } = await deleteAccount()
@@ -26,21 +35,23 @@ async function handleDeletePointsAccount() {
     })
   }
 
-  closeModal()
+  closeModal({ modal: selfModal })
 }
+
+const { isLoading: isDeleting, execute: deletePointsAccount } = useAsyncState(handleDeletePointsAccount, undefined, { immediate: false })
 </script>
 
 <template>
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click.stop="() => closeModal()">
+        <IonButton @click.stop="closeModal({ modal: selfModal })">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <div class="flex flex-col items-center h-full p-8 pt-0 text-center">
+  <div ref="content" class="flex flex-col items-center h-full p-8 pt-0 text-center">
     <h1 class="text-2xl font-bold">
       {{ $t('Really delete your Cryptocity Points account?') }}
     </h1>
@@ -48,7 +59,7 @@ async function handleDeletePointsAccount() {
       {{ $t('Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold.') }}
     </p>
 
-    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base red-button" @click="handleDeletePointsAccount">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base red-button" :disabled="isDeleting" @click="deletePointsAccount()">
       <span>
         {{ $t('Delete Points Account') }}
       </span>

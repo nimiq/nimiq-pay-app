@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
+import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -20,6 +20,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
+import { trackUpdatingConnection } from '@/lib/analytics'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -215,9 +216,13 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, rem
   if (!(expired && remoteOk && !updatingDb) || isLongTimeNoSeeOpen)
     return
   isLongTimeNoSeeOpen = true
-  await showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false })
-  const top = await modalController.getTop()
-  top?.onDidDismiss().then(() => {
+  const modal = await showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false }).catch(() => undefined)
+  if (!modal) {
+    isLongTimeNoSeeOpen = false
+    return
+  }
+  trackUpdatingConnection(modal)
+  modal.onDidDismiss().then(() => {
     isLongTimeNoSeeOpen = false
   })
 }, { immediate: true })
