@@ -37,14 +37,15 @@ export async function selectLightningAsset(app: { url: string, name: string, des
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
 }
 
-async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string, timeout?: number): Promise<boolean> {
+async function confirmWidgetChange(url: string, title: string, rows: string[], confirmButtonTitle: string, timeout?: number, subtitle?: string): Promise<boolean> {
   const result = await ExtendedDialog.sheet({
     title,
+    subtitle,
     headerLogo: resolveMiniAppLogo(url),
     headerLogoCornerRadius: -1,
-    rows: rows.map(row => ({ title: row })),
+    rows: rows.map(row => ({ title: `• ${row}` })),
     confirmButtonTitle,
-    cancelButtonTitle: 'Not now',
+    cancelButtonTitle: i18n.t('Not now'),
     timeout,
   })
   return result.confirmed
@@ -386,38 +387,28 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
 
     case 'widget': {
       const host = new URL(request.url).hostname
-      const result = await ExtendedDialog.sheet({
-        title: `Add ${request.widgetName} to Home?`,
-        subtitle: request.description,
-        headerLogo: resolveMiniAppLogo(request.url),
-        headerLogoCornerRadius: -1,
-        rows: [
-          ...(request.appName ? [{ title: `• Appears as ${request.appName} on Home` }] : []),
-          { title: `• Shows what ${host} sends` },
-          { title: `• May contact ${host} regularly to stay up to date` },
-          ...(request.permissions?.includes('addresses')
-            ? [{ title: `• Sends your addresses to ${host} with every refresh` }, { title: '• Cannot move funds' }]
-            : [{ title: '• Cannot see your balance or move funds' }]),
-          { title: '• Remove it any time from its menu' },
-        ],
-        confirmButtonTitle: 'Add to Home',
-        cancelButtonTitle: 'Not now',
-        timeout: widgetTimeout,
-      })
-      return result.confirmed
+      return confirmWidgetChange(request.url, i18n.t('Add {name} to Home?', { name: request.widgetName }), [
+        ...(request.appName ? [i18n.t('Appears as {name} on Home', { name: request.appName })] : []),
+        i18n.t('Shows what {host} sends', { host }),
+        i18n.t('May contact {host} regularly to stay up to date', { host }),
+        ...(request.permissions?.includes('addresses')
+          ? [i18n.t('Sends your addresses to {host} with every refresh', { host }), i18n.t('Cannot move funds')]
+          : [i18n.t('Cannot see your balance or move funds')]),
+        i18n.t('Remove it any time from its menu'),
+      ], i18n.t('Add to Home'), widgetTimeout, request.description)
     }
 
     case 'widgetPermissions':
-      return confirmWidgetChange(request.url, `Let ${request.widgetName} send your addresses to ${new URL(request.url).hostname}?`, [
-        '• With every refresh of this widget',
-        '• Stop any time from its menu',
-      ], 'Allow', widgetTimeout)
+      return confirmWidgetChange(request.url, i18n.t('Let {name} send your addresses to {host}?', { name: request.widgetName, host: new URL(request.url).hostname }), [
+        i18n.t('With every refresh of this widget'),
+        i18n.t('Stop any time from its menu'),
+      ], i18n.t('Allow'), widgetTimeout)
 
     case 'widgetName':
-      return confirmWidgetChange(request.url, `Show ${request.address} as ${request.to}?`, [
-        '• Shown on its widgets on Home',
-        '• The address stays in each widget\'s menu',
-      ], 'Use this name', widgetTimeout)
+      return confirmWidgetChange(request.url, i18n.t('Show {address} as {name}?', { address: request.address, name: request.to }), [
+        i18n.t('Shown on its widgets on Home'),
+        i18n.t('The address stays in each widget\'s menu'),
+      ], i18n.t('Use this name'), widgetTimeout)
 
     default:
       logger.error('Unknown confirmation request type:', request)

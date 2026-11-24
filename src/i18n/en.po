@@ -18,6 +18,10 @@ msgstr ""
 msgid "{minutes} min left at most"
 msgstr ""
 
+#: src/modals/MiniAppsModal.vue:67
+msgid "{name} has a widget on Home. You can also remove it later from its menu. | {name} has {count} widgets on Home. You can also remove them later from each widget's menu."
+msgstr ""
+
 #: src/components/competition/CompetitionAppDetail.vue:12
 #: src/components/competition/CompetitionAppPoster.vue:15
 msgid "{name} preview"
@@ -60,6 +64,10 @@ msgstr ""
 msgid "Account"
 msgstr ""
 
+#: src/components/MiniAppActionsSheet.vue:34
+msgid "Actions for {name}"
+msgstr ""
+
 #: src/modals/MenuModal.vue:26
 #: src/views/HomeView.vue:205
 msgid "Activate Cashback & Rewards"
@@ -74,17 +82,25 @@ msgstr ""
 msgid "Add"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:390
+msgid "Add {name} to Home?"
+msgstr ""
+
 #: src/components/WithdrawalAddressList.vue:45
 msgid "Add another address"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:124
+#: src/lib/mini-app-confirmation.ts:127
 #: src/types/transactions.ts:148
 msgid "Add Stake"
 msgstr ""
 
 #: src/lib/flows/steps.ts:608
 msgid "Add to address book"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:398
+msgid "Add to Home"
 msgstr ""
 
 #: src/components/TheHomeWidgets.vue:40
@@ -130,6 +146,10 @@ msgstr ""
 #: src/components/competition/MiniAppsCompetitionView.vue:89
 #: src/components/NimWithdraw.vue:64
 msgid "All"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:405
+msgid "Allow"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:136
@@ -178,6 +198,10 @@ msgstr ""
 
 #: src/modals/MenuModal.vue:45
 msgid "App Settings"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:391
+msgid "Appears as {name} on Home"
 msgstr ""
 
 #: src/modals/LogOutModal/Confirm.vue:13
@@ -272,11 +296,12 @@ msgid "Calculating Polygon fee..."
 msgstr ""
 
 #: src/components/ChatConfirmDialog.vue:13
+#: src/components/MiniAppActionsSheet.vue:93
 #: src/components/PhoneInput.vue:66
 #: src/components/TheHomeTransactions.vue:78
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
-#: src/composables/useMiniAppHost.ts:2425
+#: src/composables/useMiniAppHost.ts:2400
 msgid "Cancel"
 msgstr ""
 
@@ -290,6 +315,14 @@ msgstr ""
 
 #: src/composables/useStringParser.ts:275
 msgid "Cannot fetch existing swap"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:395
+msgid "Cannot move funds"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:396
+msgid "Cannot see your balance or move funds"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:138
@@ -319,6 +352,10 @@ msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:137
 msgid "Check back when the next entries arrive."
+msgstr ""
+
+#: src/components/MiniAppActionsSheet.vue:56
+msgid "Check out {name}! You can try this Mini App in Nimiq Pay."
 msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:16
@@ -468,7 +505,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:119
+#: src/lib/mini-app-confirmation.ts:122
 #: src/types/transactions.ts:147
 msgid "Create Staker"
 msgstr ""
@@ -870,7 +907,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:169
-#: src/composables/useMiniAppHost.ts:2640
+#: src/composables/useMiniAppHost.ts:2610
 msgid "Insufficient funds"
 msgstr ""
 
@@ -1053,6 +1090,10 @@ msgstr ""
 msgid "Keep pressing…"
 msgstr ""
 
+#: src/modals/MiniAppsModal.vue:69
+msgid "Keep them"
+msgstr ""
+
 #: src/lib/issuer-websocket.ts:73
 msgid "KYC verification required to complete this payment"
 msgstr ""
@@ -1072,6 +1113,10 @@ msgstr ""
 
 #: src/composables/useNotifications.ts:282
 msgid "Learn what is new in this update"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:402
+msgid "Let {name} send your addresses to {host}?"
 msgstr ""
 
 #: src/composables/useBitcoinLightning.ts:123
@@ -1132,6 +1177,10 @@ msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:108
 msgid "Matching submissions: {count}"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:393
+msgid "May contact {host} regularly to stay up to date"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:36
@@ -1212,7 +1261,7 @@ msgstr ""
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:136
+#: src/lib/mini-app-confirmation.ts:139
 msgid "No"
 msgstr ""
 
@@ -1252,7 +1301,7 @@ msgstr ""
 msgid "No entries in this cycle yet"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:614
+#: src/stores/mini-app-widgets.ts:730
 msgid "No longer available"
 msgstr ""
 
@@ -1318,8 +1367,12 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/stores/mini-app-widgets.ts:595
+#: src/stores/mini-app-widgets.ts:711
 msgid "Not available"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:48
+msgid "Not now"
 msgstr ""
 
 #: src/components/MiniAppWidget.vue:104
@@ -1599,7 +1652,7 @@ msgstr ""
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:2425
+#: src/composables/useMiniAppHost.ts:2400
 msgid "Preparing your Lightning payment"
 msgstr ""
 
@@ -1669,13 +1722,33 @@ msgstr ""
 msgid "Remove from Home"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:146
+#: src/components/MiniAppActionsSheet.vue:121
+msgid "Remove from Recently Viewed"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:397
+msgid "Remove it any time from its menu"
+msgstr ""
+
+#: src/modals/MiniAppsModal.vue:66
+msgid "Remove its widgets too?"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:149
 #: src/types/transactions.ts:152
 msgid "Remove Stake"
 msgstr ""
 
+#: src/modals/MiniAppsModal.vue:68
+msgid "Remove widgets"
+msgstr ""
+
 #: src/components/settings/SettingsMiniApps.vue:6
 msgid "Reopen Mini App on unlock"
+msgstr ""
+
+#: src/components/MiniAppActionsSheet.vue:109
+msgid "Report"
 msgstr ""
 
 #: src/lib/faucet.ts:37
@@ -1699,7 +1772,7 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:141
+#: src/lib/mini-app-confirmation.ts:144
 #: src/types/transactions.ts:151
 msgid "Retire Stake"
 msgstr ""
@@ -1828,6 +1901,10 @@ msgstr ""
 msgid "Sending..."
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:395
+msgid "Sends your addresses to {host} with every refresh"
+msgstr ""
+
 #: src/components/MiniAppWidgetGallery.vue:37
 msgid "Sends your addresses to its site with every refresh"
 msgstr ""
@@ -1841,7 +1918,7 @@ msgstr ""
 msgid "Session closed"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:128
+#: src/lib/mini-app-confirmation.ts:131
 #: src/types/transactions.ts:149
 msgid "Set Active Stake"
 msgstr ""
@@ -1855,12 +1932,28 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/MiniAppActionsSheet.vue:107
+msgid "Share"
+msgstr ""
+
 #: src/components/MiniAppActionsSheet.vue:112
 msgid "Share your addresses again"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:408
+msgid "Show {address} as {name}?"
+msgstr ""
+
 #: src/components/settings/SettingsGeneral.vue:45
 msgid "Show hidden transactions"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:409
+msgid "Shown on its widgets on Home"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:392
+msgid "Shows what {host} sends"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:57
@@ -1936,7 +2029,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:337
 #: src/composables/useApi.ts:345
-#: src/composables/useMiniAppHost.ts:2641
+#: src/composables/useMiniAppHost.ts:2611
 #: src/lib/tx.ts:226
 #: src/lib/tx.ts:299
 #: src/lib/tx.ts:403
@@ -1991,6 +2084,10 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:404
+msgid "Stop any time from its menu"
+msgstr ""
+
 #: src/components/MiniAppActionsSheet.vue:115
 msgid "Stop sharing your addresses"
 msgstr ""
@@ -2027,7 +2124,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:581
+#: src/composables/useMiniAppHost.ts:578
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -2051,6 +2148,10 @@ msgstr ""
 msgid "Thanks for reaching out!"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:410
+msgid "The address stays in each widget's menu"
+msgstr ""
+
 #: src/components/BackupIntroduction.vue:6
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
@@ -2063,7 +2164,7 @@ msgstr ""
 msgid "The exchange rate is unfavorable. Please try again later"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:2417
+#: src/composables/useMiniAppHost.ts:2396
 msgid "The Lightning payment could not be prepared in time. Please try again."
 msgstr ""
 
@@ -2143,7 +2244,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:555
+#: src/composables/useMiniAppHost.ts:552
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2278,7 +2379,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:133
+#: src/lib/mini-app-confirmation.ts:136
 #: src/types/transactions.ts:150
 msgid "Update Staker"
 msgstr ""
@@ -2291,7 +2392,7 @@ msgstr ""
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
-#: src/stores/feature-flags.ts:31
+#: src/stores/feature-flags.ts:43
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 
@@ -2305,6 +2406,10 @@ msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:133
 msgid "Use the new name: {name}"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:411
+msgid "Use this name"
 msgstr ""
 
 #: src/components/PhoneInput.vue:43
@@ -2490,6 +2595,10 @@ msgstr ""
 msgid "Widgets from Mini Apps may contact their site regularly to stay up to date."
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:403
+msgid "With every refresh of this widget"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:75
 #: src/lib/flows/steps.ts:526
 #: src/views/HomeView.vue:40
@@ -2534,7 +2643,7 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:136
+#: src/lib/mini-app-confirmation.ts:139
 msgid "Yes"
 msgstr ""
 

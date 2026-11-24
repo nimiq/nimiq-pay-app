@@ -21,6 +21,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
 import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { useModal } from '@/composables/useModal'
+import { i18n } from '@/i18n/i18n-setup'
 import { trackFeatureOpened } from '@/lib/analytics'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { canDownloadWidgets } from '@/lib/mini-app-widget-download'
@@ -62,12 +63,10 @@ async function removeRecent(url: string, name: string) {
     return
   // Asked, never assumed: a widget can stay on Home after its Mini App leaves Recently Viewed.
   const { value } = await ExtendedDialog.confirm({
-    title: 'Remove its widgets too?',
-    message: count === 1
-      ? `${name} has a widget on Home. You can also remove it later from its menu.`
-      : `${name} has ${count} widgets on Home. You can also remove them later from each widget's menu.`,
-    okButtonTitle: 'Remove widgets',
-    cancelButtonTitle: 'Keep them',
+    title: i18n.t('Remove its widgets too?'),
+    message: i18n.tc('{name} has a widget on Home. You can also remove it later from its menu. | {name} has {count} widgets on Home. You can also remove them later from each widget\'s menu.', count, { name, count }),
+    okButtonTitle: i18n.t('Remove widgets'),
+    cancelButtonTitle: i18n.t('Keep them'),
   })
   if (value)
     widgets.removeForOrigin(origin)

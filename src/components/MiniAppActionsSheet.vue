@@ -53,7 +53,7 @@ function onShare() {
     const { name, url } = props.context.app
     Share.share({
       title: name,
-      text: `Check out ${name}! You can try this Mini App in Nimiq Pay.`,
+      text: i18n.t('Check out {name}! You can try this Mini App in Nimiq Pay.', { name }),
       url: miniAppOpenDeeplink(url),
     }).catch(() => {}) // user dismissing the share sheet rejects; not an error
   }
@@ -104,9 +104,9 @@ const actions = computed(() => {
   return [
     ...(context.shareable === false
       ? []
-      : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
+      : [{ testid: 'mini-app-share-action', label: i18n.t('Share'), icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
     ...(context.reportUrl
-      ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
+      ? [{ testid: 'mini-app-report-action', label: i18n.t('Report'), icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
       : []),
     ...(context.stoppedPermissions
       ? [{ testid: 'mini-app-share-again-action', label: i18n.t('Share your addresses again'), icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onUsePermissions }]
@@ -118,7 +118,7 @@ const actions = computed(() => {
       ? [{ testid: 'mini-app-remove-widget-action', label: i18n.t('Remove from Home'), icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemoveWidget }]
       : []),
     ...(context.removable
-      ? [{ testid: 'mini-app-remove-action', label: 'Remove from Recently Viewed', icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemove }]
+      ? [{ testid: 'mini-app-remove-action', label: i18n.t('Remove from Recently Viewed'), icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemove }]
       : []),
   ]
 })
@@ -178,7 +178,7 @@ watch(() => props.open, (isOpen) => {
             </div>
           </div>
           <DialogDescription class="sr-only">
-            Actions for {{ context.app.name }}
+            {{ $t('Actions for {name}', { name: context.app.name }) }}
           </DialogDescription>
 
           <div v-if="updates.length" data-testid="mini-app-updates" class="mb-3 flex flex-col rounded-xl bg-sky/[0.08] p-1">
@@ -237,7 +237,7 @@ watch(() => props.open, (isOpen) => {
               type="button"
               class="mt-3 w-full rounded-full bg-space/[0.06] py-3 text-base font-bold text-space transition-colors active:bg-space/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
             >
-              Cancel
+              {{ $t('Cancel') }}
             </button>
           </DialogClose>
         </template>

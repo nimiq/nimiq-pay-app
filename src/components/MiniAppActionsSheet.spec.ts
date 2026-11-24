@@ -24,8 +24,20 @@ vi.mock('@capacitor/haptics', () => ({
 }))
 
 const { translate } = vi.hoisted(() => {
-  const german: Record<string, string> = { 'Small': 'Klein', 'Large': 'Groß', 'Size': 'Größe', 'Widget size': 'Widget-Größe', 'Remove from Home': 'Von Home entfernen' }
-  return { translate: (message: string) => german[message] ?? message }
+  const german: Record<string, string> = {
+    'Small': 'Klein',
+    'Large': 'Groß',
+    'Size': 'Größe',
+    'Widget size': 'Widget-Größe',
+    'Remove from Home': 'Von Home entfernen',
+    'Share': 'Teilen',
+    'Report': 'Melden',
+    'Remove from Recently Viewed': 'Aus Zuletzt angesehen entfernen',
+    'Cancel': 'Abbrechen',
+    'Actions for {name}': 'Aktionen für {name}',
+    'Check out {name}! You can try this Mini App in Nimiq Pay.': 'Schau dir {name} an! Du kannst diese Mini App in Nimiq Pay ausprobieren.',
+  }
+  return { translate: (message: string, params: Record<string, unknown> = {}) => Object.entries(params).reduce((text, [key, value]) => text.replace(`{${key}}`, String(value)), german[message] ?? message) }
 })
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: translate } }))
 
@@ -60,6 +72,15 @@ describe('miniAppActionsSheet', () => {
     expect(action('mini-app-remove-action')).toBeNull()
   })
 
+  it('shows its rows, Cancel and its screen reader text in the app language', async () => {
+    await mountSheet({ app, reportUrl: REPORT_URL, removable: true })
+    expect(action('mini-app-share-action')!.textContent).toContain('Teilen')
+    expect(action('mini-app-report-action')!.textContent).toContain('Melden')
+    expect(action('mini-app-remove-action')!.textContent).toContain('Aus Zuletzt angesehen entfernen')
+    expect(document.body.textContent).toContain('Abbrechen')
+    expect(document.body.textContent).toContain('Aktionen für EVM Mini Wallet')
+  })
+
   it('always shows share, even without report or remove', async () => {
     await mountSheet({ app, reportUrl: undefined, removable: false })
     expect(action('mini-app-share-action')).not.toBeNull()
@@ -74,7 +95,7 @@ describe('miniAppActionsSheet', () => {
 
     expect(shareShare).toHaveBeenCalledWith({
       title: 'EVM Mini Wallet',
-      text: 'Check out EVM Mini Wallet! You can try this Mini App in Nimiq Pay.',
+      text: 'Schau dir EVM Mini Wallet an! Du kannst diese Mini App in Nimiq Pay ausprobieren.',
       url: miniAppOpenDeeplink('https://evm-mini-wallet.vercel.app/'),
     })
     expect(w.emitted('update:open')?.at(-1)).toEqual([false])

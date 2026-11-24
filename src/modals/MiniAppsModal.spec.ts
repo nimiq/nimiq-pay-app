@@ -1,9 +1,10 @@
 import type { Component } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
+import { i18n } from '@/i18n/i18n-setup'
 import { openingMiniAppUrl } from '@/lib/mini-app-launcher'
 import MiniAppsModal from './MiniAppsModal.vue'
 
@@ -195,6 +196,12 @@ vi.mock('@/lib/mini-app-confirmation', () => ({
 }))
 
 vi.mock('@/lib/app-version', () => ({ getBundleVersion: () => Promise.resolve('2.24.1') }))
+
+// The app's English messages, as at startup: a dialog string missing from en.po would show its {placeholders}.
+beforeAll(async () => {
+  const language = 'en'
+  i18n.setLocaleMessage(language, (await import(`../i18n/${language}.po`)).default)
+})
 
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription,
@@ -872,6 +879,26 @@ describe('mini apps modal', () => {
     dialogConfirm.mockResolvedValueOnce({ value: true })
     await removeFromRecentlyViewed(wrapper, 'https://swap.example', 'Swap')
     expect(removeForOrigin).toHaveBeenCalledWith('https://swap.example')
+  })
+
+  it('asks in the app language, with the count of widgets', async () => {
+    i18n.setLocaleMessage('de', {
+      'Remove its widgets too?': 'Auch seine Widgets entfernen?',
+      '{name} has a widget on Home. You can also remove it later from its menu. | {name} has {count} widgets on Home. You can also remove them later from each widget\'s menu.': '{name} hat ein Widget auf Home. | {name} hat {count} Widgets auf Home.',
+      'Remove widgets': 'Widgets entfernen',
+      'Keep them': 'Behalten',
+    })
+    onTestFinished(() => {
+      i18n.locale = 'en'
+    })
+    listForOrigin.mockReturnValue(['swap', 'order'])
+    const wrapper = mountModal()
+    await flushPromises()
+    // After mounting, which applies the stored language.
+    i18n.locale = 'de'
+    dialogConfirm.mockResolvedValueOnce({ value: false })
+    await removeFromRecentlyViewed(wrapper, 'https://swap.example', 'Swap')
+    expect(dialogConfirm).toHaveBeenCalledWith({ title: 'Auch seine Widgets entfernen?', message: 'Swap hat 2 Widgets auf Home.', okButtonTitle: 'Widgets entfernen', cancelButtonTitle: 'Behalten' })
   })
 
   it('asks about the widgets from the Remove from Recently Viewed menu action too', async () => {

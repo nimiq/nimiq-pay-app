@@ -1,6 +1,7 @@
 import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { createPinia, setActivePinia } from 'pinia'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { i18n } from '@/i18n/i18n-setup'
 import { Asset } from '@/lib/assets'
 import { requestUserConfirmation } from './mini-app-confirmation'
 
@@ -10,6 +11,12 @@ vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ error: vi.fn() }
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: () => ({ iconForUrl: () => undefined }) }))
 vi.mock('@/lib/site-metadata', () => ({ getFaviconUrl: () => '' }))
 vi.mock('@/stores/local-wallet', () => ({ useLocalWallet: () => ({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } }) }))
+
+// The app's English messages, as at startup: a sheet string missing from en.po would show its {placeholders}.
+beforeAll(async () => {
+  const language = 'en'
+  i18n.setLocaleMessage(language, (await import(`../i18n/${language}.po`)).default)
+})
 
 describe('requestUserConfirmation Lightning payment', () => {
   beforeEach(() => {
@@ -98,6 +105,47 @@ describe('requestUserConfirmation widget', () => {
       confirmButtonTitle: 'Add to Home',
       cancelButtonTitle: 'Not now',
     }))
+  })
+})
+
+describe('requestUserConfirmation widget sheets in another language', () => {
+  beforeEach(() => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: true })
+    i18n.setLocaleMessage('de', {
+      'Add {name} to Home?': '{name} zu Home hinzufügen?',
+      'Appears as {name} on Home': 'Erscheint auf Home als {name}',
+      'Shows what {host} sends': 'Zeigt, was {host} sendet',
+      'Cannot see your balance or move funds': 'Sieht dein Guthaben nicht und bewegt kein Geld',
+      'Add to Home': 'Zu Home hinzufügen',
+      'Not now': 'Nicht jetzt',
+      'Let {name} send your addresses to {host}?': 'Darf {name} deine Adressen an {host} senden?',
+      'Allow': 'Erlauben',
+      'Show {address} as {name}?': '{address} als {name} anzeigen?',
+      'Use this name': 'Diesen Namen verwenden',
+    })
+    i18n.locale = 'de'
+  })
+
+  afterEach(() => {
+    i18n.locale = 'en'
+  })
+
+  it('translates the add sheet, keeping the bullets', async () => {
+    await requestUserConfirmation({ type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status', appName: 'SwapSpace' })
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Swap status zu Home hinzufügen?',
+      confirmButtonTitle: 'Zu Home hinzufügen',
+      cancelButtonTitle: 'Nicht jetzt',
+    }))
+    const rows = vi.mocked(ExtendedDialog.sheet).mock.calls[0]![0].rows!.map(row => row.title)
+    expect(rows).toEqual(expect.arrayContaining(['• Erscheint auf Home als SwapSpace', '• Zeigt, was swap.example sendet', '• Sieht dein Guthaben nicht und bewegt kein Geld']))
+  })
+
+  it('translates the permission and name sheets', async () => {
+    await requestUserConfirmation({ type: 'widgetPermissions', url: 'https://swap.example/app', widgetName: 'Swap status' })
+    await requestUserConfirmation({ type: 'widgetName', url: 'https://name.github.io/my-app/', address: 'name.github.io/my-app', to: 'SwapSpace' })
+    expect(ExtendedDialog.sheet).toHaveBeenNthCalledWith(1, expect.objectContaining({ title: 'Darf Swap status deine Adressen an swap.example senden?', confirmButtonTitle: 'Erlauben', cancelButtonTitle: 'Nicht jetzt' }))
+    expect(ExtendedDialog.sheet).toHaveBeenNthCalledWith(2, expect.objectContaining({ title: 'name.github.io/my-app als SwapSpace anzeigen?', confirmButtonTitle: 'Diesen Namen verwenden' }))
   })
 })
 
