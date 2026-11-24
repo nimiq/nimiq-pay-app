@@ -1157,6 +1157,7 @@ export const useTransactions = defineStore('transactions', () => {
     setTxHidden,
     clearTxHistory,
     refreshFromDb,
+    getStoredTransaction,
 
     transactionsToShow: computed(() => {
       const base = searchQuery.value ? filteredTransactions.value : activeAssetTransactions.value
