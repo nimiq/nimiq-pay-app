@@ -49,6 +49,16 @@ installNodeGlobals()
 
 const isAlertRoute = window.location.pathname.startsWith('/alert')
 
+async function mountLockdownScreen(props?: { startupFailed: boolean }) {
+  const lockdownApp = createApp(LockdownScreen, props)
+  lockdownApp.use(IonicVue)
+  lockdownApp.use(createPinia())
+  lockdownApp.use(i18nRegistration)
+  const { language } = storeToRefs(useApp())
+  await setLanguage(language.value)
+  lockdownApp.mount('#app')
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Legacy PWA SW keeps stale precache after a binary update, hanging the first launch. Clean up once.
   if ('serviceWorker' in navigator) {
@@ -70,13 +80,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // iOS Lockdown Mode disables WebAssembly, which the Nimiq client needs.
   if (useDevice().isIOS && !isWasmAvailable()) {
-    const lockdownApp = createApp(LockdownScreen)
-    lockdownApp.use(IonicVue)
-    lockdownApp.use(createPinia())
-    lockdownApp.use(i18nRegistration)
-    const { language } = storeToRefs(useApp())
-    await setLanguage(language.value)
-    lockdownApp.mount('#app')
+    await mountLockdownScreen()
     // Lockdown Mode is an intentional screen, not a failed OTA startup.
     if (Capacitor.isNativePlatform()) {
       await CapacitorUpdater.notifyAppReady()
@@ -156,7 +160,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   })
 
-  if (await wasmLoaded && !isAlertRoute && !isMockEnabled)
+  if (!await wasmLoaded && !isAlertRoute) {
+    // Left unconfirmed so the native updater rolls back a broken OTA bundle.
+    await mountLockdownScreen({ startupFailed: true })
+    return
+  }
+
+  if (!isAlertRoute && !isMockEnabled)
     void useNimiqNetwork().initClient()
 
   app.use(router)
