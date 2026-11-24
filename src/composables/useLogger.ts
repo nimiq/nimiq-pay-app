@@ -115,22 +115,17 @@ export function useLogger(name: string = '') {
       const mainLogFile = files.find(file => file.name === logFileName)
 
       if (mainLogFile && mainLogFile.size > 5 * 1e6) {
-        await Filesystem.rename({
-          from: mainLogFile.name,
-          to: `logs-${new Date().toISOString().split('T')[0]}-x${Math.round(Math.random() * 1e6)}.txt`,
+        await Filesystem.deleteFile({
+          path: logFileName,
           directory,
         })
       }
 
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3
       for (const file of logFiles) {
-        const date = new Date(file.name.split('logs-')[1].split('-x')[0]).getTime()
-        if (date < sevenDaysAgo) {
-          await Filesystem.deleteFile({
-            path: file.name,
-            directory,
-          })
-        }
+        await Filesystem.deleteFile({
+          path: file.name,
+          directory,
+        })
       }
     }
     catch (e) {

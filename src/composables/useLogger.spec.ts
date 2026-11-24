@@ -2,13 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
   appendFile: vi.fn(),
+  readdir: vi.fn(),
+  deleteFile: vi.fn(),
+  rename: vi.fn(),
   captureException: vi.fn(),
 }))
 
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Cache: 'CACHE', Documents: 'DOCUMENTS' },
   Encoding: { UTF8: 'utf8' },
-  Filesystem: { appendFile: state.appendFile },
+  Filesystem: { appendFile: state.appendFile, readdir: state.readdir, deleteFile: state.deleteFile, rename: state.rename },
 }))
 vi.mock('@capacitor/share', () => ({ Share: { share: vi.fn() } }))
 vi.mock('@capawesome/capacitor-posthog', () => ({ Posthog: { captureException: state.captureException } }))
@@ -29,6 +32,9 @@ async function flushReports() {
 beforeEach(() => {
   vi.resetModules()
   state.appendFile.mockReset()
+  state.readdir.mockReset()
+  state.deleteFile.mockReset()
+  state.rename.mockReset()
   state.captureException.mockReset()
   vi.stubEnv('DEV', false)
 })
@@ -38,6 +44,33 @@ afterEach(() => {
 })
 
 describe('useLogger', () => {
+  it('deletes an oversized logs.txt instead of rotating it', async () => {
+    state.readdir.mockResolvedValue({ files: [{ name: 'logs.txt', type: 'file', size: 5 * 1e6 + 1 }] })
+    const logger = await loadLogger()
+    await logger.init()
+
+    expect(state.deleteFile).toHaveBeenCalledExactlyOnceWith({ path: 'logs.txt', directory: 'CACHE' })
+    expect(state.rename).not.toHaveBeenCalled()
+  })
+
+  it('deletes every rotated log and keeps logs.txt under 5 MB and other cache entries', async () => {
+    const today = new Date().toISOString().split('T')[0]
+    state.readdir.mockResolvedValue({ files: [
+      { name: 'logs.txt', type: 'file', size: 5 * 1e6 },
+      { name: `logs-${today}-x123.txt`, type: 'file', size: 5 * 1e6 },
+      { name: 'logs-2020-01-01-x456.txt', type: 'file', size: 5 * 1e6 },
+      { name: 'posthog-disk-queue', type: 'directory', size: 0 },
+      { name: 'WebView', type: 'directory', size: 0 },
+    ] })
+    const logger = await loadLogger()
+    await logger.init()
+
+    expect(state.deleteFile.mock.calls.map(([options]) => options)).toEqual([
+      { path: `logs-${today}-x123.txt`, directory: 'CACHE' },
+      { path: 'logs-2020-01-01-x456.txt', directory: 'CACHE' },
+    ])
+  })
+
   it('writes Error messages to the log file instead of {}', async () => {
     const logger = await loadLogger()
     logger.error('Failed to activate included HTLC signer', new Error('Cannot activate remote signer from invalid HTLC transaction'))
