@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Ref } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
 import { motion } from 'motion-v'
@@ -48,7 +48,7 @@ const { isUsdtMaintenanceActive, isCryptocityPointsEnabled } = storeToRefs(useFe
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 const { htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 
-const notificationList: Ref<HTMLUListElement | undefined> = ref()
+const notificationList = ref<ComponentPublicInstance>()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && !isMockEnabled)
 
@@ -148,9 +148,10 @@ function openReferralFromHomeCard() {
 
 function scrollToFirstNotification() {
   window.requestAnimationFrame(() => {
-    if (localNotifications.value.length && notificationList.value) {
-      notificationList.value?.scrollTo({
-        left: notificationList.value.scrollWidth * -1,
+    const list: HTMLUListElement | undefined = notificationList.value?.$el
+    if (localNotifications.value.length && list) {
+      list.scrollTo({
+        left: list.scrollWidth * -1,
         behavior: 'smooth',
       })
     }

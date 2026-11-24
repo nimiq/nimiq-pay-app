@@ -2,6 +2,8 @@
 import { IonApp, IonButton, IonContent, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import NimiqPayLogo from '@/components/icons/nimiq-pay-logo.vue'
 
+defineProps<{ startupFailed?: boolean }>()
+
 function reload() {
   window.location.reload()
 }
@@ -20,21 +22,23 @@ function reload() {
           </div>
           <div class="flex flex-col items-center mt-auto max-w-md mx-auto">
             <h1 class="text-4xl font-bold tracking-tight text-space text-balance">
-              {{ $t('Lockdown Mode is on') }}
+              {{ startupFailed ? $t('Nimiq Pay could not start') : $t('Lockdown Mode is on') }}
             </h1>
             <p class="mt-5 text-base font-medium leading-relaxed text-space/70 text-pretty">
-              {{ $t('Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off.') }}
+              {{ startupFailed ? $t('Something went wrong while loading the app.') : $t('Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off.') }}
             </p>
-            <p class="mt-3 text-sm font-medium leading-relaxed text-space/60">
-              {{ $t('Go to Settings → Privacy & Security → Lockdown Mode') }}
-            </p>
-            <p class="mt-1 text-sm font-medium leading-relaxed text-space/60">
-              {{ $t('Turn it off, then reopen Nimiq Pay.') }}
-            </p>
+            <template v-if="!startupFailed">
+              <p class="mt-3 text-sm font-medium leading-relaxed text-space/60">
+                {{ $t('Go to Settings → Privacy & Security → Lockdown Mode') }}
+              </p>
+              <p class="mt-1 text-sm font-medium leading-relaxed text-space/60">
+                {{ $t('Turn it off, then reopen Nimiq Pay.') }}
+              </p>
+            </template>
           </div>
           <div class="w-10/12 mx-auto mt-auto mb-4">
             <IonButton class="w-full text-base" expand="block" @click="reload">
-              {{ $t('I have turned it off') }}
+              {{ startupFailed ? $t('Try again') : $t('I have turned it off') }}
             </IonButton>
           </div>
         </div>

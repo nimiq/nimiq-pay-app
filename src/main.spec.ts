@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   device: { isIOS: false, isWeb: false },
+  createApp: vi.fn(),
   use: vi.fn(),
   mount: vi.fn(),
   notifyAppReady: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock('@ionic/vue', () => ({ IonicVue: {} }))
 vi.mock('@vue/devtools', () => ({ devtools: { connect: vi.fn() } }))
 vi.mock('capacitor-lockdown-mode', () => ({ LockdownMode: { isLockdownModeEnabled: async () => ({}) } }))
 vi.mock('jeep-sqlite/dist/components/jeep-sqlite', () => ({ JeepSqlite: class {} }))
-vi.mock('vue', () => ({ createApp: () => ({ use: mocks.use, mount: mocks.mount }) }))
+vi.mock('vue', () => ({ createApp: mocks.createApp }))
 vi.mock('pinia', () => ({ createPinia: vi.fn(), storeToRefs: () => ({ language: { value: 'en' } }) }))
 vi.mock('vue-virtual-scroller', () => ({ default: {} }))
 vi.mock('@/composables/useDecrypt', () => ({ useDecrypt: vi.fn() }))
@@ -37,8 +38,8 @@ vi.mock('@/stores/app', () => ({ useApp: vi.fn() }))
 vi.mock('@/stores/conn', () => ({ useConn: () => ({ init: mocks.initDb }) }))
 vi.mock('@/stores/nimiq-network', () => ({ useNimiqNetwork: () => ({ initWasm: mocks.initWasm, initClient: mocks.initClient }) }))
 vi.mock('@/stores/mini-apps', () => ({ useMiniApps: vi.fn() }))
-vi.mock('./App.vue', () => ({ default: {} }))
-vi.mock('./views/LockdownScreen.vue', () => ({ default: {} }))
+vi.mock('./App.vue', () => ({ default: { name: 'App' } }))
+vi.mock('./views/LockdownScreen.vue', () => ({ default: { name: 'LockdownScreen' } }))
 vi.mock('./router', () => ({ default: mocks.router }))
 
 describe('ota startup confirmation', () => {
@@ -47,6 +48,7 @@ describe('ota startup confirmation', () => {
   beforeEach(async () => {
     vi.resetModules()
     vi.clearAllMocks()
+    mocks.createApp.mockReturnValue({ use: mocks.use, mount: mocks.mount })
     mocks.device.isIOS = false
     mocks.device.isWeb = false
     mocks.initDb.mockResolvedValue(undefined)
@@ -110,12 +112,16 @@ describe('ota startup confirmation', () => {
     expect(mocks.mount).toHaveBeenCalledOnce()
   })
 
-  it('mounts without the Nimiq client when the wasm fails to load', async () => {
+  it('shows the startup error screen without routing or confirming when the wasm fails to load', async () => {
     mocks.initWasm.mockResolvedValue(false)
 
     await startup()
+    expect(mocks.createApp).toHaveBeenLastCalledWith({ name: 'LockdownScreen' }, { startupFailed: true })
     expect(mocks.mount).toHaveBeenCalledOnce()
+    expect(mocks.use).not.toHaveBeenCalledWith(mocks.router)
+    expect(mocks.router.isReady).not.toHaveBeenCalled()
     expect(mocks.initClient).not.toHaveBeenCalled()
+    expect(mocks.notifyAppReady).not.toHaveBeenCalled()
   })
 
   it('reports failed navigations', async () => {
