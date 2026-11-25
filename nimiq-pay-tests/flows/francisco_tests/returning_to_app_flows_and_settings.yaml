@@ -82,12 +82,19 @@ tags:
 - extendedWaitUntil:
     visible: ${output.navigation.whatsNewBtn}
     timeout: 5000
-- tapOn: ${output.navigation.whatsNewBtn}
+# The title can't prove the tap worked: the menu row has the same text. A version header is only
+# in the changelog. On the iOS simulator this tap was dropped once with the menu at rest.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.navigation.whatsNewBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.whatsNew.versionHeader}
+          timeout: 5000
 - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible: ${output.whatsNew.title}
-    timeout: 5000
-- assertVisible: ${output.whatsNew.versionHeader}
+- assertVisible: ${output.whatsNew.title}
 - assertNotVisible:
     text: ${output.whatsNew.versionHeader}
     index: 1
@@ -100,14 +107,15 @@ tags:
     speed: 90
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
-# Only the expansion renders a second header; unlike assertVisible, this rejects one below the fold.
-# speed 90: at the default 40 this long scroll took ~25 s on the iOS simulator, at 90 ~9 s.
+# Only the expansion renders a header below "Previous versions"; unlike assertVisible, this rejects
+# one below the fold. Not index 1: iOS drops WebView nodes scrolled off screen, so once the latest
+# header is gone index 1 never exists (run 45381667703). Default speed: a fast swipe can carry the
+# button off screen before the header below it shows.
 - scrollUntilVisible:
     element:
       text: ${output.whatsNew.versionHeader}
-      index: 1
+      below: ${output.whatsNew.previousVersions}
     timeout: 60000
-    speed: 90
 - tapOn: ${output.whatsNew.closeBtn}
 - waitForAnimationToEnd
 # The menu stays in the hierarchy under What's New, so check the changelog itself is gone by
