@@ -124,13 +124,13 @@ const DEVICE = {
   properties: {
     tested: { type: 'boolean' },
     platform: { type: 'string' },
-    table: { type: 'string', description: 'markdown Before (main) / After (this PR) table, text only' },
+    table: { type: 'string', description: 'markdown test table per references/pr.md: one ./pr-<scenario>.png ref per scenario, clip lines under it' },
     screenshots: {
       type: 'array',
       items: {
         type: 'object',
-        properties: { path: { type: 'string' }, scenario: { type: 'string' }, column: { type: 'string', enum: ['before', 'after'] } },
-        required: ['path', 'scenario', 'column'],
+        properties: { path: { type: 'string', description: 'annotated pr-<scenario>.png or .mp4' }, scenario: { type: 'string' } },
+        required: ['path', 'scenario'],
       },
     },
     regression: { type: 'string', description: 'non-empty if the fix broke something on device' },
@@ -270,7 +270,7 @@ Findings: ${JSON.stringify(blocking)}${RULES}`,
     const device = await withDevice(() => limited(
       `On-device Before/After test for Linear issue ${it.id}. After = worktree ${impl.worktree} (uncommitted fix). Plan: ${it.devicePlan}
 Read ${SKILL}/references/device.md and run ${SKILL}/scripts/device-preflight.sh first. You hold the only device lock. Prefer Android (needs no user input). If the only usable device needs the user (OS PIN, iPhone unlock), don't wait: return blockedOnUser.
-Use agent-device session name ship-${it.id.toLowerCase()}. App language English unless the scenario tests a language. Save PNGs as ${OUT}/${it.id}/<scenario>-<before|after>.png. No full addresses, balances, words or PIN in frames. Before returning, open every PNG and confirm it shows its scenario, the right asset (NIM vs USDT), and bug-on-Before / fix-on-After; retake failures. Finish with "When done" in device.md, except the servers: later issues need :8100, so always kill yours and leave the main-baseline server on :8100. If you return blockedOnUser, name the worktree the user must test in it; the main session serves it later.${RULES}`,
+Use agent-device session name ship-${it.id.toLowerCase()}. App language English unless the scenario tests a language. Capture into ${OUT}/${it.id}/ per ${SKILL}/references/annotate.md (still, clip, flow or log image; measure time-based scenarios), then build annotated ${OUT}/${it.id}/pr-<scenario>.png (and .mp4 for time-based ones) and return those paths. No full addresses, balances, words or PIN in frames. Before returning, open every raw capture and every annotated file and confirm it shows its scenario, the right asset (NIM vs USDT), bug-on-Before / fix-on-After, and boxes on their elements; retake or fix failures. Finish with "When done" in device.md, except the servers: later issues need :8100, so always kill yours and leave the main-baseline server on :8100. If you return blockedOnUser, name the worktree the user must test in it; the main session serves it later.${RULES}`,
       { label: `device:${it.id}`, phase: 'Device', schema: DEVICE },
     ))
     return { ...s, device }
@@ -289,7 +289,7 @@ Use agent-device session name ship-${it.id.toLowerCase()}. App language English 
 PR body from ${SKILL}/references/pr.md through the humanizer skill. Summary: ${impl.summary}
 Impact: fill the matrix yourself from the diff; query PostHog if available, else mark unconfirmed.
 Test table for the body: ${device ? device.table : 'not tested'}
-Screenshots: ${shots.length ? `${JSON.stringify(shots)}. Attach them with gh --attach per "Screenshots" in ${SKILL}/references/pr.md: open each PR copy first, skip mismatches and report them in screenshotFailure, then check every cell shows its image. Return the attached count in screenshots.` : 'none, screenshots = 0.'}
+Screenshots: ${shots.length ? `${JSON.stringify(shots)}. Attach them with gh --attach per "Screenshots" in ${SKILL}/references/pr.md: open each file first, skip mismatches and report them in screenshotFailure, then check every cell shows its image. Return the attached count in screenshots.` : 'none, screenshots = 0.'}
 ${draft ? `The device test is still blocked (${device.blockedOnUser}): open the PR as a draft (gh pr create --draft) and say so in the body.\n` : ''}Decisions: ${it.decisions || 'none'}. Rejected review findings: ${JSON.stringify(s.prior || [])}
 Stage only the fix files. One signed commit, last line "Closes ${it.id}". Push, gh pr create, link_pull_request if the t3-code tools exist, one-line Linear comment with the full PR URL. Watch CI and fix failures your change causes.${RULES}`,
       { label: `ship:${it.id}`, phase: 'Ship', schema: SHIPPED },
