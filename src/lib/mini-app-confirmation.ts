@@ -24,14 +24,16 @@ export async function selectLightningAsset(app: { url: string, name: string, des
   if (timeout <= 0)
     return undefined
   const result = await ExtendedDialog.singleSelect({
-    title: 'Pay Bitcoin Lightning',
-    message: `${app.name} requests a Lightning payment${app.description ? ` for ${app.description}` : ''}. Choose what to spend.`,
+    title: i18n.t('Pay Bitcoin Lightning'),
+    message: app.description
+      ? i18n.t('{appName} requests a Lightning payment for {description}. Choose what to spend.', { appName: app.name, description: app.description })
+      : i18n.t('{appName} requests a Lightning payment. Choose what to spend.', { appName: app.name }),
     options: [
       { label: 'NIM', value: Asset.NIM },
-      { label: 'USDT on Polygon', value: Asset.USDT },
+      { label: i18n.t('USDT on Polygon'), value: Asset.USDT },
     ],
-    okButtonTitle: 'Continue',
-    cancelButtonTitle: 'Cancel',
+    okButtonTitle: i18n.t('Continue'),
+    cancelButtonTitle: i18n.t('Cancel'),
     timeout,
   })
   return result.value === Asset.NIM || result.value === Asset.USDT ? result.value : undefined
@@ -55,17 +57,17 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       }
 
       const result = await ExtendedDialog.sheet({
-        title: `Connect to ${appName}`,
-        subtitle: `${appName} will be able to:`,
+        title: i18n.t('Connect to {appName}', { appName }),
+        subtitle: i18n.t('{appName} will be able to:', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: `• See your address ${truncatedAddress}` },
-          { title: '• View your balance and activity' },
-          { title: '• Request approval for transactions' },
+          { title: `• ${i18n.t('See your address {address}', { address: truncatedAddress })}` },
+          { title: `• ${i18n.t('View your balance and activity')}` },
+          { title: `• ${i18n.t('Request approval for transactions')}` },
         ],
-        confirmButtonTitle: 'Connect',
-        cancelButtonTitle: 'Cancel',
+        confirmButtonTitle: i18n.t('Connect'),
+        cancelButtonTitle: i18n.t('Cancel'),
         timeout,
       })
       return result.confirmed
@@ -80,53 +82,53 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       const feeNim = formatCrypto(fee, { currency: Crypto.NIM, maxDecimals: DECIMALS[Crypto.NIM] })
 
       const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
-        ? 'Staking Contract'
+        ? i18n.t('Staking Contract')
         : recipient === useLocalWallet().localAddress.toUserFriendlyAddress()
-          ? 'You'
+          ? i18n.t('You')
           : `${recipient.slice(0, 4)}\u2026${recipient.slice(-4)}`
 
       const rows: { title: string, value?: string }[] = [
-        { title: 'Recipient', value: formattedRecipient },
-        { title: 'Amount', value: `${amountNim}` },
+        { title: i18n.t('Recipient'), value: formattedRecipient },
+        { title: i18n.t('Amount'), value: `${amountNim}` },
       ]
       if (fee)
-        rows.push({ title: 'Fee', value: `${feeNim}` })
+        rows.push({ title: i18n.t('Fee'), value: `${feeNim}` })
       if (message)
-        rows.push({ title: 'Message', value: message })
+        rows.push({ title: i18n.t('Message'), value: message })
 
       if (request.stakingData) {
         rows.push({ title: '' })
-        rows.push({ title: 'STAKING' })
+        rows.push({ title: i18n.t('STAKING') })
         switch (request.stakingData.type) {
           case 'create-staker': {
-            rows.push({ title: 'Action', value: i18n.t('Create Staker') })
-            rows.push({ title: 'Validator', value: request.stakingData.delegation })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Create Staker') })
+            rows.push({ title: i18n.t('Validator'), value: request.stakingData.delegation })
             break
           }
           case 'add-stake': {
-            rows.push({ title: 'Action', value: i18n.t('Add Stake') })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Add Stake') })
             break
           }
           case 'set-active-stake': {
-            rows.push({ title: 'Action', value: i18n.t('Set Active Stake') })
-            rows.push({ title: 'New Active Stake', value: formatCrypto(request.stakingData.newActiveBalance, { currency: Crypto.NIM }) })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Set Active Stake') })
+            rows.push({ title: i18n.t('New Active Stake'), value: formatCrypto(request.stakingData.newActiveBalance, { currency: Crypto.NIM }) })
             break
           }
           case 'update-staker': {
-            rows.push({ title: 'Action', value: i18n.t('Update Staker') })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Update Staker') })
             if (request.stakingData.newDelegation) {
-              rows.push({ title: 'New Validator', value: request.stakingData.newDelegation })
-              rows.push({ title: 'Reactivate?', value: request.stakingData.reactivateAllStake ? i18n.t('Yes') : i18n.t('No') })
+              rows.push({ title: i18n.t('New Validator'), value: request.stakingData.newDelegation })
+              rows.push({ title: i18n.t('Reactivate?'), value: request.stakingData.reactivateAllStake ? i18n.t('Yes') : i18n.t('No') })
             }
             break
           }
           case 'retire-stake': {
-            rows.push({ title: 'Action', value: i18n.t('Retire Stake') })
-            rows.push({ title: 'Amount', value: formatCrypto(request.stakingData.retireStake, { currency: Crypto.NIM }) })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Retire Stake') })
+            rows.push({ title: i18n.t('Amount'), value: formatCrypto(request.stakingData.retireStake, { currency: Crypto.NIM }) })
             break
           }
           case 'remove-stake': {
-            rows.push({ title: 'Action', value: i18n.t('Remove Stake') })
+            rows.push({ title: i18n.t('Action'), value: i18n.t('Remove Stake') })
             break
           }
         }
@@ -134,13 +136,13 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
 
       const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({
-        title: 'Confirm Transaction',
-        subtitle: `${appName} asks to send this transaction:`,
+        title: i18n.t('Confirm Transaction'),
+        subtitle: i18n.t('{appName} asks to send this transaction:', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
-        confirmButtonTitle: 'Confirm',
-        cancelButtonTitle: 'Reject',
+        confirmButtonTitle: i18n.t('Confirm'),
+        cancelButtonTitle: i18n.t('Reject'),
         timeout,
       })
       return result.confirmed
@@ -149,13 +151,13 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
     case 'lightning-access': {
       const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({
-        title: 'Review Lightning payment',
-        subtitle: `${appName} wants to prepare payments and check Lightning invoice history for this wallet during this session.`,
+        title: i18n.t('Review Lightning payment'),
+        subtitle: i18n.t('{appName} wants to prepare payments and check Lightning invoice history for this wallet during this session.', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
-        rows: request.description ? [{ title: 'Invoice', value: request.description }] : [],
-        confirmButtonTitle: 'Continue',
-        cancelButtonTitle: 'Cancel',
+        rows: request.description ? [{ title: i18n.t('Invoice'), value: request.description }] : [],
+        confirmButtonTitle: i18n.t('Continue'),
+        cancelButtonTitle: i18n.t('Cancel'),
         timeout,
       })
       return result.confirmed
@@ -166,12 +168,12 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       const { description, btcAmount, asset, amount, usdtFeeAllowance, fees } = request.data
       const formatAmount = (value: number, maxDigits: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: maxDigits }).format(value)
       const rows: { title: string, value?: string }[] = [
-        { title: 'Lightning payment', value: description || 'Bitcoin merchant' },
-        { title: 'Merchant receives', value: `${formatAmount(btcAmount, 11)} BTC` },
-        { title: 'You spend', value: `${formatAmount((amount + usdtFeeAllowance) / 10 ** DECIMALS[asset], DECIMALS[asset])} ${asset}` },
+        { title: i18n.t('Lightning payment'), value: description || i18n.t('Bitcoin merchant') },
+        { title: i18n.t('Merchant receives'), value: `${formatAmount(btcAmount, 11)} BTC` },
+        { title: i18n.t('You spend'), value: `${formatAmount((amount + usdtFeeAllowance) / 10 ** DECIMALS[asset], DECIMALS[asset])} ${asset}` },
       ]
       if (asset === Asset.USDT)
-        rows.push({ title: 'USDT fee allowance', value: `${formatAmount(usdtFeeAllowance / 10 ** DECIMALS[Crypto.USDT], DECIMALS[Crypto.USDT])} USDT` })
+        rows.push({ title: i18n.t('USDT fee allowance'), value: `${formatAmount(usdtFeeAllowance / 10 ** DECIMALS[Crypto.USDT], DECIMALS[Crypto.USDT])} USDT` })
       for (const fee of fees) {
         if (fee.asset !== Crypto.NIM && fee.asset !== Crypto.BTC && fee.asset !== Crypto.USDT && fee.asset !== 'USD')
           continue
@@ -179,18 +181,20 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
           continue
         const amount = fee.asset === 'USD' ? fee.amount.toFixed(2) : (fee.amount / 10 ** DECIMALS[fee.asset]).toFixed(DECIMALS[fee.asset])
         rows.push({
-          title: `${fee.source === 'SERVICE' ? 'Service' : 'Network'} fee${fee.included ? ' (included)' : ''}`,
+          title: fee.source === 'SERVICE'
+            ? fee.included ? i18n.t('Service fee (included)') : i18n.t('Service fee')
+            : fee.included ? i18n.t('Network fee (included)') : i18n.t('Network fee'),
           value: `${amount} ${fee.asset}`,
         })
       }
       const result = await ExtendedDialog.sheet({
-        title: 'Pay Bitcoin Lightning',
-        subtitle: `${appName} requests this payment:`,
+        title: i18n.t('Pay Bitcoin Lightning'),
+        subtitle: i18n.t('{appName} requests this payment:', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
-        confirmButtonTitle: `Pay with ${asset}`,
-        cancelButtonTitle: 'Reject',
+        confirmButtonTitle: i18n.t('Pay with {asset}', { asset }),
+        cancelButtonTitle: i18n.t('Reject'),
         timeout,
       })
       return result.confirmed
@@ -237,54 +241,54 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
 
       if (txParams.decodedAssetTransfer) {
         rows.push(
-          { title: 'Network', value: txParams.decodedAssetTransfer.network },
-          { title: 'Asset', value: txParams.decodedAssetTransfer.assetSymbol },
-          { title: 'Recipient', value: txParams.decodedAssetTransfer.recipient },
-          { title: 'Amount', value: txParams.decodedAssetTransfer.amount },
-          { title: 'Contract', value: txParams.to },
-          { title: 'Gas Limit', value: String(gasLimit) },
+          { title: i18n.t('Network'), value: txParams.decodedAssetTransfer.network },
+          { title: i18n.t('Asset'), value: txParams.decodedAssetTransfer.assetSymbol },
+          { title: i18n.t('Recipient'), value: txParams.decodedAssetTransfer.recipient },
+          { title: i18n.t('Amount'), value: txParams.decodedAssetTransfer.amount },
+          { title: i18n.t('Contract'), value: txParams.to },
+          { title: i18n.t('Gas Limit'), value: String(gasLimit) },
         )
       }
       else {
         if (txParams.chainName)
-          rows.push({ title: 'Network', value: txParams.chainName })
+          rows.push({ title: i18n.t('Network'), value: txParams.chainName })
 
         rows.push(
-          { title: 'To', value: txParams.to },
-          { title: 'Value', value: `${valueEth} ${nativeAssetSymbol}` },
-          { title: 'Gas Limit', value: String(gasLimit) },
+          { title: i18n.t('To'), value: txParams.to },
+          { title: i18n.t('Value'), value: `${valueEth} ${nativeAssetSymbol}` },
+          { title: i18n.t('Gas Limit'), value: String(gasLimit) },
         )
       }
 
       if (txParams.maxFeePerGas) {
         const gwei = toGwei(txParams.maxFeePerGas)
         if (gwei)
-          rows.push({ title: 'Max Fee', value: gwei })
+          rows.push({ title: i18n.t('Max Fee'), value: gwei })
       }
       if (txParams.maxPriorityFeePerGas) {
         const gwei = toGwei(txParams.maxPriorityFeePerGas)
         if (gwei)
-          rows.push({ title: 'Priority Fee', value: gwei })
+          rows.push({ title: i18n.t('Priority Fee'), value: gwei })
       }
       if (txParams.gasPrice && !txParams.maxFeePerGas) {
         const gwei = toGwei(txParams.gasPrice)
         if (gwei)
-          rows.push({ title: 'Gas Price', value: gwei })
+          rows.push({ title: i18n.t('Gas Price'), value: gwei })
       }
       if (maxTotalFee)
-        rows.push({ title: 'Max Total Fee', value: `${maxTotalFee} ${nativeAssetSymbol}` })
+        rows.push({ title: i18n.t('Max Total Fee'), value: `${maxTotalFee} ${nativeAssetSymbol}` })
       if (txParams.nonce !== undefined)
-        rows.push({ title: 'Nonce', value: String(txParams.nonce) })
+        rows.push({ title: i18n.t('Nonce'), value: String(txParams.nonce) })
       if (!txParams.decodedAssetTransfer && txParams.data && txParams.data !== '0x')
-        rows.push({ title: 'Contract Interaction', value: 'Yes' })
+        rows.push({ title: i18n.t('Contract Interaction'), value: i18n.t('Yes') })
 
       const result = await ExtendedDialog.sheet({
-        title: `Confirm Transaction`,
+        title: i18n.t('Confirm Transaction'),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
-        confirmButtonTitle: 'Confirm',
-        cancelButtonTitle: 'Reject',
+        confirmButtonTitle: i18n.t('Confirm'),
+        cancelButtonTitle: i18n.t('Reject'),
         timeout,
       })
       return result.confirmed
@@ -294,17 +298,17 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       const appName = request.name || new URL(request.url).hostname
       const { message: msgToSign, isHex } = request.data
       const displayMessage = isHex
-        ? `Hex data: ${msgToSign.slice(0, 50)}${msgToSign.length > 50 ? '...' : ''}`
+        ? i18n.t('Hex data: {data}', { data: `${msgToSign.slice(0, 50)}${msgToSign.length > 50 ? '...' : ''}` })
         : msgToSign
 
       const result = await ExtendedDialog.messageSheet({
-        title: 'Sign Message',
-        subtitle: `${appName} asks to sign this message:`,
+        title: i18n.t('Sign Message'),
+        subtitle: i18n.t('{appName} asks to sign this message:', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         message: displayMessage,
-        confirmButtonTitle: 'Sign',
-        cancelButtonTitle: 'Reject',
+        confirmButtonTitle: i18n.t('Sign'),
+        cancelButtonTitle: i18n.t('Reject'),
         timeout,
       })
       return result.confirmed
@@ -324,22 +328,24 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
       }
 
       const rows: { title: string, value: string }[] = [
-        { title: 'Action', value: action === 'add' ? 'Add Network' : 'Switch Network' },
-        { title: 'Network', value: chainName || chainId },
-        { title: 'Chain ID', value: chainId },
+        { title: i18n.t('Action'), value: action === 'add' ? i18n.t('Add Network') : i18n.t('Switch Network') },
+        { title: i18n.t('Network'), value: chainName || chainId },
+        { title: i18n.t('Chain ID'), value: chainId },
       ]
 
       if (rpcHost)
-        rows.push({ title: 'RPC Host', value: rpcHost })
+        rows.push({ title: i18n.t('RPC Host'), value: rpcHost })
 
       const result = await ExtendedDialog.sheet({
-        title: action === 'add' ? 'Add Network' : 'Switch Network',
-        subtitle: `${appName} wants to ${action === 'add' ? 'add and switch to' : 'switch to'} this network:`,
+        title: action === 'add' ? i18n.t('Add Network') : i18n.t('Switch Network'),
+        subtitle: action === 'add'
+          ? i18n.t('{appName} wants to add and switch to this network:', { appName })
+          : i18n.t('{appName} wants to switch to this network:', { appName }),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
-        confirmButtonTitle: action === 'add' ? 'Approve Network' : 'Switch Network',
-        cancelButtonTitle: 'Cancel',
+        confirmButtonTitle: action === 'add' ? i18n.t('Approve Network') : i18n.t('Switch Network'),
+        cancelButtonTitle: i18n.t('Cancel'),
         timeout,
       })
       return result.confirmed
@@ -348,15 +354,15 @@ export async function requestUserConfirmation(request: UserConfirmationRequest, 
     case 'deviceIdentifier': {
       const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({
-        title: `Share device ID with ${appName}?`,
-        subtitle: 'Unique to this Mini App on this device. Cannot be used to track you across other Mini Apps.',
+        title: i18n.t('Share device ID with {appName}?', { appName }),
+        subtitle: i18n.t('Unique to this Mini App on this device. Cannot be used to track you across other Mini Apps.'),
         headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: 'Reason', value: request.reason.length > 200 ? `${request.reason.slice(0, 197)}...` : request.reason },
+          { title: i18n.t('Reason'), value: request.reason.length > 200 ? `${request.reason.slice(0, 197)}...` : request.reason },
         ],
-        confirmButtonTitle: 'Share',
-        cancelButtonTitle: 'Deny',
+        confirmButtonTitle: i18n.t('Share'),
+        cancelButtonTitle: i18n.t('Deny'),
         timeout,
       })
       return result.confirmed

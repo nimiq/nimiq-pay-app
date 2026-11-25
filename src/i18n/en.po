@@ -6,6 +6,42 @@ msgstr ""
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:140
+msgid "{appName} asks to send this transaction:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:306
+msgid "{appName} asks to sign this message:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:29
+msgid "{appName} requests a Lightning payment for {description}. Choose what to spend."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:30
+msgid "{appName} requests a Lightning payment. Choose what to spend."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:192
+msgid "{appName} requests this payment:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:342
+msgid "{appName} wants to add and switch to this network:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:155
+msgid "{appName} wants to prepare payments and check Lightning invoice history for this wallet during this session."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:343
+msgid "{appName} wants to switch to this network:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:61
+msgid "{appName} will be able to:"
+msgstr ""
+
 #: src/components/competition/CompetitionSpotlight.vue:32
 msgid "{count} entries"
 msgstr ""
@@ -56,8 +92,18 @@ msgstr ""
 msgid "Account"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:104
+#: src/lib/mini-app-confirmation.ts:109
+#: src/lib/mini-app-confirmation.ts:113
+#: src/lib/mini-app-confirmation.ts:118
+#: src/lib/mini-app-confirmation.ts:126
+#: src/lib/mini-app-confirmation.ts:131
+#: src/lib/mini-app-confirmation.ts:331
+msgid "Action"
+msgstr ""
+
 #: src/modals/MenuModal.vue:26
-#: src/views/HomeView.vue:186
+#: src/views/HomeView.vue:187
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -69,7 +115,12 @@ msgstr ""
 msgid "Add another address"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:107
+#: src/lib/mini-app-confirmation.ts:331
+#: src/lib/mini-app-confirmation.ts:340
+msgid "Add Network"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:109
 #: src/types/transactions.ts:108
 msgid "Add Stake"
 msgstr ""
@@ -131,6 +182,12 @@ msgstr ""
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:127
+#: src/lib/mini-app-confirmation.ts:247
+#: src/lib/mini-app-confirmation.ts:92
+msgid "Amount"
+msgstr ""
+
 #: src/composables/useBitcoinLightning.ts:99
 msgid "Amount too small"
 msgstr ""
@@ -163,11 +220,16 @@ msgstr ""
 msgid "App Settings"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:347
+msgid "Approve Network"
+msgstr ""
+
 #: src/modals/LogOutModal/Confirm.vue:13
 msgid "Are you sure you want to log out?"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:41
+#: src/lib/mini-app-confirmation.ts:245
 msgid "Asset"
 msgstr ""
 
@@ -218,6 +280,10 @@ msgstr ""
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:171
+msgid "Bitcoin merchant"
+msgstr ""
+
 #: src/components/PaymentCard.vue:46
 msgid "Blocked"
 msgstr ""
@@ -256,6 +322,10 @@ msgstr ""
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
 #: src/composables/useMiniAppHost.ts:2052
+#: src/lib/mini-app-confirmation.ts:160
+#: src/lib/mini-app-confirmation.ts:348
+#: src/lib/mini-app-confirmation.ts:36
+#: src/lib/mini-app-confirmation.ts:70
 msgid "Cancel"
 msgstr ""
 
@@ -282,6 +352,10 @@ msgstr ""
 
 #: src/stores/nimiq-network.ts:247
 msgid "Cashlink has no balance"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:333
+msgid "Chain ID"
 msgstr ""
 
 #: src/components/settings/SettingsSecurity.vue:11
@@ -340,12 +414,19 @@ msgid "Complete"
 msgstr ""
 
 #: src/components/BricksInput.vue:18
+#: src/lib/mini-app-confirmation.ts:144
+#: src/lib/mini-app-confirmation.ts:290
 #: src/modals/LogOutModal/Confirm.vue:22
 msgid "Confirm"
 msgstr ""
 
 #: src/components/NimWithdrawConfirm.vue:38
 msgid "Confirm and send"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:139
+#: src/lib/mini-app-confirmation.ts:286
+msgid "Confirm Transaction"
 msgstr ""
 
 #: src/lib/flows/steps.ts:500
@@ -369,6 +450,14 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:69
+msgid "Connect"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:60
+msgid "Connect to {appName}"
+msgstr ""
+
 #: src/lib/utils.ts:132
 msgid "Connecting to network."
 msgstr ""
@@ -385,12 +474,22 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:64
 #: src/components/ShowWords.vue:8
+#: src/lib/mini-app-confirmation.ts:159
+#: src/lib/mini-app-confirmation.ts:35
 msgid "Continue"
 msgstr ""
 
 #: src/components/PaymentAmountInput.vue:65
 #: src/components/PaymentRequestManualInput.vue:22
 msgid "Continue and Pay"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:248
+msgid "Contract"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:283
+msgid "Contract Interaction"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:79
@@ -446,7 +545,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:102
+#: src/lib/mini-app-confirmation.ts:104
 #: src/types/transactions.ts:107
 msgid "Create Staker"
 msgstr ""
@@ -503,6 +602,10 @@ msgstr ""
 
 #: src/modals/DeletePointsModal.vue:16
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:365
+msgid "Deny"
 msgstr ""
 
 #: src/components/settings/SettingsMiniApps.vue:12
@@ -701,6 +804,10 @@ msgstr ""
 msgid "Features"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:95
+msgid "Fee"
+msgstr ""
+
 #: src/components/PaymentPreview.vue:113
 #: src/components/PaymentPreview.vue:119
 msgid "Fees may apply {fee}"
@@ -724,6 +831,15 @@ msgstr ""
 
 #: src/modals/MiniAppWarningModal.vue:50
 msgid "Full link:"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:249
+#: src/lib/mini-app-confirmation.ts:259
+msgid "Gas Limit"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:276
+msgid "Gas Price"
 msgstr ""
 
 #: src/components/settings/SettingsRoot.vue:6
@@ -756,7 +872,7 @@ msgstr ""
 msgid "Give it a name so you recognise it later"
 msgstr ""
 
-#: src/views/LockdownScreen.vue:20
+#: src/views/LockdownScreen.vue:21
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr ""
 
@@ -771,6 +887,10 @@ msgstr ""
 
 #: src/modals/ReferralModal.vue:7
 msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:301
+msgid "Hex data: {data}"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:52
@@ -797,7 +917,7 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
-#: src/views/LockdownScreen.vue:28
+#: src/views/LockdownScreen.vue:30
 msgid "I have turned it off"
 msgstr ""
 
@@ -1009,6 +1129,10 @@ msgstr ""
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:158
+msgid "Invoice"
+msgstr ""
+
 #: src/components/PhoneInput.vue:60
 msgid "Is this your phone number?"
 msgstr ""
@@ -1031,6 +1155,10 @@ msgstr ""
 
 #: src/composables/useNotifications.ts:249
 msgid "Learn what is new in this update"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:171
+msgid "Lightning payment"
 msgstr ""
 
 #: src/composables/useBitcoinLightning.ts:107
@@ -1093,11 +1221,24 @@ msgstr ""
 msgid "Matching submissions: {count}"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:266
+msgid "Max Fee"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:279
+msgid "Max Total Fee"
+msgstr ""
+
 #: src/components/competition/MiniAppsCompetitionView.vue:40
 msgid "Meet the builders creating new experiences for Nimiq Pay."
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:172
+msgid "Merchant receives"
+msgstr ""
+
 #: src/components/TransactionDetails.vue:78
+#: src/lib/mini-app-confirmation.ts:97
 msgid "Message"
 msgstr ""
 
@@ -1122,11 +1263,22 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:85
 #: src/components/TransactionDetails.vue:46
+#: src/lib/mini-app-confirmation.ts:244
+#: src/lib/mini-app-confirmation.ts:254
+#: src/lib/mini-app-confirmation.ts:332
 msgid "Network"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:131
 msgid "Network consensus lost."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:186
+msgid "Network fee"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:186
+msgid "Network fee (included)"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:36
@@ -1139,6 +1291,14 @@ msgstr ""
 
 #: src/types/transactions.ts:123
 msgid "New"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:114
+msgid "New Active Stake"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:120
+msgid "New Validator"
 msgstr ""
 
 #: src/components/HoldCardToReader.vue:61
@@ -1154,11 +1314,15 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
+#: src/views/LockdownScreen.vue:14
+msgid "Nimiq Pay could not start"
+msgstr ""
+
 #: src/views/LockdownScreen.vue:17
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:119
+#: src/lib/mini-app-confirmation.ts:121
 msgid "No"
 msgstr ""
 
@@ -1256,6 +1420,10 @@ msgstr ""
 msgid "non-ASCII character (may impersonate Latin letters)"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:281
+msgid "Nonce"
+msgstr ""
+
 #: src/composables/useGoCryptoMonitoring.ts:98
 msgid "Not a pending payment request"
 msgstr ""
@@ -1307,6 +1475,15 @@ msgstr ""
 
 #: src/components/PaymentRequestDetectedNotification.vue:21
 msgid "PAY"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:191
+#: src/lib/mini-app-confirmation.ts:27
+msgid "Pay Bitcoin Lightning"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:196
+msgid "Pay with {asset}"
 msgstr ""
 
 #: src/lib/flows/steps.ts:311
@@ -1537,6 +1714,10 @@ msgstr ""
 msgid "Previous versions"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:271
+msgid "Priority Fee"
+msgstr ""
+
 #: src/modals/DisclaimerModal.vue:17
 msgid "Privacy Policy"
 msgstr ""
@@ -1562,8 +1743,16 @@ msgstr ""
 msgid "Purchase"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:121
+msgid "Reactivate?"
+msgstr ""
+
 #: src/modals/DeletePointsModal.vue:13
 msgid "Really delete your Cryptocity Points account?"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:362
+msgid "Reason"
 msgstr ""
 
 #: src/components/settings/SettingsGeneral.vue:51
@@ -1576,6 +1765,8 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:89
 #: src/components/TransactionDetails.vue:70
+#: src/lib/mini-app-confirmation.ts:246
+#: src/lib/mini-app-confirmation.ts:91
 msgid "Recipient"
 msgstr ""
 
@@ -1595,13 +1786,24 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:129
+#: src/lib/mini-app-confirmation.ts:145
+#: src/lib/mini-app-confirmation.ts:197
+#: src/lib/mini-app-confirmation.ts:291
+#: src/lib/mini-app-confirmation.ts:311
+msgid "Reject"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:131
 #: src/types/transactions.ts:112
 msgid "Remove Stake"
 msgstr ""
 
 #: src/components/settings/SettingsMiniApps.vue:6
 msgid "Reopen Mini App on unlock"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:67
+msgid "Request approval for transactions"
 msgstr ""
 
 #: src/lib/faucet.ts:35
@@ -1613,7 +1815,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:187
+#: src/views/HomeView.vue:188
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1625,9 +1827,13 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:124
+#: src/lib/mini-app-confirmation.ts:126
 #: src/types/transactions.ts:111
 msgid "Retire Stake"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:154
+msgid "Review Lightning payment"
 msgstr ""
 
 #: src/components/settings/SettingsMiniApps.vue:23
@@ -1636,6 +1842,10 @@ msgstr ""
 
 #: src/composables/useNotifications.ts:130
 msgid "Rewards Notifications"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:337
+msgid "RPC Host"
 msgstr ""
 
 #: src/components/NimAddressInput.vue:61
@@ -1706,6 +1916,10 @@ msgstr ""
 msgid "See words"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:65
+msgid "See your address {address}"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:141
 msgid "Select an address to calculate Polygon fee."
 msgstr ""
@@ -1759,11 +1973,19 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:185
+msgid "Service fee"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:185
+msgid "Service fee (included)"
+msgstr ""
+
 #: src/components/LiveChat.vue:76
 msgid "Session closed"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:111
+#: src/lib/mini-app-confirmation.ts:113
 #: src/types/transactions.ts:109
 msgid "Set Active Stake"
 msgstr ""
@@ -1777,8 +1999,24 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:364
+msgid "Share"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:357
+msgid "Share device ID with {appName}?"
+msgstr ""
+
 #: src/components/settings/SettingsGeneral.vue:45
 msgid "Show hidden transactions"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:310
+msgid "Sign"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:305
+msgid "Sign Message"
 msgstr ""
 
 #: src/components/EnableBiometric.vue:16
@@ -1868,6 +2106,10 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
+#: src/views/LockdownScreen.vue:17
+msgid "Something went wrong while loading the app."
+msgstr ""
+
 #: src/composables/useQRScanner.ts:303
 msgid "Something went wrong while starting the camera"
 msgstr ""
@@ -1880,6 +2122,11 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:101
+msgid "STAKING"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:85
 #: src/types/transactions.ts:114
 msgid "Staking Contract"
 msgstr ""
@@ -1930,6 +2177,12 @@ msgstr ""
 
 #: src/lib/swap-preimage.ts:22
 msgid "Swap timed out waiting for Lightning payment confirmation"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:331
+#: src/lib/mini-app-confirmation.ts:340
+#: src/lib/mini-app-confirmation.ts:347
+msgid "Switch Network"
 msgstr ""
 
 #: src/composables/useMiniAppHost.ts:456
@@ -2088,6 +2341,10 @@ msgstr ""
 msgid "This transaction will reappear in your history."
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:257
+msgid "To"
+msgstr ""
+
 #: src/views/HomeView.vue:37
 msgid "Top Up"
 msgstr ""
@@ -2132,6 +2389,7 @@ msgstr ""
 #: src/components/competition/MiniAppsCompetitionView.vue:19
 #: src/components/ValidateWords.vue:28
 #: src/modals/MiniAppsModal.vue:119
+#: src/views/LockdownScreen.vue:30
 msgid "Try again"
 msgstr ""
 
@@ -2139,7 +2397,7 @@ msgstr ""
 msgid "Try another search or category."
 msgstr ""
 
-#: src/views/LockdownScreen.vue:23
+#: src/views/LockdownScreen.vue:24
 msgid "Turn it off, then reopen Nimiq Pay."
 msgstr ""
 
@@ -2163,6 +2421,10 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:358
+msgid "Unique to this Mini App on this device. Cannot be used to track you across other Mini Apps."
+msgstr ""
+
 #: src/types/transactions.ts:134
 msgid "Unknown"
 msgstr ""
@@ -2183,7 +2445,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:116
+#: src/lib/mini-app-confirmation.ts:118
 #: src/types/transactions.ts:110
 msgid "Update Staker"
 msgstr ""
@@ -2192,8 +2454,16 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:176
+msgid "USDT fee allowance"
+msgstr ""
+
 #: src/views/MainView.vue:124
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:33
+msgid "USDT on Polygon"
 msgstr ""
 
 #: src/stores/feature-flags.ts:16
@@ -2206,6 +2476,14 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:143
 msgid "Use {amount}"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:105
+msgid "Validator"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:258
+msgid "Value"
 msgstr ""
 
 #: src/components/PhoneInput.vue:43
@@ -2230,6 +2508,10 @@ msgstr ""
 
 #: src/components/competition/CompetitionAppDetail.vue:122
 msgid "View on X"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:66
+msgid "View your balance and activity"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:163
@@ -2413,8 +2695,13 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:119
+#: src/lib/mini-app-confirmation.ts:121
+#: src/lib/mini-app-confirmation.ts:283
 msgid "Yes"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:87
+msgid "You"
 msgstr ""
 
 #: src/components/NimAddressInput.vue:53
@@ -2455,7 +2742,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:192
+#: src/views/HomeView.vue:193
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -2477,6 +2764,10 @@ msgstr ""
 
 #: src/modals/TaskModal.vue:115
 msgid "You received Cryptocity Points"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:173
+msgid "You spend"
 msgstr ""
 
 #: src/components/GenericInput.vue:15
