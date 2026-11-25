@@ -36,12 +36,13 @@ watch(() => props.state.qrCodeScanner, (value) => {
 const { remoteAddress } = storeToRefs(useRemoteSigner())
 const { localAddress } = storeToRefs(useLocalWallet())
 const localEthAddress = computed(() => useLocalWallet().getEthAddress().data || '')
+const isNimAddress = computed(() => props.saveContact ? !address.value?.startsWith('0x') : isNimiqAsset.value)
 
 const validAddress = computed(() => {
   if (!address.value)
     return false
 
-  if (isNimiqAsset.value)
+  if (isNimAddress.value)
     return remoteAddress.value?.toUserFriendlyAddress() !== address.value && localAddress.value.toUserFriendlyAddress() !== address.value
 
   if (!isValidEthAddress(address.value))
@@ -57,7 +58,7 @@ function handleSave() {
   if (!address.value)
     return
 
-  const normalizedAddress = isNimiqAsset.value ? address.value : getAddress(address.value)
+  const normalizedAddress = isNimAddress.value ? address.value : getAddress(address.value)
   useApp().addNewWithdrawalAddress(normalizedAddress, alias.value)
   emit('done', normalizedAddress)
 }
@@ -70,9 +71,9 @@ function handleSave() {
         {{ $t('Enter Address') }}
       </p>
       <div v-if="saveContact" class="flex flex-col items-center gap-y-6">
-        <Identicon v-if="!address?.startsWith('0x')" :address="address ?? ''" class="size-20" />
+        <Identicon v-if="isNimAddress" :address="address ?? ''" class="size-20" />
         <UsdtLogo v-else class="size-16" />
-        <AddressDisplay :address="address ?? ''" :format="address?.startsWith('0x') ? 'ethereum' : 'nimiq'" />
+        <AddressDisplay :address="address ?? ''" :format="isNimAddress ? 'nimiq' : 'ethereum'" />
       </div>
       <AddressInput
         v-else-if="isNimiqAsset"
