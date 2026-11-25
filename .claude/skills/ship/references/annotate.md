@@ -7,7 +7,8 @@ One file per scenario: Before and After side by side, hand-drawn marks on what c
 | Scenario shows | Build |
 |---|---|
 | change on one screen | still PNG (default) |
-| change over time: spinner, flicker, skeleton, animation, scroll, hang, timeout, resume | clip `.mp4` + still PNG from same spec |
+| change over time: hang, timeout, delay, resume, spinner, skeleton | still or flow PNG of key moments, measured seconds in notes |
+| motion itself is the bug (flicker, jank, broken animation or scroll) and frames can't show it | clip `.mp4` + still PNG from same spec |
 | flow across several screens | flow PNG: several frames per side |
 | logs, file listings, counts, no visible UI | text image of the log, then still PNG |
 | nothing runs on device (CI, docs, tooling) | no image; one-line reason (SKILL.md phase 7) |
