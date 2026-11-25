@@ -4,14 +4,27 @@ Run `scripts/device-preflight.sh` first. Lists devices, LAN IP, :8100 owner, che
 
 **Language:** Nimiq Pay must show English in every screenshot set, unless scenario tests language. Check before first set. Change in Settings → General → Language, or on Android over CDP (see "Live state"): `$pinia._s.get('app').language = 'en'`, then reload app. Value persists. Leave it English.
 
+## Test setup and secrets
+
+- Read `<repo>/.claude/worktrees/.ship/test-setup.md` (local, gitignored) before asking user anything about devices or wallets. Per device: name, serial or udid, OS, logged-in wallet label, network, address as `NQ12…ABCD`, what wallet holds (funded NIM, USDT, HTLC history, empty). Missing → write it from preflight output plus user's answers. Update after every login, logout or network switch.
+- Never write a seed, private key or PIN into chat, `state.md`, `test-setup.md`, PR, logs or commits. Need seed: T3 `request_secret` with `delivery: "file"`, then type from file: `for w in $(cat "$file"); do adb shell input text "$w"; adb shell input keyevent 62; sleep 0.8; done`. No T3: ask user to save words in gitignored `<repo>/.claude/worktrees/.ship/.seed-<label>`, use same loop, delete file after import. User pastes seed in chat anyway: use it, never repeat it, suggest `request_secret` next time.
+
 ## Before / After builds
 
-- **After:** issue worktree. Run `pnpm dev --host 0.0.0.0 --port 8100`. Debug app loads `http://<LAN-IP>:8100`.
+- **After:** issue worktree. Run `pnpm dev --host 0.0.0.0 --port 8100` detached ("Long-running processes"). Debug app loads `http://<LAN-IP>:8100`.
 - **Before:** detached `main` worktree at `<repo>/.claude/worktrees/main-baseline`. Create if missing (`git worktree add --detach … origin/main`, `ln -s <repo>/.env`, copy `android/local.properties`, submodule update, `pnpm install`). Else run `git fetch && git checkout --detach origin/main` inside it, then `git submodule update --init --recursive` and `pnpm install --frozen-lockfile` (main may have moved pin or lockfile).
 - If baseline built by symlinking `node_modules` instead of `pnpm install`, also copy gitignored `public/nimiq/{launcher,lib,web}`, `public/web3-provider.js` and `web3-provider/dist/provider.js`, else app throws "Nimiq is not defined".
 - Only one server may own :8100 (`lsof -iTCP:8100 -sTCP:LISTEN`). Kill own server between runs. When done, see "When done".
 - Reload app after switching servers. Wait for home transaction list to load before testing: blank sheets during sync not regressions.
 - Before each screenshot set, run `scripts/verify-build.sh <that worktree> android|ios [device]`. Passes only when device runs that worktree's source, uncommitted changes included. Polls for stamp, so don't add `sleep`. Works for Android, physical iPhone, iOS simulator (pass udid). On iOS it relaunches app and waits up to 90 s for stamp logged after relaunch (`logs.txt` spans launches), so enter PIN again afterwards. Editing bundled files after server start = mismatch until server restart. Doesn't cover gitignored `.env` or stale `web3-provider` build: run `pnpm build:web3-provider` after provider changes.
+
+### Long-running processes
+
+Harness background tasks die at their time limit: dev servers, Gradle builds and Maestro watchers got killed mid-test. Run anything that must outlive one command detached, log and pid in `<state>`:
+- Server: `nohup pnpm dev --host 0.0.0.0 --port 8100 > <state>/dev-8100.log 2>&1 & echo $! > <state>/dev-8100.pid`.
+- Before each use: `lsof -iTCP:8100 -sTCP:LISTEN` shows it. Gone → restart, run `verify-build.sh` again.
+- Long build or test run (Gradle, xcodebuild, Maestro): `nohup sh -c '<command>; echo EXIT=$?' > <state>/<name>.log 2>&1 &`, poll `tail` of log for `EXIT=`.
+- Stop: `kill $(lsof -ti tcp:8100 -sTCP:LISTEN)` (pnpm pid alone leaves Vite running).
 
 ### Bundled build instead of the dev server
 
@@ -70,6 +83,7 @@ Reinstalled debug build with same build number keeps running last downloaded pro
 
 ## Screenshots
 
+- Annotated Before/After (exact boxes via `cdp-shot.mjs`, clips, logs as images): `references/annotate.md`.
 - Crop: `magick in.png -crop WxH+X+Y +repage out.png`. Don't use `sips -c`: crops around center, wrong offset once uploaded a balance.
 - Blur balance or address: `magick in.png -region WxH+X+Y -blur 0x30 out.png`.
 - PIL not installed. Open exact output file afterwards: crop that fails silently leaves original.
@@ -78,7 +92,7 @@ Reinstalled debug build with same build number keeps running last downloaded pro
 
 At end of every device phase, and before handing phone to user:
 - Run `agent-device close --session ship-<issue>` (same `AGENT_DEVICE_STATE_DIR`).
-- Log original wallet back in, restore network and app settings (language stays English).
+- Log original wallet back in, restore network and app settings (language stays English). Update `test-setup.md`.
 - Revert temporary `versionCode`, `CFBundleVersion` and `server.url` edits.
 - Remove `adb reverse` and `adb forward` rules you added (`adb reverse --remove tcp:<port>`, `adb forward --remove tcp:9333`).
 - Lock Android phone: `adb shell input keyevent KEYCODE_SLEEP`.

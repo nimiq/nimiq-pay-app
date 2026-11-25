@@ -42,7 +42,7 @@ Steps name capabilities, not tools. Use whatever harness has:
 | Final review | one subagent on the strongest model (Fable, high effort) | one subagent on the strongest model at high reasoning |
 | Simplify pass | `simplify` skill | `simplify` skill if installed, else review the diff for reuse and dead code yourself |
 | PostHog | posthog plugin / skill | PostHog MCP if connected, else skip and say so |
-| PR screenshots | `scripts/annotate.mjs` + `gh pr create/edit --attach` (gh ≥ 2.103), see `references/pr.md` | same; run `annotate.mjs` outside the sandbox (Chromium) |
+| PR screenshots | `scripts/cdp-shot.mjs` + `scripts/annotate.mjs` (`references/annotate.md`), `gh pr create/edit --attach` (gh ≥ 2.103, `references/pr.md`) | same; run `annotate.mjs` outside the sandbox (Chromium) |
 | T3 Code | `link_pull_request` after opening the PR | same |
 
 Something unavailable: do closest thing, note in final report. Don't stop.
@@ -141,7 +141,7 @@ Fill impact matrix from `references/pr.md` (new install, upgraded from old versi
 
 ### 7. Device test with Before/After
 
-Read `references/device.md`, run `scripts/device-preflight.sh` first. Show bug on `main` build ("Before") and fix on branch ("After"), one row per scenario, save PNGs in `<state>`. App in English for every set unless scenario tests a language (`references/device.md`). Right before each Before set and each After set run `scripts/verify-build.sh <worktree> android|ios [device]`, record printed stamp in `state.md`. Nonzero exit = wrong build on device: fix it, no screenshots until passes. Even if change not visual, capture screen where behavior shows (flow step, toast, result state). Skip phase only when nothing runs on device (CI, docs, tooling, USDT HTLC paths on testnet); give one-line reason in PR.
+Read `references/device.md`, run `scripts/device-preflight.sh` first. Show bug on `main` build ("Before") and fix on branch ("After"), one row per scenario, capture per `references/annotate.md` (still, clip, flow or log image) into `<state>`. Time-based scenario: measure it (seconds, counts) on both sides. App in English for every set unless scenario tests a language (`references/device.md`). Right before each Before set and each After set run `scripts/verify-build.sh <worktree> android|ios [device]`, record printed stamp in `state.md`. Nonzero exit = wrong build on device: fix it, no screenshots until passes. Even if change not visual, capture screen where behavior shows (flow step, toast, result state). Skip phase only when nothing runs on device (CI, docs, tooling, USDT HTLC paths on testnet); give one-line reason in PR.
 
 **Check every screenshot before using it.** Open each PNG, confirm:
 - shows scenario its row claims
@@ -165,7 +165,11 @@ End phase with "When done" in `references/device.md` (close sessions, restore ph
 
 ### 9. Report and stop
 
-End with exactly these headings:
+Open report with two lines, before anything else:
+- `READY TO MERGE` or `NOT READY: <what blocks, in user terms>`. Code-level concerns left → `NOT READY`, never a footnote.
+- `Left:` each remaining step with owner (`user`, `agent`, `CI`), or `Left: nothing`.
+
+Then exactly these headings:
 
 - **Blocked on me:** what needs user (decisions to override, manual checks like push notifications on real device, merges).
 - **Changed:** PR link, one-line fix summary, files touched, tests added.
