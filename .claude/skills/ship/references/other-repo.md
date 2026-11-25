@@ -20,6 +20,7 @@ User's request authorizes branch, signed commits, push and PR in that repo. Not 
 Same as SKILL.md phase 5; swap stack line in review and security briefs for this repo's.
 - Phase 7 becomes web check when change has UI: Playwright at 1440 and 390 px, headed or real Chrome for scrollbars and overflow, WebKit for audio and gesture rules. New page: "Before" is production URL.
 - Attach screenshots with `gh --attach` (`references/pr.md`), `--repo <owner/repo>`.
+- PR body: "Upstream PR" shape in `references/pr.md` for repos we don't own, "Nimiq Pay PR" shape for Nimiq repos.
 
 ## Upstream fixes
 
