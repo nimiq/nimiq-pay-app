@@ -13,6 +13,9 @@ const logs: Ref<string[]> = ref([])
 let writingLock = Promise.resolve()
 const logFileName = 'logs.txt'
 const directory = Directory.Cache
+const MAX_LOG_FILE_BYTES = 5 * 1e6
+const TRIMMED_LOG_FILE_BYTES = MAX_LOG_FILE_BYTES / 2
+const LOG_ENTRY_START = /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] /
 
 const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
 const MAX_ERROR_REPORTS_PER_SESSION = 200
@@ -114,23 +117,31 @@ export function useLogger(name: string = '') {
       const logFiles = files.filter(file => file.name.startsWith('logs-') && file.name.endsWith('.txt'))
       const mainLogFile = files.find(file => file.name === logFileName)
 
-      if (mainLogFile && mainLogFile.size > 5 * 1e6) {
-        await Filesystem.rename({
-          from: mainLogFile.name,
-          to: `logs-${new Date().toISOString().split('T')[0]}-x${Math.round(Math.random() * 1e6)}.txt`,
-          directory,
-        })
-      }
-
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3
-      for (const file of logFiles) {
-        const date = new Date(file.name.split('logs-')[1].split('-x')[0]).getTime()
-        if (date < sevenDaysAgo) {
-          await Filesystem.deleteFile({
-            path: file.name,
+      if (mainLogFile && mainLogFile.size > MAX_LOG_FILE_BYTES) {
+        await writingLock
+        let unlock
+        writingLock = new Promise(resolve => unlock = resolve)
+        try {
+          // Read as base64: the offset can split a UTF-8 character, and iOS fails a UTF8 read on it
+          const { data } = await Filesystem.readFile({ path: logFileName, directory, offset: mainLogFile.size - TRIMMED_LOG_FILE_BYTES })
+          const tail = new TextDecoder().decode(Uint8Array.from(atob(data as string), char => char.charCodeAt(0)))
+          await Filesystem.writeFile({
+            path: logFileName,
+            data: tail.slice(Math.max(0, tail.search(LOG_ENTRY_START))),
             directory,
+            encoding: Encoding.UTF8,
           })
         }
+        finally {
+          unlock!()
+        }
+      }
+
+      for (const file of logFiles) {
+        await Filesystem.deleteFile({
+          path: file.name,
+          directory,
+        })
       }
     }
     catch (e) {
