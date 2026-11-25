@@ -65,3 +65,15 @@
 {"buildId": "f1a6adfd0c6f28785d3274cb7bff02eca58ba73e", "flow": "mini_apps_filter", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "low", "triagedAt": "2026-11-17"}
 {"buildId": "4748eccc3b099a915dff8d1352e5cb1c120eada2", "flow": "recovery_words_banner", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "INFRA", "confidence": "medium", "triagedAt": "2026-11-17"}
 {"buildId": "4a2264f6b814d87a0255c3b0a9e8d65286330cbc", "flow": "testnet_new_wallet", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "INFRA", "confidence": "medium", "triagedAt": "2026-11-17"}
+{"buildId":"e4823d32ef91e3fe9c32837f349aff267a03dd7c","flow":"whats_new","outcome":"DETERMINISTIC","rule":"UNKNOWN","triager":"TEST_BUG","confidence":"medium","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"5f34d0c99da172eec6a6e0843946f60cb3fa6216","flow":"returning_to_app_flows_and_settings","outcome":"DETERMINISTIC","rule":"UNKNOWN","triager":"TEST_BUG","confidence":"medium","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"3e74e02f365029f3a328607e26fc68076294874a","flow":"security_change_pin","outcome":"DETERMINISTIC","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"e957c712fbfc0cd36da09b7651f29061576da8e5","flow":"testnet_new_wallet","outcome":"DETERMINISTIC","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"39df94cabe8b602c35bf85737370be5053617683","flow":"settings_nim_decimals","outcome":"UNKNOWN","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"bd86271e3e2f088641f994d50b134942d83fc062","flow":"mini_apps_recent","outcome":"UNKNOWN","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"007184f53db9eaa8346c6b30c8f747aa7bcf63c6","flow":"create_account_and_return_to_account","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"INFRA","confidence":"medium","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"6fc6144a0a97ae2f8c67b6abb356dbfd8046f2cd","flow":"create_new_account_with_pageObject","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"INFRA","confidence":"medium","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"d6b573e85c5b56a7bb380b06ea622d8b2a55f124","flow":"backup_validation","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"2d58cb5d144f4bb0c90190231966ed3a955a57f4","flow":"mini_apps_search","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"34aa3051dc8b0e2c9416f86035ac5eb872c62fd7","flow":"security_change_pin_errors","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
+{"buildId":"7589cd6eceb8dda63bc2f567aec2eaf62be4956f","flow":"pay_nim_manual","outcome":"INTERMITTENT","rule":"UNKNOWN","triager":"UNKNOWN","confidence":"low","triagedAt":"2026-11-24T15:00:23Z"}
