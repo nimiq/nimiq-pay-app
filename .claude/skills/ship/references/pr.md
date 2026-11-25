@@ -65,11 +65,12 @@ One PNG per scenario: Before and After side by side, hand-drawn boxes, arrows fr
    ::::
    :::
    ```
-   - `viewport` = raw PNG size (`sips -g pixelWidth -g pixelHeight <png>`).
+   - Wide or composite screenshot (landscape, phone + log panel): crop both to region that shows change, same crop on both sides (`sips -c <h> <w> --cropOffset <y> <x> <png> --out <scenario>-before.png`). Each image gets ~30% of final width; text must stay readable.
+   - `viewport` = PNG size after crop (`sips -g pixelWidth -g pixelHeight <png>`).
    - `x y w h` = box in percent of image: element edge px / image width or height × 100. Any scale works, same scale for both axes. Hug element edges; drawn box adds own padding.
    - Before marks what is wrong. After marks what replaced it. Missing element (off-screen, not rendered): box what shows in its place.
-   - `mark` (hand-drawn marks from AnnotationKit, annotationkit.vercel.app): `box` (default) for a block or region, `circle` for a small target (icon, spinner, badge), `underline` for one line of text. Skip `cross` (hides what it marks) and `check` (invisible at faint After opacity).
-   - Notes: Before `side="left"`, After `side="right"`. Arrow would cross another element to reach its box: both screenshots' notes `side="bottom"` instead, so images keep same size.
+   - `mark` (hand-drawn marks from AnnotationKit, annotationkit.vercel.app): `box` (default) for a block or region, `circle` for a small target (icon, spinner, badge), `underline` for one line of text with space below it, `highlight` for one row in a dense list or log (box and underline spill onto neighbor rows). Skip `cross` (hides what it marks) and `check` (invisible at faint After opacity).
+   - Notes: Before `side="left"`, After `side="right"`. Arrow would cross another element to reach its box: put both screenshots' notes on one side with a clear path (`right` or `bottom`), so images keep same size.
    - Note: what changed, ≤ 7 words. Real values when they matter ("Still spinning 94 s after tapping Pay").
    - Box around centered content stays centered: x + w/2 = 50. Stacked boxes share `x` and `w`. Same element gets same box on both sides.
    - Two plain `:::screenshot` blocks. `::compare` silently drops left/right notes. No `color`: script sets it.
