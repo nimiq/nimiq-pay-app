@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
+import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import PolygonLogo from '@/components/icons/polygon-logo.vue'
 import { Asset, Chain } from '@/lib/assets'
 import { FlowName } from '@/lib/flows/steps.types'
 import { MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
@@ -216,6 +218,37 @@ describe('transactionDetails', () => {
     expect(wrapper.text()).toContain('USDT')
     expect(wrapper.text()).toContain('Network')
     expect(wrapper.text()).toContain('Polygon')
+  })
+
+  it.each([
+    { asset: Asset.NIM, chain: Chain.Nimiq, logo: NimiqLogo, otherLogo: PolygonLogo },
+    { asset: Asset.USDT, chain: Chain.Polygon, logo: PolygonLogo, otherLogo: NimiqLogo },
+  ])('shows the $chain logo next to the network name', async ({ asset, chain, logo, otherLogo }) => {
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.UserPayment,
+          title: 'Withdrawal',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: 'hash',
+          sender: 'sender',
+          recipient: 'recipient',
+          status: 'confirmed',
+          proofSize: 0,
+          asset,
+          chain,
+        },
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+
+    const network = wrapper.get('[aria-label="Network"] + div')
+    expect(network.text()).toBe(chain)
+    expect(network.findComponent(logo).exists()).toBe(true)
+    expect(network.findComponent(otherLogo).exists()).toBe(false)
   })
 
   it('shows the sender and message and hides the own-address recipient for an incoming payment', async () => {

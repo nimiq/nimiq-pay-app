@@ -8,6 +8,8 @@ import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeMount } from 'vue'
 import AddressBookIcon from '@/components/icons/address-book.vue'
+import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import PolygonLogo from '@/components/icons/polygon-logo.vue'
 import UsdtLogo from '@/components/icons/usdt-logo.vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
@@ -159,7 +161,10 @@ onBeforeMount(() => {
       <div aria-label="Network">
         {{ $t('Network') }}
       </div>
-      <div>{{ chain }}</div>
+      <div class="flex items-center justify-end gap-x-2">
+        <component :is="chain === Chain.Nimiq ? NimiqLogo : PolygonLogo" class="size-5 shrink-0" />
+        {{ chain }}
+      </div>
 
       <template v-if="isIncoming && tx.sender">
         <div>{{ $t('Sender') }}</div>
