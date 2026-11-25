@@ -36,12 +36,12 @@ function handleAddAddress() {
 
 const editingAddress = ref<string | null>(null)
 const editingAlias = ref('')
-const aliasInput = ref<HTMLInputElement | null>(null)
+const aliasInputs = ref<HTMLInputElement[]>([])
 
 function startEditing(entry: SavedAddress) {
   editingAddress.value = entry.address
   editingAlias.value = entry.alias ?? ''
-  nextTick(() => aliasInput.value?.focus())
+  nextTick(() => aliasInputs.value[0]?.focus())
 }
 
 function cancelEditing() {
@@ -63,7 +63,7 @@ function saveAlias() {
       <div v-for="entry in addresses" :key="entry.address" class="flex items-center">
         <template v-if="editingAddress === entry.address">
           <input
-            ref="aliasInput"
+            ref="aliasInputs"
             v-model="editingAlias"
             type="text"
             maxlength="32"

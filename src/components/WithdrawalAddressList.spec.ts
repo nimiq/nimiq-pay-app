@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 
@@ -34,9 +34,9 @@ const iconStub = { default: defineComponent({ template: '<span />' }) }
 vi.mock('@/components/icons/pen.vue', () => iconStub)
 vi.mock('@/components/icons/remove.vue', () => iconStub)
 
-async function mountList(props: { manage?: boolean } = {}) {
+async function mountList(props: { manage?: boolean } = {}, attachTo?: HTMLElement) {
   const { default: WithdrawalAddressList } = await import('./WithdrawalAddressList.vue')
-  return mount(WithdrawalAddressList, { props, global: { mocks: { $t: (s: string) => s } } })
+  return mount(WithdrawalAddressList, { props, attachTo, global: { mocks: { $t: (s: string) => s } } })
 }
 
 describe('withdrawalAddressList', () => {
@@ -62,5 +62,22 @@ describe('withdrawalAddressList', () => {
     await addresses[0]!.trigger('click')
     expect(wrapper.emitted('done')).toBeUndefined()
     expect(wrapper.find('.add-address').exists()).toBe(false)
+  })
+
+  it('focuses the alias input of the entry being edited', async () => {
+    const wrapper = await mountList({ manage: true }, document.body)
+    const editAlias = async (index: number) => {
+      await wrapper.findAll('[aria-label="Edit alias"]')[index]!.trigger('click')
+      await flushPromises()
+      return wrapper.get('[aria-label="Edit address alias"]').element
+    }
+
+    const firstInput = await editAlias(0)
+    expect(document.activeElement).toBe(firstInput)
+
+    await wrapper.get('[aria-label="Cancel alias edit"]').trigger('click')
+    const secondInput = await editAlias(1)
+    expect(document.activeElement).toBe(secondInput)
+    wrapper.unmount()
   })
 })
