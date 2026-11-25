@@ -87,6 +87,9 @@ describe('nimAddressInput', () => {
   it('saves a 0x sender checksummed while NIM is active (APP-404)', async () => {
     isNimiqAsset.value = true
     const wrapper = await mountComponent({ saveContact: true, address: ETH_SENDER })
+    const { default: AddressDisplay } = await import('@/components/AddressDisplay.vue')
+
+    expect(wrapper.getComponent(AddressDisplay).classes()).toContain('max-w-min')
 
     await wrapper.get('button[aria-label="Save"]').trigger('click')
 

@@ -66,14 +66,14 @@ function handleSave() {
 
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
-    <div class="m-auto">
+    <div class="m-auto" :class="{ 'w-full': saveContact }">
       <p v-if="!saveContact" aria-label="Enter Address" class="mb-6 text-sm font-bold text-center uppercase text-space/60">
         {{ $t('Enter Address') }}
       </p>
       <div v-if="saveContact" class="flex flex-col items-center gap-y-6">
         <Identicon v-if="isNimAddress" :address="address ?? ''" class="size-20" />
         <UsdtLogo v-else class="size-16" />
-        <AddressDisplay :address="address ?? ''" :format="isNimAddress ? 'nimiq' : 'ethereum'" />
+        <AddressDisplay :address="address ?? ''" :format="isNimAddress ? 'nimiq' : 'ethereum'" :class="{ 'max-w-min !px-5': !isNimAddress }" />
       </div>
       <AddressInput
         v-else-if="isNimiqAsset"
