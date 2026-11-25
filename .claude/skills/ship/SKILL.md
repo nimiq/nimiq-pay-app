@@ -42,7 +42,7 @@ Steps name capabilities, not tools. Use whatever harness has:
 | Final review | one subagent on the strongest model (Fable, high effort) | one subagent on the strongest model at high reasoning |
 | Simplify pass | `simplify` skill | `simplify` skill if installed, else review the diff for reuse and dead code yourself |
 | PostHog | posthog plugin / skill | PostHog MCP if connected, else skip and say so |
-| PR screenshots | `gh pr create/edit --attach` (gh ≥ 2.103), see `references/pr.md` | same |
+| PR screenshots | `scripts/annotate.mjs` + `gh pr create/edit --attach` (gh ≥ 2.103), see `references/pr.md` | same; run `annotate.mjs` outside the sandbox (Chromium) |
 | T3 Code | `link_pull_request` after opening the PR | same |
 
 Something unavailable: do closest thing, note in final report. Don't stop.
