@@ -45,7 +45,7 @@ function _useModal() {
       logger.log('showModal', modal)
 
     let component: ComponentRef = null
-    if (!isOnTop)
+    if (!isOnTop && (await modalController.getTop())?.canDismiss !== false)
       await closeModal()
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
