@@ -59,7 +59,8 @@ function measure(targets) {
 }
 
 try {
-  const { data } = await send('Page.captureScreenshot', { format: 'png' })
+  // Android WebView surface capture draws z-indexed layers (Flow step title and description) at the wrong scale.
+  const { data } = await send('Page.captureScreenshot', { format: 'png', fromSurface: false })
   const png = Buffer.from(data, 'base64')
   writeFileSync(out, png)
   const { result } = await send('Runtime.evaluate', { expression: `(${measure})(${JSON.stringify(targets)})`, returnByValue: true })
