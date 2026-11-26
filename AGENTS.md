@@ -112,7 +112,6 @@ Release uses `proguard-android-optimize.txt`. With optimization on, R8 folds rea
 
 ## OTA updates
 
-- Our update server's "no update" reply has no `kind`, so `CapacitorUpdater.getLatest()` rejects with `no_new_version_available` instead of resolving (APP-353). Treat that rejection as a normal result.
 - `set()` keeps any bundle the auto-update staged, and that bundle replaces the manual install on next background. Call `next()` with the same id first.
 - Auto-update downloads and stages a bundle soon after launch, even in `atBackground` mode. To test a manual download on a device, `reset()` to builtin and `delete()` the bundle first.
 
