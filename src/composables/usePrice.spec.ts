@@ -1,6 +1,6 @@
 import { flushPromises } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { ref, toValue } from 'vue'
+import { ref, toValue, watch } from 'vue'
 
 vi.mock('pinia', async () => {
   const actual = await vi.importActual<typeof import('pinia')>('pinia')
@@ -36,9 +36,11 @@ vi.mock('@/stores/nimiq-network', () => ({
   }),
 }))
 
+const loggerError = vi.fn()
+
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
-    error: vi.fn(),
+    error: loggerError,
   }),
 }))
 
@@ -49,13 +51,15 @@ vi.mock('@/composables/useCurrencyFormatter', () => ({
   }),
 }))
 
+const getPriceDb = vi.fn().mockResolvedValue(undefined)
 const insertPrice = vi.fn().mockResolvedValue(undefined)
+const getClosestPreviousPrice = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/composables/usePriceDb', () => ({
   usePriceDb: () => ({
-    getPriceDb: vi.fn().mockResolvedValue(undefined),
+    getPriceDb,
     insertPrice,
-    getClosestPreviousPrice: vi.fn().mockResolvedValue(undefined),
+    getClosestPreviousPrice,
   }),
 }))
 
@@ -132,6 +136,39 @@ describe('usePrice', () => {
     const { fiat, getFiatPrice, state } = usePrice(ref(100000), { immediate: false })
 
     await expect(getFiatPrice()).resolves.toBeUndefined()
+    expect(state.value).toBe('loaded')
+    expect(fiat.total).toBe(2)
+  })
+  it('fetches the price from the API when reading the cached price fails', async () => {
+    const dbError = new Error('database is closed')
+    getPriceDb.mockRejectedValueOnce(dbError)
+    getClosestPreviousPrice.mockRejectedValueOnce(dbError)
+    loggerError.mockClear()
+    const { usePrice } = await import('./usePrice')
+
+    const { fiat, getFiatPrice, state } = usePrice(ref(100000), { immediate: false })
+
+    await expect(getFiatPrice()).resolves.toBeUndefined()
+    expect(state.value).toBe('loaded')
+    expect(fiat.total).toBe(2)
+    expect(loggerError).toHaveBeenCalledWith('Reading cached price failed:', dbError)
+  })
+
+  it('shows the closest cached price while fetching when only the exact read fails', async () => {
+    getPriceDb.mockRejectedValueOnce(new Error('database is closed'))
+    getClosestPreviousPrice.mockResolvedValueOnce({ price: 3 })
+    const { usePrice } = await import('./usePrice')
+
+    const { fiat, getFiatPrice, state } = usePrice(ref(100000), { immediate: false })
+
+    const closestTotals: number[] = []
+    watch(state, (value) => {
+      if (value === 'closest_price')
+        closestTotals.push(fiat.total)
+    }, { flush: 'sync' })
+
+    await getFiatPrice()
+    expect(closestTotals).toEqual([3])
     expect(state.value).toBe('loaded')
     expect(fiat.total).toBe(2)
   })
