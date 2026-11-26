@@ -7,10 +7,13 @@ const state = vi.hoisted(() => ({
   logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
   trackConsensusSlow: vi.fn(),
   reportCriticalError: vi.fn(),
+  setToast: vi.fn(),
+  currentRoute: { value: { name: 'Home' } },
 }))
 
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
-vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast: vi.fn(), clearToast: vi.fn() }) }))
+vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast: state.setToast, clearToast: vi.fn() }) }))
+vi.mock('@/router', () => ({ default: { currentRoute: state.currentRoute } }))
 vi.mock('@/lib', () => ({ isTestnet: true }))
 vi.mock('@/lib/analytics', () => ({ reportCriticalError: state.reportCriticalError, trackConsensusEstablished: vi.fn(), trackConsensusSlow: state.trackConsensusSlow }))
 vi.mock('@/stores/locks', () => {
@@ -33,6 +36,8 @@ describe('useNimiqNetwork', () => {
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
     state.reportCriticalError.mockReset()
+    state.setToast.mockReset()
+    state.currentRoute.value.name = 'Home'
     vi.stubGlobal('Nimiq', {
       default: vi.fn(() => Promise.resolve()),
       Client: { create: vi.fn() },
@@ -100,6 +105,27 @@ describe('useNimiqNetwork', () => {
     await vi.advanceTimersByTimeAsync(60 * 1e3)
 
     expect(state.trackConsensusSlow).not.toHaveBeenCalled()
+  })
+
+  it('reconnects without a consensus lost toast while on the setup route', async () => {
+    state.currentRoute.value.name = 'Setup'
+    const { onConsensusChanged } = await initWithConsensusListener()
+
+    await onConsensusChanged('established')
+    await onConsensusChanged('connecting')
+
+    expect(state.setToast).not.toHaveBeenCalled()
+    expect(state.logger.log).toHaveBeenCalledWith('Starting reconnect')
+  })
+
+  it('shows a consensus lost toast outside the setup route', async () => {
+    const { onConsensusChanged } = await initWithConsensusListener()
+
+    await onConsensusChanged('established')
+    await onConsensusChanged('connecting')
+
+    expect(state.setToast).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ message: expect.stringContaining('Network consensus lost.') }))
+    expect(state.logger.log).toHaveBeenCalledWith('Starting reconnect')
   })
 
   async function initWithPendingHeadBlocks() {
