@@ -7,6 +7,10 @@ const messages = ref<WtMessage[]>([])
 const conversationEnded = ref(false)
 const sessionId = ref('')
 const sendLogs = vi.fn()
+const { handleDeepLink, browserOpen } = vi.hoisted(() => ({ handleDeepLink: vi.fn(), browserOpen: vi.fn() }))
+
+vi.mock('@/lib/deep-link', () => ({ handleDeepLink }))
+vi.mock('@capacitor/browser', () => ({ Browser: { open: browserOpen } }))
 
 vi.mock('@ionic/vue', () => {
   const passthrough = (tag: string) => defineComponent({
@@ -215,5 +219,113 @@ describe('liveChat send logs button', () => {
     const wrapper = await mountChat()
 
     expect(wrapper.find('button[title="Send logs"]').exists()).toBe(true)
+  })
+})
+
+describe('liveChat links', () => {
+  beforeEach(() => {
+    messages.value = []
+    conversationEnded.value = false
+    handleDeepLink.mockReset().mockResolvedValue(undefined)
+    browserOpen.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('renders a Slack link label as the link text', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Read <https://nimiq.com/faq|our FAQ> first')]
+
+    const wrapper = await mountChat()
+
+    const links = wrapper.findAll('a')
+    expect(links).toHaveLength(1)
+    expect(links[0].text()).toBe('our FAQ')
+    expect(links[0].attributes('href')).toBe('https://nimiq.com/faq')
+    expect(wrapper.text()).toContain('Read our FAQ first')
+    expect(wrapper.text()).not.toContain('<https://')
+  })
+
+  it.each([
+    'See <https://nimiq.com/faq>.',
+    'See https://nimiq.com/faq.',
+  ])('links the URL in "%s" without the trailing period', async (content) => {
+    messages.value = [message('1', 'agent:Ana', content)]
+
+    const wrapper = await mountChat()
+
+    const links = wrapper.findAll('a')
+    expect(links).toHaveLength(1)
+    expect(links[0].text()).toBe('https://nimiq.com/faq')
+    expect(links[0].attributes('href')).toBe('https://nimiq.com/faq')
+    expect(wrapper.text()).toContain('See https://nimiq.com/faq.')
+  })
+
+  it('opens a Mini App deeplink in the app', async () => {
+    const url = 'https://nimpay.app/miniapps/open/example.com'
+    messages.value = [message('1', 'agent:Ana', `Try <${url}|this Mini App>`)]
+    const wrapper = await mountChat()
+
+    await wrapper.find('a').trigger('click')
+    await flushPromises()
+
+    expect(handleDeepLink).toHaveBeenCalledWith({ url })
+    expect(browserOpen).not.toHaveBeenCalled()
+  })
+
+  it('decodes Slack entities in the link, its label and the text around it', async () => {
+    const url = 'https://nimpay.app/miniapps/open/example.com?a=1&b=2'
+    messages.value = [message('1', 'agent:Ana', 'Tips &amp; tricks: <https://nimpay.app/miniapps/open/example.com?a=1&amp;b=2|Q&amp;A &lt;new&gt;>')]
+    const wrapper = await mountChat()
+
+    const link = wrapper.find('a')
+    expect(link.attributes('href')).toBe(url)
+    expect(link.text()).toBe('Q&A <new>')
+    expect(wrapper.text()).toContain('Tips & tricks: Q&A <new>')
+
+    await link.trigger('click')
+    await flushPromises()
+
+    expect(handleDeepLink).toHaveBeenCalledWith({ url })
+  })
+
+  it('decodes Slack entities in a bare link', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Check https://nimiq.com/search?q=1&amp;page=2')]
+    const wrapper = await mountChat()
+
+    await wrapper.find('a').trigger('click')
+    await flushPromises()
+
+    expect(browserOpen).toHaveBeenCalledWith({ url: 'https://nimiq.com/search?q=1&page=2', toolbarColor: '#0582CA' })
+  })
+
+  it('opens other links in the browser', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Check https://nimiq.com/blog')]
+    const wrapper = await mountChat()
+
+    await wrapper.find('a').trigger('click')
+    await flushPromises()
+
+    expect(browserOpen).toHaveBeenCalledWith({ url: 'https://nimiq.com/blog', toolbarColor: '#0582CA' })
+    expect(handleDeepLink).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'javascript:alert(1)',
+    '<javascript:alert(1)|click me>',
+    'No links here',
+  ])('does not link "%s"', async (content) => {
+    messages.value = [message('1', 'agent:Ana', content)]
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('a').exists()).toBe(false)
+    expect(wrapper.text()).toContain(content)
+  })
+
+  it('still asks for logs when the request contains a link', async () => {
+    messages.value = [message('1', 'agent:Ana', 'Please send your logs, see <https://nimiq.com/help|this guide>')]
+
+    const wrapper = await mountChat()
+
+    expect(wrapper.find('a').text()).toBe('this guide')
+    expect(wrapper.text()).toContain('Attach logs')
   })
 })
