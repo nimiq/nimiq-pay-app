@@ -103,7 +103,15 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
 
   async function getPricesFromDb() {
     const price = getPriceDb({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
+      .catch((error) => {
+        logger.error('Reading cached price failed:', error)
+        return undefined
+      })
     const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
+      .catch((error) => {
+        logger.error('Reading cached price failed:', error)
+        return undefined
+      })
 
     const [priceData, fallbackPriceData] = await Promise.all([price, fallbackPrice])
 
