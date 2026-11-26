@@ -5,13 +5,14 @@ const state = vi.hoisted(() => ({
     present: vi.fn(async () => {}),
     style: { setProperty: vi.fn() },
   })),
+  getTop: vi.fn(async (): Promise<HTMLIonModalElement | undefined> => undefined),
   trackFeatureOpened: vi.fn(),
 }))
 
 vi.mock('@ionic/vue', () => ({
   modalController: {
     create: state.create,
-    getTop: vi.fn(async () => undefined),
+    getTop: state.getTop,
   },
 }))
 
@@ -84,5 +85,32 @@ describe('useModal closeModal', () => {
 
     expect(modal.canDismiss).toBe(true)
     expect(modal.dismiss).toHaveBeenCalledWith(null, 'confirm')
+  })
+})
+
+describe('useModal showModal closing the top modal', () => {
+  beforeEach(() => {
+    state.getTop.mockReset()
+  })
+
+  it('keeps a non-dismissible top modal open and stacks the new modal', async () => {
+    const { Modal, useModal } = await import('./useModal')
+    const top = { canDismiss: false, dismiss: vi.fn(async () => true) } as unknown as HTMLIonModalElement
+    state.getTop.mockResolvedValue(top)
+
+    await useModal().showModal(Modal.LongTimeNoSee)
+
+    expect(top.dismiss).not.toHaveBeenCalled()
+    expect(top.canDismiss).toBe(false)
+  })
+
+  it('closes a dismissible top modal before showing the new modal', async () => {
+    const { Modal, useModal } = await import('./useModal')
+    const top = { canDismiss: true, dismiss: vi.fn(async () => true) } as unknown as HTMLIonModalElement
+    state.getTop.mockResolvedValue(top)
+
+    await useModal().showModal(Modal.LongTimeNoSee)
+
+    expect(top.dismiss).toHaveBeenCalledWith(null, 'confirm')
   })
 })
