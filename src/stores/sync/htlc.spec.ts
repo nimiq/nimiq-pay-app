@@ -1470,6 +1470,7 @@ describe('useSyncHtlc', () => {
 
     it('preserves the restored timestamp through reconciliation and expiry', async () => {
       state.height = 250
+      state.lastMacroBlockHeight = state.height
       state.query.mockResolvedValue([{
         hash: 'timestamp',
         sender: 'NQ00 TEST LOCAL ADDRESS',
@@ -1490,7 +1491,7 @@ describe('useSyncHtlc', () => {
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
 
-    it.each(['included', 'confirmed', 'invalidated'])('resolves legacy creation from %s sender history without a height', async (status) => {
+    it.each(['included', 'confirmed', 'invalidated'])('resolves legacy creation from %s HTLC address history without a height', async (status) => {
       const transaction = { transactionHash: 'legacy', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ22 CHILD', state: status, timestamp: 123_456, validityStartHeight: 100 }
       state.query.mockResolvedValue([{ hash: 'legacy', sender: transaction.sender, recipient: transaction.recipient, status: 'pending', validityStartHeight: null }])
       state.client.getTransaction.mockRejectedValue(new Error('not found'))
@@ -1510,6 +1511,7 @@ describe('useSyncHtlc', () => {
       const { getLegacyTransactionValidityStartHeight } = await import('@/lib/utils')
       vi.mocked(getLegacyTransactionValidityStartHeight).mockReturnValueOnce(100)
       state.height = scenario === 'boundary' ? 100 + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS : 10_000
+      state.lastMacroBlockHeight = state.height
       state.query.mockResolvedValue([{
         hash: 'legacy-raw',
         sender: 'NQ00 TEST LOCAL ADDRESS',
@@ -1570,6 +1572,7 @@ describe('useSyncHtlc', () => {
 
       setActivePinia(createPinia())
       state.height = 10_000
+      state.lastMacroBlockHeight = state.height
       await useSyncHtlc().checkHtlcState()
 
       expect(getLegacyTransactionValidityStartHeight).toHaveBeenCalledOnce()
@@ -1580,6 +1583,7 @@ describe('useSyncHtlc', () => {
     it('expires an absent broadcast after its validity window', async () => {
       state.remoteBalance = 0
       state.height = 250
+      state.lastMacroBlockHeight = state.height
       state.client.getTransaction = vi.fn(() => Promise.reject(new Error('not found'))) as any
       state.findTransactionInHistory.mockResolvedValue(undefined)
       const { useSyncHtlc } = await import('./htlc')
@@ -1594,8 +1598,121 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkHtlcState()
 
       expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
-      expect(state.findTransactionInHistory).toHaveBeenCalledWith(expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }), 'h1')
+      const [[address, hash]] = state.findTransactionInHistory.mock.calls as [[ReturnType<typeof createAddress>, string]]
+      expect(address.toUserFriendlyAddress()).toBe('NQ22 TEST NEW HTLC ADDRESS')
+      expect(hash).toBe('h1')
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'expired', timestamp: undefined })
+    })
+
+    describe('resending a dropped local HTLC creation', () => {
+      const row = {
+        hash: 'dropped',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 0,
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        recipientType: 2,
+        status: 'pending',
+        timestamp: 123,
+        validityStartHeight: 100,
+        raw: 'signing-content',
+      }
+
+      afterEach(async () => {
+        const { parseTransactionContent } = await import('@/lib/utils')
+        vi.mocked(parseTransactionContent).mockReset()
+      })
+
+      async function setupDropped() {
+        const { parseTransactionContent } = await import('@/lib/utils')
+        const transaction = {
+          sign: vi.fn(),
+          toHex: vi.fn(() => 'signed-hex'),
+          free: vi.fn(),
+        }
+        vi.mocked(parseTransactionContent).mockClear().mockReturnValue(transaction as any)
+        state.height = 150
+        state.lastMacroBlockHeight = 128
+        state.query.mockImplementation(async () => [{ ...row }])
+        state.client.getTransaction = vi.fn(() => Promise.reject(new Error('Transaction not found'))) as any
+        return { parseTransactionContent, transaction }
+      }
+
+      it('resends the same signed content once per macro block while inside the validity window', async () => {
+        const { parseTransactionContent, transaction } = await setupDropped()
+        const { useSyncHtlc } = await import('./htlc')
+        const { useSyncState } = await import('./state')
+
+        await useSyncHtlc().checkHtlcState()
+        await useSyncHtlc().checkHtlcState()
+
+        expect(parseTransactionContent).toHaveBeenCalledWith(row, state.networkId)
+        expect(transaction.sign).toHaveBeenCalledOnce()
+        expect(transaction.free).toHaveBeenCalledOnce()
+        expect(state.client.sendTransaction).toHaveBeenCalledOnce()
+        expect(state.client.sendTransaction).toHaveBeenCalledWith('signed-hex')
+        expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+        expect(useSyncState().pendingHtlcCreationTransactions).toEqual([expect.objectContaining({ transactionHash: 'dropped' })])
+
+        state.height = 170
+        state.lastMacroBlockHeight = 160
+        await useSyncHtlc().checkHtlcState()
+
+        expect(state.client.sendTransaction).toHaveBeenCalledTimes(2)
+      })
+
+      it('waits for a macro block after the window end before expiring', async () => {
+        await setupDropped()
+        state.height = 100 + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS + 5
+        state.lastMacroBlockHeight = 100 + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS - 12
+        const { useSyncHtlc } = await import('./htlc')
+        const { useSyncState } = await import('./state')
+
+        await useSyncHtlc().checkHtlcState()
+
+        expect(state.client.sendTransaction).not.toHaveBeenCalled()
+        expect(state.findTransactionInHistory).not.toHaveBeenCalled()
+        expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+        expect(useSyncState().pendingHtlcCreationTransactions).toEqual([expect.objectContaining({ transactionHash: 'dropped' })])
+
+        state.lastMacroBlockHeight = 100 + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS + 4
+        await useSyncHtlc().checkHtlcState()
+
+        expect(state.findTransactionInHistory).toHaveBeenCalledOnce()
+        expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'dropped', status: 'expired', timestamp: 123 })
+      })
+
+      it('waits for a macro block after the validity start before resending', async () => {
+        await setupDropped()
+        state.lastMacroBlockHeight = 96
+        const { useSyncHtlc } = await import('./htlc')
+
+        await useSyncHtlc().checkHtlcState()
+
+        expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      })
+
+      it('does not resend a creation the local wallet did not sign', async () => {
+        const { parseTransactionContent } = await setupDropped()
+        state.query.mockImplementation(async () => [{ ...row, sender: 'NQ11 TEST REMOTE ADDRESS', senderType: 2 }])
+        const { useSyncHtlc } = await import('./htlc')
+
+        await useSyncHtlc().checkHtlcState()
+
+        expect(parseTransactionContent).not.toHaveBeenCalled()
+        expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      })
+
+      it('keeps the creation pending when the resend fails', async () => {
+        await setupDropped()
+        state.client.sendTransaction = vi.fn(() => Promise.reject(new Error('peer gone'))) as any
+        const { useSyncHtlc } = await import('./htlc')
+        const { useSyncState } = await import('./state')
+
+        await useSyncHtlc().checkHtlcState()
+        await vi.waitFor(() => expect(state.logger.warn).toHaveBeenCalledWith('Failed to resend pending HTLC creation', { hash: 'dropped', error: 'peer gone' }))
+
+        expect(useSyncState().pendingHtlcCreationTransactions).toEqual([expect.objectContaining({ transactionHash: 'dropped' })])
+      })
     })
 
     it.each([
@@ -1629,9 +1746,10 @@ describe('useSyncHtlc', () => {
       )
     })
 
-    it('uses complete sender history before expiring an empty accepted HTLC', async () => {
+    it('uses complete HTLC address history before expiring an empty accepted HTLC', async () => {
       state.remoteBalance = 0
       state.height = 250
+      state.lastMacroBlockHeight = state.height
       state.client.getTransaction = vi.fn(() => Promise.reject(new Error('temporary rpc failure'))) as any
       const confirmed = {
         transactionHash: 'h1',
@@ -1662,8 +1780,9 @@ describe('useSyncHtlc', () => {
       expect(state.updateTransactionStatus).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'expired' }))
     })
 
-    it('retains expired-window recovery when sender history is unavailable', async () => {
+    it('retains expired-window recovery when HTLC address history is unavailable', async () => {
       state.height = 250
+      state.lastMacroBlockHeight = state.height
       state.client.getTransaction = vi.fn(() => Promise.reject(new Error('temporary rpc failure'))) as any
       state.findTransactionInHistory.mockRejectedValue(new Error('history unavailable'))
       const { useSyncHtlc } = await import('./htlc')
