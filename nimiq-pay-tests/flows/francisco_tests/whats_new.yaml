@@ -1,0 +1,65 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- runFlow: ../../subflows/open_menu.yaml
+- extendedWaitUntil:
+    visible: ${output.navigation.whatsNewBtn}
+    timeout: 5000
+# The title can't prove the tap worked: the menu row has the same text. A version header is only
+# in the changelog. On the iOS simulator this tap was dropped once with the menu at rest.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: ${output.navigation.whatsNewBtn}
+          optional: true
+      - extendedWaitUntil:
+          visible: ${output.whatsNew.versionHeader}
+          timeout: 5000
+- waitForAnimationToEnd
+- assertVisible: ${output.whatsNew.title}
+- assertNotVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
+# A long latest entry can push the button below the fold, where Maestro still finds it with
+# zero-height bounds but the tap misses; scrollUntilVisible rejects zero-height bounds.
+# 60 s: on BrowserStack iOS each swipe and settle takes ~4.4 s, so the default 20 s fits only 4-5.
+- scrollUntilVisible:
+    element: ${output.whatsNew.previousVersions}
+    timeout: 60000
+    speed: 90
+
+- tapOn: ${output.whatsNew.previousVersions}
+- waitForAnimationToEnd
+# Only the expansion renders a header below "Previous versions"; unlike assertVisible, this rejects
+# one below the fold. Not index 1: iOS drops WebView nodes scrolled off screen, so once the latest
+# header is gone index 1 never exists (run 45381667703). Default speed: a fast swipe can carry the
+# button off screen before the header below it shows.
+- scrollUntilVisible:
+    element:
+      text: ${output.whatsNew.versionHeader}
+      below: ${output.whatsNew.previousVersions}
+    timeout: 60000
+
+- tapOn: ${output.whatsNew.closeBtn}
+- waitForAnimationToEnd
+# The menu stays in the hierarchy under What's New, so check the changelog itself is gone by
+# its headers. "Previous versions" can't prove it: once scrolled to the second header, Maestro
+# already reports it not visible with the changelog still open.
+- assertNotVisible: ${output.whatsNew.versionHeader}
+# Log Out, not What's New: home also shows a "What's New" card.
+- assertVisible: ${output.navigation.logoutBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
+- waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.logoutBtn}
+- assertVisible: ${output.home.payTitle}
+
+- stopApp

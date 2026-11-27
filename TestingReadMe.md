@@ -1,0 +1,118 @@
+# Testing Nimiq Pay App on Local Machine
+
+INITIAL SETUP
+Create a main folder ie. “Nimiq Pay App Repo”
+
+Git clone the following repositories into that folder
+- https://github.com/nimiq/nimiq-pay-app (with its submodules, see below)
+
+- https://github.com/nimiq/pay-issuer-server
+
+Clone nimiq-pay-app with its submodules. The Mini Apps provider lives in the pinned
+`vendor/trust-web3-provider` submodule, not in a separate clone next to the app:
+git clone --recurse-submodules https://github.com/nimiq/nimiq-pay-app
+
+If you already cloned it without submodules (or after a pull that moved the pin):
+git submodule update --init --recursive
+
+Go to nimiq-pay-app folder by cd nimiq-pay-app
+
+Now install all dependencies. Do not pass --ignore-scripts: the postinstall step builds the
+pinned Mini Apps provider (public/web3-provider.js)
+pnpm install
+pnpm copy:nimiq
+
+Check the provider bundle is the real one (about 1.2 MB, not a few bytes):
+ls -lh public/web3-provider.js
+
+After changing provider code or moving the submodule pin, rebuild it:
+pnpm build:web3-provider
+
+
+Install Ruby dependencies (Fastlane) 
+bundle install
+
+Make the app build without being connected to the development server
+# Build the Ionic/Capacitor project directly without Fastlane
+pnpm i18n:extract
+
+pnpm build:web  # This compiles Vue -> web assets
+
+pnpm ionic cap sync android  # Sync to native Android project
+
+pnpm ionic cap build android  # Build the Android project
+
+cd android && ./gradlew assembleDebug #creates the APK
+
+# INSTALLATION
+Now install the app on the emulator
+adb install android/app/build/outputs/apk/debug/app-debug.apk
+
+Open the app
+adb shell am start -n com.nimiq.pay.debug/com.nimiq.pay.MainActivity
+
+Close the app
+adb shell am force-stop com.nimiq.pay.debug 
+
+Uninstall the app
+adb uninstall com.nimiq.pay.debug
+
+# Running Tests
+Single Test
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
+
+Test with a subflow 
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/settings_threshold_currency.yaml
+
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/withdraw_nim_validation.yaml
+
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/wallet_import_roundtrip.yaml
+
+
+# Upload Pay App in APK to BrowserStack
+# The suite needs the debug test APK (com.nimiq.pay.debug, Mini Apps on, over-the-air updates off), not the
+# release APK that `pnpm release:browserstack:apk` uploads by default. Build it, then upload it and record it in
+# the BROWSERSTACK_ANDROID_DEBUG_APP repo variable that the CI workflow reads:
+node scripts/build-test-apk.mjs
+pnpm exec dotenv -- node scripts/browserstack-apk-upload.js --apk android/app/build/outputs/apk/debug/app-debug.apk --set-repo-variables
+
+# Upload Maestro Test Suite to BrowserStack
+pnpm upload:browserstack:maestro
+
+# Runs Tests on BrowserStack
+pnpm run:browserstack:maestro
+
+
+# Run with HTML Reporter
+
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
+
+# Open HTML Report File 
+open nimiq-pay-tests/tests_output/maestro_report.html
+

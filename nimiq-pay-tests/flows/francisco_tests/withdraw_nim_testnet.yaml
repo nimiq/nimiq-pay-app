@@ -1,0 +1,128 @@
+appId: ${APP_ID}
+name: Withdraw NIM on testnet
+env:
+  # The testnet faucet (GET https://faucet.pos.nimiq-testnet.com/info), so withdrawn NIM goes back to it.
+  FAUCET_ADDRESS: NQ377C3VVMN8FRPNFXS9PLAGJMRE8SC6KUSQ
+
+tags:
+  - franciscoTest
+  # CI skips it until the MAESTRO_TESTNET_WALLET_WORDS secret is set.
+  - needsTestnetWallet
+
+---
+# Scope: on the shared funded testnet wallet, the Withdraw amount presets are in fiat ($25 sets
+# 25), All fills the whole NIM balance, and the NIM unit is kept when Withdraw reopens. Withdrawing
+# 1 NIM to the faucet sends it: the NIM balance drops by exactly 1 (NIM withdrawals have no fee),
+# and the newest history entry is a confirmed 1.0 NIM Withdrawal to the faucet.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/testnet_wallet_send.yaml
+
+# A new import starts in fiat. Presets are fiat amounts.
+- tapOn: ${output.navigation.withdrawBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.enterInNimBtn}
+    timeout: 10000
+# Withdraw focuses the amount input, and the keyboard can then cover the presets (the Galaxy S26's;
+# the iPhone 17 Pro's once it shows a suggestion bar), so a tap on $25 lands on the keyboard.
+# Tapping the title blurs the input and closes the keyboard. `above` skips the home Withdraw button
+# and the WITHDRAW button.
+- tapOn:
+    text: ${output.withdraw.title}
+    above: ${output.withdraw.enterInNimBtn}
+- waitForAnimationToEnd
+- tapOn: ${output.withdraw.amount25}
+- extendedWaitUntil:
+    visible:
+      text: ${output.withdraw.amount25Value}
+      below: ${output.withdraw.title}
+    timeout: 5000
+# All, in NIM, is the whole balance (decimals allowed: home rounds them away).
+- tapOn: ${output.withdraw.enterInNimBtn}
+- tapOn: ${output.withdraw.allBtn}
+- extendedWaitUntil:
+    visible:
+      text: ${output.balanceDigits + '(\\.[0-9]+)?'}
+      below: ${output.withdraw.title}
+    timeout: 5000
+- assertNotVisible: ${output.withdraw.insufficientFunds}
+
+# The unit is kept: reopened, Withdraw starts empty and in NIM.
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- tapOn: ${output.navigation.withdrawBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.enterInUsdBtn}
+    timeout: 10000
+- assertNotVisible: ${output.withdraw.enterInNimBtn}
+- tapOn: ${output.withdraw.emptyAmount}
+- inputText: "1"
+- tapOn: ${output.withdraw.selectAddress}
+- tapOn: ${output.withdraw.addAnotherAddressBtn}
+- extendedWaitUntil:
+    visible: ${output.withdraw.addressTitle}
+    timeout: 10000
+- evalScript: ${output.typeAddress = FAUCET_ADDRESS}
+- runFlow: ../../subflows/type_nim_address.yaml
+# Save only enables for a valid address, so a dropped character fails here.
+- extendedWaitUntil:
+    visible:
+      text: ${output.withdraw.saveAddressBtn}
+      enabled: true
+    timeout: 20000
+- tapOn: ${output.withdraw.saveAddressBtn}
+# The list now holds only the saved address, shown as its first and last group.
+- tapOn: ${FAUCET_ADDRESS.substring(32)}
+- tapOn:
+    text: ${output.withdraw.title}
+    below: ${output.withdraw.allBtn}
+
+- extendedWaitUntil:
+    visible: ${output.withdraw.confirmTitle}
+    timeout: 10000
+- assertVisible: ${output.withdraw.oneNimAmount}
+# The full address: on Android one text, its groups separated by no-break spaces; on iOS one
+# text per group.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: ${FAUCET_ADDRESS.match(/.{4}/g).join('.') + '.?'}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - evalScript: ${output.faucetGroups = FAUCET_ADDRESS.match(/.{4}/g); output.checkedGroups = 0}
+      - repeat:
+          while:
+            true: ${output.checkedGroups < output.faucetGroups.length}
+          commands:
+            - assertVisible:
+                text: ${output.faucetGroups[output.checkedGroups]}
+                below: ${output.withdraw.confirmTitle}
+                above: ${output.withdraw.confirmAndSendBtn}
+            - evalScript: ${output.checkedGroups++}
+- tapOn: ${output.withdraw.confirmAndSendBtn}
+# Next comes either the PIN step or home; wait for the confirmation to leave so a slow PIN step
+# isn't missed. Without a PIN step it stays up while the send runs, which can wait up to 30 s each
+# for consensus, the cosigner and the broadcast (src/stores/transactions.ts, src/lib/tx.ts).
+- extendedWaitUntil:
+    notVisible: ${output.withdraw.confirmTitle}
+    timeout: 90000
+- runFlow:
+    when:
+      visible: ${output.withdraw.pinTitle}
+    commands:
+      - inputText: ${PIN}
+
+- extendedWaitUntil:
+    visible: ${output.expectedBalance}
+    timeout: 90000
+    label: The NIM balance dropped by exactly 1
+
+- runFlow:
+    file: ../../subflows/newest_tx_confirmed.yaml
+    env:
+      TX_TITLE: ${output.transaction.withdrawalTitle}
+- assertVisible: ${output.withdraw.oneNimAmount}
+- assertVisible: ${FAUCET_ADDRESS.substring(0, 4) + '\\.\\.\\.' + FAUCET_ADDRESS.substring(32)}

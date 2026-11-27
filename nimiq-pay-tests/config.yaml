@@ -3,3 +3,4 @@
 # iOS: override with: maestro test -e APP_ID=com.nimiq.pay
 env:
   APP_ID: com.nimiq.pay.debug
+
