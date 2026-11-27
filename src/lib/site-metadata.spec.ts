@@ -13,14 +13,14 @@ function html(headInner: string): string {
   return `<!doctype html><html><head>${headInner}</head><body></body></html>`
 }
 
-function mockResponses(map: Record<string, { status?: number, data?: unknown, headers?: Record<string, string> }>) {
+function mockResponses(map: Record<string, { status?: number, data?: unknown, headers?: Record<string, string>, finalUrl?: string }>) {
   httpGet.mockImplementation((options) => {
     const hit = map[options.url]
     return Promise.resolve({
       status: hit?.status ?? (hit ? 200 : 404),
       data: hit?.data ?? '',
       headers: hit?.headers ?? {},
-      url: options.url,
+      url: hit?.finalUrl ?? options.url,
     })
   })
 }
@@ -70,9 +70,40 @@ describe('fetchBestIcon priority', () => {
     expect(await fetchBestIcon(PAGE)).toBe('https://example.com/favicon.ico')
   })
 
-  it('falls back to /favicon.ico when the page fetch fails', async () => {
-    mockResponses({ [PAGE]: { status: 500, data: '' } })
-    expect(await fetchBestIcon(PAGE)).toBe('https://example.com/favicon.ico')
+  it('skips a data: apple-touch-icon in favor of an http(s) <link rel=icon>', async () => {
+    mockResponses({ [PAGE]: { data: html('<link rel="apple-touch-icon" href="data:image/png;base64,AAAA"><link rel="icon" href="/fav.png">') } })
+    expect(await fetchBestIcon(PAGE)).toBe('https://example.com/fav.png')
+  })
+
+  it.each([500, 403])('returns undefined when the page fetch answers %i', async (status) => {
+    mockResponses({ [PAGE]: { status, data: '' } })
+    expect(await fetchBestIcon(PAGE)).toBeUndefined()
+  })
+
+  it('resolves icons against the redirected host after a cross-host 301', async () => {
+    mockResponses({
+      [PAGE]: { status: 301, headers: { Location: 'https://www.example.org/app' } },
+      'https://www.example.org/app': { data: html('<link rel="icon" href="/fav.png">') },
+    })
+    expect(await fetchBestIcon(PAGE)).toBe('https://www.example.org/fav.png')
+  })
+
+  it('resolves icons against the final URL when the native layer followed the redirect', async () => {
+    mockResponses({ [PAGE]: { data: html('<link rel="icon" href="/fav.png">'), finalUrl: 'https://www.example.org/app' } })
+    expect(await fetchBestIcon(PAGE)).toBe('https://www.example.org/fav.png')
+  })
+
+  it('falls back to /favicon.ico on the redirected host', async () => {
+    mockResponses({
+      [PAGE]: { status: 301, headers: { Location: 'https://www.example.org/app' } },
+      'https://www.example.org/app': { data: html('') },
+    })
+    expect(await fetchBestIcon(PAGE)).toBe('https://www.example.org/favicon.ico')
+  })
+
+  it('resolves icons against <base href>', async () => {
+    mockResponses({ [PAGE]: { data: html('<base href="/static/"><link rel="icon" href="fav.png">') } })
+    expect(await fetchBestIcon(PAGE)).toBe('https://example.com/static/fav.png')
   })
 
   it('follows a 307 redirect (via Location) when fetching the page', async () => {
@@ -85,6 +116,6 @@ describe('fetchBestIcon priority', () => {
 
   it('gives up on a redirect with no Location header', async () => {
     mockResponses({ [PAGE]: { status: 307, headers: {} } })
-    expect(await fetchBestIcon(PAGE)).toBe('https://example.com/favicon.ico')
+    expect(await fetchBestIcon(PAGE)).toBeUndefined()
   })
 })

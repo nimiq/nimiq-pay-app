@@ -54,7 +54,7 @@ function headerValue(headers: Record<string, string> | undefined, name: string):
  * Follows 3xx redirects via the `Location` header — CapacitorHttp doesn't reliably auto-follow,
  * so a site answering e.g. 307 would otherwise read as a failure.
  */
-async function fetchHtmlDoc(url: string): Promise<Document | undefined> {
+async function fetchHtmlDoc(url: string): Promise<{ doc: Document, url: string } | undefined> {
   let currentUrl = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const response = await CapacitorHttp.get({
@@ -78,7 +78,7 @@ async function fetchHtmlDoc(url: string): Promise<Document | undefined> {
     }
 
     const html = typeof response.data === 'string' ? response.data : String(response.data)
-    return new DOMParser().parseFromString(html, 'text/html')
+    return { doc: new DOMParser().parseFromString(html, 'text/html'), url: response.url || currentUrl }
   }
   console.warn('Too many redirects for', url)
   return undefined
@@ -101,11 +101,11 @@ function getPageMetadata(doc: Document) {
 
 export async function fetchPageDescription(url: string): Promise<string | undefined> {
   try {
-    const doc = await fetchHtmlDoc(url)
-    if (!doc)
+    const page = await fetchHtmlDoc(url)
+    if (!page)
       return undefined
 
-    const metadata = getPageMetadata(doc)
+    const metadata = getPageMetadata(page.doc)
     return metadata.description
       || metadata.openGraph['og:description']
       || metadata.title
@@ -119,18 +119,25 @@ export async function fetchPageDescription(url: string): Promise<string | undefi
 
 export async function fetchBestIcon(pageUrl: string): Promise<string | undefined> {
   try {
-    const doc = await fetchHtmlDoc(pageUrl)
-    if (!doc)
-      return getFaviconUrl(pageUrl)
+    const page = await fetchHtmlDoc(pageUrl)
+    if (!page)
+      return undefined
 
-    const appleHref = doc.querySelector('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')?.getAttribute('href')
+    const { doc, url } = page
+    const baseHref = doc.querySelector('base[href]')?.getAttribute('href')
+    const base = (baseHref && toHttpUrl(baseHref, url)) || url
 
-    const largestIconHref = Array.from(doc.querySelectorAll('link[rel~="icon"]'))
-      .sort((a, b) => sizesToPixels(b.getAttribute('sizes')) - sizesToPixels(a.getAttribute('sizes')))[0]
-      ?.getAttribute('href')
+    const appleLinks = Array.from(doc.querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]'))
+    const iconLinks = Array.from(doc.querySelectorAll('link[rel~="icon"]'))
+      .sort((a, b) => sizesToPixels(b.getAttribute('sizes')) - sizesToPixels(a.getAttribute('sizes')))
 
-    const href = appleHref || largestIconHref
-    return (href && toHttpUrl(href, pageUrl)) || getFaviconUrl(pageUrl)
+    for (const link of [...appleLinks, ...iconLinks]) {
+      const href = link.getAttribute('href')
+      const icon = href && toHttpUrl(href, base)
+      if (icon)
+        return icon
+    }
+    return getFaviconUrl(url)
   }
   catch {
     return undefined

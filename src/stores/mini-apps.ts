@@ -12,6 +12,8 @@ const REMOTE_JSON_URL = 'https://raw.githubusercontent.com/nimiq/awesome/main/sr
 
 const REPORT_BASE = 'https://nimpay.app/miniapps'
 
+const BEST_ICON_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
 export type MiniAppType = 'nimiq' | 'evm'
 
 export interface DApp {
@@ -109,8 +111,8 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
-  const bestIcons = useStorageAsync<Record<string, string>>(
-    'miniAppsBestIcons',
+  const bestIcons = useStorageAsync<Record<string, { url: string, checkedAt: number }>>(
+    'miniAppsBestIconsV2',
     {},
     kvPreferences(),
     { writeDefaults: false },
@@ -252,12 +254,13 @@ export const useMiniApps = defineStore('mini-apps', () => {
         logo = r.logo
       }
     }
-    return logo || bestIcons.value[origin] || getFaviconUrl(url)
+    return logo || bestIcons.value[origin]?.url || getFaviconUrl(url)
   }
 
   async function ensureBestIcon(url: string) {
     const origin = safeOrigin(url)
-    if (!origin.startsWith('http') || bestIcons.value[origin] || bestIconInFlight.has(origin))
+    const checkedAt = bestIcons.value[origin]?.checkedAt ?? 0
+    if (!origin.startsWith('http') || Date.now() - checkedAt < BEST_ICON_MAX_AGE_MS || bestIconInFlight.has(origin))
       return
     if (remoteApps.value.some(r => r.logo && safeOrigin(r.url) === origin))
       return
@@ -266,7 +269,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
     try {
       const icon = await fetchBestIcon(url)
       if (icon)
-        bestIcons.value = { ...bestIcons.value, [origin]: icon }
+        bestIcons.value = { ...bestIcons.value, [origin]: { url: icon, checkedAt: Date.now() } }
     }
     finally {
       bestIconInFlight.delete(origin)
