@@ -1,10 +1,11 @@
 import type { Component } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import { openingMiniAppUrl } from '@/lib/mini-app-launcher'
+import { useMiniApps } from '@/stores/mini-apps'
 import MiniAppsModal from './MiniAppsModal.vue'
 
 function createDeferred<T = void>() {
@@ -74,6 +75,7 @@ const {
   browserOpen,
   capacitorHttpGet,
   clearAllCookies,
+  fetchBestIcon,
   fetchPageDescription,
   getFaviconUrl,
   hostDestroy,
@@ -96,6 +98,7 @@ const {
   setToast: vi.fn(),
   loggerError: vi.fn(),
   loggerLog: vi.fn(),
+  fetchBestIcon: vi.fn((_url: string): Promise<string | undefined> => Promise.resolve(undefined)),
   fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
   getFaviconUrl: vi.fn((url: string) => `https://icons.example/${encodeURIComponent(url)}`),
   hostDestroy: vi.fn(() => Promise.resolve()),
@@ -198,7 +201,7 @@ vi.mock('@/lib/app-version', () => ({ getBundleVersion: () => Promise.resolve('2
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription,
   getFaviconUrl,
-  fetchBestIcon: vi.fn(() => Promise.resolve(undefined)),
+  fetchBestIcon,
   getGoogleFaviconUrl: (url: string) => `https://t2.gstatic.com/faviconV2?url=${encodeURIComponent(url)}`,
 }))
 
@@ -326,6 +329,8 @@ describe('mini apps modal', () => {
     setToast.mockReset()
     loggerError.mockReset()
     loggerLog.mockReset()
+    fetchBestIcon.mockReset()
+    fetchBestIcon.mockImplementation(() => Promise.resolve(undefined))
     fetchPageDescription.mockReset()
     fetchPageDescription.mockImplementation(() => Promise.resolve(undefined))
     getFaviconUrl.mockReset()
@@ -643,6 +648,46 @@ describe('mini apps modal', () => {
 
     await uniswapIcon.trigger('error')
     expect((uniswapIcon.element as HTMLImageElement).src).toContain('data:image/svg+xml')
+  })
+
+  it('shows the stored best icon on the searched URL row', async () => {
+    fetchBestIcon.mockImplementation(() => Promise.resolve('https://searched.example/apple-touch-icon.png'))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await useMiniApps().ensureBestIcon('https://searched.example/')
+    await wrapper.find('input').setValue('searched.example')
+    await flushPromises()
+
+    const icon = wrapper.find('[data-testid="searched-dapp-button"] img')
+    expect(icon.attributes('src')).toBe('https://searched.example/apple-touch-icon.png')
+  })
+
+  it('fetches the best icon for the final URL typed into search', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(private callback: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver)
+      }
+
+      unobserve() {}
+      disconnect() {}
+    })
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    fetchBestIcon.mockImplementation(url => Promise.resolve(url === 'https://searched.example/' ? 'https://searched.example/apple-touch-icon.png' : undefined))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('input').setValue('searched.e')
+    await flushPromises()
+    await wrapper.find('input').setValue('searched.example')
+    await flushPromises()
+
+    expect(fetchBestIcon).toHaveBeenCalledWith('https://searched.example/')
+    const icon = wrapper.find('[data-testid="searched-dapp-button"] img')
+    expect(icon.attributes('src')).toBe('https://searched.example/apple-touch-icon.png')
   })
 
   it('shows app url when description metadata is unavailable', async () => {
