@@ -555,16 +555,6 @@ describe('dev modal OTA update', () => {
     expect(state.updater.getLatest).not.toHaveBeenCalled()
   })
 
-  it('treats the no-update rejection as a normal result, not an error', async () => {
-    state.updater.getLatest.mockRejectedValueOnce(new Error('no_new_version_available'))
-    const wrapper = await mountModal()
-    await check(wrapper)
-
-    expect(wrapper.get('[data-testid="ota-status"]').text()).toBe('No update available for this build.')
-    expect(wrapper.find('[data-testid="ota-download"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ota-install"]').exists()).toBe(false)
-  })
-
   it('shows a resolved response without a url as no update', async () => {
     state.updater.getLatest.mockResolvedValueOnce({ version: 'builtin', kind: 'up_to_date' })
     const wrapper = await mountModal()

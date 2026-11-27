@@ -3,7 +3,7 @@
 # Alberto Monterroso 2024, 2026.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2026-11-24 20:03+0000\n"
+"PO-Revision-Date: 2026-11-26 16:11+0000\n"
 "Last-Translator: Alberto Monterroso "
 "<albermonte@users.noreply.hosted.weblate.org>\n"
 "Language: es\n"
@@ -106,10 +106,8 @@ msgid "About"
 msgstr "Acerca de"
 
 #: src/components/settings/SettingsRoot.vue:32 src/lib/flows/steps.ts:543
-#, fuzzy
-#| msgid "Backup Account"
 msgid "Account"
-msgstr "Respaldar cuenta"
+msgstr "Cuenta"
 
 #: src/lib/mini-app-confirmation.ts:104 src/lib/mini-app-confirmation.ts:109
 #: src/lib/mini-app-confirmation.ts:113 src/lib/mini-app-confirmation.ts:118
@@ -364,10 +362,8 @@ msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado exitosamente"
 
 #: src/composables/useNotifications.ts:325 src/types/transactions.ts:103
-#, fuzzy
-#| msgid "Cashlink has no balance"
 msgid "Cashlink Claiming"
-msgstr "El Cashlink no tiene fondos"
+msgstr "Cobro de Cashlink"
 
 #: src/stores/nimiq-network.ts:247
 msgid "Cashlink has no balance"
@@ -399,10 +395,8 @@ msgid "Check your connection and try again."
 msgstr "Comprueba tu conexión e inténtalo de nuevo."
 
 #: src/modals/HtlcHistoryCheckModal.vue:13 src/views/MainView.vue:157
-#, fuzzy
-#| msgid "Something went wrong syncing your account"
 msgid "Checking your account"
-msgstr "Algo salió mal sincronizando tu cuenta"
+msgstr "Comprobando tu cuenta"
 
 #: src/lib/flows/steps.ts:88
 msgid "Choose a PIN"
@@ -529,10 +523,8 @@ msgid "Cosigner returned a different transaction"
 msgstr ""
 
 #: src/components/LiveChat.vue:49
-#, fuzzy
-#| msgid "The exchange rate is unfavorable. Please try again later"
 msgid "Could not connect to support. Please try again later."
-msgstr "El tipo de cambio es desfavorable. Inténtalo de nuevo más tarde"
+msgstr "No se ha podido conectar con el soporte. Inténtalo de nuevo más tarde."
 
 #: src/stores/polygon-usdt.ts:1155
 msgid "Could not determine Polygon transaction hash"
@@ -544,16 +536,12 @@ msgstr ""
 "No se ha podido obtener el importe para el intercambio de Bitcoin Lightning."
 
 #: src/stores/polygon-usdt.ts:2595
-#, fuzzy
-#| msgid "Could not determine Polygon transaction hash"
 msgid "Could not persist Polygon swap transaction"
-msgstr "No se ha podido determinar el hash de la transacción de Polygon"
+msgstr "No se ha podido guardar la transacción de intercambio de Polygon"
 
 #: src/stores/transactions.ts:360
-#, fuzzy
-#| msgid "Could not determine Polygon transaction hash"
 msgid "Could not verify pending transactions"
-msgstr "No se ha podido determinar el hash de la transacción de Polygon"
+msgstr "No se han podido verificar las transacciones pendientes"
 
 #: src/lib/flows/steps.ts:659
 msgid "Create a backup. It's the only way to recover your account."
@@ -681,7 +669,7 @@ msgstr ""
 
 #: src/components/NimAddressInput.vue:5
 msgid "Enter Address"
-msgstr "Ingresar dirección"
+msgstr "Introducir dirección"
 
 #: src/components/NimWithdraw.vue:15 src/components/PaymentAmountInput.vue:19
 msgid "Enter amount in {currency}"
@@ -701,15 +689,15 @@ msgstr "Introducir solicitud de pago"
 
 #: src/views/PinView.vue:9
 msgid "Enter PIN"
-msgstr "Ingresar PIN"
+msgstr "Introducir PIN"
 
 #: src/lib/flows/steps.ts:67
 msgid "Enter recovery words"
-msgstr "Ingresar palabras de recuperación"
+msgstr "Introducir palabras de recuperación"
 
 #: src/lib/flows/steps.ts:260
 msgid "Enter the code from the SMS sent to you."
-msgstr "Ingresa el código del SMS que se te ha enviado."
+msgstr "Introduce el código del SMS que te hemos enviado."
 
 #: src/modals/EnableBiometricModal.vue:7
 msgid "Enter your PIN to enable biometric authentication"
@@ -717,11 +705,11 @@ msgstr "Introduce tu PIN para activar la autenticación biométrica"
 
 #: src/lib/flows/steps.ts:50
 msgid "Enter your promo code"
-msgstr "Ingresa tu código promocional"
+msgstr "Introduce tu código promocional"
 
 #: src/lib/flows/steps.ts:51
 msgid "Enter your referral promo code."
-msgstr "Ingresa tu código promocional de referencia."
+msgstr "Introduce tu código promocional de invitación."
 
 #: src/stores/nimiq-network.ts:278
 msgid "Error getting account"
@@ -1009,7 +997,7 @@ msgstr "Importe no válido"
 
 #: src/composables/useStringParser.ts:232
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
-msgstr "Factura de Bitcoin Lightning no válida: falta el monto."
+msgstr "Factura de Bitcoin Lightning no válida: falta el importe."
 
 #: src/composables/useStringParser.ts:219
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
@@ -1033,7 +1021,7 @@ msgstr "CPLink inválido. No se pudieron obtener los detalles del pago."
 
 #: src/composables/useStringParser.ts:172
 msgid "Invalid CPLink. Missing amount or recipient."
-msgstr "CPLink inválido. Falta el monto o el destinatario."
+msgstr "CPLink inválido. Falta el importe o el destinatario."
 
 #: src/composables/useStringParser.ts:163
 #: src/composables/useStringParser.ts:182
@@ -1054,25 +1042,16 @@ msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Formato de enlace inválido. Los CPLink solo son compatibles para NIM."
 
 #: src/composables/useStringParser.ts:128
-#, fuzzy
-#| msgid ""
-#| "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin "
-#| "Lightning requests are supported."
 msgid ""
 "Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are "
 "supported."
 msgstr ""
-"Formato de enlace no válido. Solo se admiten solicitudes de CPLink y NAKA "
-"para NIM y Bitcoin Lightning."
+"Formato de enlace no válido. Solo se admiten CPLinks para NIM y solicitudes "
+"de Bitcoin Lightning."
 
 #: src/composables/useStringParser.ts:129
-#, fuzzy
-#| msgid ""
-#| "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks for NIM are supported."
-msgstr ""
-"Formato de enlace no válido. Solo se admiten solicitudes de CPLink y NAKA "
-"para NIM."
+msgstr "Formato de enlace no válido. Solo se admiten CPLinks para NIM."
 
 #: src/composables/useBitcoinLightning.ts:173
 msgid "Invalid LNURL"
@@ -1137,10 +1116,8 @@ msgid "Invalid transfer type"
 msgstr "Tipo de transferencia inválido"
 
 #: src/composables/useStringParser.ts:105
-#, fuzzy
-#| msgid "Invalid LNURL"
 msgid "Invalid URL"
-msgstr "LNURL no válido"
+msgstr "URL no válida"
 
 #: src/composables/useQRScanner.ts:94 src/composables/useStringParser.ts:39
 #: src/lib/flows/steps.ts:570
@@ -1410,10 +1387,8 @@ msgid "No active card"
 msgstr "No hay ninguna tarjeta activa"
 
 #: src/components/HoldCardToReader.vue:78
-#, fuzzy
-#| msgid "No NAKA Card found"
 msgid "No card found"
-msgstr "No se ha encontrado ninguna tarjeta NAKA"
+msgstr "No se ha encontrado ninguna tarjeta"
 
 #: src/stores/nimiq-network.ts:237
 msgid "No Cashlink found"
@@ -1436,10 +1411,8 @@ msgid "No Mini App has access"
 msgstr ""
 
 #: src/components/settings/SettingsPayments.vue:36
-#, fuzzy
-#| msgid "No payment details found"
 msgid "No missing deposits found"
-msgstr "No se encontraron detalles de pago"
+msgstr "No se han encontrado depósitos perdidos"
 
 #: src/lib/tx.ts:104
 msgid "No NIM HTLC found in swap"
@@ -1678,19 +1651,19 @@ msgstr "Confirma tu código PIN"
 
 #: src/lib/flows/steps.ts:239
 msgid "Please enter a phone number"
-msgstr "Ingresa un número de teléfono"
+msgstr "Introduce un número de teléfono"
 
 #: src/lib/flows/steps.ts:108 src/lib/flows/steps.ts:194
 msgid "Please enter a PIN code"
-msgstr "Ingresa un código PIN"
+msgstr "Introduce un código PIN"
 
 #: src/lib/flows/steps.ts:55
 msgid "Please enter a promo code"
-msgstr "Ingresa un código promocional"
+msgstr "Introduce un código promocional"
 
 #: src/lib/flows/steps.ts:264
 msgid "Please enter a verification code"
-msgstr "Ingresa un código de verificación"
+msgstr "Introduce un código de verificación"
 
 #: src/modals/TaskModal.vue:92
 msgid "Please enter at least ten characters"
@@ -1748,23 +1721,17 @@ msgid "Polygon swap payment failed"
 msgstr "El pago del intercambio de Polygon ha fallado"
 
 #: src/stores/polygon-usdt.ts:2616 src/stores/polygon-usdt.ts:2640
-#, fuzzy
-#| msgid "Polygon swap payment failed"
 msgid "Polygon swap transaction failed"
-msgstr "El pago del intercambio de Polygon ha fallado"
+msgstr "La transacción de intercambio de Polygon ha fallado"
 
 #: src/stores/polygon-usdt.ts:2537
-#, fuzzy
-#| msgid "A transaction is already in progress"
 msgid "Polygon swap transaction is already pending"
-msgstr "Ya hay una transacción en curso"
+msgstr "Ya hay una transacción de intercambio de Polygon pendiente"
 
 #: src/stores/polygon-usdt.ts:2206 src/stores/polygon-usdt.ts:2331
 #: src/stores/polygon-usdt.ts:2337
-#, fuzzy
-#| msgid "Polygon payment failed"
 msgid "Polygon transaction failed"
-msgstr "El pago de Polygon ha fallado"
+msgstr "La transacción de Polygon ha fallado"
 
 #: src/stores/polygon-usdt.ts:515
 msgid "Polygon transaction not found after relay"
@@ -1920,44 +1887,31 @@ msgid "Save"
 msgstr "Guardar"
 
 #: src/components/settings/SettingsPayments.vue:26 src/lib/flows/steps.ts:541
-#, fuzzy
-#| msgid "No saved addresses"
 msgid "Saved addresses"
-msgstr "No hay direcciones guardadas"
+msgstr "Direcciones guardadas"
 
 #: src/components/QRScanner.vue:32 src/components/QRScanner.vue:61
 msgid "Scan an address QR code."
 msgstr "Escanea el código QR de una dirección."
 
 #: src/components/QRScanner.vue:28
-#, fuzzy
-#| msgid "Scan any Nimiq, USDT or NAKA QR code to pay."
 msgid "Scan any Nimiq or USDT QR code to pay."
-msgstr "Escanea cualquier código QR de Nimiq, USDT o NAKA para pagar."
+msgstr "Escanea cualquier código QR de Nimiq o USDT para pagar."
 
 #: src/components/QRScanner.vue:25
-#, fuzzy
-#| msgid "Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any Nimiq, USDT or Bitcoin Lightning QR code to pay."
 msgstr ""
-"Escanea cualquier código QR de Nimiq, USDT, Bitcoin Lightning o NAKA para "
-"pagar."
+"Escanea cualquier código QR de Nimiq, USDT o Bitcoin Lightning para pagar."
 
 #: src/components/QRScanner.vue:57
-#, fuzzy
-#| msgid "Scan any supported Nimiq, USDT or NAKA QR code to pay."
 msgid "Scan any supported Nimiq or USDT QR code to pay."
-msgstr ""
-"Escanea cualquier código QR compatible de Nimiq, USDT o NAKA para pagar."
+msgstr "Escanea cualquier código QR compatible de Nimiq o USDT para pagar."
 
 #: src/components/QRScanner.vue:54
-#, fuzzy
-#| msgid ""
-#| "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any supported Nimiq, USDT or Bitcoin Lightning QR code to pay."
 msgstr ""
-"Escanea cualquier código QR compatible de Nimiq, USDT, Bitcoin Lightning o "
-"NAKA para pagar."
+"Escanea cualquier código QR compatible de Nimiq, USDT o Bitcoin Lightning "
+"para pagar."
 
 #: src/components/NimAddressDisplay.vue:32
 msgid "Scan Cashlink"
@@ -1982,10 +1936,8 @@ msgstr "Buscar un país"
 
 #: src/components/competition/MiniAppsCompetitionView.vue:66
 #: src/components/competition/MiniAppsCompetitionView.vue:67
-#, fuzzy
-#| msgid "Submissions"
 msgid "Search submissions"
-msgstr "Participaciones"
+msgstr "Buscar participaciones"
 
 #: src/components/settings/SettingsRoot.vue:12 src/lib/flows/steps.ts:539
 msgid "Security"
@@ -2008,10 +1960,8 @@ msgid "Select an address…"
 msgstr "Seleccionar una dirección…"
 
 #: src/components/LiveChat.vue:38
-#, fuzzy
-#| msgid "Sender"
 msgid "Send"
-msgstr "Remitente"
+msgstr "Enviar"
 
 #: src/lib/flows/steps.ts:590
 msgid "Send a transaction to the address below. Top up as much as you like."
@@ -2020,10 +1970,8 @@ msgstr ""
 "desees."
 
 #: src/components/LiveChat.vue:36
-#, fuzzy
-#| msgid "Send NIM to top up"
 msgid "Send app logs to support?"
-msgstr "Envía NIM para recargar saldo"
+msgstr "¿Enviar los registros de la app al soporte?"
 
 #: src/components/LiveChat.vue:147
 msgid "Send logs"
@@ -2050,10 +1998,8 @@ msgid "Sender"
 msgstr "Remitente"
 
 #: src/components/LiveChat.vue:100
-#, fuzzy
-#| msgid "pending"
 msgid "Sending..."
-msgstr "pendiente"
+msgstr "Enviando..."
 
 #: src/components/NimWithdraw.vue:165 src/views/MainView.vue:148
 msgid "Server not available"
@@ -2092,10 +2038,8 @@ msgid "Share device ID with {appName}?"
 msgstr "¿Compartir el ID del dispositivo con {appName}?"
 
 #: src/components/settings/SettingsGeneral.vue:45
-#, fuzzy
-#| msgid "Unhide transaction?"
 msgid "Show hidden transactions"
-msgstr "¿Mostrar transacción?"
+msgstr "Mostrar transacciones ocultas"
 
 #: src/lib/mini-app-confirmation.ts:310
 msgid "Sign"
@@ -2478,10 +2422,8 @@ msgid "Transaction"
 msgstr "Transacción"
 
 #: src/stores/transactions.ts:588
-#, fuzzy
-#| msgid "This address could not be parsed."
 msgid "Transaction could not be staged"
-msgstr "No se ha podido interpretar esta dirección."
+msgstr "No se ha podido preparar la transacción"
 
 #: src/stores/transactions.ts:643 src/stores/transactions.ts:662
 msgid "Transaction invalid"
@@ -2546,10 +2488,8 @@ msgid "Unknown"
 msgstr "Desconocido"
 
 #: src/components/PaymentRequestManualInput.vue:28
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Unknown error processing payment request"
-msgstr "No es una solicitud de pago pendiente"
+msgstr "Error desconocido al procesar la solicitud de pago"
 
 #: src/composables/useBiometric.ts:39
 msgid "Unlock Nimiq Pay with your biometric data"
@@ -2668,7 +2608,7 @@ msgstr ""
 
 #: src/modals/TaskModal.vue:19
 msgid "We value your opinion. Please enter at least ten characters."
-msgstr "Valoramos tu opinión. Por favor, ingresa al menos diez caracteres."
+msgstr "Valoramos tu opinión. Por favor, introduce al menos diez caracteres."
 
 #: src/lib/flows/steps.ts:679
 msgid "We're working on something special"
@@ -2804,10 +2744,8 @@ msgid "Withdrawal successful"
 msgstr "Retiro exitoso"
 
 #: src/components/settings/SettingsPayments.vue:13
-#, fuzzy
-#| msgid "Withdrawal"
 msgid "Withdrawal unit"
-msgstr "Retiro"
+msgstr "Unidad de retiro"
 
 #: src/lib/flows/steps.ts:665
 msgid "Write down these words"
@@ -2881,10 +2819,8 @@ msgstr ""
 "Polygon."
 
 #: src/modals/TaskModal.vue:7
-#, fuzzy
-#| msgid "You received {amount}"
 msgid "You earn {amount}"
-msgstr "Has recibido {amount}"
+msgstr "Ganas {amount}"
 
 #: src/views/HomeView.vue:193
 msgid "You have a reward to claim!"

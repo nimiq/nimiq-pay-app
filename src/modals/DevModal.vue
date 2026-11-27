@@ -155,11 +155,7 @@ async function checkForOtaUpdate() {
       : `Version ${latest.version} is available.`
   }
   catch (error) {
-    // Our update server omits `kind`, so the plugin rejects "no update" instead of resolving it.
-    if (error instanceof Error && error.message === 'no_new_version_available')
-      otaStatus.value = NO_OTA_UPDATE_MESSAGE
-    else
-      setOtaError(error)
+    setOtaError(error)
   }
   finally {
     isOtaBusy.value = false
