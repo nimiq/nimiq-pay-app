@@ -9,6 +9,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
 import { reportCriticalError, trackConsensusEstablished, trackConsensusSlow } from '@/lib/analytics'
 import { promiseWithTimeout, sleep, translateConsensus } from '@/lib/utils'
+import router from '@/router'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('useNimiqNetwork')
@@ -127,11 +128,13 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         }
       }
       else if (consensus.value === 'established') {
-        setToast({
-          message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
-          type: 'spinner',
-          keepOpen: true,
-        })
+        if (router.currentRoute.value.name !== 'Setup') {
+          setToast({
+            message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
+            type: 'spinner',
+            keepOpen: true,
+          })
+        }
         if (!isPendingReconnectNetwork.value) {
           logger.log('Starting reconnect')
           startReconnectNetwork()
