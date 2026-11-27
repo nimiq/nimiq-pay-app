@@ -1,6 +1,7 @@
 import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fetchBestIcon } from '@/lib/site-metadata'
 
 const { env, httpGet, preferencesGet } = vi.hoisted(() => ({
   env: { isDev: false, isMockEnabled: false },
@@ -277,5 +278,92 @@ describe('useMiniApps device ID consent', () => {
     expect(store.hasDeviceIdConsent('https://a.example')).toBe(false)
     expect(store.hasDeviceIdConsent('https://b.example')).toBe(true)
     expect(Object.keys(store.deviceIdConsent)).toEqual(['https://b.example'])
+  })
+})
+
+describe('useMiniApps.ensureBestIcon', () => {
+  const APP = 'https://app.example/'
+  const ORIGIN = 'https://app.example'
+  const DAY = 24 * 60 * 60 * 1000
+  const NOW = Date.UTC(2026, 0, 15)
+  const fetchIcon = vi.mocked(fetchBestIcon)
+
+  function storeBestIcons(entries: Record<string, { url: string, checkedAt: number }>) {
+    preferencesGet.mockImplementation(({ key }) => Promise.resolve({ value: key === 'miniAppsBestIcons2' ? JSON.stringify(entries) : null }))
+  }
+
+  async function createStore() {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+    return store
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    httpGet.mockReset()
+    httpGet.mockResolvedValue({ status: 200, data: { nimiq: [], evm: [] } })
+    preferencesGet.mockReset()
+    preferencesGet.mockResolvedValue({ value: null })
+    fetchIcon.mockReset()
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stores nothing when the fetch fails and retries on the next call', async () => {
+    fetchIcon.mockResolvedValue(undefined)
+    const store = await createStore()
+
+    await store.ensureBestIcon(APP)
+    expect(store.iconForUrl(APP)).toBe(`https://icons.example/${encodeURIComponent(APP)}`)
+
+    fetchIcon.mockResolvedValue('https://app.example/icon.png')
+    await store.ensureBestIcon(APP)
+
+    expect(fetchIcon).toHaveBeenCalledTimes(2)
+    expect(store.iconForUrl(APP)).toBe('https://app.example/icon.png')
+  })
+
+  it('does not refetch an entry checked less than 7 days ago', async () => {
+    storeBestIcons({ [ORIGIN]: { url: 'https://app.example/old.png', checkedAt: NOW - 6 * DAY } })
+    const store = await createStore()
+
+    await store.ensureBestIcon(APP)
+
+    expect(fetchIcon).not.toHaveBeenCalled()
+    expect(store.iconForUrl(APP)).toBe('https://app.example/old.png')
+  })
+
+  it('refetches and replaces an entry checked more than 7 days ago', async () => {
+    storeBestIcons({ [ORIGIN]: { url: 'https://app.example/old.png', checkedAt: NOW - 8 * DAY } })
+    let resolveIcon!: (icon: string) => void
+    fetchIcon.mockImplementation(() => new Promise(resolve => resolveIcon = resolve))
+    const store = await createStore()
+
+    const pending = store.ensureBestIcon(APP)
+    expect(store.iconForUrl(APP)).toBe('https://app.example/old.png')
+    resolveIcon('https://app.example/new.png')
+    await pending
+
+    expect(store.iconForUrl(APP)).toBe('https://app.example/new.png')
+    await store.ensureBestIcon(APP)
+    expect(fetchIcon).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the old entry when the refetch fails', async () => {
+    storeBestIcons({ [ORIGIN]: { url: 'https://app.example/old.png', checkedAt: NOW - 8 * DAY } })
+    fetchIcon.mockResolvedValue(undefined)
+    const store = await createStore()
+
+    await store.ensureBestIcon(APP)
+    expect(store.iconForUrl(APP)).toBe('https://app.example/old.png')
+
+    await store.ensureBestIcon(APP)
+    expect(fetchIcon).toHaveBeenCalledTimes(2)
   })
 })
