@@ -92,6 +92,15 @@ export function stripTrailingSlash(url: string): string {
   return url.replace(TRAILING_SLASH_RE, '')
 }
 
+function safePathname(url: string): string {
+  try {
+    return new URL(url).pathname
+  }
+  catch {
+    return url
+  }
+}
+
 export const useMiniApps = defineStore('mini-apps', () => {
   const cachedRemoteApps = useStorageAsync<RemoteMiniApp[]>(
     'miniAppsRemoteList',
@@ -230,8 +239,20 @@ export const useMiniApps = defineStore('mini-apps', () => {
   }
 
   function iconForUrl(url: string): string {
-    const logo = remoteApps.value.find(r => stripTrailingSlash(r.url) === stripTrailingSlash(url))?.logo
-    return logo || bestIcons.value[safeOrigin(url)] || getFaviconUrl(url)
+    const origin = safeOrigin(url)
+    const path = stripTrailingSlash(safePathname(url))
+    let logo: string | undefined
+    let longestPrefix = -1
+    for (const r of remoteApps.value) {
+      if (!r.logo || safeOrigin(r.url) !== origin)
+        continue
+      const base = stripTrailingSlash(safePathname(r.url))
+      if ((path === base || path.startsWith(`${base}/`)) && base.length > longestPrefix) {
+        longestPrefix = base.length
+        logo = r.logo
+      }
+    }
+    return logo || bestIcons.value[origin] || getFaviconUrl(url)
   }
 
   async function ensureBestIcon(url: string) {
