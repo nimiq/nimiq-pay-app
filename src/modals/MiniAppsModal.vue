@@ -20,7 +20,6 @@ import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
 import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { trackFeatureOpened } from '@/lib/analytics'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
-import { getFaviconUrl } from '@/lib/site-metadata'
 import { kvPreferences, useApp } from '@/stores/app'
 import { useCompetitionMiniApps } from '@/stores/competition-mini-apps'
 import { useMiniApps } from '@/stores/mini-apps'
@@ -110,7 +109,7 @@ const searchedUrlApp = computed(() => {
     url,
     title: matchedFeaturedApp?.name || fallbackTitle,
     description: searchedDescriptions[url]?.text || matchedFeaturedApp?.description,
-    icon: matchedFeaturedApp?.icon || getFaviconUrl(url),
+    icon: matchedFeaturedApp?.icon || store.iconForUrl(url),
     type: matchedFeaturedApp?.type,
     isLoading: searchedDescriptions[url]?.status === 'loading',
   }
@@ -250,6 +249,7 @@ async function openCompetitionExternal(url: string) {
 
             <MiniAppRow
               v-if="searchedUrlApp"
+              :key="searchedUrlApp.url"
               :dapp="{ url: searchedUrlApp.url, name: searchedUrlApp.title, icon: searchedUrlApp.icon, description: searchedUrlApp.description, type: searchedUrlApp.type }"
               :opening="isOpeningUrl(searchedUrlApp.url)"
               :disabled="isOpeningAny"

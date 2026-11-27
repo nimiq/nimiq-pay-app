@@ -259,6 +259,45 @@ describe('useMiniApps remote catalog', () => {
 
     expect(httpGet).toHaveBeenCalledTimes(1)
   })
+
+  it('uses the listing logo for a deep link path on a listed origin', async () => {
+    httpGet.mockResolvedValue({ status: 200, data: { nimiq: [
+      { ...remoteApp, logo: 'https://cinima.example/logo.png' },
+      { ...remoteApp, url: 'https://cinima.example/tickets', slug: 'tickets', logo: 'https://cinima.example/tickets.png' },
+    ], evm: [] } })
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+
+    expect(store.iconForUrl('https://cinima.example/movies/42')).toBe('https://cinima.example/logo.png')
+    expect(store.iconForUrl('https://cinima.example/tickets/7')).toBe('https://cinima.example/tickets.png')
+    expect(store.iconForUrl('https://cinima.example/tickets?id=7')).toBe('https://cinima.example/tickets.png')
+    expect(store.iconForUrl('https://cinima.example/tickets#seat')).toBe('https://cinima.example/tickets.png')
+  })
+
+  it('prefers the exact listing logo over a same-origin listing', async () => {
+    httpGet.mockResolvedValue({ status: 200, data: { nimiq: [
+      { ...remoteApp, url: 'https://cinima.example/tickets', slug: 'tickets', logo: 'https://cinima.example/tickets.png' },
+      { ...remoteApp, logo: 'https://cinima.example/logo.png' },
+    ], evm: [] } })
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+
+    expect(store.iconForUrl('https://cinima.example/')).toBe('https://cinima.example/logo.png')
+  })
+
+  it('ignores a same-origin listing whose path is not a prefix of the URL', async () => {
+    httpGet.mockResolvedValue({ status: 200, data: { nimiq: [
+      { ...remoteApp, url: 'https://cinima.example/tickets', slug: 'tickets', logo: 'https://cinima.example/tickets.png' },
+    ], evm: [] } })
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    await flushPromises()
+
+    expect(store.iconForUrl('https://cinima.example/other')).not.toBe('https://cinima.example/tickets.png')
+    expect(store.iconForUrl('https://cinima.example/ticketsales')).not.toBe('https://cinima.example/tickets.png')
+  })
 })
 
 describe('useMiniApps device ID consent', () => {
