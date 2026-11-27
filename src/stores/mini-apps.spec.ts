@@ -289,7 +289,7 @@ describe('useMiniApps.ensureBestIcon', () => {
   const fetchIcon = vi.mocked(fetchBestIcon)
 
   function storeBestIcons(entries: Record<string, { url: string, checkedAt: number }>) {
-    preferencesGet.mockImplementation(({ key }) => Promise.resolve({ value: key === 'miniAppsBestIcons2' ? JSON.stringify(entries) : null }))
+    preferencesGet.mockImplementation(({ key }) => Promise.resolve({ value: key === 'miniAppsBestIconsV2' ? JSON.stringify(entries) : null }))
   }
 
   async function createStore() {

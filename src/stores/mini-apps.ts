@@ -103,7 +103,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
   )
 
   const bestIcons = useStorageAsync<Record<string, { url: string, checkedAt: number }>>(
-    'miniAppsBestIcons2',
+    'miniAppsBestIconsV2',
     {},
     kvPreferences(),
     { writeDefaults: false },
