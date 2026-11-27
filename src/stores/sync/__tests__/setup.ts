@@ -422,6 +422,7 @@ vi.mock('@/lib/analytics', () => ({
 vi.mock('@/lib/utils', async importOriginal => ({
   ...await importOriginal<typeof import('@/lib/utils')>(),
   getLegacyTransactionValidityStartHeight: vi.fn(() => undefined),
+  parseTransactionContent: vi.fn(() => undefined),
 }))
 
 vi.mock('@/lib/tx', () => ({

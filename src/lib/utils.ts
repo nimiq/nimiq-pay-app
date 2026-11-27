@@ -12,10 +12,31 @@ export function parseStoredTransaction(tx: ExternalTransaction | null) {
   return tx
 }
 
+interface StoredTransactionContent {
+  hash: string
+  sender: string
+  recipient: string
+  raw?: string | null
+}
+
 export function getLegacyTransactionValidityStartHeight(
-  row: { hash: string, sender: string, recipient: string, raw?: string | null },
+  row: StoredTransactionContent,
   expectedNetworkId: number,
 ): number | undefined {
+  const transaction = parseTransactionContent(row, expectedNetworkId)
+  try {
+    return transaction?.validityStartHeight
+  }
+  finally {
+    transaction?.free()
+  }
+}
+
+/** Rebuilds an unsigned transaction from stored signing content. The caller owns and must free it. */
+export function parseTransactionContent(
+  row: StoredTransactionContent,
+  expectedNetworkId: number,
+): Transaction | undefined {
   if (!row.raw || !/^(?:[\da-f]{2})+$/i.test(row.raw))
     return undefined
   let transaction: Transaction | undefined
@@ -62,15 +83,14 @@ export function getLegacyTransactionValidityStartHeight(
     if (transaction.hash() !== row.hash
       || transaction.recipient.toUserFriendlyAddress() !== row.recipient
       || Nimiq.BufferUtils.toHex(transaction.serializeContent()).toLowerCase() !== row.raw.toLowerCase()) {
+      transaction.free()
       return undefined
     }
-    return transaction.validityStartHeight
+    return transaction
   }
   catch {
-    return undefined
-  }
-  finally {
     transaction?.free()
+    return undefined
   }
 }
 

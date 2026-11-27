@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getLegacyTransactionValidityStartHeight, isWasmAvailable } from './utils'
+import { getLegacyTransactionValidityStartHeight, isWasmAvailable, parseTransactionContent } from './utils'
 
 describe('isWasmAvailable', () => {
   afterEach(() => {
@@ -77,6 +77,28 @@ describe('legacy transaction signing content', () => {
     tx.free()
     sender.free()
     recipient.free()
+  })
+
+  it('re-signs parsed HTLC creation content into the same valid transaction', () => {
+    const wallet = core.KeyPair.generate()
+    const sender = wallet.toAddress()
+    const htlcData = core.BufferUtils.fromHex(`${'11'.repeat(20)}${'33'.repeat(20)}01${'00'.repeat(32)}01${'00000000ffffffff'}`)
+    const placeholder = new core.Transaction(sender, 0, new Uint8Array(), core.Address.fromAny('00'.repeat(20)), 2, htlcData, 1234n, 0n, 1, 100, 24)
+    const recipient = core.Address.fromAny(placeholder.hash().substring(0, 40))
+    placeholder.free()
+    const original = new core.Transaction(sender, 0, new Uint8Array(), recipient, 2, htlcData, 1234n, 0n, 1, 100, 24)
+    original.sign(wallet, undefined)
+    const row = { hash: original.hash(), sender: sender.toUserFriendlyAddress(), recipient: original.recipient.toUserFriendlyAddress(), raw: core.BufferUtils.toHex(original.serializeContent()) }
+
+    const parsed = parseTransactionContent(row, 24)!
+    parsed.sign(wallet, undefined)
+    const resent = core.Transaction.fromAny(parsed.toHex())
+
+    expect(resent.hash()).toBe(original.hash())
+    expect(resent.toHex()).toBe(original.toHex())
+    expect(() => resent.verify(24)).not.toThrow()
+    for (const object of [resent, parsed, original, recipient, sender, wallet])
+      object.free()
   })
 
   it.each([null, undefined, '', 'zz', '00', '0001'])('rejects missing or malformed content %s', (raw) => {

@@ -12,8 +12,8 @@ import { i18n } from '@/i18n/i18n-setup'
 import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { HTLC_CHECK_HOLD_STARTED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
-import { startSwapRefund } from '@/lib/swap-telemetry'
-import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
+import { errorReason, startSwapRefund } from '@/lib/swap-telemetry'
+import { getLegacyTransactionValidityStartHeight, parseTransactionContent, promiseWithTimeout } from '@/lib/utils'
 import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -51,7 +51,7 @@ interface HtlcReconciliationContext {
 
 export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { getBalance } = useNimiqNetwork()
-  const { client, height: localHeight, consensus, headTimestamp, networkId, networkName } = storeToRefs(useNimiqNetwork())
+  const { client, height: localHeight, lastMacroBlockHeight, consensus, headTimestamp, networkId, networkName } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote, isSendingTx, htlcCheckLock } = storeToRefs(useLocks())
   const remoteSignerStore = useRemoteSigner()
@@ -280,9 +280,12 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     return walletContext
   }
 
+  const htlcCreationResendHeights = new Map<string, number>()
+
   function removePendingHtlcCreation(hash: string, context: HtlcReconciliationContext) {
     if (!isHtlcContextCurrent(context))
       return false
+    htlcCreationResendHeights.delete(hash)
     const index = pendingHtlcCreationTransactions.value.findIndex(tx => tx.transactionHash === hash)
     if (index >= 0)
       pendingHtlcCreationTransactions.value.splice(index, 1)
@@ -425,12 +428,36 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           return
         const validityStartHeight = pending.validityStartHeight
         const hasValidityHeight = typeof validityStartHeight === 'number'
-        const validityExpired = hasValidityHeight && localHeight.value
-          > validityStartHeight + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
-        if ((hasValidityHeight && !validityExpired) || !pending.sender)
+        const validityEndHeight = hasValidityHeight ? validityStartHeight + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS : undefined
+        // Light clients only find an included transaction after the next macro block.
+        const validityExpired = validityEndHeight !== undefined && lastMacroBlockHeight.value > validityEndHeight
+        if (hasValidityHeight && !validityExpired) {
+          const hash = pending.transactionHash
+          const row = persistedByHash.get(hash)
+          const isResendDue = localHeight.value <= validityEndHeight!
+            && lastMacroBlockHeight.value > (htlcCreationResendHeights.get(hash) ?? validityStartHeight)
+          const resend = isResendDue && row && pending.sender === context.owner ? parseTransactionContent(row, networkId.value) : undefined
+          if (resend) {
+            let signed: string
+            try {
+              resend.sign(localWallet.value, undefined)
+              signed = resend.toHex()
+            }
+            finally {
+              resend.free()
+            }
+            htlcCreationResendHeights.set(hash, localHeight.value)
+            logger.warn('Resending pending HTLC creation', { hash, validityStartHeight, height: localHeight.value })
+            promiseWithTimeout(context.client.sendTransaction(signed), HTLC_CALL_TIMEOUT_MS)
+              .then(details => logger.log('Resent pending HTLC creation', { hash, state: details.state }))
+              .catch(error => logger.warn('Failed to resend pending HTLC creation', { hash, error: errorReason(error) }))
+          }
+          continue
+        }
+        if (!pending.recipient)
           continue
         try {
-          transaction = await findTransactionInHistory(Nimiq.Address.fromString(pending.sender), pending.transactionHash)
+          transaction = await findTransactionInHistory(Nimiq.Address.fromString(pending.recipient), pending.transactionHash)
           if (!isHtlcContextCurrent(context))
             return
           if (!transaction) {
