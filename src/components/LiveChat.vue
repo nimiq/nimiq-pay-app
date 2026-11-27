@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Browser } from '@capacitor/browser'
 import { IonButton, IonButtons, IonIcon, IonTitle, IonToolbar } from '@ionic/vue'
 import { checkmarkCircle, close, documentTextOutline, send } from 'ionicons/icons'
 import { AnimatePresence, motion } from 'motion-v'
@@ -110,6 +111,38 @@ function agentName(sender: string): string {
 function formatTime(timestamp: string): string {
   return new Date(`${timestamp.replace(' ', 'T')}Z`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
+
+const CHAT_LINK = /<(https?:\/\/[^|>\s]+)(?:\|([^>]+))?>|(https?:\/\/[^\s<>]+)/g
+
+function unescapeSlack(text: string) {
+  return text.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&')
+}
+
+function messageParts(content: string) {
+  const parts: { text: string, url?: string }[] = []
+  let textStart = 0
+  for (const match of content.matchAll(CHAT_LINK)) {
+    const [markup, markupUrl, label, bareUrl] = match
+    const url = markupUrl ?? bareUrl.replace(/[.,;:!?)]+$/, '')
+    if (match.index > textStart)
+      parts.push({ text: unescapeSlack(content.slice(textStart, match.index)) })
+    parts.push({ text: unescapeSlack(label ?? url), url: unescapeSlack(url) })
+    textStart = match.index + (markupUrl ? markup.length : url.length)
+  }
+  if (textStart < content.length)
+    parts.push({ text: unescapeSlack(content.slice(textStart)) })
+  return parts
+}
+
+async function openChatLink(url: string) {
+  const { host, pathname } = new URL(url)
+  if (host === 'nimpay.app' && pathname.startsWith('/miniapps/open/')) {
+    const { handleDeepLink } = await import('@/lib/deep-link')
+    await handleDeepLink({ url })
+    return
+  }
+  await Browser.open({ url, toolbarColor: '#0582CA' })
+}
 </script>
 
 <template>
@@ -203,7 +236,18 @@ function formatTime(timestamp: string): string {
                   ? 'bg-sky text-white rounded-br-sm'
                   : 'bg-neutral-100 text-space rounded-bl-sm'"
               >
-                {{ msg.content }}
+                <template v-for="(part, index) in messageParts(msg.content)" :key="index">
+                  <a
+                    v-if="part.url"
+                    :href="part.url"
+                    class="underline break-all"
+                    :class="{ 'text-sky': msg.sender !== 'user' }"
+                    @click.prevent="openChatLink(part.url)"
+                  >{{ part.text }}</a>
+                  <template v-else>
+                    {{ part.text }}
+                  </template>
+                </template>
               </div>
               <span
                 class="text-xs mt-1 px-1"
