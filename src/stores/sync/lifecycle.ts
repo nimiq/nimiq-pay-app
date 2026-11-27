@@ -406,7 +406,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       checkExpiredSwapHtlcs()
   })
 
-  watch([remoteBalance, isHtlcActive, homeBalanceState], async ([newBalance, , balanceState], [oldBalance]) => {
+  watch([remoteBalance, isHtlcActive, homeBalanceState, () => remoteAddress.value?.toUserFriendlyAddress()], async ([newBalance, , balanceState], [oldBalance]) => {
     if (balanceState === 'resolved-empty') {
       logger.log('Home balance resolved as empty. Show 0 balance instead of skeleton')
       isProcessingRemote.value = false

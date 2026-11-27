@@ -953,6 +953,22 @@ describe('useSyncLifecycle', () => {
       expect(useSyncState().pendingPaymentTransactions).toEqual([])
     })
 
+    it.each([
+      { remoteBalance: 100_000, expected: false },
+      { remoteBalance: 0, expected: true },
+    ])('sets isProcessingRemote to $expected when the signer is replaced with balance $remoteBalance', async ({ remoteBalance, expected }) => {
+      state.remoteBalance = remoteBalance
+      const { useSyncLifecycle } = await import('./lifecycle')
+      useSyncLifecycle()
+      await nextTick()
+      state.isProcessingRemote = true
+
+      state.remoteAddress = createAddress('NQ22 EXTENDED REMOTE ADDRESS')
+      await nextTick()
+
+      expect(state.isProcessingRemote).toBe(expected)
+    })
+
     it('retries hydration and pending reconciliation when an undefined client becomes ready', async () => {
       const onlineClient = state.client
       state.client = undefined
