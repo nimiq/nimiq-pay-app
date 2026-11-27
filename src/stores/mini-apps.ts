@@ -230,8 +230,21 @@ export const useMiniApps = defineStore('mini-apps', () => {
   }
 
   function iconForUrl(url: string): string {
-    const logo = remoteApps.value.find(r => stripTrailingSlash(r.url) === stripTrailingSlash(url))?.logo
-    return logo || bestIcons.value[safeOrigin(url)] || getFaviconUrl(url)
+    const target = stripTrailingSlash(url)
+    const origin = safeOrigin(url)
+    let logo: string | undefined
+    let longestPrefix = -1
+    for (const r of remoteApps.value) {
+      if (!r.logo || safeOrigin(r.url) !== origin)
+        continue
+      const base = stripTrailingSlash(r.url)
+      const prefix = target === base || target.startsWith(`${base}/`) ? base.length : 0
+      if (prefix > longestPrefix) {
+        longestPrefix = prefix
+        logo = r.logo
+      }
+    }
+    return logo || bestIcons.value[origin] || getFaviconUrl(url)
   }
 
   async function ensureBestIcon(url: string) {
